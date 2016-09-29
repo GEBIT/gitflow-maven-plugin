@@ -36,6 +36,8 @@ public class GitFlowConfig {
     private String supportBranchPrefix;
     /** Prefix of the version tag. */
     private String versionTagPrefix;
+    /** Set to true if there is no production branch. */
+    private boolean noProduction;
     /** Name of the default remote. */
     private String origin;
 
@@ -50,6 +52,7 @@ public class GitFlowConfig {
         this.hotfixBranchPrefix = "hotfix/";
         this.supportBranchPrefix = "support/";
         this.versionTagPrefix = "";
+        this.noProduction = false;
         this.origin = "origin";
     }
 
@@ -171,5 +174,20 @@ public class GitFlowConfig {
      */
     public void setOrigin(String origin) {
         this.origin = origin;
+    }
+    
+    /**
+     * @return the noProduction flag
+     */
+    public boolean isNoProduction() {
+	return noProduction;
+    }
+    
+    /**
+     * @param noProduction
+     *            flag whether there is no production branch. 
+     */
+    public void setNoProduction(boolean noProduction) {
+	this.noProduction = noProduction;
     }
 }

@@ -95,7 +95,9 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowMojo {
             // fetch and check remote
             if (fetchRemote) {
                 gitFetchRemoteAndCompare(gitFlowConfig.getDevelopmentBranch());
-                gitFetchRemoteAndCompare(gitFlowConfig.getProductionBranch());
+                if (!gitFlowConfig.isNoProduction()) {
+                    gitFetchRemoteAndCompare(gitFlowConfig.getProductionBranch());
+                }
             }
 
             if (!skipTestProject) {
@@ -107,7 +109,8 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowMojo {
             }
 
             // git checkout master
-            gitCheckout(gitFlowConfig.getProductionBranch());
+            gitCheckout(gitFlowConfig.isNoProduction() ? 
+        	    gitFlowConfig.getDevelopmentBranch() : gitFlowConfig.getProductionBranch());
 
             gitMerge(releaseBranch, releaseRebase, releaseMergeNoFF);
 
@@ -126,10 +129,12 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowMojo {
                         commitMessages.getTagReleaseMessage());
             }
 
-            // git checkout develop
-            gitCheckout(gitFlowConfig.getDevelopmentBranch());
+            if (gitFlowConfig.isNoProduction()) {
+                // git checkout develop
+                gitCheckout(gitFlowConfig.getDevelopmentBranch());
 
-            gitMerge(releaseBranch, releaseRebase, releaseMergeNoFF);
+                gitMerge(releaseBranch, releaseRebase, releaseMergeNoFF);
+            }
 
             String nextSnapshotVersion = null;
             // get next snapshot version
@@ -166,7 +171,9 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowMojo {
             }
 
             if (pushRemote) {
-                gitPush(gitFlowConfig.getProductionBranch(), !skipTag);
+                if (!gitFlowConfig.isNoProduction()) {
+                    gitPush(gitFlowConfig.getProductionBranch(), !skipTag);
+                }
                 gitPush(gitFlowConfig.getDevelopmentBranch(), !skipTag);
             }
         } catch (CommandLineException e) {

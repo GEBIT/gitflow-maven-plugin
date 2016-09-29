@@ -83,7 +83,9 @@ public class GitFlowReleaseMojo extends AbstractGitFlowMojo {
             // fetch and check remote
             if (fetchRemote) {
                 gitFetchRemoteAndCompare(gitFlowConfig.getDevelopmentBranch());
-                gitFetchRemoteAndCompare(gitFlowConfig.getProductionBranch());
+                if (!gitFlowConfig.isNoProduction()) {
+                    gitFetchRemoteAndCompare(gitFlowConfig.getProductionBranch());
+                }
             }
 
             // git for-each-ref --count=1 refs/heads/release/*
@@ -151,11 +153,13 @@ public class GitFlowReleaseMojo extends AbstractGitFlowMojo {
                 gitCommit(commitMessages.getReleaseStartMessage());
             }
 
-            // git checkout master
-            gitCheckout(gitFlowConfig.getProductionBranch());
+            if (!gitFlowConfig.isNoProduction()) {
+                // git checkout master
+                gitCheckout(gitFlowConfig.getProductionBranch());
 
-            gitMerge(gitFlowConfig.getDevelopmentBranch(), releaseRebase,
-                    releaseMergeNoFF);
+                gitMerge(gitFlowConfig.getDevelopmentBranch(), releaseRebase,
+                        releaseMergeNoFF);
+            }
 
             if (!skipTag) {
                 if (tychoBuild && ArtifactUtils.isSnapshot(version)) {
@@ -169,7 +173,9 @@ public class GitFlowReleaseMojo extends AbstractGitFlowMojo {
             }
 
             // git checkout develop
-            gitCheckout(gitFlowConfig.getDevelopmentBranch());
+            if (!gitFlowConfig.isNoProduction()) {
+                gitCheckout(gitFlowConfig.getDevelopmentBranch());
+            }
 
             String nextSnapshotVersion = null;
             // get next snapshot version
@@ -201,7 +207,9 @@ public class GitFlowReleaseMojo extends AbstractGitFlowMojo {
             }
 
             if (pushRemote) {
-                gitPush(gitFlowConfig.getProductionBranch(), !skipTag);
+                if (!gitFlowConfig.isNoProduction()) {
+                    gitPush(gitFlowConfig.getProductionBranch(), !skipTag);
+                }
                 gitPush(gitFlowConfig.getDevelopmentBranch(), !skipTag);
             }
         } catch (CommandLineException e) {
