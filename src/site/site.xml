@@ -5,8 +5,6 @@
         <name>Git-Flow Maven Plugin</name>
     </bannerLeft>
 
-    <googleAnalyticsAccountId>UA-65158625-2</googleAnalyticsAccountId>
-
     <publishDate position="right"/>
     <version position="right"/>
 

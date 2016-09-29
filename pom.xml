@@ -1,6 +1,7 @@
 <!-- 
 /*
  * Copyright 2014-2016 Aleksandr Mashchenko.
+ * Copyright 2016 GEBIT Solutions GmbH
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +18,11 @@
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>com.amashchenko.maven.plugin</groupId>
+    <groupId>de.gebit.build.maven</groupId>
     <artifactId>gitflow-maven-plugin</artifactId>
     <packaging>maven-plugin</packaging>
     <name>gitflow-maven-plugin</name>
-    <version>1.2.4-SNAPSHOT</version>
+    <version>1.3.0-SNAPSHOT</version>
 
     <description>Git-Flow Maven Plugin, which runs Git and Maven commands from the command line. Supports Eclipse Plugins build with Tycho.</description>
  
@@ -37,7 +38,11 @@
 
     <developers>
         <developer>
-            <name>Aleksandr Mashchenko</name>
+            <name>Original: Aleksandr Mashchenko</name>
+        </developer>
+        <developer>
+            <name>Erwin Tratar)</name>
+            <organization>GEBIT Solutions GmbH</organization>
         </developer>
     </developers>
 
@@ -65,8 +70,8 @@
     <properties>
         <java.version>1.6</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <scm.url>scm:git:git@github.com:aleksandr-m/gitflow-maven-plugin.git</scm.url>
-        <url>https://github.com/aleksandr-m/gitflow-maven-plugin</url>
+        <scm.url>scm:git:git@github.com:gebit/gitflow-maven-plugin.git</scm.url>
+        <url>https://github.com/gebit/gitflow-maven-plugin</url>
         <maven-plugin-plugin.version>3.4</maven-plugin-plugin.version>
     </properties>
 

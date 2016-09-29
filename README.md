@@ -1,6 +1,5 @@
 # Git-Flow Maven Plugin
 
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.amashchenko.maven.plugin/gitflow-maven-plugin/badge.svg?subject=Maven Central)](https://maven-badges.herokuapp.com/maven-central/com.amashchenko.maven.plugin/gitflow-maven-plugin/)
 [![License](http://img.shields.io/badge/License-Apache License 2.0-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
 
 The Maven plugin for Vincent Driessen's [successful Git branching model](http://nvie.com/posts/a-successful-git-branching-model/).
