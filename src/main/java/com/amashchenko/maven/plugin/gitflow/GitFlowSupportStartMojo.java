@@ -20,7 +20,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
 /**
  * The git flow support start mojo.
  * 
- * @author Aleksandr Mashchenko
+ * @author Erwin Tratar
  */
 @Mojo(name = "support-start", aggregator = true)
 public class GitFlowSupportStartMojo extends AbstractGitFlowMojo {
