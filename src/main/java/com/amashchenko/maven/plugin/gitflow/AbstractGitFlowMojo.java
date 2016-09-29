@@ -474,6 +474,33 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
         executeGitCommand("tag", "-a", tagName, "-m", message);
     }
+    
+    /**
+     * Executes git symbolic-ref --short HEAD to get the current branch.
+     * 		
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected String gitCurrentBranch() throws MojoFailureException, CommandLineException {
+        getLog().info("Retrieving current branch name.");
+
+        return executeGitCommandReturn("symbolic-ref", "--short", "HEAD").trim();
+    }
+    
+    /**
+     * Executes git describe --match "[tagPrefix]*" --abbrev=0 to get the latest relase tag.
+     * 
+     * @param tagPrefix
+     *            Prefix of release tags.
+     * 		
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected String gitLastReleaseTag(final String tagPrefix) throws MojoFailureException, CommandLineException {
+        getLog().info("Looking for last release tag.");
+
+        return executeGitCommandReturn("describe", "--match", tagPrefix + "*", "--abbrev=0").trim();
+    }
 
     /**
      * Executes git branch -d.
@@ -600,7 +627,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
         if (!commandsAfterVersion.isEmpty()) {
             try {
-                executeMvnCommand(CommandLineUtils.translateCommandline(commandsAfterVersion.replaceAll("\\@\\{version\\}", version)));
+        	executeMvnCommand(CommandLineUtils.translateCommandline(commandsAfterVersion.replaceAll("\\@\\{version\\}", version)));
             } catch (Exception e) {
             	throw new MojoFailureException("Failed to execute " + commandsAfterVersion, e);
             }
@@ -645,7 +672,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws CommandLineException
      * @throws MojoFailureException
      */
-    private String executeGitCommandReturn(final String... args)
+    protected String executeGitCommandReturn(final String... args)
             throws CommandLineException, MojoFailureException {
         return executeCommand(cmdGit, true, args).getOut();
     }

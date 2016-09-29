@@ -79,27 +79,33 @@ public class GitFlowReleaseMojo extends AbstractGitFlowMojo {
             if (!allowSnapshots) {
                 checkSnapshotDependencies();
             }
-
-            // fetch and check remote
-            if (fetchRemote) {
-                gitFetchRemoteAndCompare(gitFlowConfig.getDevelopmentBranch());
-                if (!gitFlowConfig.isNoProduction()) {
-                    gitFetchRemoteAndCompare(gitFlowConfig.getProductionBranch());
+            
+            String currentBranch = gitCurrentBranch();
+            boolean releaseOnSupportBranch = currentBranch.startsWith(gitFlowConfig.getSupportBranchPrefix()); 
+            if (releaseOnSupportBranch) {
+                gitFetchRemoteAndCompare(currentBranch);
+            } else {
+                // fetch and check remote
+                if (fetchRemote) {
+                    gitFetchRemoteAndCompare(gitFlowConfig.getDevelopmentBranch());
+                    if (!gitFlowConfig.isNoProduction()) {
+                        gitFetchRemoteAndCompare(gitFlowConfig.getProductionBranch());
+                    }
                 }
+                
+                // git for-each-ref --count=1 refs/heads/release/*
+                final String releaseBranch = gitFindBranches(
+                	gitFlowConfig.getReleaseBranchPrefix(), true);
+                
+                if (StringUtils.isNotBlank(releaseBranch)) {
+                    throw new MojoFailureException(
+                	    "Release branch already exists. Cannot start release.");
+                }
+                
+                // need to be in develop to get correct project version
+                // git checkout develop
+                gitCheckout(gitFlowConfig.getDevelopmentBranch());
             }
-
-            // git for-each-ref --count=1 refs/heads/release/*
-            final String releaseBranch = gitFindBranches(
-                    gitFlowConfig.getReleaseBranchPrefix(), true);
-
-            if (StringUtils.isNotBlank(releaseBranch)) {
-                throw new MojoFailureException(
-                        "Release branch already exists. Cannot start release.");
-            }
-
-            // need to be in develop to get correct project version
-            // git checkout develop
-            gitCheckout(gitFlowConfig.getDevelopmentBranch());
 
             if (!skipTestProject) {
                 // mvn clean test
@@ -153,12 +159,13 @@ public class GitFlowReleaseMojo extends AbstractGitFlowMojo {
                 gitCommit(commitMessages.getReleaseStartMessage());
             }
 
-            if (!gitFlowConfig.isNoProduction()) {
-                // git checkout master
-                gitCheckout(gitFlowConfig.getProductionBranch());
+            // git checkout master
+            if (!releaseOnSupportBranch) {
+                if (!gitFlowConfig.isNoProduction()) {
+                    gitCheckout(gitFlowConfig.getProductionBranch());
 
-                gitMerge(gitFlowConfig.getDevelopmentBranch(), releaseRebase,
-                        releaseMergeNoFF);
+                    gitMerge(gitFlowConfig.getDevelopmentBranch(), releaseRebase, releaseMergeNoFF);
+                }
             }
 
             if (!skipTag) {
@@ -174,7 +181,7 @@ public class GitFlowReleaseMojo extends AbstractGitFlowMojo {
 
             // git checkout develop
             if (!gitFlowConfig.isNoProduction()) {
-                gitCheckout(gitFlowConfig.getDevelopmentBranch());
+        	gitCheckout(gitFlowConfig.getDevelopmentBranch());
             }
 
             String nextSnapshotVersion = null;
@@ -207,10 +214,14 @@ public class GitFlowReleaseMojo extends AbstractGitFlowMojo {
             }
 
             if (pushRemote) {
-                if (!gitFlowConfig.isNoProduction()) {
-                    gitPush(gitFlowConfig.getProductionBranch(), !skipTag);
+                if (releaseOnSupportBranch) {
+                    gitPush(currentBranch, !skipTag);
+                } else {
+                    if (!gitFlowConfig.isNoProduction()) {
+                        gitPush(gitFlowConfig.getProductionBranch(), !skipTag);
+                    }
+                    gitPush(gitFlowConfig.getDevelopmentBranch(), !skipTag);
                 }
-                gitPush(gitFlowConfig.getDevelopmentBranch(), !skipTag);
             }
         } catch (CommandLineException e) {
             getLog().error(e);
