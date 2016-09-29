@@ -108,24 +108,12 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
                         "Feature branch name to finish is blank.");
             }
 
+            // git checkout feature/...
+            gitCheckout(featureBranchName);
+            
             if (!skipTestProject) {
-                // git checkout feature/...
-                gitCheckout(featureBranchName);
-
                 // mvn clean test
                 mvnCleanTest();
-            }
-
-            // git checkout develop
-            gitCheckout(gitFlowConfig.getDevelopmentBranch());
-
-            if (featureSquash) {
-                // git merge --squash feature/...
-                gitMergeSquash(featureBranchName);
-                gitCommit(featureBranchName);
-            } else {
-                // git merge --no-ff feature/...
-                gitMergeNoff(featureBranchName);
             }
 
             // get current project version from pom
@@ -143,6 +131,18 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
 
                 // git commit -a -m updating versions for development branch
                 gitCommit(commitMessages.getFeatureFinishMessage());
+            }
+
+            // git checkout develop
+            gitCheckout(gitFlowConfig.getDevelopmentBranch());
+
+            if (featureSquash) {
+                // git merge --squash feature/...
+                gitMergeSquash(featureBranchName);
+                gitCommit(featureBranchName);
+            } else {
+                // git merge --no-ff feature/...
+                gitMergeNoff(featureBranchName);
             }
 
             if (installProject) {
