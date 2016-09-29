@@ -110,6 +110,16 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     protected boolean pushRemote;
 
     /**
+     * Additional maven commands/goals after the version has been updated. Will be committed together with the version
+     * change. Can contain an {@literal @}{version} placeholder which will be replaced with the new version before
+     * execution.
+     * 
+     * @since 1.3.0
+     */
+    @Parameter(property = "commandsAfterVersion", defaultValue = "")
+    protected String commandsAfterVersion;
+
+    /**
      * Whether to print commands output into the console.
      * 
      * @since 1.0.7
@@ -586,6 +596,14 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         } else {
             executeMvnCommand(VERSIONS_MAVEN_PLUGIN_SET_GOAL, "-DnewVersion="
                     + version, "-DgenerateBackupPoms=false");
+        }
+
+        if (!commandsAfterVersion.isEmpty()) {
+            try {
+                executeMvnCommand(CommandLineUtils.translateCommandline(commandsAfterVersion.replaceAll("\\@\\{version\\}", version)));
+            } catch (Exception e) {
+            	throw new MojoFailureException("Failed to execute " + commandsAfterVersion, e);
+            }
         }
     }
 
