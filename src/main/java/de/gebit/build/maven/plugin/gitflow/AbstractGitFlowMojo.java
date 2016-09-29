@@ -486,7 +486,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
         return executeGitCommandReturn("symbolic-ref", "--short", "HEAD").trim();
     }
-    
+
     /**
      * Executes git describe --match "[tagPrefix]*" --abbrev=0 to get the latest relase tag.
      * 
@@ -500,6 +500,46 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         getLog().info("Looking for last release tag.");
 
         return executeGitCommandReturn("describe", "--match", tagPrefix + "*", "--abbrev=0").trim();
+    }
+
+    /**
+     * Merges the first commit on the given branch ignoring any changes. This first commit is the commit that changed
+     * the versions. 
+     * 
+     * @param featureBranch
+     *            The feature branch name.
+     * @return true if the version has been premerged and does not need to be turned back
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected boolean gitIgnoreVersionCommit(String featureBranch) throws MojoFailureException, CommandLineException {
+        getLog().info("Looking for branch base of " + featureBranch + ".");
+        
+        final String branchPoint = executeGitCommandReturn("merge-base", "--fork-point", featureBranch).trim();
+        if (branchPoint.isEmpty()) {
+            throw new MojoFailureException("Failed to determine branch base of feature branch '" + featureBranch + "'.");
+        }
+        final String gitOutput = executeGitCommandReturn("rev-list", branchPoint + ".." + featureBranch, "--reverse");
+        // get the first line only
+        final int firstLineEnd = gitOutput.indexOf('\n');
+        final String firstCommitOnBranch = (firstLineEnd == -1 ? gitOutput : gitOutput.substring(0, firstLineEnd).trim());
+        if (firstCommitOnBranch.isEmpty()) {
+            if (getLog().isDebugEnabled()) {
+                getLog().debug("There seems to be no commit at all on the feature branch:" + gitOutput);
+            }
+            return false;
+        }
+        final String firstCommitMessage = executeGitCommandReturn("log", "-1", "--pretty=%s", firstCommitOnBranch);
+        if (!firstCommitMessage.contains(commitMessages.getFeatureStartMessage())) {
+            if (getLog().isDebugEnabled()) {
+                getLog().debug("First commit is not a version change commit, cannot premerge.");
+            }
+            return false;
+        }
+
+        getLog().info("Pre-merging version change commit of feature branch.");
+        executeGitCommand("merge", "--strategy=ours", firstCommitOnBranch);
+        return true;
     }
 
     /**

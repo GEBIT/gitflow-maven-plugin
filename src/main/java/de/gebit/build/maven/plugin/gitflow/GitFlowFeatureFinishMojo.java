@@ -122,17 +122,21 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
             final String featureName = featureBranchName.replaceFirst(
                     gitFlowConfig.getFeatureBranchPrefix(), "");
 
-            if (currentVersion.contains("-" + featureName)) {
-                final String version = currentVersion.replaceFirst("-"
-                        + featureName, "");
+            // git checkout develop
+            gitCheckout(gitFlowConfig.getDevelopmentBranch());
+            if (!gitIgnoreVersionCommit(featureBranchName)) {
+                gitCheckout(featureBranchName);
+                if (currentVersion.contains("-" + featureName)) {
+                    final String version = currentVersion.replaceFirst("-"
+                            + featureName, "");
+                    // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
+                    mvnSetVersions(version);
 
-                // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
-                mvnSetVersions(version);
-
-                // git commit -a -m updating versions for development branch
-                gitCommit(commitMessages.getFeatureFinishMessage());
+                    // git commit -a -m updating versions for development branch
+                    gitCommit(commitMessages.getFeatureFinishMessage());
+                }
             }
-
+            
             // git checkout develop
             gitCheckout(gitFlowConfig.getDevelopmentBranch());
 
