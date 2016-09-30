@@ -129,6 +129,9 @@
                             <goal>descriptor</goal>
                         </goals>
                         <phase>process-classes</phase>
+                        <configuration>
+                            <goalPrefix>flow</goalPrefix>
+                        </configuration>
                     </execution>
                     <execution>
                         <id>help-descriptor</id>
@@ -137,6 +140,7 @@
                         </goals>
                         <configuration>
                             <skipErrorNoDescriptorsFound>true</skipErrorNoDescriptorsFound>
+                            <goalPrefix>flow</goalPrefix>
                         </configuration>
                     </execution>
                 </executions>
