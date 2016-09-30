@@ -73,7 +73,9 @@ public class GitFlowHotfixFinishMojo extends AbstractGitFlowMojo {
             // fetch and check remote
             if (fetchRemote) {
                 gitFetchRemoteAndCompare(gitFlowConfig.getDevelopmentBranch());
-                gitFetchRemoteAndCompare(gitFlowConfig.getProductionBranch());
+                if (!gitFlowConfig.isNoProduction()) {
+                    gitFetchRemoteAndCompare(gitFlowConfig.getProductionBranch());
+                }
             }
 
             String[] branches = hotfixBranches.split("\\r?\\n");
@@ -117,7 +119,8 @@ public class GitFlowHotfixFinishMojo extends AbstractGitFlowMojo {
             }
 
             // git checkout master
-            gitCheckout(gitFlowConfig.getProductionBranch());
+            gitCheckout(gitFlowConfig.isNoProduction() ?
+                    gitFlowConfig.getDevelopmentBranch() : gitFlowConfig.getProductionBranch());
 
             // git merge --no-ff hotfix/...
             gitMergeNoff(hotfixBranchName);
@@ -147,11 +150,13 @@ public class GitFlowHotfixFinishMojo extends AbstractGitFlowMojo {
                 // git merge --no-ff hotfix/...
                 gitMergeNoff(hotfixBranchName);
             } else {
-                // git checkout develop
-                gitCheckout(gitFlowConfig.getDevelopmentBranch());
+                if (!gitFlowConfig.isNoProduction()) {
+                    // git checkout develop
+                    gitCheckout(gitFlowConfig.getDevelopmentBranch());
 
-                // git merge --no-ff hotfix/...
-                gitMergeNoff(hotfixBranchName);
+                    // git merge --no-ff hotfix/...
+                    gitMergeNoff(hotfixBranchName);
+                }
 
                 // get current project version from pom
                 final String currentVersion = getCurrentProjectVersion();
@@ -192,12 +197,11 @@ public class GitFlowHotfixFinishMojo extends AbstractGitFlowMojo {
             }
 
             if (pushRemote) {
-                gitPush(gitFlowConfig.getProductionBranch(), !skipTag);
-
                 // if no release branch
                 if (StringUtils.isBlank(releaseBranch)) {
-                    gitPush(gitFlowConfig.getDevelopmentBranch(), !skipTag);
+                    gitPush(gitFlowConfig.getProductionBranch(), !skipTag);
                 }
+                gitPush(gitFlowConfig.getDevelopmentBranch(), !skipTag);
             }
         } catch (CommandLineException e) {
             getLog().error(e);

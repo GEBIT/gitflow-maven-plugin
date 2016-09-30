@@ -47,11 +47,13 @@ public class GitFlowHotfixStartMojo extends AbstractGitFlowMojo {
 
             // need to be in master to get correct project version
             // git checkout master
-            gitCheckout(gitFlowConfig.getProductionBranch());
+            gitCheckout(gitFlowConfig.isNoProduction() ?
+                    gitFlowConfig.getDevelopmentBranch() : gitFlowConfig.getProductionBranch());
 
             // fetch and check remote
             if (fetchRemote) {
-                gitFetchRemoteAndCompare(gitFlowConfig.getProductionBranch());
+                gitFetchRemoteAndCompare(gitFlowConfig.isNoProduction() ?
+                        gitFlowConfig.getDevelopmentBranch() : gitFlowConfig.getProductionBranch());
             }
 
             // get current project version from pom
@@ -101,8 +103,8 @@ public class GitFlowHotfixStartMojo extends AbstractGitFlowMojo {
             }
 
             // git checkout -b hotfix/... master
-            gitCreateAndCheckout(gitFlowConfig.getHotfixBranchPrefix()
-                    + version, gitFlowConfig.getProductionBranch());
+            gitCreateAndCheckout(gitFlowConfig.getHotfixBranchPrefix() + version, gitFlowConfig.isNoProduction() ?
+                    gitFlowConfig.getDevelopmentBranch() : gitFlowConfig.getProductionBranch());
 
             // execute if version changed
             if (!version.equals(currentVersion)) {
