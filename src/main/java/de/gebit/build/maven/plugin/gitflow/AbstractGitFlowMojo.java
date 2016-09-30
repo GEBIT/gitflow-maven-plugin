@@ -533,6 +533,23 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
         return executeGitCommandReturn("describe", "--match", tagPrefix + "*", "--abbrev=0").trim();
     }
+    
+    /**
+     * Executes git tag --sort=-v:refname -l [tagPrefix]* to get all tags in reverse order
+     * 
+     * @param tagPrefix
+     *            Prefix of release tags.
+     * @param pattern 
+     *            filter by shell pattern. Can be <code>null</code>.
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected String[] gitListReleaseTags(final String tagPrefix, final String pattern) throws MojoFailureException, CommandLineException {
+        getLog().info("Looking for release tags.");
+        
+        return executeGitCommandReturn("tag", "--sort=-v:refname", "-l", 
+                tagPrefix + (pattern != null ? pattern : "*")).split("\\r?\\n");
+    }
 
     /**
      * Merges the first commit on the given branch ignoring any changes. This first commit is the commit that changed
@@ -734,6 +751,23 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         final String branchResult = executeGitCommandReturn("for-each-ref",
                 "refs/heads/" + branchName);
         return (StringUtils.isNotBlank(branchResult));
+    }
+
+    /**
+     * Executes <code>git for-each-ref refs/tags/[tag name]</code> to find an existing tag.
+     * 
+     * @param tagName
+     *            name of the tag to check for.
+     * @return true if a tag with the passed name exists.
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected boolean gitTagExists(final String tagName)
+            throws MojoFailureException, CommandLineException {
+        // git for-each-ref refs/tags/...
+        final String tagResult = executeGitCommandReturn("for-each-ref",
+                "refs/tags/" + tagName);
+        return (StringUtils.isNotBlank(tagResult));
     }
 
     /**

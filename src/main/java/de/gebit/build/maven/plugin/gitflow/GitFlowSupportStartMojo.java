@@ -8,9 +8,13 @@
  */
 package de.gebit.build.maven.plugin.gitflow;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.shared.release.versions.DefaultVersionInfo;
 import org.apache.maven.shared.release.versions.VersionParseException;
 import org.codehaus.plexus.components.interactivity.PrompterException;
@@ -21,9 +25,42 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * The git flow support start mojo.
  * 
  * @author Erwin Tratar
+ * @since 1.3.0
  */
 @Mojo(name = "support-start", aggregator = true)
 public class GitFlowSupportStartMojo extends AbstractGitFlowMojo {
+
+    /**
+     * The release version to create the support branch from.
+     * 
+     * @since 1.3.0
+     */
+    @Parameter(defaultValue = "${releaseVersion}", required = false)
+    protected String releaseVersion;
+
+    /**
+     * The version used for the branch itself.
+     * 
+     * @since 1.3.0
+     */
+    @Parameter(defaultValue = "${supportVersion}", required = false)
+    protected String supportVersion;
+
+    /**
+     * The first version to set on the branch.
+     * 
+     * @since 1.3.0
+     */
+    @Parameter(defaultValue = "${firstSupportVersion}", required = false)
+    protected String firstSupportVersion;
+
+    /**
+     * Filter to query for relaese branches to limit the results.
+     * 
+     * @since 1.3.0
+     */
+    @Parameter(defaultValue = "${releaseBranchFilter}", required = false)
+    protected String releaseBranchFilter;
 
     /** {@inheritDoc} */
     @Override
@@ -35,59 +72,112 @@ public class GitFlowSupportStartMojo extends AbstractGitFlowMojo {
             // check uncommitted changes
             checkUncommittedChanges();
 
-            // need to be in master to get correct project version
-            // git checkout master (or development is there is no master)
-            String baseName = gitFlowConfig.isNoProduction() ? gitFlowConfig.getDevelopmentBranch()
-                    : gitFlowConfig.getProductionBranch();
-            gitCheckout(baseName);
-
-            String defaultVersion = "1.0.0";
-
-            // get current project version from pom
-            String currentVersion = getCurrentProjectVersion();
-
-            // get default support version
-            try {
-                try {
-                    final String lastReleaseTag = gitLastReleaseTag(gitFlowConfig.getVersionTagPrefix());
-                    currentVersion = lastReleaseTag.substring(gitFlowConfig.getVersionTagPrefix().length());
-                    baseName = currentVersion;
-                } catch (CommandLineException e) {
-                    getLog().info("Failed to obtain latest release version.");
-                    if (getLog().isDebugEnabled()) {
-                        getLog().debug(e);
-                    }
+            String baseName = null;
+            if (releaseVersion == null) {
+                final String[] releaseTags = gitListReleaseTags(gitFlowConfig.getVersionTagPrefix(), releaseBranchFilter);
+                if (releaseTags.length == 0) {
+                    throw new MojoFailureException("No releases found.");
                 }
-                final DefaultVersionInfo versionInfo = new DefaultVersionInfo(currentVersion);
-                defaultVersion = versionInfo.getNextVersion().getSnapshotVersionString();
-            } catch (VersionParseException e) {
-                if (getLog().isDebugEnabled()) {
-                    getLog().debug(e);
+                List<String> numberedList = new ArrayList<String>();
+                StringBuilder str = new StringBuilder("Release:").append(LS);
+                
+                for (int i = 0; i < releaseTags.length; i++) {
+                    str.append((i + 1) + ". " + releaseTags[i] + LS);
+                    numberedList.add(String.valueOf(i + 1));
+                }
+                str.append("Choose release create suppport branch");
+
+                String releaseNumber = null;
+                try {
+                    while (StringUtils.isBlank(releaseNumber)) {
+                        releaseNumber = prompter.prompt(str.toString(),numberedList);
+                    }
+                } catch (PrompterException e) {
+                    getLog().error(e);
+                }
+
+                if (!StringUtils.isBlank(releaseNumber)) {
+                    int num = Integer.parseInt(releaseNumber);
+                    baseName = releaseTags[num - 1];
+                } else {
+                    baseName = releaseTags[0];
+                }
+
+            } else {
+                if (gitTagExists(releaseVersion)) {
+                    baseName = releaseVersion;
+                } else {
+                    if (gitTagExists(gitFlowConfig.getVersionTagPrefix() + releaseVersion)) {
+                        baseName = gitFlowConfig.getVersionTagPrefix() + releaseVersion;
+                    } else {
+                        throw new MojoFailureException("Release '" + releaseVersion + "' does not exist.");
+                    }
                 }
             }
 
-            String version = null;
+            if (StringUtils.isBlank(baseName)) {
+                throw new MojoFailureException("Release to create support branch from is blank.");
+            }
+
+            // checkout the tag
+            gitCheckout(baseName);
+
+            // get default support version
+            String supportBranchVersion = supportVersion;
+            String supportBranchFirstVersion = firstSupportVersion;
+            
+            if (firstSupportVersion == null && supportVersion == null) {
+                // get current project version from pom
+                String currentVersion = getCurrentProjectVersion();
+                
+                try {
+                    final DefaultVersionInfo versionInfo = new DefaultVersionInfo(currentVersion);
+                    final DefaultVersionInfo branchVersionInfo = new DefaultVersionInfo(versionInfo.getDigits().subList(0, versionInfo.getDigits().size()-1),
+                            versionInfo.getAnnotation(), versionInfo.getAnnotationRevision(),
+                            versionInfo.getBuildSpecifier(), null, null, null);
+                    supportBranchVersion = branchVersionInfo.getReleaseVersionString();
+                    supportBranchFirstVersion = versionInfo.getNextVersion().getSnapshotVersionString();
+                } catch (VersionParseException e) {
+                    throw new MojoFailureException("Failed to calculate support versions", e);
+                }
+            } else if (firstSupportVersion == null || supportVersion == null) {
+                throw new MojoFailureException(
+                        "Either both <supportVersion> and <firstSupportVersion> must be specified or none");
+            }
+
+            String branchVersion = null;
             try {
-                version = prompter.prompt("What is the support version? [" + currentVersion + "]");
+                branchVersion = prompter.prompt("What is the support version? [" + supportBranchVersion + "]");
             } catch (PrompterException e) {
                 getLog().error(e);
             }
 
-            if (StringUtils.isBlank(version)) {
-                version = currentVersion;
+            if (StringUtils.isBlank(branchVersion)) {
+                branchVersion = supportBranchVersion;
+            }
+
+            String branchFirstVersion = null;
+            try {
+                branchFirstVersion = prompter.prompt("What is the first version on the support branch? [" + supportBranchFirstVersion + "]");
+            } catch (PrompterException e) {
+                getLog().error(e);
+            }
+            
+            if (StringUtils.isBlank(branchFirstVersion)) {
+                branchFirstVersion = supportBranchFirstVersion;
             }
 
             // git for-each-ref refs/heads/support/...
-            final boolean supportBranchExists = gitBranchExists(gitFlowConfig.getSupportBranchPrefix() + version);
+            final boolean supportBranchExists = gitBranchExists(gitFlowConfig.getSupportBranchPrefix() + branchVersion);
             if (supportBranchExists) {
                 throw new MojoFailureException("Support branch with that name already exists. Cannot start support.");
             }
 
             // git checkout -b support/... master
-            gitCreateAndCheckout(gitFlowConfig.getSupportBranchPrefix() + version, baseName);
+            gitCreateAndCheckout(gitFlowConfig.getSupportBranchPrefix() + branchVersion, baseName);
 
             // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
-            mvnSetVersions(defaultVersion);
+            mvnSetVersions(branchFirstVersion);
 
             // git commit -a -m updating poms for support
             gitCommit("updating poms for support");
