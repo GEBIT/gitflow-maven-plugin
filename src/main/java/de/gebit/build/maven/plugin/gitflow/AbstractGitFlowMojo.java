@@ -19,13 +19,18 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.text.StrLookup;
+import org.apache.commons.lang3.text.StrSubstitutor;
 import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.apache.maven.plugin.AbstractMojo;
+import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Parameter;
@@ -121,6 +126,17 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     @Parameter(property = "commandsAfterVersion", defaultValue = "")
     protected String commandsAfterVersion;
+
+    /**
+     * A regex pattern that a new feature name must match. It is also used to extract a "key" from a 
+     * branch name which can be referred to as <code>@key</code> in commit messages. The extraction will be performed
+     * using the first matching group (if present). You will need this if your commit messages need to refer to e.g. an
+     * issue tracker key. 
+     * 
+     * @since 1.3.0
+     */
+    @Parameter(property = "featureNamePattern", required = false)
+    protected String featureNamePattern;
 
     /**
      * Whether to print commands output into the console.
@@ -530,7 +546,6 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected boolean gitTryRebaseWithoutVersionChange(String featureBranch) throws MojoFailureException, CommandLineException {
         getLog().info("Looking for branch base of " + featureBranch + ".");
-        
         final String branchPoint = executeGitCommandReturn("merge-base", "HEAD", featureBranch).trim();
         if (branchPoint.isEmpty()) {
             throw new MojoFailureException("Failed to determine branch base of feature branch '" + featureBranch + "'.");
@@ -546,7 +561,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             return false;
         }
         final String firstCommitMessage = executeGitCommandReturn("log", "-1", "--pretty=%s", firstCommitOnBranch);
-        if (!firstCommitMessage.contains(commitMessages.getFeatureStartMessage())) {
+        final String featureStartMessage = substituteInMessage(commitMessages.getFeatureStartMessage(), featureBranch);
+        if (!firstCommitMessage.contains(featureStartMessage)) {
             if (getLog().isDebugEnabled()) {
                 getLog().debug("First commit is not a version change commit, cannot premerge.");
             }
@@ -904,6 +920,79 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     private void executeMvnCommand(final String... args)
             throws CommandLineException, MojoFailureException {
         executeCommand(cmdMvn, true, args);
+    }
+
+    /**
+     * Check whether the given feature name matches the required pattern, if any.
+     */
+    protected boolean validateFeatureName(String featureName) {
+        if (featureNamePattern == null) {
+            return true;
+        }
+        return featureName.matches(featureNamePattern);
+    }
+
+    protected String substituteInMessage(final String message) throws MojoFailureException {
+        return substituteInMessage(message, null);
+    }
+
+    /**
+     * Substitute keys of the form <code>@{name}</code> in the messages. By
+     * default knows about <code>key</code>, which is extracted from the feature
+     * branch name and all project properties.
+     * 
+     * @param message
+     *            the message to process.
+     * @param featureBranchName
+     *            the branch name without prefix used to extract the key from.
+     * @return the message with applied substitutions
+     * @see #lookupKey(String)
+     */
+    protected String substituteInMessage(final String message, final String featureBranchName) throws MojoFailureException {
+        StrSubstitutor s = new StrSubstitutor(new StrLookup() {
+            @Override
+            public String lookup(String key) {
+                if ("key".equals(key)) {
+                    if (featureBranchName == null) {
+                        throw new IllegalStateException("@{key} is used, but not a feature branch.");
+                    }
+                    if (featureNamePattern == null) {
+                        throw new IllegalStateException("@{key} is used, but no <featureNamePattern> specified.");
+                    }
+                    Matcher m = Pattern.compile(featureNamePattern).matcher(featureBranchName);
+                    if (!m.matches()) {
+                        // retry with prefixe removed
+                        if (featureBranchName.startsWith(gitFlowConfig.getFeatureBranchPrefix())) {
+                            m = Pattern.compile(featureNamePattern).matcher(
+                                    featureBranchName.substring(gitFlowConfig.getFeatureBranchPrefix().length()));
+                        }
+                        if (!m.matches()) {
+                            throw new IllegalStateException(
+                                    "@{key} is used, but feature branch does not conform to <featureNamePattern> specified.");
+                        }
+                    }
+                    if (m.groupCount() == 0){
+                        throw new IllegalStateException(
+                                "@{key} is used, but <featureNamePattern> does not contain a matching group.");
+                    }
+                    return m.group(1);
+                }
+                return lookupKey(key);
+            }
+        }, "@{", "}", '@');
+        try {
+            return s.replace(message);
+        } catch (IllegalStateException e) {
+            throw new MojoFailureException(e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Lookup keys from the project properties.
+     * @return <code>null</code> if not found.
+     */
+    protected String lookupKey(String key) {
+        return project.getProperties().getProperty(key);
     }
 
     /**

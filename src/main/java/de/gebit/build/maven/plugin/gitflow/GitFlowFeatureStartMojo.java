@@ -65,6 +65,10 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
                     featureName = prompter
                             .prompt("What is a name of feature branch? "
                                     + gitFlowConfig.getFeatureBranchPrefix());
+                    if (!validateFeatureName(featureName)) {
+                        prompter.showMessage("Feature name does not match the required pattern.");
+                        featureName = null;
+                    }
                 }
             } catch (PrompterException e) {
                 getLog().error(e);
@@ -80,6 +84,8 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
                 throw new MojoFailureException(
                         "Feature branch with that name already exists. Cannot start feature.");
             }
+            final String featureStartMessage = substituteInMessage(commitMessages.getFeatureStartMessage(),
+                    gitFlowConfig.getFeatureBranchPrefix() + featureName);
 
             // git checkout -b ... develop
             gitCreateAndCheckout(gitFlowConfig.getFeatureBranchPrefix()
@@ -107,7 +113,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
                     mvnSetVersions(version);
 
                     // git commit -a -m updating versions for feature branch
-                    gitCommit(commitMessages.getFeatureStartMessage());
+                    gitCommit(featureStartMessage);
                 }
             }
 

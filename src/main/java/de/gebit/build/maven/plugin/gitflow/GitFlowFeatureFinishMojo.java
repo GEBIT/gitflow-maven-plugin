@@ -124,7 +124,8 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
                     throw new MojoFailureException(
                             "Feature branch name to finish is blank.");
                 }
-
+                final String featureFinishMessage = substituteInMessage(commitMessages.getFeatureFinishMessage(),
+                        featureBranchName);
                 // git checkout feature/...
                 gitCheckout(featureBranchName);
                 
@@ -150,7 +151,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
                         mvnSetVersions(version);
 
                         // git commit -a -m updating versions for development branch
-                        gitCommit(commitMessages.getFeatureFinishMessage());
+                        gitCommit(featureFinishMessage);
                     }
                 }
             } else {
