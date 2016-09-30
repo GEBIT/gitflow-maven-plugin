@@ -15,9 +15,12 @@
  */
 package de.gebit.build.maven.plugin.gitflow;
 
+import java.io.File;
 import java.io.FileReader;
+import java.io.IOException;
 import java.util.List;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Model;
@@ -512,10 +515,10 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws MojoFailureException
      * @throws CommandLineException
      */
-    protected boolean gitIgnoreVersionCommit(String featureBranch) throws MojoFailureException, CommandLineException {
+    protected boolean gitTryRebaseWithoutVersionChange(String featureBranch) throws MojoFailureException, CommandLineException {
         getLog().info("Looking for branch base of " + featureBranch + ".");
         
-        final String branchPoint = executeGitCommandReturn("merge-base", "--fork-point", featureBranch).trim();
+        final String branchPoint = executeGitCommandReturn("merge-base", "HEAD", featureBranch).trim();
         if (branchPoint.isEmpty()) {
             throw new MojoFailureException("Failed to determine branch base of feature branch '" + featureBranch + "'.");
         }
@@ -537,9 +540,37 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             return false;
         }
 
-        getLog().info("Pre-merging version change commit of feature branch.");
-        executeGitCommand("merge", "--strategy=ours", firstCommitOnBranch);
+        if (!gitHasNoMergeCommits(featureBranch, firstCommitOnBranch)) {
+            if (getLog().isDebugEnabled()) {
+                getLog().debug("Cannot rebase due to merge commits.");
+            }
+            return false;
+        }
+
+        getLog().info("Removing version change commit.");
+        executeGitCommand("rebase", "--no-ff", "--onto", branchPoint, firstCommitOnBranch, featureBranch);
+
+        if (pushRemote) {
+            gitBranchDeleteRemote(featureBranch);
+        }
         return true;
+    }
+
+    /**
+     * Execute git rev-list [branchPoint]..[branchName] --merges to check whether there are merge commits in the given feature branch 
+     * from the given branch point. This is useful to determine if a rebase can be done. 
+     * 
+     * @param branchName
+     *            The feature branch name.
+     * @param branchPoint
+     *            commit id of the branching point of the feature branch from develop.
+     * @return true if no merge commits were found in the given range.
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected boolean gitHasNoMergeCommits(String branchName, String branchPoint) throws MojoFailureException, CommandLineException {
+        final String mergeCommits = executeGitCommandReturn("rev-list", branchPoint + ".." + branchName, "--merges");
+        return mergeCommits.trim().isEmpty();
     }
 
     /**
@@ -570,6 +601,21 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         getLog().info("Deleting (-D) '" + branchName + "' branch.");
 
         executeGitCommand("branch", "-D", branchName);
+    }
+
+    /**
+     * Executes git push [origin] --delete <branch_name>.
+     * 
+     * @param branchName
+     *            Branch name to delete.
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitBranchDeleteRemote(final String branchName)
+            throws MojoFailureException, CommandLineException {
+        getLog().info("Deleting '" + branchName + "' branch on remote.");
+
+        executeGitCommand("push", gitFlowConfig.getOrigin(), "--delete", branchName);
     }
 
     /**
@@ -659,6 +705,50 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         final String branchResult = executeGitCommandReturn("for-each-ref",
                 "refs/heads/" + branchName);
         return (StringUtils.isNotBlank(branchResult));
+    }
+
+    /**
+     * Checks whether a rebase is in progress by looking at .git/rebase-apply.
+     * 
+     * @return true if a branch with the passed name exists.
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected String gitRebaseBranchInProcess()
+            throws MojoFailureException, CommandLineException {
+        final String gitDir = executeGitCommandReturn("rev-parse", "--git-dir").trim();
+        final File headNameFile = FileUtils.getFile(gitDir, "rebase-apply/head-name");
+        if (!headNameFile.exists()) {
+            getLog().info(headNameFile + " not found in " + gitDir);
+            return null;
+        }
+        String headName;
+        try {
+            headName = FileUtils.readFileToString(headNameFile);
+        } catch (IOException e) {
+            throw new CommandLineException("Failed to check for currently rebasing branch.", e);
+        }
+        final String branchRef = headName.trim();
+        if (!branchRef.startsWith("refs/heads/")) {
+            throw new CommandLineException("Illegal rebasing branch reference: " + branchRef);
+        }
+        final String tempBranchName = branchRef.substring("refs/heads/".length());
+        if (!tempBranchName.startsWith(gitFlowConfig.getFeatureBranchPrefix())) {
+            throw new CommandLineException("Rebasing branch is not a feature branch: " + branchRef);
+        }
+        return tempBranchName;
+    }
+    
+    /**
+     * Checks whether a rebase is in progress by looking at .git/rebase-apply.
+     * 
+     * @return true if a branch with the passed name exists.
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitRebaseContinue()
+            throws MojoFailureException, CommandLineException {
+        executeGitCommand("rebase", "--continue");
     }
 
     /**
