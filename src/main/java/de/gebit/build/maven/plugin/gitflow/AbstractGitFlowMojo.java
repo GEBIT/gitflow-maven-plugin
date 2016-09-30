@@ -645,6 +645,23 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
+     * Executes <code>git for-each-ref refs/heads/[branch name]</code> to find an existing branch.
+     * 
+     * @param branchName
+     *            name of the branch to check for.
+     * @return true if a branch with the passed name exists.
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected boolean gitBranchExists(final String branchName)
+            throws MojoFailureException, CommandLineException {
+        // git for-each-ref refs/heads/support/...
+        final String branchResult = executeGitCommandReturn("for-each-ref",
+                "refs/heads/" + branchName);
+        return (StringUtils.isNotBlank(branchResult));
+    }
+
+    /**
      * Executes 'set' goal of versions-maven-plugin or 'set-version' of
      * tycho-versions-plugin in case it is tycho build.
      * 
@@ -712,7 +729,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws CommandLineException
      * @throws MojoFailureException
      */
-    protected String executeGitCommandReturn(final String... args)
+    private String executeGitCommandReturn(final String... args)
             throws CommandLineException, MojoFailureException {
         return executeCommand(cmdGit, true, args).getOut();
     }

@@ -78,10 +78,8 @@ public class GitFlowSupportStartMojo extends AbstractGitFlowMojo {
             }
 
             // git for-each-ref refs/heads/support/...
-            final String supportBranch = executeGitCommandReturn("for-each-ref",
-                    "refs/heads/" + gitFlowConfig.getSupportBranchPrefix() + version);
-
-            if (StringUtils.isNotBlank(supportBranch)) {
+            final boolean supportBranchExists = gitBranchExists(gitFlowConfig.getSupportBranchPrefix() + version);
+            if (supportBranchExists) {
                 throw new MojoFailureException("Support branch with that name already exists. Cannot start support.");
             }
 
