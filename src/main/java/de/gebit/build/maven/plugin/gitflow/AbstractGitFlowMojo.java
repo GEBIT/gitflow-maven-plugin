@@ -409,6 +409,19 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
+     * Executes git commit to complete a merge.
+     * 
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitCommitMerge() throws MojoFailureException,
+    CommandLineException {
+        getLog().info("Committing changes.");
+        
+        executeGitCommand("commit", "--no-edit");
+    }
+
+    /**
      * Executes git rebase or git merge --no-ff or git merge.
      * 
      * @param branchName
@@ -719,26 +732,55 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         final String gitDir = executeGitCommandReturn("rev-parse", "--git-dir").trim();
         final File headNameFile = FileUtils.getFile(gitDir, "rebase-apply/head-name");
         if (!headNameFile.exists()) {
-            getLog().info(headNameFile + " not found in " + gitDir);
+            if (getLog().isDebugEnabled()) {
+                getLog().debug(headNameFile + " not found in " + gitDir);
+            }
             return null;
         }
         String headName;
         try {
             headName = FileUtils.readFileToString(headNameFile);
         } catch (IOException e) {
-            throw new CommandLineException("Failed to check for currently rebasing branch.", e);
+            throw new MojoFailureException("Failed to check for currently rebasing branch.", e);
         }
         final String branchRef = headName.trim();
         if (!branchRef.startsWith("refs/heads/")) {
-            throw new CommandLineException("Illegal rebasing branch reference: " + branchRef);
+            throw new MojoFailureException("Illegal rebasing branch reference: " + branchRef);
         }
         final String tempBranchName = branchRef.substring("refs/heads/".length());
         if (!tempBranchName.startsWith(gitFlowConfig.getFeatureBranchPrefix())) {
-            throw new CommandLineException("Rebasing branch is not a feature branch: " + branchRef);
+            throw new MojoFailureException("Rebasing branch is not a feature branch: " + branchRef);
         }
         return tempBranchName;
     }
-    
+
+    /**
+     * Checks whether a rebase is in progress by looking at .git/rebase-apply.
+     * 
+     * @return true if a branch with the passed name exists.
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected String gitMergeBranchInProcess()
+            throws MojoFailureException, CommandLineException {
+        final String gitDir = executeGitCommandReturn("rev-parse", "--git-dir").trim();
+        final File mergeHeadNameFile = FileUtils.getFile(gitDir, "MERGE_HEAD");
+        if (!mergeHeadNameFile.exists()) {
+            if (getLog().isDebugEnabled()) {
+                getLog().debug(mergeHeadNameFile + " not found in " + gitDir);
+            }
+            return null;
+        }
+        final String currentBranchName = executeGitCommandReturn("rev-parse", "--abbrev-ref", "HEAD").trim();
+        if (StringUtils.isBlank(currentBranchName)) {
+            throw new MojoFailureException("Failed to obtain current branch name.");
+        }
+        if (!currentBranchName.startsWith(gitFlowConfig.getFeatureBranchPrefix())) {
+            throw new MojoFailureException("Merge target branch is not a feature branch: " + currentBranchName);
+        }
+        return currentBranchName;
+    }
+
     /**
      * Checks whether a rebase is in progress by looking at .git/rebase-apply.
      * 
