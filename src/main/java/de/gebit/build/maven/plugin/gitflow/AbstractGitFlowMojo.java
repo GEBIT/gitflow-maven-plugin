@@ -30,7 +30,6 @@ import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.apache.maven.plugin.AbstractMojo;
-import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Parameter;
@@ -41,6 +40,7 @@ import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 import org.codehaus.plexus.util.cli.CommandLineUtils;
 import org.codehaus.plexus.util.cli.Commandline;
+import org.codehaus.plexus.util.cli.StreamConsumer;
 
 /**
  * Abstract git flow mojo.
@@ -137,6 +137,30 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     @Parameter(property = "featureNamePattern", required = false)
     protected String featureNamePattern;
+
+    /**
+     * When set to <code>true</code> the output generated from executing the tests is written to the console.
+     * 
+     * @since 1.3.0
+     */
+    @Parameter(property = "printTestOutput", required = false, defaultValue = "false")
+    private boolean printTestOutput;
+
+    /**
+     * When set to <code>true</code> the output generated from executing the install is written to the console.
+     * 
+     * @since 1.3.0
+     */
+    @Parameter(property = "printInstallOutput", required = false, defaultValue = "false")
+    private boolean printInstallOutput;
+
+    /**
+     * When set to <code>true</code> the output generated from executing the release goals is written to the console.
+     * 
+     * @since 1.3.0
+     */
+    @Parameter(property = "printReleaseOutput", required = false, defaultValue = "true")
+    private boolean printReleaseOutput;
 
     /**
      * Whether to print commands output into the console.
@@ -857,18 +881,18 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         getLog().info("Updating version(s) to '" + version + "'.");
 
         if (tychoBuild) {
-            executeMvnCommand(TYCHO_VERSIONS_PLUGIN_SET_GOAL, "-DnewVersion="
+            executeMvnCommand(false, TYCHO_VERSIONS_PLUGIN_SET_GOAL, "-DnewVersion="
                     + version, "-Dtycho.mode=maven");
         } else {
-            executeMvnCommand(VERSIONS_MAVEN_PLUGIN_SET_GOAL, "-DnewVersion="
+            executeMvnCommand(false, VERSIONS_MAVEN_PLUGIN_SET_GOAL, "-DnewVersion="
                     + version, "-DgenerateBackupPoms=false");
         }
 
         if (!commandsAfterVersion.isEmpty()) {
             try {
-        	executeMvnCommand(CommandLineUtils.translateCommandline(commandsAfterVersion.replaceAll("\\@\\{version\\}", version)));
+                executeMvnCommand(false, CommandLineUtils.translateCommandline(commandsAfterVersion.replaceAll("\\@\\{version\\}", version)));
             } catch (Exception e) {
-            	throw new MojoFailureException("Failed to execute " + commandsAfterVersion, e);
+                throw new MojoFailureException("Failed to execute " + commandsAfterVersion, e);
             }
         }
     }
@@ -883,9 +907,9 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             CommandLineException {
         getLog().info("Cleaning and testing the project.");
         if (tychoBuild) {
-            executeMvnCommand("clean", "verify");
+            executeMvnCommand(printTestOutput, "clean", "verify");
         } else {
-            executeMvnCommand("clean", "test");
+            executeMvnCommand(printTestOutput, "clean", "test");
         }
     }
 
@@ -899,7 +923,23 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             CommandLineException {
         getLog().info("Cleaning and installing the project.");
 
-        executeMvnCommand("clean", "install");
+        executeMvnCommand(printInstallOutput, "clean", "install");
+    }
+
+    /**
+     * Executes mvn [goals].
+     * 
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void mvnGoals(String goals) throws MojoFailureException,
+            CommandLineException {
+        getLog().info("Executing mvn " + goals + ".");
+        try {
+            executeMvnCommand(printReleaseOutput, CommandLineUtils.translateCommandline(goals));
+        } catch (Exception e) {
+            throw new MojoFailureException("Failed to execute mvn " + goals, e);
+        }
     }
 
     /**
@@ -946,14 +986,20 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     /**
      * Executes Maven command.
      * 
+     * @param copyOutput
+     *            Copy output to console.
      * @param args
      *            Maven command line arguments.
      * @throws CommandLineException
      * @throws MojoFailureException
      */
-    private void executeMvnCommand(final String... args)
+    private void executeMvnCommand(boolean copyOutput, final String... args)
             throws CommandLineException, MojoFailureException {
-        executeCommand(cmdMvn, true, args);
+        if (copyOutput) {
+            executeCommandCopyOut(cmdMvn, true, args);
+        } else {
+            executeCommand(cmdMvn, true, args);
+        }
     }
 
     /**
@@ -1027,6 +1073,71 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected String lookupKey(String key) {
         return project.getProperties().getProperty(key);
+    }
+
+    /**
+     * Executes command line.
+     * 
+     * @param cmd
+     *            Command line.
+     * @param failOnError
+     *            Whether to throw exception on NOT success exit code.
+     * @param args
+     *            Command line arguments.
+     * @return {@link CommandResult} instance holding command exit code, output
+     *         and error if any.
+     * @throws CommandLineException
+     * @throws MojoFailureException
+     *             If <code>failOnError</code> is <code>true</code> and command
+     *             exit code is NOT equals to 0.
+     */
+    private CommandResult executeCommandCopyOut(final Commandline cmd,
+            final boolean failOnError, final String... args)
+            throws CommandLineException, MojoFailureException {
+        // initialize executables
+        initExecutables();
+
+        if (getLog().isDebugEnabled()) {
+            getLog().debug(
+                    cmd.getExecutable() + " " + StringUtils.join(args, " "));
+        }
+
+        cmd.clearArgs();
+        cmd.addArguments(args);
+
+        final StringBufferStreamConsumer out = new StringBufferStreamConsumer(
+                verbose);
+
+        final CommandLineUtils.StringStreamConsumer err = new CommandLineUtils.StringStreamConsumer();
+
+        // execute
+        final int exitCode = CommandLineUtils.executeCommandLine(cmd, new StreamConsumer() {
+            @Override
+            public void consumeLine(String line) {
+                out.consumeLine(line);
+                System.out.println(line);
+            }
+        }, new StreamConsumer() {
+            @Override
+            public void consumeLine(String line) {
+                err.consumeLine(line);
+                System.err.println(line);
+            }
+        });
+
+        String errorStr = err.getOutput();
+        String outStr = out.getOutput();
+
+        if (failOnError && exitCode != SUCCESS_EXIT_CODE) {
+            // not all commands print errors to error stream
+            if (StringUtils.isBlank(errorStr) && StringUtils.isNotBlank(outStr)) {
+                errorStr = outStr;
+            }
+
+            throw new MojoFailureException(errorStr);
+        }
+
+        return new CommandResult(exitCode, null, errorStr);
     }
 
     /**

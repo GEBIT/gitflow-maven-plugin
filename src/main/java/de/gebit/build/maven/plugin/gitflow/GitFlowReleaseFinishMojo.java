@@ -68,6 +68,14 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowMojo {
     @Parameter(property = "releaseMergeNoFF", defaultValue = "true")
     private boolean releaseMergeNoFF = true;
 
+    /**
+     * Goals to perform on release, before tagging and pushing. A useful combination is <code>deploy site</code>.
+     * 
+     * @since 1.3.0
+     */
+    @Parameter(property = "releaseGoals", defaultValue = "${releaseGoals}")
+    private String releaseGoals;
+
     /** {@inheritDoc} */
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
@@ -106,6 +114,11 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowMojo {
 
                 // mvn clean test
                 mvnCleanTest();
+            }
+
+            // perform the release goals
+            if (releaseGoals != null) {
+                mvnGoals(releaseGoals);
             }
 
             // git checkout master
