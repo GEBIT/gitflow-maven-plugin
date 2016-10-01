@@ -49,6 +49,14 @@ public class GitFlowReleaseMojo extends AbstractGitFlowMojo {
     private boolean skipTestProject = false;
 
     /**
+     * Whether to skip calling Maven release goals before releasing.
+     * 
+     * @since 1.3.0
+     */
+    @Parameter(property = "skipDeployProject", defaultValue = "false")
+    private boolean skipDeployProject = false;
+
+    /**
      * Whether to rebase branch or merge. If <code>true</code> then rebase will
      * be performed.
      * 
@@ -168,7 +176,7 @@ public class GitFlowReleaseMojo extends AbstractGitFlowMojo {
             }
 
             // perform the release goals
-            if (releaseGoals != null) {
+            if (!skipDeployProject && releaseGoals != null) {
                 mvnGoals(releaseGoals);
             }
 
