@@ -26,6 +26,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.text.StrLookup;
 import org.apache.commons.lang3.text.StrSubstitutor;
 import org.apache.maven.artifact.ArtifactUtils;
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
@@ -184,6 +185,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     /** Maven project. */
     @Parameter(defaultValue = "${project}", readonly = true)
     private MavenProject project;
+    @Parameter(defaultValue = "${session}")
+    private MavenSession session;
     /** Default prompter. */
     @Component
     protected Prompter prompter;
@@ -995,10 +998,20 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     private void executeMvnCommand(boolean copyOutput, final String... args)
             throws CommandLineException, MojoFailureException {
-        if (copyOutput) {
-            executeCommandCopyOut(cmdMvn, true, args);
+        String[] effectiveArgs = args;
+        if (session.getRequest().getUserSettingsFile() != null) {
+            effectiveArgs = new String[args.length + 2];
+            effectiveArgs[0] = "-s";
+            effectiveArgs[1] = session.getRequest().getUserSettingsFile().getAbsolutePath();
+            System.arraycopy(args, 0, effectiveArgs, 2, args.length);
         } else {
-            executeCommand(cmdMvn, true, args);
+            effectiveArgs = args;
+        }
+
+        if (copyOutput) {
+            executeCommandCopyOut(cmdMvn, true, effectiveArgs);
+        } else {
+            executeCommand(cmdMvn, true, effectiveArgs);
         }
     }
 
