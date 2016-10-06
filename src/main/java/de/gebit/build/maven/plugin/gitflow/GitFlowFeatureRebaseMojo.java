@@ -31,10 +31,10 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * the development branch into the feature branch.
  * 
  * @author Erwin Tratar
- * @since 1.3.0
+ * @since 1.3.1
  */
-@Mojo(name = "feature-update", aggregator = true)
-public class GitFlowFeatureUpdateMojo extends AbstractGitFlowMojo {
+@Mojo(name = "feature-rebase", aggregator = true)
+public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
 
     /**
      * Controls whether a merge of the development branch instead of a rebase on the development branch is performed.
