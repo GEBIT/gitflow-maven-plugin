@@ -66,7 +66,8 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
                             .prompt("What is a name of feature branch? "
                                     + gitFlowConfig.getFeatureBranchPrefix());
                     if (!validateFeatureName(featureName)) {
-                        prompter.showMessage("Feature name does not match the required pattern.");
+                        prompter.showMessage("Feature name does not match the required pattern: " 
+                                + featureNamePattern.toString());
                         featureName = null;
                     }
                 }
