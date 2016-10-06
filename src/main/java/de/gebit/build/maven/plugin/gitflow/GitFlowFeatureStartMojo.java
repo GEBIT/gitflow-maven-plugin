@@ -43,6 +43,15 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
      */
     @Parameter(property = "skipFeatureVersion", defaultValue = "false")
     private boolean skipFeatureVersion = false;
+    
+    /**
+     * A natual language description of the <code>featureNamePattern</code> which is used to print an error message.
+     * If not specified the pattern is printed in the error message as is, which can be hard to understand.
+     * 
+     * @since 1.3.1
+     */
+    @Parameter(property = "featureNamePatternDescription", required = false)
+    protected String featureNamePatternDescription;
 
     /** {@inheritDoc} */
     @Override
@@ -66,8 +75,11 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
                             .prompt("What is a name of feature branch? "
                                     + gitFlowConfig.getFeatureBranchPrefix());
                     if (!validateFeatureName(featureName)) {
-                        prompter.showMessage("Feature name does not match the required pattern: " 
-                                + featureNamePattern.toString());
+                        if (featureNamePatternDescription != null) {
+                            prompter.showMessage(featureNamePatternDescription);
+                        } else {
+                            prompter.showMessage("Feature name does not match the required pattern: " + featureNamePattern);
+                        }
                         featureName = null;
                     }
                 }
@@ -125,5 +137,15 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
         } catch (CommandLineException e) {
             getLog().error(e);
         }
+    }
+
+    /**
+     * Check whether the given feature name matches the required pattern, if any.
+     */
+    protected boolean validateFeatureName(String featureName) {
+        if (featureNamePattern == null) {
+            return true;
+        }
+        return featureName.matches(featureNamePattern);
     }
 }

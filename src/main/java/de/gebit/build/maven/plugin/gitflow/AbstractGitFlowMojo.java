@@ -128,6 +128,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     @Parameter(property = "commandsAfterVersion", defaultValue = "")
     protected String commandsAfterVersion;
 
+
     /**
      * A regex pattern that a new feature name must match. It is also used to extract a "key" from a 
      * branch name which can be referred to as <code>@key</code> in commit messages. The extraction will be performed
@@ -1013,16 +1014,6 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         } else {
             executeCommand(cmdMvn, true, effectiveArgs);
         }
-    }
-
-    /**
-     * Check whether the given feature name matches the required pattern, if any.
-     */
-    protected boolean validateFeatureName(String featureName) {
-        if (featureNamePattern == null) {
-            return true;
-        }
-        return featureName.matches(featureNamePattern);
     }
 
     protected String substituteInMessage(final String message) throws MojoFailureException {
