@@ -900,7 +900,6 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             executeMvnCommand(false, VERSIONS_MAVEN_PLUGIN_SET_GOAL, "-DnewVersion="
                     + version, "-DgenerateBackupPoms=false");
         }
-
         for (String command : getCommandsAfterVersion()) {
             try {
                 executeMvnCommand(false, CommandLineUtils.translateCommandline(
@@ -918,7 +917,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @return a new unmodifiable list with the command.
      */
     protected List<String> getCommandsAfterVersion() throws MojoFailureException {
-        if (!commandsAfterVersion.isEmpty()) {
+        if (commandsAfterVersion.isEmpty()) {
             return Collections.emptyList();
         }
         return Collections.singletonList(commandsAfterVersion);
