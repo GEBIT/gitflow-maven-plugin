@@ -18,6 +18,8 @@ package de.gebit.build.maven.plugin.gitflow;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -243,6 +245,13 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         } catch (Exception e) {
             throw new MojoFailureException("", e);
         }
+    }
+    
+    /**
+     * Access to the project itself.
+     */
+    protected MavenProject getProject() {
+        return project;
     }
 
     /**
@@ -892,13 +901,27 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                     + version, "-DgenerateBackupPoms=false");
         }
 
-        if (!commandsAfterVersion.isEmpty()) {
+        for (String command : getCommandsAfterVersion()) {
             try {
-                executeMvnCommand(false, CommandLineUtils.translateCommandline(commandsAfterVersion.replaceAll("\\@\\{version\\}", version)));
+                executeMvnCommand(false, CommandLineUtils.translateCommandline(
+                        command.replaceAll("\\@\\{version\\}", version)));
             } catch (Exception e) {
-                throw new MojoFailureException("Failed to execute " + commandsAfterVersion, e);
+                throw new MojoFailureException("Failed to execute " + command, e);
             }
         }
+    }
+
+    /**
+     * Get the command specific additional commands to execute when a version
+     * changes.
+     * 
+     * @return a new unmodifiable list with the command.
+     */
+    protected List<String> getCommandsAfterVersion() throws MojoFailureException {
+        if (!commandsAfterVersion.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return Collections.singletonList(commandsAfterVersion);
     }
 
     /**
