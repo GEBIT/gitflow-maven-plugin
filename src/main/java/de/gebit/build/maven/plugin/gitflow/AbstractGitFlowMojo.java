@@ -18,9 +18,10 @@ package de.gebit.build.maven.plugin.gitflow;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -491,16 +492,46 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         if (rebase) {
             getLog().info("Rebasing '" + branchName + "' branch.");
             executeGitCommand("rebase", branchName);
-        } else if (noff) {
-            getLog().info("Merging (--no-ff) '" + branchName + "' branch.");
-            executeGitCommand("merge", "--no-ff", branchName);
         } else {
-            getLog().info("Merging '" + branchName + "' branch.");
-            executeGitCommand("merge", branchName);
+            if (noff) {
+                getLog().info("Merging (--no-ff) '" + branchName + "' branch.");
+                executeGitCommand("merge", "--no-ff", branchName);
+            } else {
+                getLog().info("Merging '" + branchName + "' branch.");
+                executeGitCommand("merge", branchName);
+            }
+            // fix up the commit message, if necessary
+            String tempCommitMessage = getHeadCommitMessage();
+            if (commitMessages.getMergeMessagePattern() != null) {
+                Map<String,String> tempReplacements = new HashMap<String, String>();
+                tempReplacements.put("message", tempCommitMessage);
+                String tempNewMessage = substituteStrings(commitMessages.getMergeMessagePattern(), tempReplacements);
+                if (tempNewMessage != null && !tempNewMessage.equals(tempCommitMessage)) {
+                    tempCommitMessage = tempNewMessage;
+                    executeGitCommand("commit", "--amend", "-m", tempCommitMessage);
+                }
+            }
+            if (featureNamePattern != null) {
+                Matcher m = Pattern.compile(featureNamePattern).matcher(tempCommitMessage);
+                if (!m.matches()) {
+                    throw new MojoFailureException("Commit does not pass message verification: " + tempCommitMessage);
+                }
+            }
         }
     }
 
     /**
+     * Returns the commit message of the top-most commit in the current branch.
+     * If there is no commit, an exception is thrown.
+	 * @return the commit message of the top-most commit in the current branch
+     * @throws CommandLineException
+     * @throws MojoFailureException
+	 */
+	private String getHeadCommitMessage() throws MojoFailureException, CommandLineException {
+		return executeGitCommandReturn("log", "--format=%s", "-n", "1").trim();
+	}
+
+	/**
      * Executes git merge --no-ff.
      * 
      * @param branchName
@@ -1088,6 +1119,37 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         }, "@{", "}", '@');
         try {
             return s.replace(message);
+        } catch (IllegalStateException e) {
+            throw new MojoFailureException(e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Performs strings replacements in the given message, specified with the
+     * given replacement map. Placeholders in the message must be declared as
+     * @{someName} while the key in the map shall be just someName. If the map
+     * does not contain a found placeholder, it will also look in the project properties.
+     * @param aMessage
+     * @param someReplacements
+     * @return
+     * @throws MojoFailureException
+     */
+    protected String substituteStrings(final String aMessage, final Map<String,String> someReplacements) throws MojoFailureException {
+        StrSubstitutor s = new StrSubstitutor(new StrLookup() {
+            @Override
+            public String lookup(String key) {
+                String tempReplacement = someReplacements.get(key);
+                if (tempReplacement == null) {
+                    tempReplacement = lookupKey(key);
+                    if (tempReplacement == null) {
+                        throw new IllegalStateException("@{" + key + "} is used, but no replacement provided.");
+                    }
+                }
+                return tempReplacement;
+            }
+        }, "@{", "}", '@');
+        try {
+            return s.replace(aMessage);
         } catch (IllegalStateException e) {
             throw new MojoFailureException(e.getMessage(), e);
         }

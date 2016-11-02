@@ -33,6 +33,13 @@ public class CommitMessages {
 
     private String tagHotfixMessage;
     private String tagReleaseMessage;
+    /**
+     * An optional pattern for merge commit messages.
+     * May contain the placeholder @{message} that will be replaced with the
+     * original commit message.
+     * Other placeholders will be looked up in the project properties.
+     */
+	private String mergeMessagePattern;
 
     public CommitMessages() {
         featureStartMessage = "updating versions for feature branch";
@@ -46,6 +53,8 @@ public class CommitMessages {
 
         tagHotfixMessage = "tagging hotfix";
         tagReleaseMessage = "tagging release";
+
+        mergeMessagePattern = null;
     }
 
     /**
@@ -166,5 +175,19 @@ public class CommitMessages {
      */
     public void setTagReleaseMessage(String tagReleaseMessage) {
         this.tagReleaseMessage = tagReleaseMessage;
+    }
+
+    /**
+     * @return the mergeMessagePattern
+     */
+    public String getMergeMessagePattern() {
+        return mergeMessagePattern;
+    }
+
+    /**
+     * @param aMergeMessagePattern the mergeMessagePattern to set
+     */
+    public void setMergeMessagePattern(String aMergeMessagePattern) {
+        mergeMessagePattern = aMergeMessagePattern;
     }
 }
