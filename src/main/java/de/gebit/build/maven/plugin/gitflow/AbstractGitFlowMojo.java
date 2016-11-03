@@ -511,12 +511,6 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                     executeGitCommand("commit", "--amend", "-m", tempCommitMessage);
                 }
             }
-            if (featureNamePattern != null) {
-                Matcher m = Pattern.compile(featureNamePattern).matcher(tempCommitMessage);
-                if (!m.matches()) {
-                    throw new MojoFailureException("Commit does not pass message verification: " + tempCommitMessage);
-                }
-            }
         }
     }
 
