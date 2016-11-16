@@ -168,6 +168,15 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     private boolean printReleaseOutput;
 
     /**
+     * When set to <code>true</code> before checking for local changes a `git status` will be performed. This way
+     * any non-real changes (CRLF) will be reconciled.
+     * 
+     * @since 1.3.6
+     */
+    @Parameter(property = "statusBeforeCheck", required = false, defaultValue = "false")
+    private boolean statusBeforeCheck;
+
+    /**
      * Whether to print commands output into the console.
      * 
      * @since 1.0.7
@@ -294,6 +303,10 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             CommandLineException {
         boolean uncommited = false;
 
+        if (statusBeforeCheck) {
+            // issue a git status first which reconciles any pseudo-changes (CRLF)
+            executeGitCommand("status");
+        }
         // 1 if there were differences and 0 means no differences
 
         // git diff --no-ext-diff --ignore-submodules --quiet --exit-code
