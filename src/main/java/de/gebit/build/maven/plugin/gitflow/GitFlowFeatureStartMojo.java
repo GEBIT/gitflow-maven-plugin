@@ -18,6 +18,8 @@ package de.gebit.build.maven.plugin.gitflow;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -137,10 +139,32 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
 
                 String version = null;
                 try {
+                    String featureIssue = featureName;
+                    if (featureNamePattern != null) {
+                        // extract the issue number only
+                        Matcher m = Pattern.compile(featureNamePattern).matcher(featureName);
+                        if (!m.matches()) {
+                            // retry with prefixe removed
+                            if (featureName.startsWith(gitFlowConfig.getFeatureBranchPrefix())) {
+                                m = Pattern.compile(featureNamePattern).matcher(
+                                        featureName.substring(gitFlowConfig.getFeatureBranchPrefix().length()));
+                            }
+                            if (!m.matches()) {
+                                getLog().warn(
+                                        "Feature branch does not conform to <featureNamePattern> specified, cannot extract issue number.");
+                            }
+                        } else if (m.groupCount() == 0){
+                            getLog().warn(
+                                    "Feature branch conforms to <featureNamePattern>, but ther is no matching group to extract the issue number.");
+                        } else {
+                            featureIssue = m.group(1);
+                        }
+                    }
+                    
                     final DefaultVersionInfo versionInfo = new DefaultVersionInfo(
                             currentVersion);
                     version = versionInfo.getReleaseVersionString() + "-"
-                            + featureName + "-" + Artifact.SNAPSHOT_VERSION;
+                            + featureIssue + "-" + Artifact.SNAPSHOT_VERSION;
                 } catch (VersionParseException e) {
                     if (getLog().isDebugEnabled()) {
                         getLog().debug(e);
