@@ -714,6 +714,21 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
+     * Returns <code>true</code> if the given branch exists on the configured origin remote.
+	 * @param aFeatureBranch
+	 * @return
+     * @throws CommandLineException
+     * @throws MojoFailureException
+	 */
+	protected boolean hasRemoteBranch(String aBranch) throws MojoFailureException, CommandLineException {
+		String tempResult = executeGitCommandReturn("ls-remote", "--heads", gitFlowConfig.getOrigin(), aBranch);
+		if (tempResult != null && tempResult.trim().endsWith(aBranch)) {
+			return true;
+		}
+		return false;
+	}
+
+	/**
      * Execute git rev-list [branchPoint]..[branchName] --merges to check whether there are merge commits in the given feature branch 
      * from the given branch point. This is useful to determine if a rebase can be done. 
      * 
@@ -761,7 +776,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Executes git push [origin] --delete <branch_name>.
+     * Checks if the given branch exists on the configure origin remote,
+     * and if so, executes git push [origin] --delete <branch_name>.
      * 
      * @param branchName
      *            Branch name to delete.
@@ -772,7 +788,9 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             throws MojoFailureException, CommandLineException {
         getLog().info("Deleting '" + branchName + "' branch on remote.");
 
-        executeGitCommand("push", gitFlowConfig.getOrigin(), "--delete", branchName);
+        if (hasRemoteBranch(branchName)) {
+            executeGitCommand("push", gitFlowConfig.getOrigin(), "--delete", branchName);
+        }
     }
 
     /**
