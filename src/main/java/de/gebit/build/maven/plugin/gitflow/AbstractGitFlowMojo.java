@@ -18,6 +18,7 @@ package de.gebit.build.maven.plugin.gitflow;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.text.MessageFormat;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -506,42 +507,60 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             getLog().info("Rebasing '" + branchName + "' branch.");
             executeGitCommand("rebase", branchName);
         } else {
-            String tempCommitHash = getHeadCommitHash();
+            String tempMergeCommitMessage = getMergeMessageFor(branchName, gitCurrentBranch());
+
             if (noff) {
                 getLog().info("Merging (--no-ff) '" + branchName + "' branch.");
-                executeGitCommand("merge", "--no-ff", branchName);
+                executeGitCommand("merge", "--no-ff", "-m", tempMergeCommitMessage, branchName);
             } else {
                 getLog().info("Merging '" + branchName + "' branch.");
-                executeGitCommand("merge", branchName);
+                executeGitCommand("merge", "-m", tempMergeCommitMessage, branchName);
             }
+        }
+    }
 
-            // fix up the commit message, if necessary
-            // but only do it if the merge actually did something
-            String tempNextCommitHash = getHeadCommitHash();
-            if (!tempCommitHash.equals(tempNextCommitHash)) {
-                String tempCommitMessage = getHeadCommitMessage();
-                if (commitMessages.getMergeMessagePattern() != null) {
-                    Map<String,String> tempReplacements = new HashMap<String, String>();
-                    tempReplacements.put("message", tempCommitMessage);
-                    String tempNewMessage = substituteStrings(commitMessages.getMergeMessagePattern(), tempReplacements);
-                    if (tempNewMessage != null && !tempNewMessage.equals(tempCommitMessage)) {
-                        tempCommitMessage = tempNewMessage;
-                        executeGitCommand("commit", "--amend", "-m", tempCommitMessage);
-                    }
-                }
+    /**
+     * @param aBranchName
+     * @param aCurrentBranchName
+     * @return
+     * @throws MojoFailureException
+     */
+    private String getMergeMessageFor(String aBranchName, String aCurrentBranchName) throws MojoFailureException {
+        String tempCommitMessage = getDefaultMergeMessageFor(aBranchName, aCurrentBranchName);
+
+        if (commitMessages.getMergeMessagePattern() != null) {
+            Map<String,String> tempReplacements = new HashMap<String, String>();
+            tempReplacements.put("message", tempCommitMessage);
+            String tempNewMessage = substituteStrings(commitMessages.getMergeMessagePattern(), tempReplacements);
+            if (tempNewMessage != null) {
+                tempCommitMessage = tempNewMessage;
             }
+        }
+        return tempCommitMessage;
+    }
+
+    /**
+     * Returns the default commit message to use for merging a branch into another one.
+     * @param aBranchToMerge the branch to merge
+     * @param aCurrentBranchName the branch to merge into
+     */
+    private String getDefaultMergeMessageFor(String aBranchToMerge, String aCurrentBranchName) {
+        if ("master".equals(aCurrentBranchName)) {
+            return MessageFormat.format("Merge branch \"{0}\"", aBranchToMerge);
+        } else {
+            return MessageFormat.format("Merge branch \"{0}\" into {1}", aBranchToMerge, aCurrentBranchName);
         }
     }
 
     /**
      * Returns the commit hash of the top-most commit in the current branch.
      * If there is no commit, an exception is thrown.
-	 * @return the commit hash of the top-most commit in the current branch
+     * @return the commit hash of the top-most commit in the current branch
      * @throws CommandLineException
      * @throws MojoFailureException
-	 */
-	private String getHeadCommitHash() throws MojoFailureException, CommandLineException {
-		return executeGitCommandReturn("log", "--format=%H", "-n", "1").trim();
+     */
+    private String getHeadCommitHash() throws MojoFailureException, CommandLineException {
+        return executeGitCommandReturn("log", "--format=%H", "-n", "1").trim();
     }
 
     /**
@@ -601,7 +620,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     
     /**
      * Executes git symbolic-ref --short HEAD to get the current branch.
-     * 		
+     * Throws an exception when in detached HEAD state.
+     *
      * @throws MojoFailureException
      * @throws CommandLineException
      */
@@ -616,7 +636,6 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * 
      * @param tagPrefix
      *            Prefix of release tags.
-     * 		
      * @throws MojoFailureException
      * @throws CommandLineException
      */
