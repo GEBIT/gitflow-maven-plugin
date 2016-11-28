@@ -36,8 +36,8 @@ import org.codehaus.plexus.util.cli.CommandLineException;
 public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
 
     /** Whether to keep feature branch after finish. */
-    @Parameter(property = "keepBranch", defaultValue = "false")
-    private boolean keepBranch = false;
+    @Parameter(property = "keepFeatureBranch", defaultValue = "false")
+    private boolean keepFeatureBranch = false;
 
     /**
      * Whether to skip calling Maven test goal before merging the branch.
@@ -176,7 +176,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
                 mvnCleanInstall();
             }
 
-            if (!keepBranch) {
+            if (!keepFeatureBranch) {
                 if (featureSquash) {
                     // git branch -D feature/...
                     gitBranchDeleteForce(featureBranchName);
