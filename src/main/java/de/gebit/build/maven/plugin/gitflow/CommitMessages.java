@@ -33,6 +33,9 @@ public class CommitMessages {
 
     private String tagHotfixMessage;
     private String tagReleaseMessage;
+
+    private String supportStartMessage;
+
     /**
      * An optional pattern for merge commit messages.
      * May contain the placeholder @{message} that will be replaced with the
@@ -53,6 +56,8 @@ public class CommitMessages {
 
         tagHotfixMessage = "tagging hotfix";
         tagReleaseMessage = "tagging release";
+
+        supportStartMessage = "updating versions for support branch";
 
         mergeMessagePattern = null;
     }
@@ -175,6 +180,21 @@ public class CommitMessages {
      */
     public void setTagReleaseMessage(String tagReleaseMessage) {
         this.tagReleaseMessage = tagReleaseMessage;
+    }
+
+    /**
+     * @return the supportStartMessage
+     */
+    public String getSupportStartMessage() {
+        return supportStartMessage;
+    }
+
+    /**
+     * @param supportStartMessage
+     *            the supportStartMessage to set
+     */
+    public void setSupportStartMessage(String supportStartMessage) {
+        this.supportStartMessage = supportStartMessage;
     }
 
     /**

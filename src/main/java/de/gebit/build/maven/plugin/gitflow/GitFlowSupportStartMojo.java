@@ -180,7 +180,7 @@ public class GitFlowSupportStartMojo extends AbstractGitFlowMojo {
             mvnSetVersions(branchFirstVersion);
 
             // git commit -a -m updating poms for support
-            gitCommit("updating poms for support");
+            gitCommit(commitMessages.getSupportStartMessage());
 
             if (installProject) {
                 // mvn clean install
