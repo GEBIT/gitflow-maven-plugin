@@ -280,6 +280,34 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         }
     }
 
+    /**
+     * If a maintenance release is performed we need to look for the maintenance branch instead of the development 
+     * branch.
+     */
+    protected String getDevelopmentBranchForRelease() throws MojoFailureException, 
+        CommandLineException {
+        getLog().info("Checking for development branch changes.");
+        String log = executeGitCommandReturn("--no-pager", "log", "--branches", "--source", "--oneline").trim();
+        String[] commits = org.apache.commons.lang3.StringUtils.split(log, '\n');
+        for (int i=0; i<commits.length; ++i) {
+            String[] logline = org.apache.commons.lang3.StringUtils.split(commits[i], '\t');
+            if (logline.length > 1) {
+                // read branch name
+                int b = logline[1].indexOf(' ');
+                String branch = logline[1];
+                if (b >= 0) {
+                    branch = branch.substring(0, b);
+                }
+                getLog().debug("Commit " + logline[0] + " on branch '" + branch + "'");
+                if (!branch.startsWith(gitFlowConfig.getReleaseBranchPrefix())) {
+                    // the first non-release branch we find is development or a support branch
+                    return branch;
+                }
+            }
+        }
+        return gitFlowConfig.getDevelopmentBranch();
+    }
+
     @SuppressWarnings("unchecked")
     protected void checkSnapshotDependencies() throws MojoFailureException {
         getLog().info("Checking for SNAPSHOT versions in dependencies.");

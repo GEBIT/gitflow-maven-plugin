@@ -109,17 +109,20 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowMojo {
             }
 
             // fetch and check remote
+            String branch = getDevelopmentBranchForRelease();
+            boolean releaseOnSupportBranch = branch.startsWith(gitFlowConfig.getSupportBranchPrefix());  
             if (fetchRemote) {
-                gitFetchRemoteAndCompare(gitFlowConfig.getDevelopmentBranch());
-                if (!gitFlowConfig.isNoProduction()) {
+                gitFetchRemoteAndCompare(branch);
+                if (!releaseOnSupportBranch && !gitFlowConfig.isNoProduction()) {
                     gitFetchRemoteAndCompare(gitFlowConfig.getProductionBranch());
                 }
             }
 
             if (!skipTestProject) {
-                // git checkout release/...
-                gitCheckout(releaseBranch);
-
+                if (!releaseOnSupportBranch) {
+                    // git checkout release/...
+                    gitCheckout(releaseBranch);
+                }
                 // mvn clean test
                 mvnCleanTest();
             }
@@ -130,8 +133,8 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowMojo {
             }
 
             // git checkout master
-            gitCheckout(gitFlowConfig.isNoProduction() ? 
-        	    gitFlowConfig.getDevelopmentBranch() : gitFlowConfig.getProductionBranch());
+            gitCheckout(releaseOnSupportBranch || gitFlowConfig.isNoProduction() ? 
+        	    branch : gitFlowConfig.getProductionBranch());
 
             gitMerge(releaseBranch, releaseRebase, releaseMergeNoFF);
 
@@ -148,13 +151,6 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowMojo {
                 // git tag -a ...
                 gitTag(gitFlowConfig.getVersionTagPrefix() + tagVersion,
                         commitMessages.getTagReleaseMessage());
-            }
-
-            if (gitFlowConfig.isNoProduction()) {
-                // git checkout develop
-                gitCheckout(gitFlowConfig.getDevelopmentBranch());
-
-                gitMerge(releaseBranch, releaseRebase, releaseMergeNoFF);
             }
 
             String nextSnapshotVersion = null;
@@ -192,10 +188,10 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowMojo {
             }
 
             if (pushRemote) {
-                if (!gitFlowConfig.isNoProduction()) {
+                if (!releaseOnSupportBranch && !gitFlowConfig.isNoProduction()) {
                     gitPush(gitFlowConfig.getProductionBranch(), !skipTag);
                 }
-                gitPush(gitFlowConfig.getDevelopmentBranch(), !skipTag);
+                gitPush(branch, !skipTag);
             }
         } catch (CommandLineException e) {
             getLog().error(e);

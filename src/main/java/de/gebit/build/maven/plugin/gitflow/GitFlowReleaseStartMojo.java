@@ -64,23 +64,29 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowMojo {
                 checkSnapshotDependencies();
             }
 
-            // git for-each-ref --count=1 refs/heads/release/*
-            final String releaseBranch = gitFindBranches(
-                    gitFlowConfig.getReleaseBranchPrefix(), true);
-
-            if (StringUtils.isNotBlank(releaseBranch)) {
-                throw new MojoFailureException(
-                        "Release branch already exists. Cannot start release.");
+            String currentBranch = gitCurrentBranch();
+            boolean releaseOnSupportBranch = currentBranch.startsWith(gitFlowConfig.getSupportBranchPrefix()); 
+            if (releaseOnSupportBranch) {
+                gitFetchRemoteAndCompare(currentBranch);
+            } else {
+                // git for-each-ref --count=1 refs/heads/release/*
+                final String releaseBranch = gitFindBranches(
+                        gitFlowConfig.getReleaseBranchPrefix(), true);
+    
+                if (StringUtils.isNotBlank(releaseBranch)) {
+                    throw new MojoFailureException(
+                            "Release branch already exists. Cannot start release.");
+                }
+    
+                // fetch and check remote
+                if (fetchRemote) {
+                    gitFetchRemoteAndCompare(gitFlowConfig.getDevelopmentBranch());
+                }
+    
+                // need to be in develop to get correct project version
+                // git checkout develop
+                gitCheckout(gitFlowConfig.getDevelopmentBranch());
             }
-
-            // fetch and check remote
-            if (fetchRemote) {
-                gitFetchRemoteAndCompare(gitFlowConfig.getDevelopmentBranch());
-            }
-
-            // need to be in develop to get correct project version
-            // git checkout develop
-            gitCheckout(gitFlowConfig.getDevelopmentBranch());
 
             // get current project version from pom
             final String currentVersion = getCurrentProjectVersion();
@@ -126,8 +132,7 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowMojo {
             }
 
             // git checkout -b release/... develop
-            gitCreateAndCheckout(branchName,
-                    gitFlowConfig.getDevelopmentBranch());
+            gitCreateAndCheckout(branchName, releaseOnSupportBranch ? currentBranch : gitFlowConfig.getDevelopmentBranch());
 
             // execute if version changed
             if (!version.equals(currentVersion)) {
