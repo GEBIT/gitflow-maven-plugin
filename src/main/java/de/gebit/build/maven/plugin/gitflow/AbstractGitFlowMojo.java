@@ -186,6 +186,14 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     private boolean verbose = false;
 
     /**
+     * Optional list of properties that if present on the invocation will be passed to forked mvn invocations.
+     * 
+     * @since 1.3.9
+     */
+    @Parameter(property = "copyProperties", required = false)
+    private String[] copyProperties;
+
+    /**
      * The path to the Maven executable. Defaults to "mvn".
      */
     @Parameter(property = "mvnExecutable")
@@ -1149,6 +1157,17 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             System.arraycopy(args, 0, effectiveArgs, 2, args.length);
         } else {
             effectiveArgs = args;
+        }
+        if (copyProperties != null) {
+            for (String userProperty : copyProperties) {
+                if (session.getRequest().getUserProperties().containsKey(userProperty)) {
+                    String[] newEffectiveArgs = new String[effectiveArgs.length + 1];
+                    System.arraycopy(effectiveArgs, 0, newEffectiveArgs, 0, effectiveArgs.length);
+                    newEffectiveArgs[effectiveArgs.length] = "-D" + userProperty + "=" 
+                            + CommandLineUtils.quote((String) session.getRequest().getUserProperties().get(userProperty));
+                    effectiveArgs = newEffectiveArgs;
+                }
+            }
         }
 
         if (copyOutput) {
