@@ -74,12 +74,14 @@ public class GitFlowReleaseMojo extends AbstractGitFlowMojo {
     private boolean releaseMergeNoFF = true;
 
     /**
-     * Goals to perform on release, before tagging and pushing. A useful combination is <code>deploy site</code>.
+     * Goals to perform on release, before tagging and pushing. A useful combination is <code>deploy site</code>. You
+     * may specifify multiple entries, they are perfored 
      * 
      * @since 1.3.0
+     * @since 1.3.9 you can specify multiple entries
      */
     @Parameter(property = "releaseGoals", defaultValue = "${releaseGoals}")
-    private String releaseGoals;
+    private String[] releaseGoals;
 
     /** {@inheritDoc} */
     @Override
@@ -177,7 +179,9 @@ public class GitFlowReleaseMojo extends AbstractGitFlowMojo {
 
             // perform the release goals
             if (!skipDeployProject && releaseGoals != null) {
-                mvnGoals(releaseGoals);
+                for (String goals : releaseGoals) {
+                    mvnGoals(goals);
+                }
             }
 
             // git checkout master
