@@ -86,6 +86,17 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowMojo {
     @Parameter(property = "releaseGoals", defaultValue = "${releaseGoals}")
     private String[] releaseGoals;
 
+    /**
+     * Version to set for the next development iteration. If not specified you
+     * will be asked for the version (in interactive mode), in batch mode the
+     * default will be used (current version with stripped SNAPSHOT incremented
+     * and SNAPSHOT added).
+     * 
+     * @since 1.3.10
+     */
+    @Parameter(property = "developmentVersion", required = false)
+    private String developmentVersion;
+
     /** {@inheritDoc} */
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
@@ -142,32 +153,36 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowMojo {
 
             gitMerge(releaseBranch, releaseRebase, releaseMergeNoFF);
 
-            // get current project version from pom
-            final String currentVersion = getCurrentProjectVersion();
-
-            if (!skipTag) {
-                String tagVersion = currentVersion;
-                if (tychoBuild && ArtifactUtils.isSnapshot(currentVersion)) {
-                    tagVersion = currentVersion.replace("-"
-                            + Artifact.SNAPSHOT_VERSION, "");
-                }
-
-                // git tag -a ...
-                gitTag(gitFlowConfig.getVersionTagPrefix() + tagVersion,
-                        commitMessages.getTagReleaseMessage());
-            }
-
             String nextSnapshotVersion = null;
-            // get next snapshot version
-            try {
-                final DefaultVersionInfo versionInfo = new DefaultVersionInfo(
-                        currentVersion);
-                nextSnapshotVersion = versionInfo.getNextVersion()
-                        .getSnapshotVersionString();
-            } catch (VersionParseException e) {
-                if (getLog().isDebugEnabled()) {
-                    getLog().debug(e);
+            if (developmentVersion == null) {
+                // get current project version from pom
+                final String currentVersion = getCurrentProjectVersion();
+    
+                if (!skipTag) {
+                    String tagVersion = currentVersion;
+                    if (tychoBuild && ArtifactUtils.isSnapshot(currentVersion)) {
+                        tagVersion = currentVersion.replace("-"
+                                + Artifact.SNAPSHOT_VERSION, "");
+                    }
+    
+                    // git tag -a ...
+                    gitTag(gitFlowConfig.getVersionTagPrefix() + tagVersion,
+                            commitMessages.getTagReleaseMessage());
                 }
+    
+                // get next snapshot version
+                try {
+                    final DefaultVersionInfo versionInfo = new DefaultVersionInfo(
+                            currentVersion);
+                    nextSnapshotVersion = versionInfo.getNextVersion()
+                            .getSnapshotVersionString();
+                } catch (VersionParseException e) {
+                    if (getLog().isDebugEnabled()) {
+                        getLog().debug(e);
+                    }
+                }
+            } else {
+                nextSnapshotVersion = developmentVersion;
             }
 
             if (StringUtils.isBlank(nextSnapshotVersion)) {

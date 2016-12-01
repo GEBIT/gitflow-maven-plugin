@@ -83,6 +83,27 @@ public class GitFlowReleaseMojo extends AbstractGitFlowMojo {
     @Parameter(property = "releaseGoals", defaultValue = "${releaseGoals}")
     private String[] releaseGoals;
 
+    /**
+     * Version to set for the next development iteration. If not specified you
+     * will be asked for the version (in interactive mode), in batch mode the
+     * default will be used (current version with stripped SNAPSHOT incremented
+     * and SNAPSHOT added).
+     * 
+     * @since 1.3.10
+     */
+    @Parameter(property = "developmentVersion", required = false)
+    private String developmentVersion;
+
+    /**
+     * Version to set for the release. If not specified you will be asked for
+     * the version (in interactive mode), in batch mode the default will be used
+     * (current version with stripped SNAPSHOT).
+     * 
+     * @since 1.3.10
+     */
+    @Parameter(property = "releaseVersion", required = false)
+    private String releaseVersion;
+
     /** {@inheritDoc} */
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
@@ -133,39 +154,43 @@ public class GitFlowReleaseMojo extends AbstractGitFlowMojo {
             // get current project version from pom
             final String currentVersion = getCurrentProjectVersion();
 
-            String defaultVersion = null;
-            if (tychoBuild) {
-                defaultVersion = currentVersion;
-            } else {
-                // get default release version
-                try {
-                    final DefaultVersionInfo versionInfo = new DefaultVersionInfo(
-                            currentVersion);
-                    defaultVersion = versionInfo.getReleaseVersionString();
-                } catch (VersionParseException e) {
-                    if (getLog().isDebugEnabled()) {
-                        getLog().debug(e);
+            String version = null;
+            if (releaseVersion == null) {
+                String defaultVersion = null;
+                if (tychoBuild) {
+                    defaultVersion = currentVersion;
+                } else {
+                    // get default release version
+                    try {
+                        final DefaultVersionInfo versionInfo = new DefaultVersionInfo(
+                                currentVersion);
+                        defaultVersion = versionInfo.getReleaseVersionString();
+                    } catch (VersionParseException e) {
+                        if (getLog().isDebugEnabled()) {
+                            getLog().debug(e);
+                        }
                     }
                 }
-            }
-
-            if (defaultVersion == null) {
-                throw new MojoFailureException(
-                        "Cannot get default project version.");
-            }
-
-            String version = null;
-            if (settings.isInteractiveMode()) {
-                try {
-                    version = prompter.prompt("What is release version? ["
-                            + defaultVersion + "]");
-                } catch (PrompterException e) {
-                    getLog().error(e);
+    
+                if (defaultVersion == null) {
+                    throw new MojoFailureException(
+                            "Cannot get default project version.");
                 }
-            }
-
-            if (StringUtils.isBlank(version)) {
-                version = defaultVersion;
+    
+                if (settings.isInteractiveMode()) {
+                    try {
+                        version = prompter.prompt("What is release version? ["
+                                + defaultVersion + "]");
+                    } catch (PrompterException e) {
+                        getLog().error(e);
+                    }
+                }
+    
+                if (StringUtils.isBlank(version)) {
+                    version = defaultVersion;
+                }
+            } else {
+                version = releaseVersion;
             }
 
             // execute if version changed
@@ -210,16 +235,20 @@ public class GitFlowReleaseMojo extends AbstractGitFlowMojo {
             }
 
             String nextSnapshotVersion = null;
-            // get next snapshot version
-            try {
-                final DefaultVersionInfo versionInfo = new DefaultVersionInfo(
-                        version);
-                nextSnapshotVersion = versionInfo.getNextVersion()
-                        .getSnapshotVersionString();
-            } catch (VersionParseException e) {
-                if (getLog().isDebugEnabled()) {
-                    getLog().debug(e);
+            if (developmentVersion == null) {
+                // get next snapshot version
+                try {
+                    final DefaultVersionInfo versionInfo = new DefaultVersionInfo(
+                            version);
+                    nextSnapshotVersion = versionInfo.getNextVersion()
+                            .getSnapshotVersionString();
+                } catch (VersionParseException e) {
+                    if (getLog().isDebugEnabled()) {
+                        getLog().debug(e);
+                    }
                 }
+            } else {
+                nextSnapshotVersion = developmentVersion;
             }
 
             if (StringUtils.isBlank(nextSnapshotVersion)) {
