@@ -104,6 +104,19 @@ public class GitFlowReleaseMojo extends AbstractGitFlowMojo {
     @Parameter(property = "releaseVersion", required = false)
     private String releaseVersion;
 
+    /**
+     * When you are releasing using a CI infrastructure the actual deployment might be suppressed until the task
+     * is finished (to make sure every module is deployable). But at this point your checkout is already in the state
+     * for the next development version. Enable this option to checkout the release commit after finishing, which will
+     * result in a detached HEAD (you are on no branch then).
+     * 
+     * Note that this option implies installProject=false, as otherwise the build artifacts could not be preserved.
+     * 
+     * @since 1.3.11
+     */
+    @Parameter(property = "detachReleaseCommit", required = false, defaultValue = "false")
+    private boolean detachReleaseCommit; 
+
     /** {@inheritDoc} */
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
@@ -229,6 +242,8 @@ public class GitFlowReleaseMojo extends AbstractGitFlowMojo {
                         commitMessages.getTagReleaseMessage());
             }
 
+            String releaseCommit = getCurrentCommit();
+
             // git checkout develop
             if (!gitFlowConfig.isNoProduction()) {
         	gitCheckout(gitFlowConfig.getDevelopmentBranch());
@@ -262,7 +277,7 @@ public class GitFlowReleaseMojo extends AbstractGitFlowMojo {
             // git commit -a -m updating for next development version
             gitCommit(commitMessages.getReleaseFinishMessage());
 
-            if (installProject) {
+            if (!detachReleaseCommit && installProject) {
                 // mvn clean install
                 mvnCleanInstall();
             }
@@ -276,6 +291,10 @@ public class GitFlowReleaseMojo extends AbstractGitFlowMojo {
                     }
                     gitPush(gitFlowConfig.getDevelopmentBranch(), !skipTag);
                 }
+            }
+            if (detachReleaseCommit) {
+                // make sure we leave the workspace in the state as released
+                gitCheckout(releaseCommit);
             }
         } catch (CommandLineException e) {
             getLog().error(e);

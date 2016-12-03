@@ -466,7 +466,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * Executes git checkout.
      * 
      * @param branchName
-     *            Branch name to checkout.
+     *            Branch name to checkout. You can give a commit id, too. In this case you will end up with a detached
+     *            HEAD.
      * @throws MojoFailureException
      * @throws CommandLineException
      */
@@ -967,6 +968,20 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             throw new MojoFailureException("Rebasing branch is not a feature branch: " + branchRef);
         }
         return tempBranchName;
+    }
+
+    /**
+     * Get the current commit ID.
+     * @return commit id of the current commit.
+     */
+    protected String getCurrentCommit() throws MojoFailureException {
+        try {
+            return executeGitCommandReturn("rev-parse", "HEAD");
+        } catch (MojoFailureException exc) {
+            throw exc;
+        } catch (CommandLineException exc) {
+            throw new MojoFailureException("Failed to get the current commit ID.", exc);
+        }
     }
 
     /**
