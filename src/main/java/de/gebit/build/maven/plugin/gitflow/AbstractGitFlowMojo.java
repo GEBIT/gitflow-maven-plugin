@@ -26,6 +26,12 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.configuration2.Configuration;
+import org.apache.commons.configuration2.FileBasedConfiguration;
+import org.apache.commons.configuration2.PropertiesConfiguration;
+import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder;
+import org.apache.commons.configuration2.builder.fluent.Parameters;
+import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.text.StrLookup;
 import org.apache.commons.lang3.text.StrSubstitutor;
@@ -46,6 +52,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
 import org.codehaus.plexus.util.cli.CommandLineUtils;
 import org.codehaus.plexus.util.cli.Commandline;
 import org.codehaus.plexus.util.cli.StreamConsumer;
+import org.codehaus.plexus.util.cli.shell.Shell;
 
 /**
  * Abstract git flow mojo.
@@ -1021,6 +1028,92 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     protected void gitRebaseContinue()
             throws MojoFailureException, CommandLineException {
         executeGitCommand("rebase", "--continue");
+    }
+
+    /**
+     * Checkout the branch configuration as a separate worktree. Needs git 2.5+
+     * 
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitBranchConfigWorktree(final String branchName, final String configBranchName, 
+                final String configBranchDir, final String propertyName, final String propertyValue)
+            throws MojoFailureException, CommandLineException {
+        getLog().info("Creating new worktree for branch configuration.");
+        
+        // clean worktree target directory
+        File branchConfigWorktree = new File(configBranchDir);
+        if (branchConfigWorktree.exists()) {
+            try {
+                FileUtils.deleteDirectory(branchConfigWorktree);
+            } catch (IOException ex) {
+                throw new MojoFailureException("Failed to cleanup worktree '" + branchConfigWorktree + "'", ex);
+            }
+        }
+
+        // get rid of stale worktrees
+        executeGitCommand("worktree", "prune");
+
+        Commandline worktreeCmd = new Commandline();
+        worktreeCmd.setExecutable(cmdGit.getExecutable());
+        worktreeCmd.setWorkingDirectory(branchConfigWorktree);
+
+        if (hasRemoteBranch(configBranchName)) {
+            // configuration branch already exists, just create the worktree
+            executeGitCommand("worktree", "add", "-B", configBranchName, configBranchDir, gitFlowConfig.getOrigin() + "/" + configBranchName);
+        } else {
+            // need to create the branch correctly
+            executeGitCommand("worktree", "add", "--no-checkout", "--detach", configBranchDir);
+
+            executeCommand(worktreeCmd, true, "checkout", "--orphan", configBranchName);
+            executeCommand(worktreeCmd, true, "reset", "--hard");
+            executeCommand(worktreeCmd, true, "commit", "--allow-empty", "-m", commitMessages.getBranchConfigMessage());
+            
+            executeCommand(worktreeCmd, true, "push", "--set-upstream", gitFlowConfig.getOrigin(), configBranchName);
+        }
+
+        // now we're ready to actually set a property. 
+        File branchPropertyFile = new File(branchConfigWorktree, branchName);
+        
+        Parameters params = new Parameters();
+        FileBasedConfigurationBuilder<FileBasedConfiguration> builder =
+            new FileBasedConfigurationBuilder<FileBasedConfiguration>(PropertiesConfiguration.class)
+            .configure(params.properties()
+            .setThrowExceptionOnMissing(false));
+        if (branchPropertyFile.exists()) {
+            // only set if existing at this point
+            builder.getFileHandler().setFile(branchPropertyFile);
+        }
+        try
+        {
+            Configuration config = builder.getConfiguration();
+            if (StringUtils.isEmpty(propertyValue)) {
+                config.clearProperty(propertyName);
+            } else {
+                config.setProperty(propertyName, propertyValue);
+            }
+            builder.getFileHandler().setFile(branchPropertyFile);
+            builder.save();
+        }
+        catch(ConfigurationException cex)
+        {
+            throw new MojoFailureException("Failed to change branch property '" + propertyName + "'", cex); 
+        }
+
+        // now commit the change and push it
+        executeCommand(worktreeCmd, true, "add", branchName);
+        executeCommand(worktreeCmd, true, "commit", "-m", commitMessages.getBranchConfigMessage());
+        executeCommand(worktreeCmd, true, "push");
+
+        // clean up
+        try {
+            FileUtils.deleteDirectory(branchConfigWorktree);
+        } catch (IOException ex) {
+            getLog().debug("Failed to cleanup worktree", ex);
+        }
+
+        // get rid of stale worktrees
+        executeGitCommand("worktree", "prune");
     }
 
     /**

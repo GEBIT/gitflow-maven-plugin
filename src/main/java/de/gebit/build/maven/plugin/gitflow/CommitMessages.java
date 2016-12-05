@@ -35,6 +35,7 @@ public class CommitMessages {
     private String tagReleaseMessage;
 
     private String supportStartMessage;
+    private String branchConfigMessage;
 
     /**
      * An optional pattern for merge commit messages.
@@ -42,7 +43,7 @@ public class CommitMessages {
      * original commit message.
      * Other placeholders will be looked up in the project properties.
      */
-	private String mergeMessagePattern;
+    private String mergeMessagePattern;
 
     public CommitMessages() {
         featureStartMessage = "updating versions for feature branch";
@@ -58,6 +59,7 @@ public class CommitMessages {
         tagReleaseMessage = "tagging release";
 
         supportStartMessage = "updating versions for support branch";
+        branchConfigMessage = "changed branch configuration";
 
         mergeMessagePattern = null;
     }
@@ -195,6 +197,21 @@ public class CommitMessages {
      */
     public void setSupportStartMessage(String supportStartMessage) {
         this.supportStartMessage = supportStartMessage;
+    }
+    
+    /**
+     * @return the branchConfigMessage
+     */
+    public String getBranchConfigMessage() {
+        return branchConfigMessage;
+    }
+    
+    /**
+     * @param branchConfigMessage
+     *            the branchConfigMessage to set
+     */
+    public void setBranchConfigMessage(String branchConfigMessage) {
+        this.branchConfigMessage = branchConfigMessage;
     }
 
     /**
