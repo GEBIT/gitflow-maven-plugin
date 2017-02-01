@@ -52,9 +52,10 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowMojo {
     private boolean skipTestProject = false;
 
     /**
-     * Whether to skip calling Maven release goals before releasing.
+     * Whether to skip calling Maven deploy if it is part of the release goals.
      * 
      * @since 1.3.0
+     * @since 1.4.1
      */
     @Parameter(property = "skipDeployProject", defaultValue = "false")
     private boolean skipDeployProject = false;
@@ -154,8 +155,14 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowMojo {
             }
 
             // perform the release goals
-            if (!skipDeployProject && releaseGoals != null) {
+            if (releaseGoals != null) {
                 for (String goals : releaseGoals) {
+                    if (skipDeployProject) {
+                        goals = goals.replaceAll("(?:^|\\s+)deploy(?:$|\\s+)", " ").trim();
+                        if (goals.isEmpty()) {
+                            continue;
+                        }
+                    }
                     mvnGoals(goals);
                 }
             }
