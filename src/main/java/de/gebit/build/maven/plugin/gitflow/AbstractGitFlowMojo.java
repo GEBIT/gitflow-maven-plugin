@@ -1102,8 +1102,13 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
         // now commit the change and push it
         executeCommand(worktreeCmd, true, "add", branchName);
-        executeCommand(worktreeCmd, true, "commit", "-m", commitMessages.getBranchConfigMessage());
-        executeCommand(worktreeCmd, true, "push");
+        CommandResult result = executeCommand(worktreeCmd, false, "commit", "-m", commitMessages.getBranchConfigMessage());
+        if (result.exitCode == SUCCESS_EXIT_CODE) {
+            // push the change 
+            executeCommand(worktreeCmd, true, "push");
+        } else {
+            getLog().info("No changes detected.");
+        }
 
         // clean up
         try {
