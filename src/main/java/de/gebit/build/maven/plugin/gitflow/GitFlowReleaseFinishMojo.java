@@ -175,23 +175,22 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowMojo {
 
             String releaseCommit = getCurrentCommit();
 
+            // get current project version from pom
+            final String currentVersion = getCurrentProjectVersion();
+            if (!skipTag) {
+                String tagVersion = currentVersion;
+                if (tychoBuild && ArtifactUtils.isSnapshot(currentVersion)) {
+                    tagVersion = currentVersion.replace("-"
+                            + Artifact.SNAPSHOT_VERSION, "");
+                }
+
+                // git tag -a ...
+                gitTag(gitFlowConfig.getVersionTagPrefix() + tagVersion,
+                        commitMessages.getTagReleaseMessage());
+            }
+
             String nextSnapshotVersion = null;
             if (developmentVersion == null) {
-                // get current project version from pom
-                final String currentVersion = getCurrentProjectVersion();
-    
-                if (!skipTag) {
-                    String tagVersion = currentVersion;
-                    if (tychoBuild && ArtifactUtils.isSnapshot(currentVersion)) {
-                        tagVersion = currentVersion.replace("-"
-                                + Artifact.SNAPSHOT_VERSION, "");
-                    }
-    
-                    // git tag -a ...
-                    gitTag(gitFlowConfig.getVersionTagPrefix() + tagVersion,
-                            commitMessages.getTagReleaseMessage());
-                }
-    
                 // get next snapshot version
                 try {
                     final DefaultVersionInfo versionInfo = new DefaultVersionInfo(
