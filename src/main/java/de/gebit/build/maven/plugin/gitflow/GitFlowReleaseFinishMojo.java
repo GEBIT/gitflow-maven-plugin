@@ -15,15 +15,10 @@
  */
 package de.gebit.build.maven.plugin.gitflow;
 
-import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
-import org.apache.maven.shared.release.versions.DefaultVersionInfo;
-import org.apache.maven.shared.release.versions.VersionParseException;
-import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
@@ -33,7 +28,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * 
  */
 @Mojo(name = "release-finish", aggregator = true)
-public class GitFlowReleaseFinishMojo extends AbstractGitFlowMojo {
+public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
 
     /** Whether to skip tagging the release in Git. */
     @Parameter(property = "skipTag", defaultValue = "false")
@@ -78,6 +73,14 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowMojo {
     private boolean releaseMergeNoFF = true;
 
     /**
+     * Whether to use <code>--no-ff</code> option when merging the release branch to production.
+     * 
+     * @since 1.5.0
+     */
+    @Parameter(property = "releaseMergeProductionNoFF", defaultValue = "true")
+    private boolean releaseMergeProductionNoFF = true;
+
+    /**
      * Goals to perform on release, before tagging and pushing. A useful combination is <code>deploy site</code>. You
      * may specifify multiple entries, they are perfored 
      * 
@@ -99,6 +102,14 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowMojo {
     private String developmentVersion;
 
     /**
+     * A release branch can be pushed to the remote to prevent concurrent releases. The default is <code>false</code>.
+     * 
+     * @since 1.5.0
+     */
+    @Parameter(property = "pushReleaseBranch", required = false)
+    private boolean pushReleaseBranch;
+
+    /**
      * When you are releasing using a CI infrastructure the actual deployment might be suppressed until the task
      * is finished (to make sure every module is deployable). But at this point your checkout is already in the state
      * for the next development version. Enable this option to checkout the release commit after finishing, which will
@@ -111,6 +122,71 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowMojo {
     @Parameter(property = "detachReleaseCommit", required = false, defaultValue = "false")
     private boolean detachReleaseCommit; 
 
+    @Override
+    protected boolean isSkipTestProject() {
+        return skipTestProject;
+    }
+
+    @Override
+    protected boolean isSkipDeployProject() {
+        return skipDeployProject;
+    }
+
+    @Override
+    protected boolean isSkipTag() {
+        return skipTag;
+    }
+
+    @Override
+    protected boolean isKeepBranch() {
+        return keepBranch;
+    }
+
+    @Override
+    protected boolean isReleaseRebase() {
+        return releaseRebase;
+    }
+
+    @Override
+    protected boolean isReleaseMergeNoFF() {
+        return releaseMergeNoFF;
+    }
+
+    @Override
+    protected boolean isReleaseMergeProductionNoFF() {
+        return releaseMergeProductionNoFF;
+    }
+
+    @Override
+    protected boolean isDetachReleaseCommit() {
+        return detachReleaseCommit;
+    }
+
+    @Override
+    protected boolean isSameBranchName() {
+        throw new IllegalStateException("release-finish does not create the release branch.");
+    }
+
+    @Override
+    protected String[] getReleaseGoals() {
+        return releaseGoals;
+    }
+
+    @Override
+    protected String getReleaseVersion() {
+        throw new IllegalStateException("release-finish does not set the release version.");
+    }
+
+    @Override
+    protected String getDevelopmentVersion() {
+        return developmentVersion;
+    }
+
+    @Override
+    protected boolean isPushReleaseBranch() {
+        return pushReleaseBranch;
+    }
+
     /** {@inheritDoc} */
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
@@ -118,24 +194,6 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowMojo {
             // check uncommitted changes
             checkUncommittedChanges();
 
-            // check snapshots dependencies
-            if (!allowSnapshots) {
-                checkSnapshotDependencies();
-            }
-
-            // git for-each-ref --format='%(refname:short)' refs/heads/release/*
-            final String releaseBranch = gitFindBranches(
-                    gitFlowConfig.getReleaseBranchPrefix(), false).trim();
-
-            if (StringUtils.isBlank(releaseBranch)) {
-                throw new MojoFailureException("There is no release branch.");
-            } else if (StringUtils.countMatches(releaseBranch,
-                    gitFlowConfig.getReleaseBranchPrefix()) > 1) {
-                throw new MojoFailureException(
-                        "More than one release branch exists. Cannot finish release.");
-            }
-
-            // fetch and check remote
             String branch = getDevelopmentBranchForRelease();
             boolean releaseOnSupportBranch = branch.startsWith(gitFlowConfig.getSupportBranchPrefix());  
             if (fetchRemote) {
@@ -145,98 +203,7 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowMojo {
                 }
             }
 
-            if (!skipTestProject) {
-                if (!releaseOnSupportBranch) {
-                    // git checkout release/...
-                    gitCheckout(releaseBranch);
-                }
-                // mvn clean test
-                mvnCleanTest();
-            }
-
-            // perform the release goals
-            if (releaseGoals != null) {
-                for (String goals : releaseGoals) {
-                    if (skipDeployProject) {
-                        goals = goals.replaceAll("(?:^|\\s+)deploy(?:$|\\s+)", " ").trim();
-                        if (goals.isEmpty()) {
-                            continue;
-                        }
-                    }
-                    mvnGoals(goals);
-                }
-            }
-
-            // git checkout master
-            gitCheckout(releaseOnSupportBranch || gitFlowConfig.isNoProduction() ? 
-        	    branch : gitFlowConfig.getProductionBranch());
-
-            gitMerge(releaseBranch, releaseRebase, releaseMergeNoFF);
-
-            String releaseCommit = getCurrentCommit();
-
-            // get current project version from pom
-            final String currentVersion = getCurrentProjectVersion();
-            if (!skipTag) {
-                String tagVersion = currentVersion;
-                if (tychoBuild && ArtifactUtils.isSnapshot(currentVersion)) {
-                    tagVersion = currentVersion.replace("-"
-                            + Artifact.SNAPSHOT_VERSION, "");
-                }
-
-                // git tag -a ...
-                gitTag(gitFlowConfig.getVersionTagPrefix() + tagVersion,
-                        commitMessages.getTagReleaseMessage());
-            }
-
-            String nextSnapshotVersion = null;
-            if (developmentVersion == null) {
-                // get next snapshot version
-                try {
-                    final DefaultVersionInfo versionInfo = new DefaultVersionInfo(
-                            currentVersion);
-                    nextSnapshotVersion = versionInfo.getNextVersion()
-                            .getSnapshotVersionString();
-                } catch (VersionParseException e) {
-                    if (getLog().isDebugEnabled()) {
-                        getLog().debug(e);
-                    }
-                }
-            } else {
-                nextSnapshotVersion = developmentVersion;
-            }
-
-            if (StringUtils.isBlank(nextSnapshotVersion)) {
-                throw new MojoFailureException(
-                        "Next snapshot version is blank.");
-            }
-
-            // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
-            mvnSetVersions(nextSnapshotVersion);
-
-            // git commit -a -m updating for next development version
-            gitCommit(commitMessages.getReleaseFinishMessage());
-
-            if (!detachReleaseCommit && installProject) {
-                // mvn clean install
-                mvnCleanInstall();
-            }
-
-            if (!keepBranch) {
-                // git branch -d release/...
-                gitBranchDelete(releaseBranch);
-            }
-
-            if (pushRemote) {
-                if (!releaseOnSupportBranch && !gitFlowConfig.isNoProduction()) {
-                    gitPush(gitFlowConfig.getProductionBranch(), !skipTag);
-                }
-                gitPush(branch, !skipTag);
-            }
-            if (detachReleaseCommit) {
-                // make sure we leave the workspace in the state as released
-                gitCheckout(releaseCommit);
-            }
+            releaseFinish(releaseOnSupportBranch);
         } catch (CommandLineException e) {
             getLog().error(e);
         }

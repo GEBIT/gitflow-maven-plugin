@@ -19,10 +19,6 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
-import org.apache.maven.shared.release.versions.DefaultVersionInfo;
-import org.apache.maven.shared.release.versions.VersionParseException;
-import org.codehaus.plexus.components.interactivity.PrompterException;
-import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
@@ -32,7 +28,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * 
  */
 @Mojo(name = "release-start", aggregator = true)
-public class GitFlowReleaseStartMojo extends AbstractGitFlowMojo {
+public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
 
     /**
      * Whether to use the same name of the release branch for every release.
@@ -59,6 +55,78 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowMojo {
     @Parameter(property = "releaseVersion", required = false)
     private String releaseVersion;
 
+    /**
+     * A release branch can be pushed to the remote to prevent concurrent releases. The default is <code>false</code>.
+     * 
+     * @since 1.5.0
+     */
+    @Parameter(property = "pushReleaseBranch", required = false)
+    private boolean pushReleaseBranch;
+
+    @Override
+    protected boolean isSkipTestProject() {
+        throw new IllegalStateException("release-start does not test the project.");
+    }
+
+    @Override
+    protected boolean isSkipDeployProject() {
+        throw new IllegalStateException("release-start does not deploy the project.");
+    }
+
+    @Override
+    protected boolean isSkipTag() {
+        throw new IllegalStateException("release-start does not tag the project.");
+    }
+
+    @Override
+    protected boolean isKeepBranch() {
+        throw new IllegalStateException("release-start does not delete the release branch project.");
+    }
+
+    @Override
+    protected boolean isReleaseRebase() {
+        throw new IllegalStateException("release-start does not test the project.");
+    }
+
+    @Override
+    protected boolean isReleaseMergeNoFF() {
+        throw new IllegalStateException("release-start does not commit the release project.");
+    }
+    
+    @Override
+    protected boolean isReleaseMergeProductionNoFF() {
+        throw new IllegalStateException("release-start does not commit the release project.");
+    }
+
+    @Override
+    protected boolean isDetachReleaseCommit() {
+        throw new IllegalStateException("release-start does not commit the release project.");
+    }
+
+    @Override
+    protected boolean isSameBranchName() {
+        return sameBranchName;
+    }
+
+    @Override
+    protected String[] getReleaseGoals() {
+        throw new IllegalStateException("release-start does not build the release.");
+    }
+
+    @Override
+    protected String getReleaseVersion() {
+        return releaseVersion;
+    }
+
+    @Override
+    protected boolean isPushReleaseBranch() {
+        return pushReleaseBranch;
+    }
+
+    @Override
+    protected String getDevelopmentVersion() {
+        throw new IllegalStateException("release-start does not set the next development version project.");
+    }
 
     /** {@inheritDoc} */
     @Override
@@ -70,98 +138,7 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowMojo {
             // check uncommitted changes
             checkUncommittedChanges();
 
-            // check snapshots dependencies
-            if (!allowSnapshots) {
-                checkSnapshotDependencies();
-            }
-
-            String currentBranch = gitCurrentBranch();
-            boolean releaseOnSupportBranch = currentBranch.startsWith(gitFlowConfig.getSupportBranchPrefix()); 
-            if (releaseOnSupportBranch) {
-                gitFetchRemoteAndCompare(currentBranch);
-            } else {
-                // git for-each-ref --count=1 refs/heads/release/*
-                final String releaseBranch = gitFindBranches(
-                        gitFlowConfig.getReleaseBranchPrefix(), true);
-    
-                if (StringUtils.isNotBlank(releaseBranch)) {
-                    throw new MojoFailureException(
-                            "Release branch already exists. Cannot start release.");
-                }
-    
-                // fetch and check remote
-                if (fetchRemote) {
-                    gitFetchRemoteAndCompare(gitFlowConfig.getDevelopmentBranch());
-                }
-    
-                // need to be in develop to get correct project version
-                // git checkout develop
-                gitCheckout(gitFlowConfig.getDevelopmentBranch());
-            }
-
-            // get current project version from pom
-            final String currentVersion = getCurrentProjectVersion();
-
-            String version = null;
-            if (releaseVersion == null) {
-                String defaultVersion = null;
-                if (tychoBuild) {
-                    defaultVersion = currentVersion;
-                } else {
-                    // get default release version
-                    try {
-                        final DefaultVersionInfo versionInfo = new DefaultVersionInfo(
-                                currentVersion);
-                        defaultVersion = versionInfo.getReleaseVersionString();
-                    } catch (VersionParseException e) {
-                        if (getLog().isDebugEnabled()) {
-                            getLog().debug(e);
-                        }
-                    }
-                }
-
-                if (defaultVersion == null) {
-                    throw new MojoFailureException(
-                            "Cannot get default project version.");
-                }
-
-                if (settings.isInteractiveMode()) {
-                    try {
-                        version = prompter.prompt("What is release version? ["
-                                + defaultVersion + "]");
-                    } catch (PrompterException e) {
-                        getLog().error(e);
-                    }
-                }
-
-                if (StringUtils.isBlank(version)) {
-                    version = defaultVersion;
-                }
-            } else {
-                version = releaseVersion;
-            }
-
-            String branchName = gitFlowConfig.getReleaseBranchPrefix();
-            if (!sameBranchName) {
-                branchName += version;
-            }
-
-            // git checkout -b release/... develop
-            gitCreateAndCheckout(branchName, releaseOnSupportBranch ? currentBranch : gitFlowConfig.getDevelopmentBranch());
-
-            // execute if version changed
-            if (!version.equals(currentVersion)) {
-                // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
-                mvnSetVersions(version);
-
-                // git commit -a -m updating versions for release
-                gitCommit(commitMessages.getReleaseStartMessage());
-            }
-
-            if (installProject) {
-                // mvn clean install
-                mvnCleanInstall();
-            }
+            releaseStart();
         } catch (CommandLineException e) {
             getLog().error(e);
         }

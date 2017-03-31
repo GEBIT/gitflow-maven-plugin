@@ -52,7 +52,6 @@ import org.codehaus.plexus.util.cli.CommandLineException;
 import org.codehaus.plexus.util.cli.CommandLineUtils;
 import org.codehaus.plexus.util.cli.Commandline;
 import org.codehaus.plexus.util.cli.StreamConsumer;
-import org.codehaus.plexus.util.cli.shell.Shell;
 
 /**
  * Abstract git flow mojo.
@@ -870,6 +869,49 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                         .deleteWhitespace(counts[1]))) {
                     throw new MojoFailureException(
                             "Remote branch is ahead of the local branch " + branchName + ". Execute git pull.");
+                }
+            }
+        } else {
+            getLog().warn(
+                    "There were some problems fetching remote branch '"
+                            + gitFlowConfig.getOrigin()
+                            + " "
+                            + branchName
+                            + "'. You can turn off remote branch fetching by setting the 'fetchRemote' parameter to false.");
+        }
+    }
+
+    /**
+     * 
+     * @param branchName
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitFetchRemoteAndMergeIfNecessary(final String branchName)
+            throws MojoFailureException, CommandLineException {
+        getLog().info(
+                "Fetching remote branch '" + gitFlowConfig.getOrigin() + " "
+                        + branchName + "'.");
+
+        CommandResult result = executeGitCommandExitCode("fetch", "--quiet",
+                gitFlowConfig.getOrigin(), branchName);
+
+        if (result.getExitCode() == SUCCESS_EXIT_CODE) {
+            getLog().info(
+                    "Comparing local branch '" + branchName + "' with remote '"
+                            + gitFlowConfig.getOrigin() + "/" + branchName
+                            + "'.");
+            String revlistout = executeGitCommandReturn("rev-list",
+                    "--left-right", "--count", branchName + "..."
+                            + gitFlowConfig.getOrigin() + "/" + branchName);
+
+            String[] counts = org.apache.commons.lang3.StringUtils.split(
+                    revlistout, '\t');
+            if (counts != null && counts.length > 1) {
+                if (!"0".equals(org.apache.commons.lang3.StringUtils
+                        .deleteWhitespace(counts[1]))) {
+                    getLog().info("Remote branch is ahead of the local branch " + branchName + ", trying to merge:");
+                    gitMerge(gitFlowConfig.getOrigin() + "/" + branchName, false, false);
                 }
             }
         } else {
