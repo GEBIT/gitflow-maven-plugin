@@ -122,13 +122,14 @@ public class GitFlowSupportStartMojo extends AbstractGitFlowMojo {
             // checkout the tag
             gitCheckout(baseName);
 
+            // get current project version from pom
+            String currentVersion = getCurrentProjectVersion();
+
             // get default support version
             String supportBranchVersion = supportVersion;
             String supportBranchFirstVersion = firstSupportVersion;
             
             if (firstSupportVersion == null && supportVersion == null) {
-                // get current project version from pom
-                String currentVersion = getCurrentProjectVersion();
                 
                 try {
                     final DefaultVersionInfo versionInfo = new DefaultVersionInfo(currentVersion);
@@ -176,12 +177,18 @@ public class GitFlowSupportStartMojo extends AbstractGitFlowMojo {
             // git checkout -b support/... master
             gitCreateAndCheckout(gitFlowConfig.getSupportBranchPrefix() + branchVersion, baseName);
 
-            // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
-            mvnSetVersions(branchFirstVersion);
+            if (!currentVersion.equals(branchFirstVersion)) {
+                // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
+                mvnSetVersions(branchFirstVersion);
+    
+                // git commit -a -m updating poms for support
+                gitCommit(commitMessages.getSupportStartMessage());
+            }
 
-            // git commit -a -m updating poms for support
-            gitCommit(commitMessages.getSupportStartMessage());
-
+            if (pushRemote)  {
+                gitPush(gitFlowConfig.getSupportBranchPrefix() + branchVersion, false);
+            }
+            
             if (installProject) {
                 // mvn clean install
                 mvnCleanInstall();
