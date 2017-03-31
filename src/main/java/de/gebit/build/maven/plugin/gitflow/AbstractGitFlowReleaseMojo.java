@@ -26,26 +26,82 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  */
 public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
 
+    /**
+     * The mojo provides this flag from a configuration property.
+     */
     protected abstract boolean isSkipTestProject();
+
+    /**
+     * The mojo provides this flag from a configuration property.
+     */
     protected abstract boolean isSkipDeployProject();
+
+    /**
+     * The mojo provides this flag from a configuration property.
+     */
     protected abstract boolean isSkipTag();
+
+    /**
+     * The mojo provides this flag from a configuration property.
+     */
     protected abstract boolean isKeepBranch();
+
+    /**
+     * The mojo provides this flag from a configuration property.
+     */
     protected abstract boolean isReleaseRebase();
+
+    /**
+     * The mojo provides this flag from a configuration property.
+     */
     protected abstract boolean isReleaseMergeNoFF();
+
+    /**
+     * The mojo provides this flag from a configuration property.
+     */
     protected abstract boolean isReleaseMergeProductionNoFF();
+
+    /**
+     * The mojo provides this flag from a configuration property.
+     */
     protected abstract boolean isDetachReleaseCommit();
+
+    /**
+     * The mojo provides this flag from a configuration property.
+     */
     protected abstract boolean isSameBranchName();
-    
+
+    /**
+     * The mojo provides this flag from a configuration property.
+     */
     protected abstract boolean isPushReleaseBranch();
-    
+
+    /**
+     * The mojo provides this flag from a configuration property.
+     */
     protected abstract String[] getReleaseGoals();
+
+    /**
+     * The mojo provides this flag from a configuration property.
+     */
     protected abstract String getReleaseVersion();
+
+    /**
+     * The mojo provides this flag from a configuration property.
+     */
     protected abstract String getDevelopmentVersion();
 
     protected boolean isInstallProject() {
         return installProject;
     }
 
+    /**
+     * Perfom the steps to start a release. Create a release branch and sets the version
+     * @return <code>true</code> if the release is on a support/maintenance branch
+     * @throws MojoExecutionException
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
     protected boolean releaseStart() throws MojoExecutionException, MojoFailureException, CommandLineException {
         // check snapshots dependencies
         if (!allowSnapshots) {
@@ -141,6 +197,15 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         return releaseOnSupportBranch;
     }
 
+    /**
+     * Perfom the steps to finish a release. Must be called on a release branch. It will merge the branch either
+     * to development/production or maintenance, depending on configuration and branch point.
+     * 
+     * @param releaseOnSupportBranch <code>true</code> if the release is on a support/maintenance branch
+     * @throws MojoExecutionException
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
     protected void releaseFinish(boolean releaseOnSupportBranch) throws MojoExecutionException, MojoFailureException, CommandLineException {
         // fetch and check remote
         String developmentBranch = getDevelopmentBranchForRelease();
