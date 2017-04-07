@@ -167,7 +167,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
                 if (StringUtils.isNotBlank(version)) {
                     // mvn versions:set -DnewVersion=...
                     // -DgenerateBackupPoms=false
-                    mvnSetVersions(version, true);
+                    mvnSetVersions(version, "On feature branch: ");
 
                     // git commit -a -m updating versions for feature branch
                     gitCommit(featureStartMessage);

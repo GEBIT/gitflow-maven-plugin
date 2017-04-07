@@ -148,7 +148,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
                         final String version = currentVersion.replaceFirst("-"
                                 + featureName, "");
                         // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
-                        mvnSetVersions(version, false);
+                        mvnSetVersions(version);
 
                         // git commit -a -m updating versions for development branch
                         gitCommit(featureFinishMessage);

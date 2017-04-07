@@ -1187,10 +1187,27 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws MojoFailureException
      * @throws CommandLineException
      */
-    protected void mvnSetVersions(final String version, boolean processAdditionalCommands)
+    protected void mvnSetVersions(final String version)
+            throws MojoFailureException, CommandLineException {
+        mvnSetVersions(version, null);
+    }
+    
+    /**
+     * Executes 'set' goal of versions-maven-plugin or 'set-version' of
+     * tycho-versions-plugin in case it is tycho build.
+     * 
+     * @param version
+     *            New version to set.
+     * @param promptPrefix
+     *            Specify a prompt prefix. A value <code>!= null</code> triggers processing of {@link #additionalVersionCommands}
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void mvnSetVersions(final String version, String promptPrefix)
             throws MojoFailureException, CommandLineException {
 
-        if (additionalVersionCommands != null) {
+        boolean processAdditionalCommands = (promptPrefix != null);
+        if (processAdditionalCommands && additionalVersionCommands != null) {
             StringSearchInterpolator interpolator = new StringSearchInterpolator("@{", "}");
             interpolator.addValueSource(new PropertiesBasedValueSource(getProject().getProperties()));
             Properties properties = new Properties();
@@ -1198,7 +1215,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             interpolator.addValueSource(new PropertiesBasedValueSource(properties));
 
             // process additional commands/parameters
-            if (processAdditionalCommands) {
+            if (promptPrefix != null) {
                 for (GitFlowFeatureParameter parameter : additionalVersionCommands) {
                     if (!parameter.isEnabled()) {
                         continue;
@@ -1209,6 +1226,9 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                                 String value = null;
                                 
                                 String prompt = interpolator.interpolate(parameter.getPrompt());
+                                if (promptPrefix != null) {
+                                    prompt = promptPrefix + prompt;
+                                }
                                 String defaultValue = parameter.getDefaultValue() != null
                                         ? interpolator.interpolate(parameter.getDefaultValue()) : null;
                                 

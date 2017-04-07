@@ -180,7 +180,7 @@ public class GitFlowHotfixFinishMojo extends AbstractGitFlowMojo {
                 }
 
                 // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
-                mvnSetVersions(nextSnapshotVersion, false);
+                mvnSetVersions(nextSnapshotVersion);
 
                 // git commit -a -m updating for next development version
                 gitCommit(commitMessages.getHotfixFinishMessage());
