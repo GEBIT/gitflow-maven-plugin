@@ -75,9 +75,11 @@ public class GitFlowSetVersionMojo extends AbstractGitFlowMojo {
             if (StringUtils.isBlank(newVersion)) {
                 throw new MojoFailureException("No new version set, aborting....");
             }
+
             
+
             // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
-            mvnSetVersions(newVersion);
+            mvnSetVersions(newVersion, true);
 
         } catch (CommandLineException e) {
             getLog().error(e);

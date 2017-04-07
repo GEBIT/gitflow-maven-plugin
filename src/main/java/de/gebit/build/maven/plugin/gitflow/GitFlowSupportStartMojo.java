@@ -179,7 +179,7 @@ public class GitFlowSupportStartMojo extends AbstractGitFlowMojo {
 
             if (!currentVersion.equals(branchFirstVersion)) {
                 // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
-                mvnSetVersions(branchFirstVersion);
+                mvnSetVersions(branchFirstVersion, true);
     
                 // git commit -a -m updating poms for support
                 gitCommit(commitMessages.getSupportStartMessage());

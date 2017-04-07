@@ -87,7 +87,7 @@ public class GitFlowBuildVersionMojo extends AbstractGitFlowMojo {
             }
             
             // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
-            mvnSetVersions(baseVersion + "-" + buildVersion);
+            mvnSetVersions(baseVersion + "-" + buildVersion, false);
 
         } catch (CommandLineException e) {
             getLog().error(e);

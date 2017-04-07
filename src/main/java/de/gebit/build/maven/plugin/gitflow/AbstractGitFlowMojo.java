@@ -19,10 +19,12 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.text.MessageFormat;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -47,6 +49,11 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.settings.Settings;
 import org.codehaus.plexus.components.interactivity.Prompter;
+import org.codehaus.plexus.components.interactivity.PrompterException;
+import org.codehaus.plexus.interpolation.InterpolationException;
+import org.codehaus.plexus.interpolation.PropertiesBasedValueSource;
+import org.codehaus.plexus.interpolation.SingleResponseValueSource;
+import org.codehaus.plexus.interpolation.StringSearchInterpolator;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 import org.codehaus.plexus.util.cli.CommandLineUtils;
@@ -198,6 +205,14 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     @Parameter(property = "copyProperties", required = false)
     private String[] copyProperties;
+
+
+    /**
+     * Additional version commands that can prompt for user input or be conditionally enabled.
+     * @since 1.5.2
+     */
+    @Parameter
+    protected GitFlowFeatureParameter[] additionalVersionCommands;
 
     /**
      * The path to the Maven executable. Defaults to "mvn".
@@ -1172,8 +1187,60 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws MojoFailureException
      * @throws CommandLineException
      */
-    protected void mvnSetVersions(final String version)
+    protected void mvnSetVersions(final String version, boolean processAdditionalCommands)
             throws MojoFailureException, CommandLineException {
+
+        if (additionalVersionCommands != null) {
+            StringSearchInterpolator interpolator = new StringSearchInterpolator("@{", "}");
+            interpolator.addValueSource(new PropertiesBasedValueSource(getProject().getProperties()));
+            Properties properties = new Properties();
+            properties.setProperty("version", version);
+            interpolator.addValueSource(new PropertiesBasedValueSource(properties));
+
+            // process additional commands/parameters
+            if (processAdditionalCommands) {
+                for (GitFlowFeatureParameter parameter : additionalVersionCommands) {
+                    if (!parameter.isEnabled()) {
+                        continue;
+                    }
+                    if (settings.isInteractiveMode()) {
+                        if (parameter.getPrompt() != null) {
+                            try {
+                                String value = null;
+                                
+                                String prompt = interpolator.interpolate(parameter.getPrompt());
+                                String defaultValue = parameter.getDefaultValue() != null
+                                        ? interpolator.interpolate(parameter.getDefaultValue()) : null;
+                                
+                                while (value == null) {
+                                    if (defaultValue != null) {
+                                        value = prompter.prompt(prompt, defaultValue);
+                                    } else {
+                                        value = prompter.prompt(prompt);
+                                    }
+                                }
+                                
+                                parameter.setValue(value);
+                            } catch (InterpolationException e) {
+                                throw new MojoFailureException("Failed to interpolate values", e);
+                            } catch (PrompterException e) {
+                                throw new MojoFailureException("Failed to prompt for parameter", e);
+                            }
+                        }
+                    } else {
+                        try {
+                            String defaultValue = parameter.getDefaultValue() != null
+                                    ? interpolator.interpolate(parameter.getDefaultValue()) : null;
+                                    parameter.setValue(defaultValue);
+                        } catch (InterpolationException e) {
+                            throw new MojoFailureException("Failed to interpolate values", e);
+                        }
+                    }
+                    getLog().info("Parameter set to '" + parameter.getValue() + "'");
+                }
+            }
+        }
+
         getLog().info("Updating version(s) to '" + version + "'.");
 
         if (tychoBuild) {
@@ -1183,7 +1250,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             executeMvnCommand(false, VERSIONS_MAVEN_PLUGIN_SET_GOAL, "-DnewVersion="
                     + version, "-DgenerateBackupPoms=false");
         }
-        for (String command : getCommandsAfterVersion()) {
+        for (String command : getCommandsAfterVersion(processAdditionalCommands)) {
             try {
                 executeMvnCommand(false, CommandLineUtils.translateCommandline(
                         command.replaceAll("\\@\\{version\\}", version)));
@@ -1192,6 +1259,32 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             }
         }
     }
+    
+    protected List<String> getAdditionalVersionCommands() throws MojoFailureException {
+        if (additionalVersionCommands == null || additionalVersionCommands.length == 0) {
+            return Collections.emptyList();
+        }
+        List<String> result = new ArrayList<String>();
+        for (GitFlowFeatureParameter parameter : additionalVersionCommands) {
+            if (!parameter.isEnabled()) {
+                continue;
+            }
+            if (parameter.isEnabledByPrompt() && !"true".equals(parameter.getValue()) && !"yes".equals(parameter.getValue())) {
+                continue;
+            }
+
+            StringSearchInterpolator interpolator = new StringSearchInterpolator("@{", "}");
+            interpolator.addValueSource(new PropertiesBasedValueSource(getProject().getProperties()));
+            interpolator.addValueSource(new SingleResponseValueSource("value", parameter.getValue()));
+
+            try {
+                result.add(interpolator.interpolate(parameter.getCommand()));
+            } catch (InterpolationException e) {
+                throw new MojoFailureException("Failed to interpolate command", e);
+            }
+        }
+        return result;
+    }
 
     /**
      * Get the command specific additional commands to execute when a version
@@ -1199,11 +1292,15 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * 
      * @return a new unmodifiable list with the command.
      */
-    protected List<String> getCommandsAfterVersion() throws MojoFailureException {
-        if (commandsAfterVersion.isEmpty()) {
-            return Collections.emptyList();
+    protected List<String> getCommandsAfterVersion(boolean processAdditionalCommands) throws MojoFailureException {
+        List<String> result = new ArrayList<String>();
+        if (!commandsAfterVersion.isEmpty()) {
+            result.add(commandsAfterVersion);
         }
-        return Collections.singletonList(commandsAfterVersion);
+        if (processAdditionalCommands) {
+            result.addAll(getAdditionalVersionCommands());
+        }
+        return result;
     }
 
     /**

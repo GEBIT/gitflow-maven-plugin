@@ -147,7 +147,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
 
             if (settings.isInteractiveMode()) {
                 try {
-                    version = prompter.prompt("What is release version? [" + defaultVersion + "]");
+                    version = prompter.prompt("What is the release version? [" + defaultVersion + "]");
                 } catch (PrompterException e) {
                     getLog().error(e);
                 }
@@ -179,7 +179,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         // execute if version changed
         if (!version.equals(currentVersion)) {
             // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
-            mvnSetVersions(version);
+            mvnSetVersions(version, false);
 
             // git commit -a -m updating versions for release
             gitCommit(commitMessages.getReleaseStartMessage());
@@ -300,7 +300,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         }
 
         // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
-        mvnSetVersions(nextSnapshotVersion);
+        mvnSetVersions(nextSnapshotVersion, true);
 
         // git commit -a -m updating for next development version
         gitCommit(commitMessages.getReleaseFinishMessage());

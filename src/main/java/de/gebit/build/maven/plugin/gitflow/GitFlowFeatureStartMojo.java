@@ -75,13 +75,6 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
     @Parameter(property = "featureNamePatternDescription", required = false)
     protected String featureNamePatternDescription;
 
-    /**
-     * Additional version commands that can prompt for user input or be conditionally enabled.
-     * @since 1.3.2
-     */
-    @Parameter
-    protected GitFlowFeatureParameter[] additionalVersionCommands;
-
     /** {@inheritDoc} */
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
@@ -172,48 +165,9 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
                 }
 
                 if (StringUtils.isNotBlank(version)) {
-                    if (additionalVersionCommands != null) {
-                        StringSearchInterpolator interpolator = new StringSearchInterpolator("@{", "}");
-                        interpolator.addValueSource(new PropertiesBasedValueSource(getProject().getProperties()));
-                        Properties properties = new Properties();
-                        properties.setProperty("version", version);
-                        properties.setProperty("currentVersion", currentVersion);
-                        interpolator.addValueSource(new PropertiesBasedValueSource(properties));
-
-                        // process additional commands/parameters
-                        for (GitFlowFeatureParameter parameter : additionalVersionCommands) {
-                            if (!parameter.isEnabled()) {
-                                continue;
-                            }
-                            if (parameter.getPrompt() != null) {
-                                try {
-                                    String value = null;
-                                    
-                                    String prompt = interpolator.interpolate(parameter.getPrompt());
-                                    String defaultValue = parameter.getDefaultValue() != null
-                                            ? interpolator.interpolate(parameter.getDefaultValue()) : null;
-                                    
-                                    while (value == null) {
-                                        if (defaultValue != null) {
-                                            value = prompter.prompt(prompt, defaultValue);
-                                        } else {
-                                            value = prompter.prompt(prompt);
-                                        }
-                                    }
-                                    
-                                    parameter.setValue(value);
-                                } catch (InterpolationException e) {
-                                    throw new MojoFailureException("Failed to interpolate values", e);
-                                } catch (PrompterException e) {
-                                    throw new MojoFailureException("Failed to prompt for parameter", e);
-                                }
-                            }
-                        }
-                    }
-
                     // mvn versions:set -DnewVersion=...
                     // -DgenerateBackupPoms=false
-                    mvnSetVersions(version);
+                    mvnSetVersions(version, true);
 
                     // git commit -a -m updating versions for feature branch
                     gitCommit(featureStartMessage);
@@ -233,32 +187,14 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
      * If {@link #commandsAfterFeatureVersion} is set use it to replace the {@link AbstractGitFlowMojo#commandsAfterVersion}.
      */
     @Override
-    protected List<String> getCommandsAfterVersion() throws MojoFailureException {
-        List<String> result = new ArrayList<String>();
+    protected List<String> getCommandsAfterVersion(boolean processAdditionalCommands) throws MojoFailureException {
         if (commandsAfterFeatureVersion.isEmpty()) {
-            result.addAll(super.getCommandsAfterVersion());
-        } else {
-            result.add(commandsAfterFeatureVersion);
+            return super.getCommandsAfterVersion(processAdditionalCommands);
         }
-        if (additionalVersionCommands != null) {
-            for (GitFlowFeatureParameter parameter : additionalVersionCommands) {
-                if (!parameter.isEnabled()) {
-                    continue;
-                }
-                if (parameter.isEnabledByPrompt() && !"true".equals(parameter.getValue()) && !"yes".equals(parameter.getValue())) {
-                    continue;
-                }
-                
-                StringSearchInterpolator interpolator = new StringSearchInterpolator("@{", "}");
-                interpolator.addValueSource(new PropertiesBasedValueSource(getProject().getProperties()));
-                interpolator.addValueSource(new SingleResponseValueSource("value", parameter.getValue()));
-                
-                try {
-                    result.add(interpolator.interpolate(parameter.getCommand()));
-                } catch (InterpolationException e) {
-                    throw new MojoFailureException("Failed to interpolate command", e);
-                }
-            }
+        List<String> result = new ArrayList<String>();
+        result.add(commandsAfterFeatureVersion);
+        if (processAdditionalCommands) {
+            result.addAll(getAdditionalVersionCommands());
         }
         return result;
     }
