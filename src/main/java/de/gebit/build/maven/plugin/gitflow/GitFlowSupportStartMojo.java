@@ -75,17 +75,15 @@ public class GitFlowSupportStartMojo extends AbstractGitFlowMojo {
             String baseName = null;
             if (releaseVersion == null) {
                 final String[] releaseTags = gitListReleaseTags(gitFlowConfig.getVersionTagPrefix(), releaseBranchFilter);
-                if (releaseTags.length == 0) {
-                    throw new MojoFailureException("No releases found.");
-                }
                 List<String> numberedList = new ArrayList<String>();
                 StringBuilder str = new StringBuilder("Release:").append(LS);
-                
+                str.append("0. <current commit>" + LS);
+                numberedList.add(String.valueOf(0));
                 for (int i = 0; i < releaseTags.length; i++) {
                     str.append((i + 1) + ". " + releaseTags[i] + LS);
                     numberedList.add(String.valueOf(i + 1));
                 }
-                str.append("Choose release create suppport branch");
+                str.append("Choose release create suppport branch or enter custom tag or release name");
 
                 String releaseNumber = null;
                 try {
@@ -96,11 +94,12 @@ public class GitFlowSupportStartMojo extends AbstractGitFlowMojo {
                     getLog().error(e);
                 }
 
-                if (!StringUtils.isBlank(releaseNumber)) {
+                if (!StringUtils.isBlank(releaseNumber) && !releaseNumber.equals("0")) {
                     int num = Integer.parseInt(releaseNumber);
                     baseName = releaseTags[num - 1];
                 } else {
-                    baseName = releaseTags[0];
+                    // get off current commit
+                    baseName = getCurrentCommit();
                 }
 
             } else {
@@ -130,12 +129,15 @@ public class GitFlowSupportStartMojo extends AbstractGitFlowMojo {
             String supportBranchFirstVersion = firstSupportVersion;
             
             if (firstSupportVersion == null && supportVersion == null) {
-                
                 try {
                     final DefaultVersionInfo versionInfo = new DefaultVersionInfo(currentVersion);
+                    getLog().info("Version info: " +versionInfo);
                     final DefaultVersionInfo branchVersionInfo = new DefaultVersionInfo(versionInfo.getDigits().subList(0, versionInfo.getDigits().size()-1),
-                            versionInfo.getAnnotation(), versionInfo.getAnnotationRevision(),
-                            versionInfo.getBuildSpecifier(), null, null, null);
+                            versionInfo.getAnnotation(), 
+                            versionInfo.getAnnotationRevision(),
+                            versionInfo.getBuildSpecifier() != null  ? "-" + versionInfo.getBuildSpecifier() : null, 
+                            null, null, null);
+                    getLog().info("Branch Version info: " +branchVersionInfo);
                     supportBranchVersion = branchVersionInfo.getReleaseVersionString();
                     supportBranchFirstVersion = versionInfo.getNextVersion().getSnapshotVersionString();
                 } catch (VersionParseException e) {
