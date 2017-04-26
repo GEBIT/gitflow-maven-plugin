@@ -195,15 +195,15 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
             checkUncommittedChanges();
 
             String branch = getDevelopmentBranchForRelease();
-            boolean releaseOnSupportBranch = branch.startsWith(gitFlowConfig.getSupportBranchPrefix());  
+            boolean releaseOnMaintenanceBranch = branch.startsWith(gitFlowConfig.getMaintenanceBranchPrefix());  
             if (fetchRemote) {
                 gitFetchRemoteAndCompare(branch);
-                if (!releaseOnSupportBranch && !gitFlowConfig.isNoProduction()) {
+                if (!releaseOnMaintenanceBranch && !gitFlowConfig.isNoProduction()) {
                     gitFetchRemoteAndCompare(gitFlowConfig.getProductionBranch());
                 }
             }
 
-            releaseFinish(releaseOnSupportBranch);
+            releaseFinish(releaseOnMaintenanceBranch);
         } catch (CommandLineException e) {
             getLog().error(e);
         }

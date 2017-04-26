@@ -32,8 +32,8 @@ public class GitFlowConfig {
     private String releaseBranchPrefix;
     /** Prefix of the hotfix branch. */
     private String hotfixBranchPrefix;
-    /** Prefix of the support branch. */
-    private String supportBranchPrefix;
+    /** Prefix of the maintenance branches. */
+    private String maintenanceBranchPrefix;
     /** Prefix of the version tag. */
     private String versionTagPrefix;
     /** Set to true if there is no production branch. */
@@ -50,7 +50,7 @@ public class GitFlowConfig {
         this.featureBranchPrefix = "feature/";
         this.releaseBranchPrefix = "release/";
         this.hotfixBranchPrefix = "hotfix/";
-        this.supportBranchPrefix = "support/";
+        this.maintenanceBranchPrefix = "maintenance/";
         this.versionTagPrefix = "";
         this.noProduction = false;
         this.origin = "origin";
@@ -132,18 +132,27 @@ public class GitFlowConfig {
     }
 
     /**
-     * @return the supportBranchPrefix
-     */
-    public String getSupportBranchPrefix() {
-        return supportBranchPrefix;
-    }
-
-    /**
      * @param supportBranchPrefix
      *            the supportBranchPrefix to set
+     * @deprecated use {@link #maintenanceBranchPrefix}
      */
     public void setSupportBranchPrefix(String supportBranchPrefix) {
-        this.supportBranchPrefix = supportBranchPrefix;
+        this.maintenanceBranchPrefix = supportBranchPrefix;
+    }
+    
+    /**
+     * @return the maintenanceBranchPrefix
+     */
+    public String getMaintenanceBranchPrefix() {
+        return maintenanceBranchPrefix;
+    }
+    
+    /**
+     * @param maintenanceBranchPrefix
+     *            the maintenanceBranchPrefix to set
+     */
+    public void setMaintenanceBranchPrefix(String maintenanceBranchPrefix) {
+        this.maintenanceBranchPrefix = maintenanceBranchPrefix;
     }
 
     /**

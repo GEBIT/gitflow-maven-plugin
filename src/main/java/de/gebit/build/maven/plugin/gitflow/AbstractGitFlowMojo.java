@@ -415,7 +415,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         gitSetConfig("gitflow.prefix.hotfix",
                 gitFlowConfig.getHotfixBranchPrefix());
         gitSetConfig("gitflow.prefix.support",
-                gitFlowConfig.getSupportBranchPrefix());
+                gitFlowConfig.getMaintenanceBranchPrefix());
         gitSetConfig("gitflow.prefix.versiontag",
                 gitFlowConfig.getVersionTagPrefix());
 

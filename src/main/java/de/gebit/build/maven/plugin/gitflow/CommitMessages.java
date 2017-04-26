@@ -34,7 +34,7 @@ public class CommitMessages {
     private String tagHotfixMessage;
     private String tagReleaseMessage;
 
-    private String supportStartMessage;
+    private String maintenanceStartMessage;
     private String branchConfigMessage;
 
     /**
@@ -58,7 +58,7 @@ public class CommitMessages {
         tagHotfixMessage = "tagging hotfix";
         tagReleaseMessage = "tagging release";
 
-        supportStartMessage = "updating versions for support branch";
+        maintenanceStartMessage = "updating versions for maintenance branch";
         branchConfigMessage = "changed branch configuration";
 
         mergeMessagePattern = null;
@@ -185,20 +185,29 @@ public class CommitMessages {
     }
 
     /**
-     * @return the supportStartMessage
+     * @param supportStartMessage
+     *            the supportStartMessage to set
+     * @deprecated use {@link #setMaintenanceStartMessage(String)}
      */
-    public String getSupportStartMessage() {
-        return supportStartMessage;
+    public void setSupportStartMessage(String supportStartMessage) {
+        this.maintenanceStartMessage = supportStartMessage;
     }
 
     /**
-     * @param supportStartMessage
-     *            the supportStartMessage to set
+     * @return the maintenanceStartMessage
      */
-    public void setSupportStartMessage(String supportStartMessage) {
-        this.supportStartMessage = supportStartMessage;
+    public String getMaintenanceStartMessage() {
+        return maintenanceStartMessage;
     }
-    
+
+    /**
+     * @param maintenanceStartMessage
+     *            the maintenanceStartMessage to set
+     */
+    public void setMaintenanceStartMessage(String maintenanceStartMessage) {
+        this.maintenanceStartMessage = maintenanceStartMessage;
+    }
+
     /**
      * @return the branchConfigMessage
      */

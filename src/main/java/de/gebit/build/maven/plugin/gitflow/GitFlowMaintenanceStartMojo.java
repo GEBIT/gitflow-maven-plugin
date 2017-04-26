@@ -31,7 +31,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
 public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
 
     /**
-     * The release version to create the support branch from.
+     * The release version to create the maintenance branch from.
      * 
      * @since 1.3.0
      */
@@ -42,17 +42,35 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
      * The version used for the branch itself.
      * 
      * @since 1.3.0
+     * @deprecated use {@link #maintenanceVersion}
      */
     @Parameter(defaultValue = "${supportVersion}", required = false)
     protected String supportVersion;
+    
+    /**
+     * The version used for the branch itself.
+     * 
+     * @since 1.5.3
+     */
+    @Parameter(defaultValue = "${maintenanceVersion}", required = false)
+    protected String maintenanceVersion;
 
     /**
      * The first version to set on the branch.
      * 
      * @since 1.3.0
+     * @deprecated use {@link #firstMaintenanceVersion}
      */
     @Parameter(defaultValue = "${firstSupportVersion}", required = false)
     protected String firstSupportVersion;
+    
+    /**
+     * The first version to set on the branch.
+     * 
+     * @since 1.5.3
+     */
+    @Parameter(defaultValue = "${firstMaintenanceVersion}", required = false)
+    protected String firstMaintenanceVersion;
 
     /**
      * Filter to query for relaese branches to limit the results.
@@ -115,7 +133,7 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
             }
 
             if (StringUtils.isBlank(baseName)) {
-                throw new MojoFailureException("Release to create support branch from is blank.");
+                throw new MojoFailureException("Release to create maintenance branch from is blank.");
             }
 
             // checkout the tag
@@ -124,11 +142,11 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
             // get current project version from pom
             String currentVersion = getCurrentProjectVersion();
 
-            // get default support version
-            String supportBranchVersion = supportVersion;
-            String supportBranchFirstVersion = firstSupportVersion;
+            // get default maintenance version
+            String maintenanceBranchVersion = maintenanceVersion != null ? maintenanceVersion : supportVersion;
+            String maintenanceBranchFirstVersion = firstMaintenanceVersion != null ? firstMaintenanceVersion : firstSupportVersion;
             
-            if (firstSupportVersion == null && supportVersion == null) {
+            if (maintenanceBranchVersion == null && firstMaintenanceVersion == null) {
                 try {
                     final DefaultVersionInfo versionInfo = new DefaultVersionInfo(currentVersion);
                     getLog().info("Version info: " +versionInfo);
@@ -138,57 +156,57 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
                             versionInfo.getBuildSpecifier() != null  ? "-" + versionInfo.getBuildSpecifier() : null, 
                             null, null, null);
                     getLog().info("Branch Version info: " +branchVersionInfo);
-                    supportBranchVersion = branchVersionInfo.getReleaseVersionString();
-                    supportBranchFirstVersion = versionInfo.getNextVersion().getSnapshotVersionString();
+                    maintenanceBranchVersion = branchVersionInfo.getReleaseVersionString();
+                    maintenanceBranchFirstVersion = versionInfo.getNextVersion().getSnapshotVersionString();
                 } catch (VersionParseException e) {
-                    throw new MojoFailureException("Failed to calculate support versions", e);
+                    throw new MojoFailureException("Failed to calculate maintenance versions", e);
                 }
-            } else if (firstSupportVersion == null || supportVersion == null) {
+            } else if (maintenanceBranchVersion == null || firstMaintenanceVersion == null) {
                 throw new MojoFailureException(
-                        "Either both <supportVersion> and <firstSupportVersion> must be specified or none");
+                        "Either both <maintenanceVersion> and <firstMaintenanceVersion> must be specified or none");
             }
 
             String branchVersion = null;
             try {
-                branchVersion = prompter.prompt("What is the support version? [" + supportBranchVersion + "]");
+                branchVersion = prompter.prompt("What is the maintenance version? [" + maintenanceBranchVersion + "]");
             } catch (PrompterException e) {
                 getLog().error(e);
             }
 
             if (StringUtils.isBlank(branchVersion)) {
-                branchVersion = supportBranchVersion;
+                branchVersion = maintenanceBranchVersion;
             }
 
             String branchFirstVersion = null;
             try {
-                branchFirstVersion = prompter.prompt("What is the first version on the support branch? [" + supportBranchFirstVersion + "]");
+                branchFirstVersion = prompter.prompt("What is the first version on the maintenance branch? [" + maintenanceBranchFirstVersion + "]");
             } catch (PrompterException e) {
                 getLog().error(e);
             }
             
             if (StringUtils.isBlank(branchFirstVersion)) {
-                branchFirstVersion = supportBranchFirstVersion;
+                branchFirstVersion = maintenanceBranchFirstVersion;
             }
 
-            // git for-each-ref refs/heads/support/...
-            final boolean supportBranchExists = gitBranchExists(gitFlowConfig.getSupportBranchPrefix() + branchVersion);
-            if (supportBranchExists) {
-                throw new MojoFailureException("Support branch with that name already exists. Cannot start support.");
+            // git for-each-ref refs/heads/maintenance/...
+            final boolean maintenanceBranchExists = gitBranchExists(gitFlowConfig.getMaintenanceBranchPrefix() + branchVersion);
+            if (maintenanceBranchExists) {
+                throw new MojoFailureException("Maintenance branch with that name already exists. Cannot start maintenance.");
             }
 
-            // git checkout -b support/... master
-            gitCreateAndCheckout(gitFlowConfig.getSupportBranchPrefix() + branchVersion, baseName);
+            // git checkout -b maintenance/... master
+            gitCreateAndCheckout(gitFlowConfig.getMaintenanceBranchPrefix() + branchVersion, baseName);
 
             if (!currentVersion.equals(branchFirstVersion)) {
                 // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
-                mvnSetVersions(branchFirstVersion, "On support branch: ");
+                mvnSetVersions(branchFirstVersion, "On maintenance branch: ");
     
-                // git commit -a -m updating poms for support
-                gitCommit(commitMessages.getSupportStartMessage());
+                // git commit -a -m updating poms for maintenance
+                gitCommit(commitMessages.getMaintenanceStartMessage());
             }
 
             if (pushRemote)  {
-                gitPush(gitFlowConfig.getSupportBranchPrefix() + branchVersion, false);
+                gitPush(gitFlowConfig.getMaintenanceBranchPrefix() + branchVersion, false);
             }
             
             if (installProject) {

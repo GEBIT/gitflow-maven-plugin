@@ -112,10 +112,10 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         if (currentBranch.startsWith(gitFlowConfig.getReleaseBranchPrefix())) {
             throw new MojoFailureException("Current branch '" + currentBranch + "' is already a release branch.");
         }
-        boolean releaseOnSupportBranch = currentBranch.startsWith(gitFlowConfig.getSupportBranchPrefix()); 
+        boolean releaseOnMaintenanceBranch = currentBranch.startsWith(gitFlowConfig.getMaintenanceBranchPrefix()); 
         if (fetchRemote) {
             gitFetchRemoteAndCompare(currentBranch);
-            if (!releaseOnSupportBranch && !gitFlowConfig.isNoProduction()) {
+            if (!releaseOnMaintenanceBranch && !gitFlowConfig.isNoProduction()) {
                 // check the production branch, too
                 gitFetchRemoteAndCompare(gitFlowConfig.getProductionBranch());
             }
@@ -173,7 +173,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         }
 
         // git checkout -b release/... develop to create the release branch
-        gitCreateAndCheckout(releaseBranchName, releaseOnSupportBranch 
+        gitCreateAndCheckout(releaseBranchName, releaseOnMaintenanceBranch 
                 ? currentBranch : gitFlowConfig.getDevelopmentBranch());
 
         // execute if version changed
@@ -194,19 +194,19 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
             mvnCleanInstall();
         }
 
-        return releaseOnSupportBranch;
+        return releaseOnMaintenanceBranch;
     }
 
     /**
      * Perfom the steps to finish a release. Must be called on a release branch. It will merge the branch either
      * to development/production or maintenance, depending on configuration and branch point.
      * 
-     * @param releaseOnSupportBranch <code>true</code> if the release is on a support/maintenance branch
+     * @param releaseOnMaintenanceBranch <code>true</code> if the release is on a support/maintenance branch
      * @throws MojoExecutionException
      * @throws MojoFailureException
      * @throws CommandLineException
      */
-    protected void releaseFinish(boolean releaseOnSupportBranch) throws MojoExecutionException, MojoFailureException, CommandLineException {
+    protected void releaseFinish(boolean releaseOnMaintenanceBranch) throws MojoExecutionException, MojoFailureException, CommandLineException {
         // fetch and check remote
         String developmentBranch = getDevelopmentBranchForRelease();
 
@@ -236,7 +236,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         }
 
         // if we're on a release branch merge it now to maintenance or production.
-        String targetBranch = releaseOnSupportBranch || gitFlowConfig.isNoProduction() 
+        String targetBranch = releaseOnMaintenanceBranch || gitFlowConfig.isNoProduction() 
                 ? developmentBranch : gitFlowConfig.getProductionBranch(); 
         gitCheckout(targetBranch);
 
@@ -319,7 +319,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         }
 
         if (pushRemote) {
-            if (!releaseOnSupportBranch && !gitFlowConfig.isNoProduction()) {
+            if (!releaseOnMaintenanceBranch && !gitFlowConfig.isNoProduction()) {
                 gitPush(gitFlowConfig.getProductionBranch(), !isSkipTag());
             }
             gitPush(developmentBranch, !isSkipTag());
