@@ -206,10 +206,9 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
      * @throws MojoFailureException
      * @throws CommandLineException
      */
-    protected void releaseFinish(boolean releaseOnMaintenanceBranch) throws MojoExecutionException, MojoFailureException, CommandLineException {
-        // fetch and check remote
-        String developmentBranch = getDevelopmentBranchForRelease();
+    protected void releaseFinish(String developmentBranch, boolean releaseOnMaintenanceBranch) throws MojoExecutionException, MojoFailureException, CommandLineException {
 
+        // fetch and check remote
         final String releaseBranch = gitCurrentBranch();
         if (StringUtils.isBlank(releaseBranch)) {
             throw new MojoFailureException("There is no release branch.");

@@ -49,8 +49,14 @@ public class GitFlowReleaseAbortMojo extends AbstractGitFlowMojo {
                         "More than one release branch exists. Cannot abort release.");
             }
 
+            String gitConfigName = "branch.\"" + releaseBranch + "\".development";
+            String developmentBranch = gitGetConfig(gitConfigName);
+            if (developmentBranch == null || developmentBranch.isEmpty()) {
+                developmentBranch = gitFlowConfig.getDevelopmentBranch();
+            }
+
             // back to the development branch
-            gitCheckout(gitFlowConfig.getDevelopmentBranch());
+            gitCheckout(developmentBranch);
 
             // git branch -D release/...
             gitBranchDeleteForce(releaseBranch);

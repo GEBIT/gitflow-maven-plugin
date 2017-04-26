@@ -138,7 +138,11 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
             // check uncommitted changes
             checkUncommittedChanges();
 
+            String developmentBranch = gitCurrentBranch();
             releaseStart();
+            
+            // store development branch in branch config
+            gitSetConfig("branch.\"" + gitCurrentBranch() + "\".development", developmentBranch);
         } catch (CommandLineException e) {
             getLog().error(e);
         }

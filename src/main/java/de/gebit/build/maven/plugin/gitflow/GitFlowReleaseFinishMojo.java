@@ -194,16 +194,24 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
             // check uncommitted changes
             checkUncommittedChanges();
 
-            String branch = getDevelopmentBranchForRelease();
+            String gitConfigName = "branch.\"" + gitCurrentBranch() + "\".development";
+            String branch = gitGetConfig(gitConfigName);
+            if (branch == null || branch.isEmpty()) {
+                getLog().error("The release branch has no development branch configured. Use 'git config " + gitConfigName + " [development branch name]' to configure it.");
+                return;
+            }
             boolean releaseOnMaintenanceBranch = branch.startsWith(gitFlowConfig.getMaintenanceBranchPrefix());  
             if (fetchRemote) {
-                gitFetchRemoteAndCompare(branch);
+                // no changes in release branch
+                gitFetchRemoteAndCompare(gitCurrentBranch());
+
+                // if we want to push to production branch it needs to be up-to-date, too
                 if (!releaseOnMaintenanceBranch && !gitFlowConfig.isNoProduction()) {
                     gitFetchRemoteAndCompare(gitFlowConfig.getProductionBranch());
                 }
             }
 
-            releaseFinish(releaseOnMaintenanceBranch);
+            releaseFinish(branch, releaseOnMaintenanceBranch);
         } catch (CommandLineException e) {
             getLog().error(e);
         }

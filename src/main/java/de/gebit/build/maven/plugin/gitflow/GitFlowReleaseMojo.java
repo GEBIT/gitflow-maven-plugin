@@ -234,9 +234,10 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
             // check uncommitted changes
             checkUncommittedChanges();
 
+            String developmentBranch = gitCurrentBranch();
             // perform start and finish in one step
             boolean releaseOnSupportBranch = releaseStart();
-            releaseFinish(releaseOnSupportBranch);
+            releaseFinish(developmentBranch, releaseOnSupportBranch);
 
         } catch (CommandLineException e) {
             getLog().error(e);
