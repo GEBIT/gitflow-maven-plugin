@@ -1646,6 +1646,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             // not all commands print errors to error stream
             if (StringUtils.isBlank(errorStr) && StringUtils.isNotBlank(outStr)) {
                 errorStr = outStr;
+            } else {
+                getLog().debug("Command output: " + outStr);
             }
 
             throw new MojoFailureException(errorStr);
