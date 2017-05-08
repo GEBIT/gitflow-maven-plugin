@@ -1,5 +1,5 @@
 //
-// GitFlowFeatureParameter.java
+// GitFlowParameter.java
 //
 // Copyright (C) 2016
 // GEBIT Solutions GmbH, 
@@ -14,7 +14,7 @@ import org.apache.maven.plugins.annotations.Parameter;
  * Additional parameter that will be asked of the user when creating a feature branch.
  * @author Erwin Tratar
  */
-public class GitFlowFeatureParameter {
+public class GitFlowParameter {
 
     /**
      * User prompt text. If not set only the command is executed. Can contain the {@literal @}{version} placeholder
@@ -43,6 +43,13 @@ public class GitFlowFeatureParameter {
      */
     @Parameter(required = false)
     protected String defaultValue;
+    
+    /**
+     * Name of a property which, if defined will be used as the value skipping the querying.
+     * @since 1.5.4
+     */
+    @Parameter(required = false)
+    protected String property;
 
     /**
      * Maven command (goals) to execute. Can use the {@literal @}{value} placeholder if a value has been prompted.
@@ -62,26 +69,19 @@ public class GitFlowFeatureParameter {
         return prompt;
     }
 
-    // /**
-    // * @param prompt the prompt to set
-    // */
-    // public void setPrompt(String prompt) {
-    // this.prompt = prompt;
-    // }
-
     /**
      * @return the defaultValue
      */
     public String getDefaultValue() {
         return defaultValue;
     }
-
-    // /**
-    // * @param defaultValue the defaultValue to set
-    // */
-    // public void setDefaultValue(String defaultValue) {
-    // this.defaultValue = defaultValue;
-    // }
+    
+    /**
+     * @return the property
+     */
+    public String getProperty() {
+        return property;
+    }
 
     /**
      * @return the command
@@ -89,13 +89,6 @@ public class GitFlowFeatureParameter {
     public String getCommand() {
         return command;
     }
-
-    // /**
-    // * @param command the command to set
-    // */
-    // public void setCommand(String command) {
-    // this.command = command;
-    // }
     
     /**
      * @return the enabled

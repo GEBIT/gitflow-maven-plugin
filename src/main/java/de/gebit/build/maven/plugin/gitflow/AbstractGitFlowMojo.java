@@ -212,7 +212,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @since 1.5.2
      */
     @Parameter
-    protected GitFlowFeatureParameter[] additionalVersionCommands;
+    protected GitFlowParameter[] additionalVersionCommands;
 
     /**
      * The path to the Maven executable. Defaults to "mvn".
@@ -1209,11 +1209,15 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
             // process additional commands/parameters
             if (promptPrefix != null) {
-                for (GitFlowFeatureParameter parameter : additionalVersionCommands) {
+                for (GitFlowParameter parameter : additionalVersionCommands) {
                     if (!parameter.isEnabled()) {
                         continue;
                     }
-                    if (settings.isInteractiveMode()) {
+                    if (!parameter.isEnabledByPrompt()
+                            && parameter.getProperty() != null
+                            && session.getRequest().getUserProperties().getProperty(parameter.getProperty()) != null) {
+                        parameter.setValue(session.getRequest().getUserProperties().getProperty(parameter.getProperty()));
+                    } else if (settings.isInteractiveMode()) {
                         if (parameter.getPrompt() != null) {
                             try {
                                 String value = null;
@@ -1278,7 +1282,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             return Collections.emptyList();
         }
         List<String> result = new ArrayList<String>();
-        for (GitFlowFeatureParameter parameter : additionalVersionCommands) {
+        for (GitFlowParameter parameter : additionalVersionCommands) {
             if (!parameter.isEnabled()) {
                 continue;
             }

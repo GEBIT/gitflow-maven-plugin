@@ -66,7 +66,7 @@ public class GitFlowSetVersionMojo extends AbstractGitFlowMojo {
                 }
                 
                 try {
-                    newVersion = prompter.prompt("What is new version?", newVersion);
+                    newVersion = prompter.prompt("What is the new version?", newVersion);
                 } catch (PrompterException e) {
                     getLog().error(e);
                 }
