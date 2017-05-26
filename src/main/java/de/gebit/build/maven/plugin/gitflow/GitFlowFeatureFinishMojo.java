@@ -177,12 +177,12 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
             }
 
             if (!keepFeatureBranch) {
-                if (featureSquash) {
-                    // git branch -D feature/...
-                    gitBranchDeleteForce(featureBranchName);
-                } else {
-                    // git branch -d feature/...
-                    gitBranchDelete(featureBranchName);
+                // git branch -D feature/...
+                gitBranchDeleteForce(featureBranchName);
+                
+                // delete the remote branch
+                if (pushRemote) {
+                    gitBranchDeleteRemote(featureBranchName);
                 }
             }
 
