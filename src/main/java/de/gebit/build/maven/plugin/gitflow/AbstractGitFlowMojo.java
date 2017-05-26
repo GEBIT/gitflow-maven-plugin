@@ -756,7 +756,16 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         }
 
         getLog().info("Removing version change commit.");
-        executeGitCommand("rebase", "--no-ff", "--onto", branchPoint, firstCommitOnBranch, featureBranch);
+        try {
+            executeGitCommand("rebase", "--no-ff", "--onto", branchPoint, firstCommitOnBranch, featureBranch);
+        } catch (MojoFailureException ex) {
+            getLog().info("");
+            getLog().info("####");
+            getLog().info("Automatic rebase failed. Fix your merge conflicts and git add your changes. After that, run mvn flow:feature-finish again. Do NOT run git rebase --continue.");
+            getLog().info("####");
+            getLog().info("");
+            throw ex;
+        }
         return true;
     }
 
