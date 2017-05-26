@@ -143,6 +143,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
                 // git checkout develop
                 gitCheckout(gitFlowConfig.getDevelopmentBranch());
                 if (!rebaseWithoutVersionChange || !gitTryRebaseWithoutVersionChange(featureBranchName)) {
+                    // rebase not configured or not possible, then manually revert the version 
                     gitCheckout(featureBranchName);
                     if (currentVersion.contains("-" + featureName)) {
                         final String version = currentVersion.replaceFirst("-"
