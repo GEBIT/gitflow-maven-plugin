@@ -757,10 +757,6 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
         getLog().info("Removing version change commit.");
         executeGitCommand("rebase", "--no-ff", "--onto", branchPoint, firstCommitOnBranch, featureBranch);
-
-        if (pushRemote) {
-            gitBranchDeleteRemote(featureBranch);
-        }
         return true;
     }
 
