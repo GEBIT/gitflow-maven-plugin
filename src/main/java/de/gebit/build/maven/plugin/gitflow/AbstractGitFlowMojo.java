@@ -1611,6 +1611,32 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
+     * Check whether commandline git is available at all.
+     */
+    protected boolean isGitAvailable() throws MojoFailureException, CommandLineException {
+        CommandResult gitResult = executeGitCommandExitCode("--version");
+        return (gitResult.exitCode == 0);
+    }
+
+    /**
+     * Check whether we can write to the repository. We're doing this by deleting a nonexisting remote tag
+     */
+    protected void checkGitWriteable() throws MojoFailureException, CommandLineException {
+        String tempBranchName = "temp/" + System.getProperty("user.name").toLowerCase().replace(' ', '-') + "_access_check";
+
+        // clear any stale branch
+        try {
+            executeGitCommand("push", gitFlowConfig.getOrigin(), "--delete", tempBranchName);
+        } catch (MojoFailureException ex) {
+            // we ignore any error here, as it will fail if it has been properly cleared up before
+        }
+
+        // now create branch and remove it
+        executeGitCommand("push", gitFlowConfig.getOrigin(), "HEAD:" + tempBranchName);
+        executeGitCommand("push", gitFlowConfig.getOrigin(), "--delete", tempBranchName);
+    }
+
+    /**
      * Executes command line.
      * 
      * @param cmd
