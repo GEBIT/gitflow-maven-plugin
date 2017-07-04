@@ -86,8 +86,11 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
             checkUncommittedChanges();
 
             // fetch and check remote
+            String currentBranch = gitCurrentBranch();
+            String baseBranch = currentBranch.startsWith(gitFlowConfig.getMaintenanceBranchPrefix()) 
+                    ? currentBranch : gitFlowConfig.getDevelopmentBranch();
             if (fetchRemote) {
-                gitFetchRemoteAndCompare(gitFlowConfig.getDevelopmentBranch());
+                gitFetchRemoteAndCompare(baseBranch);
             }
 
             String featureName = null;
@@ -123,8 +126,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
                     gitFlowConfig.getFeatureBranchPrefix() + featureName);
 
             // git checkout -b ... develop
-            gitCreateAndCheckout(gitFlowConfig.getFeatureBranchPrefix()
-                    + featureName, gitFlowConfig.getDevelopmentBranch());
+            gitCreateAndCheckout(gitFlowConfig.getFeatureBranchPrefix() + featureName, baseBranch);
 
             if (!skipFeatureVersion && !tychoBuild) {
                 // get current project version from pom
