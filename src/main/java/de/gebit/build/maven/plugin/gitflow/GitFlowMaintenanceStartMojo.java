@@ -101,7 +101,7 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
                     str.append((i + 1) + ". " + releaseTags[i] + LS);
                     numberedList.add(String.valueOf(i + 1));
                 }
-                str.append("Choose release create suppport branch or enter custom tag or release name");
+                str.append("Choose release to create the maintenance branch from or enter a custom tag or release name");
 
                 String releaseNumber = null;
                 try {
