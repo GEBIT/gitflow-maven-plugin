@@ -95,6 +95,9 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
                 }
 
                 final String[] branches = featureBranches.split("\\r?\\n");
+                
+                // is the current branch a feature branch?
+                String currentBranch = gitCurrentBranch();
 
                 List<String> numberedList = new ArrayList<String>();
                 StringBuilder str = new StringBuilder("Feature branches:")
@@ -102,33 +105,43 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
                 for (int i = 0; i < branches.length; i++) {
                     str.append((i + 1) + ". " + branches[i] + LS);
                     numberedList.add(String.valueOf(i + 1));
-                }
-                str.append("Choose feature branch to finish");
-
-                String featureNumber = null;
-                try {
-                    while (StringUtils.isBlank(featureNumber)) {
-                        featureNumber = prompter.prompt(str.toString(),
-                                numberedList);
+                    if (branches[i].equals(currentBranch)) {
+                        // we're on a feature branch, no need to ask
+                        featureBranchName = currentBranch;
+                        break;
                     }
-                } catch (PrompterException e) {
-                    getLog().error(e);
                 }
 
-                if (featureNumber != null) {
-                    int num = Integer.parseInt(featureNumber);
-                    featureBranchName = branches[num - 1];
+                if (featureBranchName == null && !StringUtils.isBlank(featureBranchName)) {
+                    str.append("Choose feature branch to finish");
+
+                    String featureNumber = null;
+                    try {
+                        while (StringUtils.isBlank(featureNumber)) {
+                            featureNumber = prompter.prompt(str.toString(),
+                                    numberedList);
+                        }
+                    } catch (PrompterException e) {
+                        getLog().error(e);
+                    }
+
+                    if (featureNumber != null) {
+                        int num = Integer.parseInt(featureNumber);
+                        featureBranchName = branches[num - 1];
+                    }
+
+                    if (StringUtils.isBlank(featureBranchName)) {
+                        throw new MojoFailureException(
+                                "Feature branch name to finish is blank.");
+                    }
+
+                    // git checkout feature/...
+                    gitCheckout(featureBranchName);
                 }
 
-                if (StringUtils.isBlank(featureBranchName)) {
-                    throw new MojoFailureException(
-                            "Feature branch name to finish is blank.");
-                }
                 final String featureFinishMessage = substituteInMessage(commitMessages.getFeatureFinishMessage(),
                         featureBranchName);
-                // git checkout feature/...
-                gitCheckout(featureBranchName);
-                
+
                 if (!skipTestProject) {
                     // mvn clean test
                     mvnCleanTest();
