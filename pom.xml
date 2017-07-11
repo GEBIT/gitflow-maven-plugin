@@ -157,8 +157,6 @@
 						<tile>de.gebit.build.tile:encoding:${version.build}</tile>
 						<tile>de.gebit.build.tile:eclipse-compiler:${version.build}</tile>
 						<tile>de.gebit.build.tile:javac:${version.build}</tile>
-						<tile>de.gebit.build.tile:checkstyle:${version.build}</tile>
-						<tile>de.gebit.build.tile:findbugs:${version.build}</tile>
 						<tile>de.gebit.build.tile:javadoc:${version.build}</tile>
 						<tile>de.gebit.build.tile:reports:${version.build}</tile>
 					</tiles>
