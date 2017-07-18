@@ -37,6 +37,7 @@ import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.text.StrLookup;
 import org.apache.commons.lang3.text.StrSubstitutor;
+import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Dependency;
@@ -48,6 +49,8 @@ import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.settings.Settings;
+import org.apache.maven.shared.release.versions.DefaultVersionInfo;
+import org.apache.maven.shared.release.versions.VersionParseException;
 import org.codehaus.plexus.components.interactivity.Prompter;
 import org.codehaus.plexus.components.interactivity.PrompterException;
 import org.codehaus.plexus.interpolation.InterpolationException;
@@ -556,7 +559,24 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             boolean noff) throws MojoFailureException, CommandLineException {
         if (rebase) {
             getLog().info("Rebasing '" + branchName + "' branch.");
-            executeGitCommand("rebase", branchName);
+            CommandResult tempResult = executeGitCommandExitCode("rebase", branchName);
+            if (tempResult.getExitCode() != SUCCESS_EXIT_CODE) {
+                // not all commands print errors to error stream
+                String errorStr = tempResult.getError();
+                if (StringUtils.isBlank(errorStr) && StringUtils.isNotBlank(tempResult.getOut())) {
+                    errorStr = tempResult.getOut();
+                } else {
+                    getLog().debug("Command output: " + tempResult.getOut());
+                }
+
+                Pattern p = Pattern.compile("Patch failed at \\d+ .*");
+                Matcher m = p.matcher(tempResult.getOut());
+                if (m.find()) {
+                    errorStr += "\n" + m.group();
+                }
+                throw new MojoFailureException(errorStr);
+            }
+
         } else {
             String tempMergeCommitMessage = getMergeMessageFor(branchName, gitCurrentBranch());
 
@@ -567,6 +587,33 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                 getLog().info("Merging '" + branchName + "' branch.");
                 executeGitCommand("merge", "-m", tempMergeCommitMessage, branchName);
             }
+        }
+    }
+
+    /**
+     * Update initial version commit to new version on development branch
+     * @param featureBranchVersion the desired version on the feature branch
+     */
+    protected void gitRebaseFeatureCommit(final String featureIssue) throws MojoFailureException, CommandLineException {
+        // use OURS = theirs in rebase
+        executeGitCommand("checkout", "--ours", ".");
+        
+        // read the version
+        String tempDevelopmentVersion = getCurrentProjectVersion();
+        
+        try {
+            final DefaultVersionInfo versionInfo = new DefaultVersionInfo(
+                    tempDevelopmentVersion);
+            String tempFeatureVersion = versionInfo.getReleaseVersionString() + "-"
+                    + featureIssue + "-" + Artifact.SNAPSHOT_VERSION;
+            
+            // set desired version
+            mvnSetVersions(tempFeatureVersion);
+    
+            // add changes to initial commit
+            executeGitCommand("add", "-u");
+        } catch (VersionParseException ex) {
+            throw new MojoFailureException("Failed to create update version for feature branch.", ex);
         }
     }
 

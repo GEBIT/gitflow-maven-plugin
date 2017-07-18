@@ -76,37 +76,49 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
 
                 final String[] branches = featureBranches.split("\\r?\\n");
 
+                // is the current branch a feature branch?
+                String currentBranch = gitCurrentBranch();
+
                 List<String> numberedList = new ArrayList<String>();
                 StringBuilder str = new StringBuilder("Feature branches:")
                         .append(LS);
                 for (int i = 0; i < branches.length; i++) {
                     str.append((i + 1) + ". " + branches[i] + LS);
                     numberedList.add(String.valueOf(i + 1));
-                }
-                str.append("Choose feature branch to update");
-
-                String featureNumber = null;
-                try {
-                    while (StringUtils.isBlank(featureNumber)) {
-                        featureNumber = prompter.prompt(str.toString(),
-                                numberedList);
+                    if (branches[i].equals(currentBranch)) {
+                        // we're on a feature branch, no need to ask
+                        featureBranchName = currentBranch;
+                        getLog().info("Current feature branch: " + featureBranchName);
+                        break;
                     }
-                } catch (PrompterException e) {
-                    getLog().error(e);
                 }
 
-                if (featureNumber != null) {
-                    int num = Integer.parseInt(featureNumber);
-                    featureBranchName = branches[num - 1];
+                if (featureBranchName == null || StringUtils.isBlank(featureBranchName)) {
+                    str.append("Choose feature branch to update");
+    
+                    String featureNumber = null;
+                    try {
+                        while (StringUtils.isBlank(featureNumber)) {
+                            featureNumber = prompter.prompt(str.toString(),
+                                    numberedList);
+                        }
+                    } catch (PrompterException e) {
+                        getLog().error(e);
+                    }
+    
+                    if (featureNumber != null) {
+                        int num = Integer.parseInt(featureNumber);
+                        featureBranchName = branches[num - 1];
+                    }
+    
+                    if (StringUtils.isBlank(featureBranchName)) {
+                        throw new MojoFailureException(
+                                "Feature branch name to finish is blank.");
+                    }
+    
+                    // git checkout feature/...
+                    gitCheckout(featureBranchName);
                 }
-
-                if (StringUtils.isBlank(featureBranchName)) {
-                    throw new MojoFailureException(
-                            "Feature branch name to finish is blank.");
-                }
-
-                // git checkout feature/...
-                gitCheckout(featureBranchName);
 
                 if (updateWithMerge && rebaseWithoutVersionChange) {
                     try {
@@ -121,7 +133,24 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
                 }
 
                 // merge in development
-                gitMerge(gitFlowConfig.getDevelopmentBranch(), !updateWithMerge, true);
+                try {
+                    gitMerge(gitFlowConfig.getDevelopmentBranch(), !updateWithMerge, true);
+                } catch (MojoFailureException ex) {
+                    // rebase conflict on first commit?
+                    final String featureName = featureBranchName.replaceFirst(
+                            gitFlowConfig.getFeatureBranchPrefix(), "");
+                    final String featureStartMessage = substituteInMessage(commitMessages.getFeatureStartMessage(),
+                            featureBranchName);
+                    if (ex.getMessage().contains("Patch failed at 0001 " + featureStartMessage)) {
+                        // try automatic rebase
+                        gitRebaseFeatureCommit(featureName);
+
+                        // continue rebase
+                        gitRebaseContinue();
+                    } else {
+                        throw ex;
+                    }
+                }
             } else {
                 if (updateWithMerge) {
                     // continue with commit

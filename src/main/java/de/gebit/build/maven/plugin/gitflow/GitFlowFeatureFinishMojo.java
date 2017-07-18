@@ -108,11 +108,12 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
                     if (branches[i].equals(currentBranch)) {
                         // we're on a feature branch, no need to ask
                         featureBranchName = currentBranch;
+                        getLog().info("Current feature branch: " + featureBranchName);
                         break;
                     }
                 }
 
-                if (featureBranchName == null && !StringUtils.isBlank(featureBranchName)) {
+                if (featureBranchName == null || StringUtils.isBlank(featureBranchName)) {
                     str.append("Choose feature branch to finish");
 
                     String featureNumber = null;
