@@ -89,11 +89,6 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
                     throw new MojoFailureException("There are no feature branches.");
                 }
 
-                // fetch and check remote
-                if (fetchRemote) {
-                    gitFetchRemoteAndCompare(gitFlowConfig.getDevelopmentBranch());
-                }
-
                 final String[] branches = featureBranches.split("\\r?\\n");
                 
                 // is the current branch a feature branch?
@@ -139,6 +134,10 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
                     // git checkout feature/...
                     gitCheckout(featureBranchName);
                 }
+                // fetch and check remote feature branch
+                if (fetchRemote) {
+                    gitFetchRemoteAndCompare(featureBranchName);
+                }
 
                 final String featureFinishMessage = substituteInMessage(commitMessages.getFeatureFinishMessage(),
                         featureBranchName);
@@ -154,7 +153,10 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
                 final String featureName = featureBranchName.replaceFirst(
                         gitFlowConfig.getFeatureBranchPrefix(), "");
 
-                // git checkout develop
+                // git checkout develop after fetch and check remote
+                if (fetchRemote) {
+                    gitFetchRemoteAndCompare(gitFlowConfig.getDevelopmentBranch());
+                }
                 gitCheckout(gitFlowConfig.getDevelopmentBranch());
                 if (!rebaseWithoutVersionChange || !gitTryRebaseWithoutVersionChange(featureBranchName)) {
                     // rebase not configured or not possible, then manually revert the version 

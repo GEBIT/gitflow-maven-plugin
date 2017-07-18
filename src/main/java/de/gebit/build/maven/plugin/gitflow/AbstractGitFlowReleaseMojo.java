@@ -276,7 +276,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         }
 
         // if there are any changes in the remote development branch, we need to merge them now
-        gitFetchRemoteAndMergeIfNecessary(developmentBranch);
+        gitFetchRemoteAndMergeIfNecessary(developmentBranch, false);
 
         String nextSnapshotVersion = null;
         if (getDevelopmentVersion() == null) {

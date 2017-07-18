@@ -69,11 +69,6 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
                     throw new MojoFailureException("There are no feature branches.");
                 }
 
-                // fetch and check remote
-                if (fetchRemote) {
-                    gitFetchRemoteAndCompare(gitFlowConfig.getDevelopmentBranch());
-                }
-
                 final String[] branches = featureBranches.split("\\r?\\n");
 
                 // is the current branch a feature branch?
@@ -118,6 +113,13 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
     
                     // git checkout feature/...
                     gitCheckout(featureBranchName);
+                }
+
+                // fetch and check remote
+                if (fetchRemote) {
+                    // fetch and compare both feature and development branch
+                    gitFetchRemoteAndCompare(featureBranchName);
+                    gitFetchRemoteAndResetIfNecessary(gitFlowConfig.getDevelopmentBranch());
                 }
 
                 if (updateWithMerge && rebaseWithoutVersionChange) {
@@ -171,7 +173,7 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
                     // delete remote branch to not run into non-fast-forward error
                     gitBranchDeleteRemote(featureBranchName);
                 }
-                gitPush(gitFlowConfig.getDevelopmentBranch(), false);
+                gitPush(featureBranchName, false);
             }
         } catch (CommandLineException e) {
             getLog().error(e);
