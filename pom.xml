@@ -71,7 +71,7 @@
 	<properties>
 		<project.build-name>gitflow-maven-plugin</project.build-name>
 		<version.property>version.gitflow-maven-plugin</version.property>
-		<version.testsimple>1.5.8-SNAPSHOT</version.testsimple>
+		<version.gitflow-maven-plugin>1.5.9-SNAPSHOT</version.gitflow-maven-plugin>
 
 		<!-- The Project JIRA ID -->
 		<project.jira>GBLD</project.jira>
