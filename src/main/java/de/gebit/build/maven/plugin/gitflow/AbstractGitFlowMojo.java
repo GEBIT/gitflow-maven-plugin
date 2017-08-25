@@ -64,6 +64,8 @@ import org.codehaus.plexus.util.cli.CommandLineUtils;
 import org.codehaus.plexus.util.cli.Commandline;
 import org.codehaus.plexus.util.cli.StreamConsumer;
 
+import edu.emory.mathcs.backport.java.util.Arrays;
+
 /**
  * Abstract git flow mojo.
  * 
@@ -754,11 +756,11 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws MojoFailureException
      * @throws CommandLineException
      */
-    protected String[] gitListReleaseTags(final String tagPrefix, final String pattern) throws MojoFailureException, CommandLineException {
+    protected List<String> gitListReleaseTags(final String tagPrefix, final String pattern) throws MojoFailureException, CommandLineException {
         getLog().info("Looking for release tags.");
         
-        return executeGitCommandReturn("tag", "--sort=-v:refname", "-l", 
-                tagPrefix + (pattern != null ? pattern : "*")).split("\\r?\\n");
+        return new ArrayList<>(Arrays.asList(executeGitCommandReturn("tag", "--sort=-v:refname", "-l", 
+                tagPrefix + (pattern != null ? pattern : "*")).split("\\r?\\n")));
     }
 
     /**

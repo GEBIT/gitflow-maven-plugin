@@ -9,7 +9,9 @@
 package de.gebit.build.maven.plugin.gitflow;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -20,6 +22,8 @@ import org.apache.maven.shared.release.versions.VersionParseException;
 import org.codehaus.plexus.components.interactivity.PrompterException;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
+
+import edu.emory.mathcs.backport.java.util.Arrays;
 
 /**
  * The git flow maintenance branch start mojo.
@@ -73,12 +77,23 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
     protected String firstMaintenanceVersion;
 
     /**
-     * Filter to query for relaese branches to limit the results.
+     * Filter to query for release branches to limit the results. The value is a shell glob pattern if not starting
+     * with a ^ and as a regular expression otherwise. 
      * 
      * @since 1.3.0
+     * @since 1.5.9
      */
     @Parameter(defaultValue = "${releaseBranchFilter}", required = false)
     protected String releaseBranchFilter;
+
+    /**
+     * Number of release versions to offer. If not specified the selection is unlimited. The order is from highest to
+     * lowest.
+     * 
+     * @since 1.5.9
+     */
+    @Parameter(defaultValue = "${releaseVersionLimit}", required = false)
+    protected Integer releaseVersionLimit;
 
     /** {@inheritDoc} */
     @Override
@@ -92,15 +107,34 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
 
             String baseName = null;
             if (releaseVersion == null) {
-                final String[] releaseTags = gitListReleaseTags(gitFlowConfig.getVersionTagPrefix(), releaseBranchFilter);
+                boolean regexMode = releaseBranchFilter != null && releaseBranchFilter.startsWith("^");
+                List<String> releaseTags = gitListReleaseTags(gitFlowConfig.getVersionTagPrefix(), regexMode ? null : releaseBranchFilter);
+
+                // post process selection
+                if (regexMode) {
+                    Pattern versionFilter = Pattern.compile("^\\Q" + gitFlowConfig.getVersionTagPrefix() + "\\E" + releaseBranchFilter.substring(1));
+                    for (Iterator<String> it = releaseTags.iterator(); it.hasNext(); ) {
+                        if (!versionFilter.matcher(it.next()).matches()) {
+                            it.remove();
+                        }
+                    }
+                }
+                if (releaseVersionLimit != null && releaseTags.size() > releaseVersionLimit) {
+                    releaseTags = releaseTags.subList(0, releaseVersionLimit);
+                }
                 List<String> numberedList = new ArrayList<String>();
                 StringBuilder str = new StringBuilder("Release:").append(LS);
                 str.append("0. <current commit>" + LS);
                 numberedList.add(String.valueOf(0));
-                for (int i = 0; i < releaseTags.length; i++) {
-                    str.append((i + 1) + ". " + releaseTags[i] + LS);
+                for (int i = 0; i < releaseTags.size(); i++) {
+                    str.append((i + 1) + ". " + releaseTags.get(i) + LS);
                     numberedList.add(String.valueOf(i + 1));
                 }
+
+                // add explicit choice
+                str.append("T. <prompt for explicit tag name>" + LS);
+                numberedList.add("T");
+
                 str.append("Choose release to create the maintenance branch from or enter a custom tag or release name");
 
                 String releaseNumber = null;
@@ -112,12 +146,19 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
                     getLog().error(e);
                 }
 
-                if (!StringUtils.isBlank(releaseNumber) && !releaseNumber.equals("0")) {
-                    int num = Integer.parseInt(releaseNumber);
-                    baseName = releaseTags[num - 1];
-                } else {
+                if (StringUtils.isBlank(releaseNumber) || "0".equals(releaseNumber)) {
                     // get off current commit
                     baseName = getCurrentCommit();
+                } else if ("T".equals(releaseNumber)) {
+                    // prompt for tag name
+                    try {
+                        baseName = prompter.prompt("Enter explicit tag name");
+                    } catch (PrompterException e) {
+                        getLog().error(e);
+                    }
+                } else {
+                    int num = Integer.parseInt(releaseNumber);
+                    baseName = releaseTags.get(num - 1);
                 }
 
             } else {
