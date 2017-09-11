@@ -978,6 +978,14 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                 gitFlowConfig.getOrigin(), branchName);
 
         if (result.getExitCode() == SUCCESS_EXIT_CODE) {
+            // if there is no local branch create it now and return
+            result = executeGitCommandExitCode("rev-parse", "--verify", branchName);
+            if (result.getExitCode() != SUCCESS_EXIT_CODE) {
+                // no such local branch, create it now (then it's up to date) 
+                executeGitCommand("branch", "-u",  gitFlowConfig.getOrigin() + "/" + branchName, branchName);
+                return;
+            }
+
             getLog().info(
                     "Comparing local branch '" + branchName + "' with remote '"
                             + gitFlowConfig.getOrigin() + "/" + branchName
