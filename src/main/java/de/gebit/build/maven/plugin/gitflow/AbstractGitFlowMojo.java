@@ -982,7 +982,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             result = executeGitCommandExitCode("rev-parse", "--verify", branchName);
             if (result.getExitCode() != SUCCESS_EXIT_CODE) {
                 // no such local branch, create it now (then it's up to date) 
-                executeGitCommand("branch", "-u",  gitFlowConfig.getOrigin() + "/" + branchName, branchName);
+                executeGitCommand("branch", branchName,  gitFlowConfig.getOrigin() + "/" + branchName);
                 return;
             }
 
