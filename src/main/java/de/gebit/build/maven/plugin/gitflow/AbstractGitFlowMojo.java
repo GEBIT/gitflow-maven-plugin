@@ -40,6 +40,7 @@ import org.apache.commons.lang3.text.StrLookup;
 import org.apache.commons.lang3.text.StrSubstitutor;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.ArtifactUtils;
+import org.apache.maven.execution.MavenExecutionRequest;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Model;
@@ -1504,14 +1505,41 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     private void executeMvnCommand(boolean copyOutput, final String... args)
             throws CommandLineException, MojoFailureException {
-        String[] effectiveArgs = args;
+        String[] effectiveArgs = addArgs(args, "-f", session.getRequest().getPom().getAbsolutePath());
         if (session.getRequest().getUserSettingsFile() != null) {
-            effectiveArgs = new String[args.length + 2];
-            effectiveArgs[0] = "-s";
-            effectiveArgs[1] = session.getRequest().getUserSettingsFile().getAbsolutePath();
-            System.arraycopy(args, 0, effectiveArgs, 2, args.length);
-        } else {
-            effectiveArgs = args;
+            effectiveArgs = addArgs(effectiveArgs, "-s", session.getRequest().getUserSettingsFile().getAbsolutePath());
+        }
+        if (session.getRequest().isOffline()) {
+            effectiveArgs = addArgs(effectiveArgs, "-o");
+        }
+        if (session.getRequest().isNoSnapshotUpdates()) {
+            effectiveArgs = addArgs(effectiveArgs, "-nsu");
+        }
+        StringBuilder profileActivation = new StringBuilder();
+        if (session.getRequest().getActiveProfiles() != null) {
+            for (String profile : session.getRequest().getActiveProfiles()) {
+                if (profileActivation.length() > 0) {
+                    profileActivation.append(",");
+                }
+                profileActivation.append(profile);
+            }
+        }
+        if (session.getRequest().getInactiveProfiles() != null) {
+            for (String profile : session.getRequest().getInactiveProfiles()) {
+                if (profileActivation.length() > 0) {
+                    profileActivation.append(",");
+                }
+                profileActivation.append("-").append(profile);
+            }
+        }
+        if (profileActivation.length() > 0) {
+            effectiveArgs = addArgs(effectiveArgs, "-P", profileActivation.toString());
+        }
+        if (session.getRequest().isShowErrors()) {
+            effectiveArgs = addArgs(effectiveArgs, "-e");
+        }
+        if (session.getRequest().getLoggingLevel() == MavenExecutionRequest.LOGGING_LEVEL_DEBUG) {
+            effectiveArgs = addArgs(effectiveArgs, "-X");
         }
         if (copyProperties != null) {
             for (String userProperty : copyProperties) {
@@ -1530,6 +1558,16 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         } else {
             executeCommand(cmdMvn, true, effectiveArgs);
         }
+    }
+
+    /**
+     * Add (prepend) additional arguments to given arguments
+     */
+    private String[] addArgs(String[] args, String... additionalArgs) {
+        String[] result = new String[args.length + additionalArgs.length];
+        System.arraycopy(additionalArgs, 0, result, 0, additionalArgs.length);
+        System.arraycopy(args, 0, result, additionalArgs.length, args.length);
+        return result;
     }
 
     protected String substituteInMessage(final String message) throws MojoFailureException {
