@@ -47,7 +47,7 @@ public class GitFlowIntegratedMojo extends AbstractGitFlowMojo {
             initGitFlowConfig();
 
             if (StringUtils.isBlank(integrationBranch)) {
-                integrationBranch = gitCurrentBranch() + gitFlowConfig.getIntegrationBranchSuffix();
+                integrationBranch = gitFlowConfig.getIntegrationBranchPrefix() + gitCurrentBranch();
                 
                 if (settings.isInteractiveMode()) {
                     try {
