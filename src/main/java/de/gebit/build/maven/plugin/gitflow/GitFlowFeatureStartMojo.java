@@ -17,7 +17,7 @@ package de.gebit.build.maven.plugin.gitflow;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Properties;
+import java.util.concurrent.Callable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -29,12 +29,6 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.shared.release.versions.DefaultVersionInfo;
 import org.apache.maven.shared.release.versions.VersionParseException;
 import org.codehaus.plexus.components.interactivity.PrompterException;
-import org.codehaus.plexus.interpolation.InterpolationException;
-import org.codehaus.plexus.interpolation.PropertiesBasedValueSource;
-import org.codehaus.plexus.interpolation.RegexBasedInterpolator;
-import org.codehaus.plexus.interpolation.SingleResponseValueSource;
-import org.codehaus.plexus.interpolation.StringSearchInterpolator;
-import org.codehaus.plexus.interpolation.ValueSource;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
@@ -89,7 +83,30 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
             String currentBranch = gitCurrentBranch();
             String baseBranch = currentBranch.startsWith(gitFlowConfig.getMaintenanceBranchPrefix()) 
                     ? currentBranch : gitFlowConfig.getDevelopmentBranch();
-            if (fetchRemote) {
+            
+            // use integration branch?
+            final String integrationBranch = gitFlowConfig.getIntegrationBranchPrefix() + baseBranch;
+            if (!gitBranchExists(integrationBranch) && fetchRemote) {
+                // first try to fetch it
+                gitFetchRemoteAndCompare(integrationBranch, new Callable<Void>() {
+                    
+                    @Override
+                    public Void call() throws Exception {
+                        gitUpdateRef(integrationBranch, "refs/remotes/" + gitFlowConfig.getOrigin() + "/" + integrationBranch);
+                        return null;
+                    }
+                });
+            }
+            if (gitBranchExists(integrationBranch)) {
+                getLog().info("Using integration branch '" + integrationBranch + "'");
+                baseBranch = integrationBranch;
+                
+                String branchPoint = gitBranchPoint(integrationBranch, baseBranch);
+                if (StringUtils.isEmpty(branchPoint)) {
+                    throw new MojoFailureException("Failed to determine branch base of '" + integrationBranch
+                            + "' in respect to '" + baseBranch + "'.");
+                }
+            } else if (fetchRemote) {
                 gitFetchRemoteAndCompare(baseBranch);
             }
 

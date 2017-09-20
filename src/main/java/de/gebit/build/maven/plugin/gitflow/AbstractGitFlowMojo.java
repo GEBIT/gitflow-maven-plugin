@@ -719,7 +719,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
         executeGitCommand("tag", "-a", tagName, "-m", message);
     }
-    
+
     /**
      * Executes git symbolic-ref --short HEAD to get the current branch.
      * Throws an exception when in detached HEAD state.
@@ -776,8 +776,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected boolean gitTryRebaseWithoutVersionChange(String featureBranch) throws MojoFailureException, CommandLineException {
         getLog().info("Looking for branch base of " + featureBranch + ".");
-        final String branchPoint = executeGitCommandReturn("merge-base", "HEAD", featureBranch).trim();
-        if (branchPoint.isEmpty()) {
+        final String branchPoint = gitBranchPoint("HEAD", featureBranch);
+        if (StringUtils.isEmpty(branchPoint)) {
             throw new MojoFailureException("Failed to determine branch base of feature branch '" + featureBranch + "'.");
         }
         final String gitOutput = executeGitCommandReturn("rev-list", branchPoint + ".." + featureBranch, "--reverse");
@@ -928,13 +928,20 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected void gitFetchRemoteAndCompare(final String branchName)
             throws MojoFailureException, CommandLineException {
-        gitFetchRemoteAndCompare(branchName, new Callable<Void>() {
+        if (!gitFetchRemoteAndCompare(branchName, new Callable<Void>() {
             @Override
             public Void call() throws MojoFailureException {
                 throw new MojoFailureException(
                         "Remote branch is ahead of the local branch " + branchName + ". Execute git pull.");
             }
-        });
+        })) {
+            getLog().warn(
+                    "There were some problems fetching remote branch '"
+                            + gitFlowConfig.getOrigin()
+                            + " "
+                            + branchName
+                            + "'. You can turn off remote branch fetching by setting the 'fetchRemote' parameter to false.");
+        }
     }
 
     /**
@@ -945,16 +952,23 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected void gitFetchRemoteAndMergeIfNecessary(final String branchName, final boolean rebase)
             throws MojoFailureException, CommandLineException {
-        gitFetchRemoteAndCompare(branchName, new Callable<Void>() {
+        if (!gitFetchRemoteAndCompare(branchName, new Callable<Void>() {
             @Override
             public Void call() throws MojoFailureException, CommandLineException {
                 getLog().info("Remote branch is ahead of the local branch " + branchName + ", trying to merge:");
                 gitMerge(gitFlowConfig.getOrigin() + "/" + branchName, rebase, false);
                 return null;
             }
-        });
+        })) {
+            getLog().warn(
+                    "There were some problems fetching remote branch '"
+                            + gitFlowConfig.getOrigin()
+                            + " "
+                            + branchName
+                            + "'. You can turn off remote branch fetching by setting the 'fetchRemote' parameter to false.");
+        }
     }
-    
+
     /**
      * 
      * @param branchName
@@ -963,7 +977,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected void gitFetchRemoteAndResetIfNecessary(final String branchName)
             throws MojoFailureException, CommandLineException {
-        gitFetchRemoteAndCompare(branchName, new Callable<Void>() {
+        if (!gitFetchRemoteAndCompare(branchName, new Callable<Void>() {
             @Override
             public Void call() throws MojoFailureException, CommandLineException {
                 // is the remote a descendant of the local reference?
@@ -976,7 +990,14 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                     throw new MojoFailureException("Remote branch is ahead of the local branch " + branchName + ", but cannot reset as local is not an ancestor of remote.");
                 }
             }
-        });
+        })) {
+            getLog().warn(
+                    "There were some problems fetching remote branch '"
+                            + gitFlowConfig.getOrigin()
+                            + " "
+                            + branchName
+                            + "'. You can turn off remote branch fetching by setting the 'fetchRemote' parameter to false.");
+        }
     }
 
     /**
@@ -984,28 +1005,27 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * 
      * @param branchName
      *            Branch name to fetch and compare.
+     * @return <code>true</code> if the branch exists, <code>false</code> if not
      * @throws MojoFailureException
      * @throws CommandLineException
      */
-    protected void gitFetchRemoteAndCompare(final String branchName, Callable<Void> diffFunctor)
+    protected boolean gitFetchRemoteAndCompare(final String branchName, Callable<Void> diffFunctor)
             throws MojoFailureException, CommandLineException {
         getLog().info(
-                "Fetching remote branch '" + gitFlowConfig.getOrigin() + " "
-                        + branchName + "'.");
+                "Fetching remote branch '" + branchName + "' from '" + gitFlowConfig.getOrigin() + "'.");
 
         CommandResult result = executeGitCommandExitCode("fetch", "--quiet",
                 gitFlowConfig.getOrigin(), branchName);
 
         if (result.getExitCode() == SUCCESS_EXIT_CODE) {
             // if there is no local branch create it now and return
-            result = executeGitCommandExitCode("rev-parse", "--verify", branchName);
-            if (result.getExitCode() != SUCCESS_EXIT_CODE) {
+            if (!gitBranchExists(branchName)) {
                 // no such local branch, create it now (then it's up to date) 
                 executeGitCommand("branch", branchName,  gitFlowConfig.getOrigin() + "/" + branchName);
-                return;
+                return true;
             }
 
-            getLog().info(
+            getLog().debug(
                     "Comparing local branch '" + branchName + "' with remote '"
                             + gitFlowConfig.getOrigin() + "/" + branchName
                             + "'.");
@@ -1027,13 +1047,9 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                     }
                 }
             }
+            return true;
         } else {
-            getLog().warn(
-                    "There were some problems fetching remote branch '"
-                            + gitFlowConfig.getOrigin()
-                            + " "
-                            + branchName
-                            + "'. You can turn off remote branch fetching by setting the 'fetchRemote' parameter to false.");
+            return false;
         }
     }
 
@@ -1079,6 +1095,23 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         final String branchResult = executeGitCommandReturn("for-each-ref",
                 "refs/heads/" + branchName);
         return (StringUtils.isNotBlank(branchResult));
+    }
+
+    /**
+     * Find the merge point between two branches
+     * @param branchName the branch to check for. Use HEAD for current branch.
+     * @param otherBranchName the branch to compare to. Use HEAD for current branch.
+     * @return the commit id of the branch point or <code>null</code> if not found
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected String gitBranchPoint(final String branchName, final String otherBranchName)
+            throws MojoFailureException, CommandLineException {
+        final String branchPoint = executeGitCommandReturn("merge-base", branchName, otherBranchName).trim();
+        if (branchPoint.isEmpty()) {
+            return null;
+        }
+        return branchPoint;
     }
 
     /**
