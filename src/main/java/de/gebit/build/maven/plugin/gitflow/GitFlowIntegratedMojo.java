@@ -59,6 +59,9 @@ public class GitFlowIntegratedMojo extends AbstractGitFlowMojo {
             }
 
             gitUpdateRef(integrationBranch, "HEAD");
+            if (pushRemote)  {
+                gitPush(integrationBranch, false);
+            }
 
         } catch (CommandLineException e) {
             getLog().error(e);
