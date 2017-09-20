@@ -34,6 +34,11 @@ public class GitFlowConfig {
     private String hotfixBranchPrefix;
     /** Prefix of the maintenance branches. */
     private String maintenanceBranchPrefix;
+    /** 
+     * Suffix for integration branches.
+     * @since 1.5.10 
+     */
+    private String integrationBranchSuffix;
     /** Prefix of the version tag. */
     private String versionTagPrefix;
     /** Set to true if there is no production branch. */
@@ -54,6 +59,7 @@ public class GitFlowConfig {
         this.versionTagPrefix = "";
         this.noProduction = false;
         this.origin = "origin";
+        this.integrationBranchSuffix = "-integration";
     }
 
     /**
@@ -155,6 +161,22 @@ public class GitFlowConfig {
         this.maintenanceBranchPrefix = maintenanceBranchPrefix;
     }
 
+    
+    /**
+     * @return the integrationBranchSuffix
+     */
+    public String getIntegrationBranchSuffix() {
+        return integrationBranchSuffix;
+    }
+    
+    /**
+     * @param integrationBranchSuffix
+     *            the integrationBranchSuffix to set
+     */
+    public void setIntegrationBranchSuffix(String integrationBranchSuffix) {
+        this.integrationBranchSuffix = integrationBranchSuffix;
+    }
+    
     /**
      * @return the versionTagPrefix
      */

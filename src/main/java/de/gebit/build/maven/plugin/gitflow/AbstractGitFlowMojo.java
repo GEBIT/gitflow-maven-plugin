@@ -853,6 +853,24 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
+     * Call update-ref to explicitly set a reference for a branch.
+     * 
+     * @param branchName
+     *            Branch name to set a specific reference for
+     * @param newRef
+     *            Value to set the reference to
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     * @since 1.5.9
+     */
+    protected void gitUpdateRef(final String branchName, final String newRef)
+            throws MojoFailureException, CommandLineException {
+        getLog().info("Updating reference for branch '" + branchName + "'.");
+
+        executeGitCommand("update-ref", "refs/heads/" + branchName, newRef);
+    }
+
+    /**
      * Executes git branch -d.
      * 
      * @param branchName
