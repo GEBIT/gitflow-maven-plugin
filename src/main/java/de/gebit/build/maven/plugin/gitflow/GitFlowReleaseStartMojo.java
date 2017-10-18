@@ -114,6 +114,11 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
     }
 
     @Override
+    protected String getDeployReplacement() {
+        throw new IllegalStateException("release-start does not build the release.");
+    }
+
+    @Override
     protected String getReleaseVersion() {
         return releaseVersion;
     }

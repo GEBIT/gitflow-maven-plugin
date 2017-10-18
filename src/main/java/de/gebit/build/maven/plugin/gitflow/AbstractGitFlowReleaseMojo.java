@@ -82,6 +82,12 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
     protected abstract String[] getReleaseGoals();
 
     /**
+     * Get a replacement for the 'deploy' goal/phase when {@link #isSkipDeployProject()} is activated.
+     * @since 1.5.10
+     */
+    protected abstract String getDeployReplacement();
+
+    /**
      * The mojo provides this flag from a configuration property.
      */
     protected abstract String getReleaseVersion();
@@ -225,7 +231,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         if (getReleaseGoals() != null) {
             for (String goals : getReleaseGoals()) {
                 if (isSkipDeployProject()) {
-                    goals = goals.replaceAll("(?:^|\\s+)deploy(?:$|\\s+)", " ").trim();
+                    goals = goals.replaceAll("(?:^|\\s+)deploy(?:$|\\s+)", " " + getDeployReplacement() + " " ).trim();
                     if (goals.isEmpty()) {
                         continue;
                     }

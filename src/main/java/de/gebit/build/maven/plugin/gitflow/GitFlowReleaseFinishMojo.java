@@ -91,6 +91,15 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
     private String[] releaseGoals;
 
     /**
+     * When {@link #skipDeployProject} is activated the invocation of 'deploy' in {@link #releaseGoals} is suppressed.
+     * You can specify a replacement goal that is substituted here (the default is empty). 
+     * 
+     * @since 1.5.10
+     */
+    @Parameter(property = "deployReplacement", defaultValue = "${deployReplacement}")
+    private String deployReplacement;
+
+    /**
      * Version to set for the next development iteration. If not specified you
      * will be asked for the version (in interactive mode), in batch mode the
      * default will be used (current version with stripped SNAPSHOT incremented
@@ -170,6 +179,11 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
     @Override
     protected String[] getReleaseGoals() {
         return releaseGoals;
+    }
+
+    @Override
+    protected String getDeployReplacement() {
+        return deployReplacement;
     }
 
     @Override
