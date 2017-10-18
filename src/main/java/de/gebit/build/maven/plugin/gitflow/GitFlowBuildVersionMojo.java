@@ -53,7 +53,7 @@ public class GitFlowBuildVersionMojo extends AbstractGitFlowMojo {
             final String currentVersion = getCurrentProjectVersion();
 
             String baseVersion = null;
-            if (tychoBuild) {
+            if (false && tychoBuild) {
                 baseVersion = currentVersion;
             } else {
                 // get default release version
