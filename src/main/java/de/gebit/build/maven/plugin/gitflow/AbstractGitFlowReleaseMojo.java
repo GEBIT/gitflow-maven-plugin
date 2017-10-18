@@ -127,7 +127,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         String version = null;
         if (getReleaseVersion() == null) {
             String defaultVersion = null;
-            if (tychoBuild) {
+            if (false && tychoBuild) {
                 defaultVersion = currentVersion;
             } else {
                 // get default release version
