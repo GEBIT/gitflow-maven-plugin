@@ -133,17 +133,13 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         String version = null;
         if (getReleaseVersion() == null) {
             String defaultVersion = null;
-            if (false && tychoBuild) {
-                defaultVersion = currentVersion;
-            } else {
-                // get default release version
-                try {
-                    final DefaultVersionInfo versionInfo = new DefaultVersionInfo(currentVersion);
-                    defaultVersion = versionInfo.getReleaseVersionString();
-                } catch (VersionParseException e) {
-                    if (getLog().isDebugEnabled()) {
-                        getLog().debug(e);
-                    }
+            // get default release version
+            try {
+                final DefaultVersionInfo versionInfo = new DefaultVersionInfo(currentVersion);
+                defaultVersion = versionInfo.getReleaseVersionString();
+            } catch (VersionParseException e) {
+                if (getLog().isDebugEnabled()) {
+                    getLog().debug(e);
                 }
             }
 
@@ -164,6 +160,24 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
             }
         } else {
             version = getReleaseVersion();
+        }
+        if (tychoBuild) {
+            // make sure we have an OSGi conforming version
+            try {
+                DefaultVersionInfo versionInfo = new DefaultVersionInfo(version);
+                if (versionInfo.getDigits().size() <= 4) {
+                    version = StringUtils.join(versionInfo.getDigits().iterator(), ".");
+                } else {
+                    // version from first 3 components and join remaining in qualifier
+                    version = StringUtils.join(versionInfo.getDigits().subList(0, 3).iterator(), ".");
+                    // add remaining to qualifier
+                    version += "_" + StringUtils.join(versionInfo.getDigits().subList(4, versionInfo.getDigits().size()-1).iterator(), "_").replace('-', '_');
+                }
+            } catch (VersionParseException e) {
+                if (getLog().isDebugEnabled()) {
+                    getLog().debug(e);
+                }
+            }
         }
 
         // actually create the release branch now

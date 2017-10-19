@@ -53,18 +53,25 @@ public class GitFlowBuildVersionMojo extends AbstractGitFlowMojo {
             final String currentVersion = getCurrentProjectVersion();
 
             String baseVersion = null;
-            if (false && tychoBuild) {
-                baseVersion = currentVersion;
-            } else {
-                // get default release version
-                try {
-                    final DefaultVersionInfo versionInfo = new DefaultVersionInfo(
-                            currentVersion);
-                    baseVersion = versionInfo.getReleaseVersionString();
-                } catch (VersionParseException e) {
-                    if (getLog().isDebugEnabled()) {
-                        getLog().debug(e);
+            // get default release version
+            try {
+                DefaultVersionInfo versionInfo = new DefaultVersionInfo(
+                        currentVersion);
+                baseVersion = versionInfo.getReleaseVersionString();
+                if (tychoBuild) {
+                    versionInfo = new DefaultVersionInfo(baseVersion);
+                    if (versionInfo.getDigits().size() <= 4) {
+                        baseVersion = StringUtils.join(versionInfo.getDigits().iterator(), ".");
+                    } else {
+                        // version from first 3 components and join remaining in qualifier
+                        baseVersion = StringUtils.join(versionInfo.getDigits().subList(0, 3).iterator(), ".");
+                        // add remaining to qualifier
+                        baseVersion += "_" + StringUtils.join(versionInfo.getDigits().subList(4, versionInfo.getDigits().size()-1).iterator(), "_").replace('-', '_');
                     }
+                }
+            } catch (VersionParseException e) {
+                if (getLog().isDebugEnabled()) {
+                    getLog().debug(e);
                 }
             }
 
@@ -87,7 +94,16 @@ public class GitFlowBuildVersionMojo extends AbstractGitFlowMojo {
             }
             
             // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
-            mvnSetVersions(baseVersion + "-" + buildVersion, "");
+            if (tychoBuild) {
+                // convert the base Version to OSGi
+                if (StringUtils.countMatches(baseVersion, ".") < 4) {
+                    mvnSetVersions(baseVersion + "." + buildVersion, "");
+                } else {
+                    mvnSetVersions(baseVersion + "_" + buildVersion, "");
+                }
+            } else {
+                mvnSetVersions(baseVersion + "-" + buildVersion, "");
+            }
 
         } catch (CommandLineException e) {
             getLog().error(e);
