@@ -1807,6 +1807,24 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
+     * Create a valid Tycho (OSGi) version from the passed version: It must have only 4 version components and the first
+     * 3 must be numeric.
+     */
+    protected String makeValidTychoVersion(String version) throws VersionParseException {
+        String result = version;
+        DefaultVersionInfo versionInfo = new DefaultVersionInfo(version);
+        if (versionInfo.getDigits().size() <= 4) {
+            result = StringUtils.join(versionInfo.getDigits().iterator(), ".");
+        } else {
+            // version from first 3 components and join remaining in qualifier
+            result = StringUtils.join(versionInfo.getDigits().subList(0, 3).iterator(), ".");
+            // add remaining to qualifier
+            result += "-" + StringUtils.join(versionInfo.getDigits().subList(4, versionInfo.getDigits().size()-1).iterator(), "_");
+        }
+        return result;
+    }
+
+    /**
      * Executes command line.
      * 
      * @param cmd

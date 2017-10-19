@@ -59,15 +59,7 @@ public class GitFlowBuildVersionMojo extends AbstractGitFlowMojo {
                         currentVersion);
                 baseVersion = versionInfo.getReleaseVersionString();
                 if (tychoBuild) {
-                    versionInfo = new DefaultVersionInfo(baseVersion);
-                    if (versionInfo.getDigits().size() <= 4) {
-                        baseVersion = StringUtils.join(versionInfo.getDigits().iterator(), ".");
-                    } else {
-                        // version from first 3 components and join remaining in qualifier
-                        baseVersion = StringUtils.join(versionInfo.getDigits().subList(0, 3).iterator(), ".");
-                        // add remaining to qualifier
-                        baseVersion += "-" + StringUtils.join(versionInfo.getDigits().subList(4, versionInfo.getDigits().size()-1).iterator(), "_");
-                    }
+                    baseVersion = makeValidTychoVersion(baseVersion);
                 }
             } catch (VersionParseException e) {
                 if (getLog().isDebugEnabled()) {

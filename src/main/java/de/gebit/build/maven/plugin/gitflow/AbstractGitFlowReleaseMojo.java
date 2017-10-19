@@ -164,15 +164,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         if (tychoBuild) {
             // make sure we have an OSGi conforming version
             try {
-                DefaultVersionInfo versionInfo = new DefaultVersionInfo(version);
-                if (versionInfo.getDigits().size() <= 4) {
-                    version = StringUtils.join(versionInfo.getDigits().iterator(), ".");
-                } else {
-                    // version from first 3 components and join remaining in qualifier
-                    version = StringUtils.join(versionInfo.getDigits().subList(0, 3).iterator(), ".");
-                    // add remaining to qualifier
-                    version += "-" + StringUtils.join(versionInfo.getDigits().subList(4, versionInfo.getDigits().size()-1).iterator(), "_");
-                }
+                version = makeValidTychoVersion(version);
             } catch (VersionParseException e) {
                 if (getLog().isDebugEnabled()) {
                     getLog().debug(e);
