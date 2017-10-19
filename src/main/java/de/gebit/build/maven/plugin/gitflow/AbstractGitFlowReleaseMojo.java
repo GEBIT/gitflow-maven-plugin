@@ -171,7 +171,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                     // version from first 3 components and join remaining in qualifier
                     version = StringUtils.join(versionInfo.getDigits().subList(0, 3).iterator(), ".");
                     // add remaining to qualifier
-                    version += "_" + StringUtils.join(versionInfo.getDigits().subList(4, versionInfo.getDigits().size()-1).iterator(), "_").replace('-', '_');
+                    version += "-" + StringUtils.join(versionInfo.getDigits().subList(4, versionInfo.getDigits().size()-1).iterator(), "_");
                 }
             } catch (VersionParseException e) {
                 if (getLog().isDebugEnabled()) {

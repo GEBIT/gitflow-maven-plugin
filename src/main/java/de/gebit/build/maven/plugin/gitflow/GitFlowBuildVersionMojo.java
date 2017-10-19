@@ -66,7 +66,7 @@ public class GitFlowBuildVersionMojo extends AbstractGitFlowMojo {
                         // version from first 3 components and join remaining in qualifier
                         baseVersion = StringUtils.join(versionInfo.getDigits().subList(0, 3).iterator(), ".");
                         // add remaining to qualifier
-                        baseVersion += "_" + StringUtils.join(versionInfo.getDigits().subList(4, versionInfo.getDigits().size()-1).iterator(), "_").replace('-', '_');
+                        baseVersion += "-" + StringUtils.join(versionInfo.getDigits().subList(4, versionInfo.getDigits().size()-1).iterator(), "_");
                     }
                 }
             } catch (VersionParseException e) {
