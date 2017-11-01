@@ -21,8 +21,8 @@ import java.nio.file.FileSystems;
 
 import org.apache.maven.artifact.manager.WagonManager;
 import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.artifact.repository.ArtifactRepositoryFactory;
 import org.apache.maven.artifact.repository.DefaultArtifactRepository;
+import org.apache.maven.artifact.repository.MavenArtifactRepository;
 import org.apache.maven.artifact.repository.layout.ArtifactRepositoryLayout;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -57,9 +57,6 @@ public class GitFlowCheckMojo extends AbstractGitFlowMojo {
     
     @Component(role = ArtifactRepositoryLayout.class)
     private ArtifactRepositoryLayout artifactRepositoryLayout;
-    
-    @Component(role = ArtifactRepositoryFactory.class)
-    private ArtifactRepositoryFactory artifactRepositoryFactory;
     
     @Parameter(required = false, defaultValue = "${project.distributionManagement.repository.id}|${project.distributionManagement.repository.url},${project.distributionManagement.snapshotRepository.id}|${project.distributionManagement.snapshotRepository.url}")
     private Repository[] deploymentRepositories;
@@ -140,7 +137,7 @@ public class GitFlowCheckMojo extends AbstractGitFlowMojo {
         getLog().info("Checking " + type + " access for " + id + " at " + url);
 
         try {
-            ArtifactRepository tempArtifactRepository = artifactRepositoryFactory.createArtifactRepository(id, url, artifactRepositoryLayout, null, null);
+            ArtifactRepository tempArtifactRepository = new MavenArtifactRepository(id, url, artifactRepositoryLayout, null, null);
             Wagon tempWagon = wagonManager.getWagon(tempArtifactRepository.getProtocol());
             DefaultArtifactRepository tempRepository = new DefaultArtifactRepository(id, url, artifactRepositoryLayout, false);
             tempWagon.connect(tempRepository, wagonManager.getAuthenticationInfo(id));
