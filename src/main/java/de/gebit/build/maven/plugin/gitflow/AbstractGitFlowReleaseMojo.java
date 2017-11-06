@@ -250,7 +250,11 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         // if we're on a release branch merge it now to maintenance or production.
         String targetBranch = releaseOnMaintenanceBranch || gitFlowConfig.isNoProduction() 
                 ? developmentBranch : gitFlowConfig.getProductionBranch(); 
-        gitCheckout(targetBranch);
+        if (gitBranchExists(targetBranch)) {
+            gitCheckout(targetBranch);
+        } else {
+            gitCreateAndCheckout(targetBranch, developmentBranch);
+        }
 
         // merge the release branch in the target branch
         getLog().info("Merging release branch to " + targetBranch);
