@@ -118,12 +118,20 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         if (currentBranch.startsWith(gitFlowConfig.getReleaseBranchPrefix())) {
             throw new MojoFailureException("Current branch '" + currentBranch + "' is already a release branch.");
         }
+
         boolean releaseOnMaintenanceBranch = currentBranch.startsWith(gitFlowConfig.getMaintenanceBranchPrefix()); 
+        String productionBranch = gitFlowConfig.getProductionBranch();
+        if (releaseOnMaintenanceBranch) {
+            // derive production branch from maintenance branch
+            productionBranch = productionBranch + "-" + gitFlowConfig.getMaintenanceBranchPrefix()
+                    + currentBranch.substring(gitFlowConfig.getMaintenanceBranchPrefix().length());
+        }
+
         if (fetchRemote) {
             gitFetchRemoteAndCompare(currentBranch);
-            if (!releaseOnMaintenanceBranch && !gitFlowConfig.isNoProduction()) {
+            if (!gitFlowConfig.isNoProduction()) {
                 // check the production branch, too
-                gitFetchRemoteAndCompare(gitFlowConfig.getProductionBranch());
+                gitFetchRemoteAndResetIfNecessary(productionBranch);
             }
         }
 
@@ -188,6 +196,9 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         gitCreateAndCheckout(releaseBranchName, releaseOnMaintenanceBranch 
                 ? currentBranch : gitFlowConfig.getDevelopmentBranch());
 
+        // store development branch in branch config
+        gitSetConfig("branch.\"" + releaseBranchName + "\".development", currentBranch);
+
         // execute if version changed
         if (!version.equals(currentVersion)) {
             // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
@@ -247,9 +258,15 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
             }
         }
 
+        String productionBranch = gitFlowConfig.getProductionBranch();
+        if (releaseOnMaintenanceBranch) {
+            // derive production branch from maintenance branch
+            productionBranch = productionBranch + "-" + gitFlowConfig.getMaintenanceBranchPrefix() 
+                    + developmentBranch.substring(gitFlowConfig.getMaintenanceBranchPrefix().length());
+        }
+
         // if we're on a release branch merge it now to maintenance or production.
-        String targetBranch = releaseOnMaintenanceBranch || gitFlowConfig.isNoProduction() 
-                ? developmentBranch : gitFlowConfig.getProductionBranch(); 
+        String targetBranch = gitFlowConfig.isNoProduction() ? developmentBranch : productionBranch; 
         if (gitBranchExists(targetBranch)) {
             gitCheckout(targetBranch);
         } else {
@@ -258,7 +275,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
 
         // merge the release branch in the target branch
         getLog().info("Merging release branch to " + targetBranch);
-        if (gitFlowConfig.isNoProduction() || !targetBranch.equals(gitFlowConfig.getProductionBranch())) {
+        if (gitFlowConfig.isNoProduction() || !targetBranch.equals(productionBranch)) {
             // merge release branch to development
             gitMerge(releaseBranch, isReleaseRebase(), isReleaseMergeNoFF());
         } else {
@@ -335,8 +352,8 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         }
 
         if (pushRemote) {
-            if (!releaseOnMaintenanceBranch && !gitFlowConfig.isNoProduction()) {
-                gitPush(gitFlowConfig.getProductionBranch(), !isSkipTag());
+            if (!gitFlowConfig.isNoProduction()) {
+                gitPush(productionBranch, !isSkipTag());
             }
             gitPush(developmentBranch, !isSkipTag());
         }
