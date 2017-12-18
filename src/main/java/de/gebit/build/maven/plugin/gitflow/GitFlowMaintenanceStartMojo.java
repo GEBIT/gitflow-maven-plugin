@@ -247,7 +247,7 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
             }
 
             if (pushRemote)  {
-                gitPush(gitFlowConfig.getMaintenanceBranchPrefix() + branchVersion, false);
+                gitPush(gitFlowConfig.getMaintenanceBranchPrefix() + branchVersion, false, false);
             }
             
             if (installProject) {

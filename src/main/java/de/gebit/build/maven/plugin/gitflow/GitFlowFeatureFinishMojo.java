@@ -154,21 +154,27 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
                         gitFlowConfig.getFeatureBranchPrefix(), "");
 
                 // git checkout develop after fetch and check remote
+                String baseBranch = gitFeatureBranchBaseBranch(featureBranchName);
                 if (fetchRemote) {
-                    gitFetchRemoteAndCompare(gitFlowConfig.getDevelopmentBranch());
+                    gitFetchRemoteAndCompare(baseBranch);
                 }
-                gitCheckout(gitFlowConfig.getDevelopmentBranch());
-                if (!rebaseWithoutVersionChange || !gitTryRebaseWithoutVersionChange(featureBranchName)) {
-                    // rebase not configured or not possible, then manually revert the version 
-                    gitCheckout(featureBranchName);
-                    if (currentVersion.contains("-" + featureName)) {
-                        final String version = currentVersion.replaceFirst("-"
-                                + featureName, "");
-                        // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
-                        mvnSetVersions(version);
+                gitCheckout(baseBranch);
+                if (!rebaseWithoutVersionChange) {
+                    String branchPoint = gitFeatureBranchBaseCommit(featureBranchName, baseBranch);
+                    String firstCommitOnBranch = gitVersionChangeCommitOnBranch(featureBranchName, branchPoint);
+                    if (firstCommitOnBranch != null) {
+                        gitTryRebaseWithoutVersionChange(featureBranchName, branchPoint, firstCommitOnBranch);
+                        // rebase not configured or not possible, then manually revert the version 
+                        gitCheckout(featureBranchName);
+                        if (currentVersion.contains("-" + featureName)) {
+                            final String version = currentVersion.replaceFirst("-"
+                                    + featureName, "");
+                            // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
+                            mvnSetVersions(version);
 
-                        // git commit -a -m updating versions for development branch
-                        gitCommit(featureFinishMessage);
+                            // git commit -a -m updating versions for development branch
+                            gitCommit(featureFinishMessage);
+                        }
                     }
                 }
             } else {
@@ -177,7 +183,8 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
             }
 
             // git checkout develop
-            gitCheckout(gitFlowConfig.getDevelopmentBranch());
+            String baseBranch = gitFeatureBranchBaseBranch(featureBranchName);
+            gitCheckout(baseBranch);
 
             if (featureSquash) {
                 // git merge --squash feature/...
@@ -196,7 +203,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
             if (!keepFeatureBranch) {
                 // git branch -D feature/...
                 gitBranchDeleteForce(featureBranchName);
-                
+
                 // delete the remote branch
                 if (pushRemote) {
                     gitBranchDeleteRemote(featureBranchName);
@@ -204,7 +211,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
             }
 
             if (pushRemote) {
-                gitPush(gitFlowConfig.getDevelopmentBranch(), false);
+                gitPush(baseBranch, false, false);
             }
         } catch (CommandLineException e) {
             getLog().error(e);

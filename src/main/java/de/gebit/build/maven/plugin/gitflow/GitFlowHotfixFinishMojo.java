@@ -199,9 +199,9 @@ public class GitFlowHotfixFinishMojo extends AbstractGitFlowMojo {
             if (pushRemote) {
                 // if no release branch
                 if (StringUtils.isBlank(releaseBranch)) {
-                    gitPush(gitFlowConfig.getProductionBranch(), !skipTag);
+                    gitPush(gitFlowConfig.getProductionBranch(), !skipTag, false);
                 }
-                gitPush(gitFlowConfig.getDevelopmentBranch(), !skipTag);
+                gitPush(gitFlowConfig.getDevelopmentBranch(), !skipTag, false);
             }
         } catch (CommandLineException e) {
             getLog().error(e);

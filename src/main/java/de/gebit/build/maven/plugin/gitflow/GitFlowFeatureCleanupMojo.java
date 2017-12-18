@@ -27,14 +27,14 @@ import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
- * The git flow feature update mojo. Will either rebase the feature branch on the current development branch or merge
- * the development branch into the feature branch.
+ * The git flow feature rebase cleanup mojo. Will find out the matching development branch and start a rebase --interactive
+ * to allow you to reorder/squash/reword your commits.
  * 
  * @author Erwin Tratar
- * @since 1.3.1
+ * @since 1.5.11
  */
-@Mojo(name = "feature-rebase", aggregator = true)
-public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
+@Mojo(name = "feature-rebase-cleanup", aggregator = true)
+public class GitFlowFeatureCleanupMojo extends AbstractGitFlowMojo {
 
     /**
      * Controls whether a merge of the development branch instead of a rebase on the development branch is performed.
@@ -42,15 +42,6 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
      */
     @Parameter(property = "updateWithMerge", defaultValue = "false")
     private boolean updateWithMerge = false;
-
-    /**
-     * This property applies mainly to <code>feature-finish</code>, but if it is set a merge at this point would
-     * make a later rebase impossible. So we use this property to decide wheter a warning needs to be issued.
-     * 
-     * @since 1.3.0
-     */
-    @Parameter(property = "rebaseWithoutVersionChange", defaultValue = "false")
-    private boolean rebaseWithoutVersionChange = false;
 
     /**
      * If fast forward pushes on feature branches are not allowed, the remote branch is deleted before pushing
@@ -65,7 +56,7 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         try {
-            String featureBranchName = updateWithMerge ? gitMergeBranchInProcess() : gitRebaseBranchInProcess(); 
+            String featureBranchName = gitRebaseBranchInProcess(); 
             if (featureBranchName == null) {
                 // check uncommitted changes
                 checkUncommittedChanges();
@@ -125,49 +116,36 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
                 }
 
                 // fetch and check remote
+                String baseBranch = gitFeatureBranchBaseBranch(featureBranchName);
+                String baseCommit = gitFeatureBranchBaseCommit(featureBranchName, baseBranch);
+
+                getLog().info("Rebasing upon " + baseBranch + " at " + baseCommit);
+
                 if (fetchRemote) {
                     // fetch and compare both feature and development branch
                     gitFetchRemoteAndCompare(featureBranchName);
-                    gitFetchRemoteAndResetIfNecessary(gitFlowConfig.getDevelopmentBranch());
+                    gitFetchRemoteAndResetIfNecessary(baseBranch);
                 }
 
-                if (updateWithMerge && rebaseWithoutVersionChange) {
-                    try {
-                        final String reply = prompter.prompt("Updating is configured for merges, a later rebase will not be possible. Continue? (yes/no)", "no");
-                        if (reply == null || !reply.toLowerCase().equals("yes")) {
-                            return;
-                        }
-                    } catch (PrompterException e) {
-                        getLog().error(e);
-                        return;
-                    }
+                String rebaseCommit = baseCommit;
+                String firstCommitOnBranch = gitVersionChangeCommitOnBranch(featureBranchName, baseCommit);
+                if (firstCommitOnBranch != null) {
+                    rebaseCommit = firstCommitOnBranch;
                 }
 
-                // merge in development
-                try {
-                    gitMerge(gitFlowConfig.getDevelopmentBranch(), !updateWithMerge, true);
-                } catch (MojoFailureException ex) {
-                    // rebase conflict on first commit?
-                    final String featureName = featureBranchName.replaceFirst(
-                            gitFlowConfig.getFeatureBranchPrefix(), "");
-                    final String featureStartMessage = substituteInMessage(commitMessages.getFeatureStartMessage(),
-                            featureBranchName);
-                    if (ex.getMessage().contains("Patch failed at 0001 " + featureStartMessage)) {
-                        // try automatic rebase
-                        gitRebaseFeatureCommit(featureName);
-
-                        // continue rebase
-                        gitRebaseContinue();
-                    } else {
-                        throw ex;
-                    }
+                if (!gitRebaseInteractive(rebaseCommit)) {
+                    getLog().info("The rebase is paused, perform your changes and call flow:feature-rebase-cleanup again to continue.");
+                    System.exit(1);
                 }
+
             } else {
                 if (updateWithMerge) {
                     // continue with commit
-                    gitCommitMerge();
+                    getLog().error("A merge is already in process, cannot cleanup now.");
+                    return;
                 } else {
                     // continue with the rebase
+                    getLog().info("A rebase is in process. Assume the interactive rebase is resumed and continue...");
                     gitRebaseContinue();
                 }
             }
@@ -178,8 +156,8 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
             }
 
             if (pushRemote) {
-                if (!updateWithMerge && deleteRemoteBranchOnRebase) {
-                    // delete remote branch to not run into non-fast-forward error
+                // delete remote branch to not run into non-fast-forward error
+                if (deleteRemoteBranchOnRebase) {
                     gitBranchDeleteRemote(featureBranchName);
                 }
                 gitPush(featureBranchName, false, true);

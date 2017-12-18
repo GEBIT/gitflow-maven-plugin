@@ -210,7 +210,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
 
         if (pushRemote && isPushReleaseBranch()) {
             // push the release branch to the remote
-            gitPush(gitCurrentBranch(), false);
+            gitPush(gitCurrentBranch(), false, false);
         }
         if (isInstallProject()) {
             // mvn clean install
@@ -353,9 +353,9 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
 
         if (pushRemote) {
             if (!gitFlowConfig.isNoProduction()) {
-                gitPush(productionBranch, !isSkipTag());
+                gitPush(productionBranch, !isSkipTag(), false);
             }
-            gitPush(developmentBranch, !isSkipTag());
+            gitPush(developmentBranch, !isSkipTag(), false);
         }
         if (isDetachReleaseCommit()) {
             // make sure we leave the workspace in the state as released
