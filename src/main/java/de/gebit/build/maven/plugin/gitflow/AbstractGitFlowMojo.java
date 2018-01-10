@@ -1410,6 +1410,9 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         worktreeCmd.setExecutable(cmdGit.getExecutable());
         worktreeCmd.setWorkingDirectory(branchConfigWorktree);
 
+        // fetch remote reference first to be up-to-date
+        executeGitCommand("fetch", "--quiet", gitFlowConfig.getOrigin(), configBranchName);
+
         if (hasRemoteBranch(configBranchName)) {
             // configuration branch already exists, just create the worktree
             executeGitCommand("worktree", "add", "-B", configBranchName, configBranchDir, gitFlowConfig.getOrigin() + "/" + configBranchName);
