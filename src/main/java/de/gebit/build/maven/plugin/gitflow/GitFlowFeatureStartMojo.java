@@ -16,6 +16,7 @@
 package de.gebit.build.maven.plugin.gitflow;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.regex.Matcher;
@@ -86,7 +87,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
             
             // use integration branch?
             final String integrationBranch = gitFlowConfig.getIntegrationBranchPrefix() + baseBranch;
-            if (!gitBranchExists(integrationBranch) && fetchRemote) {
+            if (!gitBranchExists(integrationBranch) || fetchRemote) {
                 // first try to fetch it
                 gitFetchRemoteAndCompare(integrationBranch, new Callable<Void>() {
                     
@@ -97,17 +98,35 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
                     }
                 });
             }
-            if (gitBranchExists(integrationBranch)) {
-                getLog().info("Using integration branch '" + integrationBranch + "'");
-                baseBranch = integrationBranch;
-                
-                String branchPoint = gitBranchPoint(integrationBranch, baseBranch);
-                if (StringUtils.isEmpty(branchPoint)) {
-                    throw new MojoFailureException("Failed to determine branch base of '" + integrationBranch
-                            + "' in respect to '" + baseBranch + "'.");
-                }
-            } else if (fetchRemote) {
+            if (fetchRemote) {
                 gitFetchRemoteAndCompare(baseBranch);
+            }
+            if (gitBranchExists(integrationBranch)) {
+                boolean useIntegrationBranch = true;
+                if (getCurrentCommit(integrationBranch) != getCurrentCommit(baseBranch)) {
+                    if (settings.isInteractiveMode()) {
+                        try {
+                            String answer = prompter.prompt("The current commit on " + baseBranch
+                                    + " is not integrated. Create a branch off the last integrated commit ("
+                                    + integrationBranch + ")?", Arrays.asList("y", "n"), "y");
+                            if (!"y".equalsIgnoreCase(answer)) {
+                                useIntegrationBranch = false;
+                            }
+                        } catch (PrompterException e) {
+                            getLog().error(e);
+                        }
+                    }
+                }
+                if (useIntegrationBranch) {
+                    getLog().info("Using integration branch '" + integrationBranch + "'");
+                    baseBranch = integrationBranch;
+                    
+                    String branchPoint = gitBranchPoint(integrationBranch, baseBranch);
+                    if (StringUtils.isEmpty(branchPoint)) {
+                        throw new MojoFailureException("Failed to determine branch base of '" + integrationBranch
+                                + "' in respect to '" + baseBranch + "'.");
+                    }
+                }
             }
 
             String featureName = null;

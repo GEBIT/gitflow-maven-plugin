@@ -124,11 +124,13 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
                     gitCheckout(featureBranchName);
                 }
 
+                String baseBranch = gitFeatureBranchBaseBranch(featureBranchName);
+
                 // fetch and check remote
                 if (fetchRemote) {
                     // fetch and compare both feature and development branch
                     gitFetchRemoteAndCompare(featureBranchName);
-                    gitFetchRemoteAndResetIfNecessary(gitFlowConfig.getDevelopmentBranch());
+                    gitFetchRemoteAndResetIfNecessary(baseBranch);
                 }
 
                 if (updateWithMerge && rebaseWithoutVersionChange) {
@@ -145,7 +147,7 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
 
                 // merge in development
                 try {
-                    gitMerge(gitFlowConfig.getDevelopmentBranch(), !updateWithMerge, true);
+                    gitMerge(baseBranch, !updateWithMerge, true);
                 } catch (MojoFailureException ex) {
                     // rebase conflict on first commit?
                     final String featureName = featureBranchName.replaceFirst(

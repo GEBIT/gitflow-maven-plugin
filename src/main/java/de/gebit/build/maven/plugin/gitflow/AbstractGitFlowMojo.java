@@ -1272,8 +1272,16 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @return commit id of the current commit.
      */
     protected String getCurrentCommit() throws MojoFailureException {
+        return getCurrentCommit("HEAD");
+    }
+
+    /**
+     * Get the current commit ID on the given reference (branch name)
+     * @return commit id of the current commit.
+     */
+    protected String getCurrentCommit(String ref) throws MojoFailureException {
         try {
-            return executeGitCommandReturn("rev-parse", "HEAD");
+            return executeGitCommandReturn("rev-parse", ref);
         } catch (MojoFailureException exc) {
             throw exc;
         } catch (CommandLineException exc) {

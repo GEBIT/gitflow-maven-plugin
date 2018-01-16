@@ -132,8 +132,12 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
                     }
 
                     // git checkout feature/...
+                    if (fetchRemote) {
+                        gitFetchRemoteAndResetIfNecessary(featureBranchName);
+                    }
                     gitCheckout(featureBranchName);
                 }
+
                 // fetch and check remote feature branch
                 if (fetchRemote) {
                     gitFetchRemoteAndCompare(featureBranchName);
@@ -159,22 +163,26 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
                     gitFetchRemoteAndCompare(baseBranch);
                 }
                 gitCheckout(baseBranch);
-                if (!rebaseWithoutVersionChange) {
+                boolean rebased = false;
+                if (rebaseWithoutVersionChange) {
                     String branchPoint = gitFeatureBranchBaseCommit(featureBranchName, baseBranch);
                     String firstCommitOnBranch = gitVersionChangeCommitOnBranch(featureBranchName, branchPoint);
+                    getLog().debug("branch point is " + branchPoint + ", version change commit is " + firstCommitOnBranch);
                     if (firstCommitOnBranch != null) {
-                        gitTryRebaseWithoutVersionChange(featureBranchName, branchPoint, firstCommitOnBranch);
-                        // rebase not configured or not possible, then manually revert the version 
-                        gitCheckout(featureBranchName);
-                        if (currentVersion.contains("-" + featureName)) {
-                            final String version = currentVersion.replaceFirst("-"
-                                    + featureName, "");
-                            // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
-                            mvnSetVersions(version);
+                        rebased = gitTryRebaseWithoutVersionChange(featureBranchName, branchPoint, firstCommitOnBranch);
+                    }
+                }
+                if (!rebased) {
+                    // rebase not configured or not possible, then manually revert the version 
+                    gitCheckout(featureBranchName);
+                    if (currentVersion.contains("-" + featureName)) {
+                        final String version = currentVersion.replaceFirst("-"
+                                + featureName, "");
+                        // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
+                        mvnSetVersions(version);
 
-                            // git commit -a -m updating versions for development branch
-                            gitCommit(featureFinishMessage);
-                        }
+                        // git commit -a -m updating versions for development branch
+                        gitCommit(featureFinishMessage);
                     }
                 }
             } else {

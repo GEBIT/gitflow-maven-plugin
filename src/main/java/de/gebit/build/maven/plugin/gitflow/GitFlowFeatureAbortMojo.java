@@ -55,12 +55,10 @@ public class GitFlowFeatureAbortMojo extends AbstractGitFlowMojo {
                 throw new MojoFailureException("There are no feature branches.");
             }
 
-            // fetch and check remote
-            if (fetchRemote) {
-                gitFetchRemoteAndCompare(gitFlowConfig.getDevelopmentBranch());
-            }
-
             final String[] branches = featureBranches.split("\\r?\\n");
+
+            // is the current branch a feature branch?
+            String currentBranch = gitCurrentBranch();
 
             List<String> numberedList = new ArrayList<String>();
             StringBuilder str = new StringBuilder("Feature branches:")
@@ -68,31 +66,44 @@ public class GitFlowFeatureAbortMojo extends AbstractGitFlowMojo {
             for (int i = 0; i < branches.length; i++) {
                 str.append((i + 1) + ". " + branches[i] + LS);
                 numberedList.add(String.valueOf(i + 1));
-            }
-            str.append("Choose feature branch to abort");
-
-            String featureNumber = null;
-            try {
-                while (StringUtils.isBlank(featureNumber)) {
-                    featureNumber = prompter.prompt(str.toString(),
-                            numberedList);
+                if (branches[i].equals(currentBranch)) {
+                    // we're on a feature branch, no need to ask
+                    featureBranchName = currentBranch;
+                    getLog().info("Current feature branch: " + featureBranchName);
+                    break;
                 }
-            } catch (PrompterException e) {
-                getLog().error(e);
             }
 
-            if (featureNumber != null) {
-                int num = Integer.parseInt(featureNumber);
-                featureBranchName = branches[num - 1];
-            }
+            if (featureBranchName == null || StringUtils.isBlank(featureBranchName)) {
+                str.append("Choose feature branch to abort");
 
-            if (StringUtils.isBlank(featureBranchName)) {
-                throw new MojoFailureException(
-                        "Feature branch name to abort is blank.");
-            }
+                String featureNumber = null;
+                try {
+                    while (StringUtils.isBlank(featureNumber)) {
+                        featureNumber = prompter.prompt(str.toString(),
+                                numberedList);
+                    }
+                } catch (PrompterException e) {
+                    getLog().error(e);
+                }
 
-            // git checkout develop
-            gitCheckout(gitFlowConfig.getDevelopmentBranch());
+                if (featureNumber != null) {
+                    int num = Integer.parseInt(featureNumber);
+                    featureBranchName = branches[num - 1];
+                }
+
+                if (StringUtils.isBlank(featureBranchName)) {
+                    throw new MojoFailureException(
+                            "Feature branch name to finish is blank.");
+                }
+            }
+            String baseBranch = gitFeatureBranchBaseBranch(featureBranchName);
+
+            // git checkout development branch
+            if (fetchRemote) {
+                gitFetchRemoteAndResetIfNecessary(baseBranch);
+            }
+            gitCheckout(baseBranch);
 
             // git branch -D feature/...
             gitBranchDeleteForce(featureBranchName);

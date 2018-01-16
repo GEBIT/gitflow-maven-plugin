@@ -89,7 +89,7 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowMojo {
                 }
 
                 if (featureBranchName == null || StringUtils.isBlank(featureBranchName)) {
-                    str.append("Choose feature branch to update");
+                    str.append("Choose feature branch to clean up");
     
                     String featureNumber = null;
                     try {
@@ -108,7 +108,7 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowMojo {
     
                     if (StringUtils.isBlank(featureBranchName)) {
                         throw new MojoFailureException(
-                                "Feature branch name to finish is blank.");
+                                "Feature branch name to clean up is blank.");
                     }
     
                     // git checkout feature/...
