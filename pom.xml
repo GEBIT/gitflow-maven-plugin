@@ -1,4 +1,4 @@
-<!-- 
+<!--
 /*
  * Copyright 2014-2016 Aleksandr Mashchenko.
  * Copyright 2016 GEBIT Solutions GmbH
@@ -81,7 +81,7 @@
 		<java.optimize>true</java.optimize>
 		<java.debug>true</java.debug>
 		<java.encoding>UTF-8</java.encoding>
-		
+
 		<maven-plugin-plugin.version>3.4</maven-plugin-plugin.version>
 	</properties>
 
@@ -144,7 +144,7 @@
 					</execution>
 				</executions>
 			</plugin>
-			
+
 			<!-- site configuration -->
 			<plugin>
 				<groupId>io.repaint.maven</groupId>
@@ -153,7 +153,7 @@
 				<configuration>
 					<tiles>
 						<tile>de.gebit.build.tile:enforce-maven:${version.build}</tile>
-						<!-- 
+						<!--
 						<tile>de.gebit.build.tile:enforce-java:${version.build}</tile>
 						 -->
 						<tile>de.gebit.build.tile:encoding:${version.build}</tile>
@@ -177,7 +177,7 @@
 		<dependency>
 			<groupId>org.apache.maven</groupId>
 			<artifactId>maven-core</artifactId>
-			<version>3.0</version>
+			<version>3.3.9</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
@@ -199,10 +199,19 @@
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
-			<groupId>org.apache.maven.release</groupId>
-			<artifactId>maven-release-manager</artifactId>
-			<version>2.5.3</version>
-			<scope>compile</scope>
+			<groupId>org.codehaus.plexus</groupId>
+			<artifactId>plexus-interactivity-api</artifactId>
+			<version>1.0-alpha-6</version>
+		</dependency>
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+			<version>2.6</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.maven</groupId>
+			<artifactId>maven-compat</artifactId>
+			<version>3.3.9</version>
 		</dependency>
 	</dependencies>
 </project>
