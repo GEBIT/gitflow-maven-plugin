@@ -64,6 +64,23 @@ import org.codehaus.plexus.util.cli.StreamConsumer;
  */
 public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
+	/**
+	 * A property key for an alternative maven cmd executable that can be defined in request user properties.
+	 */
+	public static final String USER_PROPERTY_KEY_CMD_MVN_EXECUTABLE = "cmd.mvn.executable";
+
+	/**
+	 * A property key for argumetns (array of Strings) for the alternative maven cmd executable that will be prepended
+	 * to other arguments.
+	 */
+	public static final String USER_PROPERTY_KEY_CMD_MVN_ARGS_PREPEND = "cmd.mvn.args.prepend";
+
+	/**
+	 * A property key for argumetns (array of Strings) for the alternative maven cmd executable that will be appended to
+	 * other arguments.
+	 */
+	public static final String USER_PROPERTY_KEY_CMD_MVN_ARGS_APPEND = "cmd.mvn.args.append";
+
 	/** A full name of the versions-maven-plugin set goal. */
 	private static final String VERSIONS_MAVEN_PLUGIN_SET_GOAL = "org.codehaus.mojo:versions-maven-plugin:2.1:set";
 
@@ -244,12 +261,16 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 	 */
 	private void initExecutables() {
 		if (StringUtils.isBlank(cmdMvn.getExecutable())) {
+			String basedir = session.getRequest().getBaseDirectory();
+			cmdMvn.setWorkingDirectory(basedir);
 			if (StringUtils.isBlank(mvnExecutable)) {
 				mvnExecutable = "mvn";
 			}
 			cmdMvn.setExecutable(mvnExecutable);
 		}
 		if (StringUtils.isBlank(cmdGit.getExecutable())) {
+			String basedir = session.getRequest().getBaseDirectory();
+			cmdGit.setWorkingDirectory(basedir);
 			if (StringUtils.isBlank(gitExecutable)) {
 				gitExecutable = "git";
 			}
@@ -1706,12 +1727,48 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 				}
 			}
 		}
-
-		if (copyOutput) {
-			executeCommandCopyOut(cmdMvn, true, effectiveArgs);
+		Commandline cmd = getCmdMvnConfiguredByUserProperties();
+		if (cmd != null) {
+			effectiveArgs = mergeCmdMvnArgsConfiguredByUserProperties(effectiveArgs);
 		} else {
-			executeCommand(cmdMvn, true, effectiveArgs);
+			cmd = cmdMvn;
 		}
+		if (copyOutput) {
+			executeCommandCopyOut(cmd, true, effectiveArgs);
+		} else {
+			executeCommand(cmd, true, effectiveArgs);
+		}
+	}
+
+	private Commandline getCmdMvnConfiguredByUserProperties() {
+		String cmdMvnExecutable = session.getUserProperties().getProperty(USER_PROPERTY_KEY_CMD_MVN_EXECUTABLE);
+		if (cmdMvnExecutable != null) {
+			ShellCommandLine cmd = new ShellCommandLine();
+			String basedir = session.getRequest().getBaseDirectory();
+			cmd.setExecutable(cmdMvnExecutable);
+			cmd.setWorkingDirectory(basedir);
+			return cmd;
+		}
+		return null;
+	}
+
+	private String[] mergeCmdMvnArgsConfiguredByUserProperties(String[] effectiveArgs) {
+		String[] cmdMvnArgs = (String[]) session.getUserProperties().get(USER_PROPERTY_KEY_CMD_MVN_ARGS_PREPEND);
+		String[] cmdMvnArgsAfter = (String[]) session.getUserProperties().get(USER_PROPERTY_KEY_CMD_MVN_ARGS_APPEND);
+		String[] newEffectiveArgs = effectiveArgs;
+		if (cmdMvnArgs != null && cmdMvnArgs.length > 0) {
+			String[] tmpEffectiveArgs = new String[cmdMvnArgs.length + newEffectiveArgs.length];
+			System.arraycopy(cmdMvnArgs, 0, tmpEffectiveArgs, 0, cmdMvnArgs.length);
+			System.arraycopy(newEffectiveArgs, 0, tmpEffectiveArgs, cmdMvnArgs.length, newEffectiveArgs.length);
+			newEffectiveArgs = tmpEffectiveArgs;
+		}
+		if (cmdMvnArgsAfter != null && cmdMvnArgsAfter.length > 0) {
+			String[] tmpEffectiveArgs = new String[newEffectiveArgs.length + cmdMvnArgsAfter.length];
+			System.arraycopy(newEffectiveArgs, 0, tmpEffectiveArgs, 0, newEffectiveArgs.length);
+			System.arraycopy(cmdMvnArgsAfter, 0, tmpEffectiveArgs, newEffectiveArgs.length, cmdMvnArgsAfter.length);
+			newEffectiveArgs = tmpEffectiveArgs;
+		}
+		return newEffectiveArgs;
 	}
 
 	/**
