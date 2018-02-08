@@ -1,17 +1,10 @@
 /*
- * Copyright 2014-2016 Aleksandr Mashchenko.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright 2014-2016 Aleksandr Mashchenko. Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language governing permissions and limitations under the
+ * License.
  */
 package de.gebit.build.maven.plugin.gitflow;
 
@@ -28,201 +21,193 @@ import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
  * The git flow feature finish mojo.
- * 
+ *
  * @author Aleksandr Mashchenko
- * 
  */
 @Mojo(name = "feature-finish", aggregator = true)
 public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
 
-    /** Whether to keep feature branch after finish. */
-    @Parameter(property = "keepFeatureBranch", defaultValue = "false")
-    private boolean keepFeatureBranch = false;
+	/** Whether to keep feature branch after finish. */
+	@Parameter(property = "keepFeatureBranch", defaultValue = "false")
+	private boolean keepFeatureBranch = false;
 
-    /**
-     * Whether to skip calling Maven test goal before merging the branch.
-     * 
-     * @since 1.0.5
-     */
-    @Parameter(property = "skipTestProject", defaultValue = "false")
-    private boolean skipTestProject = false;
+	/**
+	 * Whether to skip calling Maven test goal before merging the branch.
+	 *
+	 * @since 1.0.5
+	 */
+	@Parameter(property = "skipTestProject", defaultValue = "false")
+	private boolean skipTestProject = false;
 
-    /**
-     * Whether to squash feature branch commits into a single commit upon
-     * merging.
-     * 
-     * @since 1.2.3
-     */
-    @Parameter(property = "featureSquash", defaultValue = "false")
-    private boolean featureSquash = false;
+	/**
+	 * Whether to squash feature branch commits into a single commit upon merging.
+	 *
+	 * @since 1.2.3
+	 */
+	@Parameter(property = "featureSquash", defaultValue = "false")
+	private boolean featureSquash = false;
 
-    /**
-     * You can try a rebase of the feature branch skipping the initial commit that update the pom versions just before
-     * finishing a feature. The operation will peform a rebase, which may not finish successfully. You can make your
-     * changes and run feature-finish again in that case.
-     * <br>
-     * Note: problems arise if you're modifying the poms near the version number. You will need to fix those conflicts
-     * before running feature-finish again, as otherwise the pom will be invalid and the process cannot be started.
-     * If you cannot fix the pom into a working state with the current commit you can manually issue a 
-     * <code>git rebase --continue</code>.
-     * 
-     * @since 1.3.0
-     */
-    @Parameter(property = "rebaseWithoutVersionChange", defaultValue = "false")
-    private boolean rebaseWithoutVersionChange = false;
+	/**
+	 * You can try a rebase of the feature branch skipping the initial commit that update the pom versions just before
+	 * finishing a feature. The operation will peform a rebase, which may not finish successfully. You can make your
+	 * changes and run feature-finish again in that case. <br>
+	 * Note: problems arise if you're modifying the poms near the version number. You will need to fix those conflicts
+	 * before running feature-finish again, as otherwise the pom will be invalid and the process cannot be started. If
+	 * you cannot fix the pom into a working state with the current commit you can manually issue a
+	 * <code>git rebase --continue</code>.
+	 *
+	 * @since 1.3.0
+	 */
+	@Parameter(property = "rebaseWithoutVersionChange", defaultValue = "false")
+	private boolean rebaseWithoutVersionChange = false;
 
-    /** {@inheritDoc} */
-    @Override
-    public void execute() throws MojoExecutionException, MojoFailureException {
-        try {
-            // check if rebase in process
-            String featureBranchName = gitRebaseBranchInProcess(); 
-            if (featureBranchName == null) {
-                // check uncommitted changes
-                checkUncommittedChanges();
+	/** {@inheritDoc} */
+	@Override
+	public void execute() throws MojoExecutionException, MojoFailureException {
+		try {
+			// check if rebase in process
+			String featureBranchName = gitRebaseBranchInProcess();
+			if (featureBranchName == null) {
+				// check uncommitted changes
+				checkUncommittedChanges();
 
-                // git for-each-ref --format='%(refname:short)' refs/heads/feature/*
-                final String featureBranches = gitFindBranches(
-                        gitFlowConfig.getFeatureBranchPrefix(), false);
+				// git for-each-ref --format='%(refname:short)' refs/heads/feature/*
+				final String featureBranches = gitFindBranches(gitFlowConfig.getFeatureBranchPrefix(), false);
 
-                if (StringUtils.isBlank(featureBranches)) {
-                    throw new MojoFailureException("There are no feature branches.");
-                }
+				if (StringUtils.isBlank(featureBranches)) {
+					throw new MojoFailureException("There are no feature branches.");
+				}
 
-                final String[] branches = featureBranches.split("\\r?\\n");
-                
-                // is the current branch a feature branch?
-                String currentBranch = gitCurrentBranch();
+				final String[] branches = featureBranches.split("\\r?\\n");
 
-                List<String> numberedList = new ArrayList<String>();
-                StringBuilder str = new StringBuilder("Feature branches:")
-                        .append(LS);
-                for (int i = 0; i < branches.length; i++) {
-                    str.append((i + 1) + ". " + branches[i] + LS);
-                    numberedList.add(String.valueOf(i + 1));
-                    if (branches[i].equals(currentBranch)) {
-                        // we're on a feature branch, no need to ask
-                        featureBranchName = currentBranch;
-                        getLog().info("Current feature branch: " + featureBranchName);
-                        break;
-                    }
-                }
+				// is the current branch a feature branch?
+				String currentBranch = gitCurrentBranch();
 
-                if (featureBranchName == null || StringUtils.isBlank(featureBranchName)) {
-                    str.append("Choose feature branch to finish");
+				List<String> numberedList = new ArrayList<String>();
+				StringBuilder str = new StringBuilder("Feature branches:").append(LS);
+				for (int i = 0; i < branches.length; i++) {
+					str.append((i + 1) + ". " + branches[i] + LS);
+					numberedList.add(String.valueOf(i + 1));
+					if (branches[i].equals(currentBranch)) {
+						// we're on a feature branch, no need to ask
+						featureBranchName = currentBranch;
+						getLog().info("Current feature branch: " + featureBranchName);
+						break;
+					}
+				}
 
-                    String featureNumber = null;
-                    try {
-                        while (StringUtils.isBlank(featureNumber)) {
-                            featureNumber = prompter.prompt(str.toString(),
-                                    numberedList);
-                        }
-                    } catch (PrompterException e) {
-                        getLog().error(e);
-                    }
+				if (featureBranchName == null || StringUtils.isBlank(featureBranchName)) {
+					str.append("Choose feature branch to finish");
 
-                    if (featureNumber != null) {
-                        int num = Integer.parseInt(featureNumber);
-                        featureBranchName = branches[num - 1];
-                    }
+					String featureNumber = null;
+					try {
+						while (StringUtils.isBlank(featureNumber)) {
+							featureNumber = prompter.prompt(str.toString(), numberedList);
+						}
+					} catch (PrompterException e) {
+						getLog().error(e);
+					}
 
-                    if (StringUtils.isBlank(featureBranchName)) {
-                        throw new MojoFailureException(
-                                "Feature branch name to finish is blank.");
-                    }
+					if (featureNumber != null) {
+						int num = Integer.parseInt(featureNumber);
+						featureBranchName = branches[num - 1];
+					}
 
-                    // git checkout feature/...
-                    if (fetchRemote) {
-                        gitFetchRemoteAndResetIfNecessary(featureBranchName);
-                    }
-                    gitCheckout(featureBranchName);
-                }
+					if (StringUtils.isBlank(featureBranchName)) {
+						throw new MojoFailureException("Feature branch name to finish is blank.");
+					}
 
-                // fetch and check remote feature branch
-                if (fetchRemote) {
-                    gitFetchRemoteAndCompare(featureBranchName);
-                }
+					// git checkout feature/...
+					if (fetchRemote) {
+						gitFetchRemoteAndResetIfNecessary(featureBranchName);
+					}
+					gitCheckout(featureBranchName);
+				}
 
-                final String featureFinishMessage = substituteInMessage(commitMessages.getFeatureFinishMessage(),
-                        featureBranchName);
+				// fetch and check remote feature branch
+				if (fetchRemote) {
+					gitFetchRemoteAndCompare(featureBranchName);
+				}
 
-                if (!skipTestProject) {
-                    // mvn clean test
-                    mvnCleanTest();
-                }
+				final String featureFinishMessage =
+						substituteInMessage(commitMessages.getFeatureFinishMessage(), featureBranchName);
 
-                // get current project version from pom
-                final String currentVersion = getCurrentProjectVersion();
+				if (!skipTestProject) {
+					// mvn clean test
+					mvnCleanTest();
+				}
 
-                final String featureName = featureBranchName.replaceFirst(
-                        gitFlowConfig.getFeatureBranchPrefix(), "");
+				// get current project version from pom
+				final String currentVersion = getCurrentProjectVersion();
 
-                // git checkout develop after fetch and check remote
-                String baseBranch = gitFeatureBranchBaseBranch(featureBranchName);
-                if (fetchRemote) {
-                    gitFetchRemoteAndCompare(baseBranch);
-                }
-                gitCheckout(baseBranch);
-                boolean rebased = false;
-                if (rebaseWithoutVersionChange) {
-                    String branchPoint = gitFeatureBranchBaseCommit(featureBranchName, baseBranch);
-                    String firstCommitOnBranch = gitVersionChangeCommitOnBranch(featureBranchName, branchPoint);
-                    getLog().debug("branch point is " + branchPoint + ", version change commit is " + firstCommitOnBranch);
-                    if (firstCommitOnBranch != null) {
-                        rebased = gitTryRebaseWithoutVersionChange(featureBranchName, branchPoint, firstCommitOnBranch);
-                    }
-                }
-                if (!rebased) {
-                    // rebase not configured or not possible, then manually revert the version 
-                    gitCheckout(featureBranchName);
-                    if (currentVersion.contains("-" + featureName)) {
-                        final String version = currentVersion.replaceFirst("-"
-                                + featureName, "");
-                        // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
-                        mvnSetVersions(version);
+				final String featureName = featureBranchName.replaceFirst(gitFlowConfig.getFeatureBranchPrefix(), "");
 
-                        // git commit -a -m updating versions for development branch
-                        gitCommit(featureFinishMessage);
-                    }
-                }
-            } else {
-                // continue with the rebase
-                gitRebaseContinue();
-            }
+				// git checkout develop after fetch and check remote
+				String baseBranch = gitFeatureBranchBaseBranch(featureBranchName);
+				if (fetchRemote) {
+					gitFetchRemoteAndCompare(baseBranch);
+				}
+				gitCheckout(baseBranch);
+				boolean rebased = false;
+				if (rebaseWithoutVersionChange) {
+					String branchPoint = gitBranchPoint(featureBranchName, baseBranch);
+					String firstCommitOnBranch = gitVersionChangeCommitOnBranch(featureBranchName, branchPoint);
+					getLog().debug(
+							"branch point is " + branchPoint + ", version change commit is " + firstCommitOnBranch);
+					if (firstCommitOnBranch != null) {
+						rebased = gitTryRebaseWithoutVersionChange(featureBranchName, branchPoint, firstCommitOnBranch);
+					}
+				}
+				if (!rebased) {
+					// rebase not configured or not possible, then manually revert the version
+					gitCheckout(featureBranchName);
+					if (currentVersion.contains("-" + featureName)) {
+						final String version = currentVersion.replaceFirst("-" + featureName, "");
+						// mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
+						mvnSetVersions(version);
 
-            // git checkout develop
-            String baseBranch = gitFeatureBranchBaseBranch(featureBranchName);
-            gitCheckout(baseBranch);
+						// git commit -a -m updating versions for development branch
+						gitCommit(featureFinishMessage);
+					}
+				}
+			} else {
+				// continue with the rebase
+				gitRebaseContinue();
+			}
 
-            if (featureSquash) {
-                // git merge --squash feature/...
-                gitMergeSquash(featureBranchName);
-                gitCommit(featureBranchName);
-            } else {
-                // git merge --no-ff feature/...
-                gitMergeNoff(featureBranchName);
-            }
+			// git checkout develop
+			String baseBranch = gitFeatureBranchBaseBranch(featureBranchName);
+			gitCheckout(baseBranch);
 
-            if (installProject) {
-                // mvn clean install
-                mvnCleanInstall();
-            }
+			if (featureSquash) {
+				// git merge --squash feature/...
+				gitMergeSquash(featureBranchName);
+				gitCommit(featureBranchName);
+			} else {
+				// git merge --no-ff feature/...
+				gitMergeNoff(featureBranchName);
+			}
 
-            if (!keepFeatureBranch) {
-                // git branch -D feature/...
-                gitBranchDeleteForce(featureBranchName);
+			if (installProject) {
+				// mvn clean install
+				mvnCleanInstall();
+			}
 
-                // delete the remote branch
-                if (pushRemote) {
-                    gitBranchDeleteRemote(featureBranchName);
-                }
-            }
+			if (!keepFeatureBranch) {
+				// git branch -D feature/...
+				gitBranchDeleteForce(featureBranchName);
 
-            if (pushRemote) {
+				// delete the remote branch
+				if (pushRemote) {
+					gitBranchDeleteRemote(featureBranchName);
+				}
+			}
+
+			if (pushRemote) {
                 gitPush(baseBranch, false, false);
-            }
-        } catch (CommandLineException e) {
-            getLog().error(e);
-        }
-    }
+			}
+		} catch (CommandLineException e) {
+			getLog().error(e);
+		}
+	}
 }
