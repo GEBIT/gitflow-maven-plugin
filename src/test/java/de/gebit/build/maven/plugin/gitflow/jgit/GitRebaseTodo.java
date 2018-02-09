@@ -19,6 +19,7 @@ import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 
 /**
+ * Container for information from a git-rebase-todo file created by git for an interactive rebase.
  *
  * @author VMedvid
  */
@@ -27,24 +28,33 @@ public class GitRebaseTodo {
     private List<GitRebaseTodoEntry> entries = new ArrayList<GitRebaseTodoEntry>();
     private String sourceStartCommitId;
     private String sourceEndCommitId;
-    private String targetCommit;
+    private String targetCommitId;
 
     /**
-     * @param aEntries
-     * @param aSourceStartCommitId
-     * @param aSourceEndCommitId
-     * @param aTargetCommit
+     * Creates the container and fills it with passed information.
+     *
+     * @param aEntries the list of commits listed in the git-rebase-todo file
+     * @param aSourceStartCommitId the commitId of the rebase source start
+     * @param aSourceEndCommitId the commitId of the rebase source end
+     * @param aTargetCommitId the commitId of the rebase target
      */
     private GitRebaseTodo(List<GitRebaseTodoEntry> aEntries, String aSourceStartCommitId, String aSourceEndCommitId,
-            String aTargetCommit) {
-        super();
+            String aTargetCommitId) {
         entries = aEntries;
         sourceStartCommitId = aSourceStartCommitId;
         sourceEndCommitId = aSourceEndCommitId;
-        targetCommit = aTargetCommit;
+        targetCommitId = aTargetCommitId;
     }
 
 
+    /**
+     * Loads and parses passed git-rebase-todo file.
+     *
+     * @param gitRebaseTodoFile the path to the git-rebase-todo file
+     * @return the container with information from the git-rebase-todo file
+     * @throws FileNotFoundException if git-rebase-todo file can't be found
+     * @throws IOException if error occurs on reading the file
+     */
     public static GitRebaseTodo load(File gitRebaseTodoFile) throws FileNotFoundException, IOException {
         try (BufferedReader br = new BufferedReader(new FileReader(gitRebaseTodoFile))) {
             List<GitRebaseTodoEntry> entries = new ArrayList<GitRebaseTodoEntry>();
@@ -82,33 +92,38 @@ public class GitRebaseTodo {
     }
 
     /**
-     * @return the entries
+     * @return the list of commits listed in the git-rebase-todo file
      */
     public List<GitRebaseTodoEntry> getEntries() {
         return entries;
     }
 
     /**
-     * @return the sourceStartCommitId
+     * @return the commitId of the rebase source start
      */
     public String getSourceStartCommitId() {
         return sourceStartCommitId;
     }
 
     /**
-     * @return the sourceEndCommitId
+     * @return the commitId of the rebase source end
      */
     public String getSourceEndCommitId() {
         return sourceEndCommitId;
     }
 
     /**
-     * @return the targetCommit
+     * @return the commitId of the rebase target
      */
-    public String getTargetCommit() {
-        return targetCommit;
+    public String getTargetCommitId() {
+        return targetCommitId;
     }
 
+    /**
+     * Container with information for a commit from a git-rebase-todo file.
+     *
+     * @author VMedvid
+     */
     public static class GitRebaseTodoEntry {
 
         private String command;
@@ -116,9 +131,11 @@ public class GitRebaseTodo {
         private String message;
 
         /**
-         * @param aCommand
-         * @param aCommitId
-         * @param aMessage
+         * Creates the container and fills it with passed information.
+         *
+         * @param aCommand the command for the commit (pick, reword, squash etc.)
+         * @param aCommitId the short commitId
+         * @param aMessage the commit message
          */
         private GitRebaseTodoEntry(String aCommand, String aCommitId, String aMessage) {
             command = aCommand;
@@ -126,14 +143,23 @@ public class GitRebaseTodo {
             message = aMessage;
         }
 
+        /**
+         * @return the command for the commit (pick, reword, squash etc.)
+         */
         public String getCommand() {
             return command;
         }
 
+        /**
+         * @return the short commitId
+         */
         public String getCommitId() {
             return commitId;
         }
 
+        /**
+         * @return the commit message
+         */
         public String getMessage() {
             return message;
         }

@@ -14,6 +14,12 @@ import java.nio.file.Files;
 import java.util.Arrays;
 
 /**
+ * The editor program that can be used instead of default git editor for eaxmple
+ * for testing purposes. The program expects a path to the file to be edited as
+ * parameter. The file will be copied to the target which bese directory
+ * specified by system properties "DummyEditor.target.basedir" and relative path
+ * is "__editor/file.txt".
+ *
  * @author VMedvid
  */
 public class GitDummyEditor {

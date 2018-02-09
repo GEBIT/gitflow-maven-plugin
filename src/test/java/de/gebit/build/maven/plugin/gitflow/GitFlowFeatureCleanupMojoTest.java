@@ -8,6 +8,7 @@
 //
 package de.gebit.build.maven.plugin.gitflow;
 
+import static de.gebit.build.maven.plugin.gitflow.jgit.GitExecution.COMMIT_MESSAGE_FOR_TESTFILE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.verifyZeroInteractions;
@@ -31,26 +32,26 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
 
     @Test
     public void testExecute() throws Exception {
-        try (RepositorySet repositorySet = prepareGitRepo(TestProjects.BASIC)) {
+        try (RepositorySet repositorySet = git.createGitRepositorySet(TestProjects.BASIC)) {
             // set up
-            executeFeatureStart(repositorySet, FEATURE_NUMBER);
-            gitCreateAndCommitTestfile(repositorySet);
+            ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NUMBER);
+            git.createAndCommitTestfile(repositorySet);
             // test
-            executeMojo(repositorySet.getWorkingBasedir(), GOAL, promptControllerMock);
+            executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
             // verify
-            assertTrue("working directory is not clean", gitStatus(repositorySet).isClean());
-            assertEquals("current branch is wrong", FEATURE_BRANCH, gitCurrentBranch(repositorySet));
-            assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
-            assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+            assertTrue("working directory is not clean", git.status(repositorySet).isClean());
+            assertEquals("current branch is wrong", FEATURE_BRANCH, git.currentBranch(repositorySet));
+            git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+            git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
 
-            assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
-            assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FOR_TESTFILE,
+            git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
+            git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FOR_TESTFILE,
                     EXPECTED_SET_VERSION_COMMIT_MESSAGE);
-            assertCommitsInRemoteBranch(repositorySet, MASTER_BRANCH);
-            assertCommitsInRemoteBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FOR_TESTFILE,
+            git.assertCommitsInRemoteBranch(repositorySet, MASTER_BRANCH);
+            git.assertCommitsInRemoteBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FOR_TESTFILE,
                     EXPECTED_SET_VERSION_COMMIT_MESSAGE);
 
-            assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE);
+            git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE);
 
             verifyZeroInteractions(promptControllerMock);
         }

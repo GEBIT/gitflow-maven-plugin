@@ -13,65 +13,61 @@ import java.io.File;
 import org.eclipse.jgit.api.Git;
 
 /**
- * Repository set contains Git APIs for origin and working repositories.
+ * Repository set contains Git APIs for remote and local repositories.
  *
  * @author VMedvid
  */
 public class RepositorySet implements AutoCloseable {
 
-    private Git originRepoGit;
+    private Git remoteRepoGit;
 
-    private Git workingRepoGit;
+    private Git localRepoGit;
 
     /**
-     * Initializes repository set with Git APIs for origin and working
+     * Initializes repository set with Git APIs for remote and local
      * repositories.
      *
-     * @param aOriginRepoGit
-     *            the Git API for origin repository
-     * @param aWorkingRepoGit
-     *            the Git API for working repository
+     * @param aRemoteRepoGit
+     *            the Git API for remote repository
+     * @param aLocalRepoGit
+     *            the Git API for local repository
      */
-    public RepositorySet(Git aOriginRepoGit, Git aWorkingRepoGit) {
-        originRepoGit = aOriginRepoGit;
-        workingRepoGit = aWorkingRepoGit;
+    public RepositorySet(Git aRemoteRepoGit, Git aLocalRepoGit) {
+        remoteRepoGit = aRemoteRepoGit;
+        localRepoGit = aLocalRepoGit;
     }
 
     @Override
     public void close() throws Exception {
-        if (originRepoGit != null) {
-            originRepoGit.getRepository().close();
-            originRepoGit.close();
+        if (remoteRepoGit != null) {
+            remoteRepoGit.getRepository().close();
+            remoteRepoGit.close();
         }
-        if (workingRepoGit != null) {
-            workingRepoGit.getRepository().close();
-            workingRepoGit.close();
+        if (localRepoGit != null) {
+            localRepoGit.getRepository().close();
+            localRepoGit.close();
         }
     }
 
     /**
-     * @return the Git API for origin repository.
+     * @return the Git API for remote repository.
      */
-    public Git getOriginRepoGit() {
-        return originRepoGit;
+    public Git getRemoteRepoGit() {
+        return remoteRepoGit;
     }
 
     /**
-     * @return the Git API for working repository.
+     * @return the Git API for local repository.
      */
-    public Git getWorkingRepoGit() {
-        return workingRepoGit;
+    public Git getLocalRepoGit() {
+        return localRepoGit;
     }
 
     /**
-     * @return the basedir for working repository
+     * @return the working directory of local repository
      */
-    public File getWorkingBasedir() {
-        return getRepoBasedir(workingRepoGit);
-    }
-
-    private File getRepoBasedir(Git repoGit) {
-        return repoGit.getRepository().getDirectory().getParentFile();
+    public File getWorkingDirectory() {
+        return localRepoGit.getRepository().getDirectory().getParentFile();
     }
 
 }

@@ -34,17 +34,17 @@ public class GitFlowSetVersionMojoTest extends AbstractGitFlowMojoTestCase {
 
     @Test
     public void testExecute() throws Exception {
-        try (RepositorySet repositorySet = prepareGitRepo(TestProjects.BASIC)) {
+        try (RepositorySet repositorySet = git.createGitRepositorySet(TestProjects.BASIC)) {
             // set up
             Properties properties = new Properties();
             properties.setProperty("newVersion", NEW_VERSION);
             // test
-            executeMojo(repositorySet.getWorkingBasedir(), GOAL, properties);
+            executeMojo(repositorySet.getWorkingDirectory(), GOAL, properties);
             // verify
-            Set<String> modified = repositorySet.getWorkingRepoGit().status().call().getModified();
+            Set<String> modified = git.status(repositorySet).getModified();
             assertEquals("wrong number of modified and not commited files", 1, modified.size());
             assertEquals("pom.xml should be modified and not commited", "pom.xml", modified.iterator().next());
-            Model pom = readPom(repositorySet.getWorkingBasedir());
+            Model pom = readPom(repositorySet.getWorkingDirectory());
             assertEquals("version in pom.xml is not correctly set", NEW_VERSION, pom.getVersion());
             assertEquals("version in version.build property is not correctly set", NEW_VERSION,
                     pom.getProperties().getProperty("version.build"));
@@ -53,16 +53,16 @@ public class GitFlowSetVersionMojoTest extends AbstractGitFlowMojoTestCase {
 
     @Test
     public void testExecuteWithPrompter() throws Exception {
-        try (RepositorySet repositorySet = prepareGitRepo(TestProjects.BASIC)) {
+        try (RepositorySet repositorySet = git.createGitRepositorySet(TestProjects.BASIC)) {
             // set up
             when(promptControllerMock.prompt("What is the new version?", POM_RELEASE_VERSION)).thenReturn(NEW_VERSION);
             // test
-            executeMojo(repositorySet.getWorkingBasedir(), GOAL, promptControllerMock);
+            executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
             // verify
-            Set<String> modified = repositorySet.getWorkingRepoGit().status().call().getModified();
+            Set<String> modified = git.status(repositorySet).getModified();
             assertEquals("wrong number of modified and not commited files", 1, modified.size());
             assertEquals("pom.xml should be modified and not commited", "pom.xml", modified.iterator().next());
-            Model pom = readPom(repositorySet.getWorkingBasedir());
+            Model pom = readPom(repositorySet.getWorkingDirectory());
             assertEquals("version in pom.xml is not correctly set", NEW_VERSION, pom.getVersion());
             assertEquals("version in version.build property is not correctly set", NEW_VERSION,
                     pom.getProperties().getProperty("version.build"));
