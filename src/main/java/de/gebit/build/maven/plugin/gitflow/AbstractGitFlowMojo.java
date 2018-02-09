@@ -734,9 +734,12 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 			throws MojoFailureException, CommandLineException {
 		getLog().info("Looking for release tags.");
 
-		return new ArrayList<>(Arrays.asList(
-				executeGitCommandReturn("tag", "--sort=-v:refname", "-l", tagPrefix + (pattern != null ? pattern : "*"))
-						.split("\\r?\\n")));
+		String gitResult = executeGitCommandReturn("tag", "--sort=-v:refname", "-l",
+		        tagPrefix + (pattern != null ? pattern : "*"));
+		if (gitResult.trim().isEmpty()) {
+		    return new ArrayList<>();
+		}
+                return new ArrayList<>(Arrays.asList(gitResult.split("\\r?\\n")));
 	}
 
 	/**
