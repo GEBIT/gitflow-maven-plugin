@@ -1359,7 +1359,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 		getLog().info("Creating new worktree for branch configuration.");
 
 		// clean worktree target directory
-		File branchConfigWorktree = new File(configBranchDir);
+		String basedir = this.session.getRequest().getBaseDirectory();
+		File branchConfigWorktree = new File(basedir, configBranchDir);
 		if (branchConfigWorktree.exists()) {
 			try {
 				FileUtils.deleteDirectory(branchConfigWorktree);
