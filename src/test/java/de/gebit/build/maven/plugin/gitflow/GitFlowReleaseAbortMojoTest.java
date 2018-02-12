@@ -1,5 +1,5 @@
 //
-// GitFlowFeatureAbortMojoTest.java
+// GitFlowReleaseAbortMojoTest.java
 //
 // Copyright (C) 2018
 // GEBIT Solutions GmbH,
@@ -18,17 +18,17 @@ import de.gebit.build.maven.plugin.gitflow.jgit.RepositorySet;
  *
  * @author VMedvid
  */
-public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
+public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
 
-    private static final String GOAL = "feature-abort";
+    private static final String GOAL = "release-abort";
 
-    private static final String FEATURE_NUMBER = TestProjects.BASIC.jiraProject + "-42";
+    private static final String RELEASE_VERSION = "1.42.0";
 
     @Test
     public void testExecute() throws Exception {
         try (RepositorySet repositorySet = git.createGitRepositorySet(TestProjects.BASIC.basedir)) {
             // set up
-            ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NUMBER);
+            ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
             git.createAndCommitTestfile(repositorySet);
             // test
             executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
@@ -38,10 +38,6 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
             git.assertClean(repositorySet);
             git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
             git.assertLocalBranches(repositorySet, MASTER_BRANCH);
-            git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
-
-            git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
-            git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         }
     }
 

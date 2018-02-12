@@ -8,15 +8,20 @@
 //
 package de.gebit.build.maven.plugin.gitflow.jgit;
 
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Properties;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -27,11 +32,16 @@ import org.eclipse.jgit.errors.IncorrectObjectTypeException;
 import org.eclipse.jgit.errors.MissingObjectException;
 import org.eclipse.jgit.errors.StopWalkException;
 import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.lib.ObjectLoader;
+import org.eclipse.jgit.lib.ObjectStream;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.StoredConfig;
 import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.revwalk.filter.RevFilter;
+import org.eclipse.jgit.treewalk.TreeWalk;
+import org.eclipse.jgit.treewalk.filter.PathFilter;
 
 import de.gebit.build.maven.plugin.gitflow.WorkspaceUtils;
 import de.gebit.build.maven.plugin.gitflow.jgit.GitRebaseTodo.GitRebaseTodoEntry;
@@ -52,6 +62,8 @@ public class GitExecution {
     private static final String GIT_BASEDIR_LOCAL_SUFFIX = "working";
 
     private static final String REFS_HEADS_PATH = "refs/heads/";
+
+    private static final String REFS_TAGS_PATH = "refs/tags/";
 
     private String gitBaseDir;
 
@@ -111,6 +123,7 @@ public class GitExecution {
         File repoBasedir = new File(gitBaseDir, basedirName);
         File remoteRepoBasedir = new File(repoBasedir, GIT_BASEDIR_REMOTE_SUFFIX);
         File localRepoBasedir = new File(repoBasedir, GIT_BASEDIR_LOCAL_SUFFIX);
+        FileUtils.copyFileToDirectory(new File(sourceBasedir.getParentFile(), "parent-pom.xml"), repoBasedir);
         Git remoteGit = Git.init().setDirectory(remoteRepoBasedir).setBare(true).call();
         Git localGit = null;
         try {
@@ -239,6 +252,18 @@ public class GitExecution {
     }
 
     /**
+     * Returns the name of the tag by the reference. E.g., for "refs/tags/1.0.0"
+     * will be returned "1.0.0".
+     *
+     * @param aBranchRef
+     *            the reference of a branch
+     * @return the name of the referenced branch
+     */
+    public String tagNameByRef(Ref aTagRef) {
+        return StringUtils.substringAfter(aTagRef.getName(), REFS_TAGS_PATH);
+    }
+
+    /**
      * Swiches to the passed branch.
      *
      * @param aRepositorySet
@@ -249,7 +274,24 @@ public class GitExecution {
      *             if an error occurs on git command execution
      */
     public void switchToBranch(RepositorySet aRepositorySet, String aBranch) throws GitAPIException {
-        aRepositorySet.getLocalRepoGit().checkout().setName(aBranch).call();
+        switchToBranch(aRepositorySet, aBranch, false);
+    }
+
+    /**
+     * Swiches to the passed branch.
+     *
+     * @param aRepositorySet
+     *            the repository to be used
+     * @param aBranch
+     *            the branch to switch to
+     * @param createBranch
+     *            <code>true</code> if branch should be created before switch
+     * @throws GitAPIException
+     *             if an error occurs on git command execution
+     */
+    public void switchToBranch(RepositorySet aRepositorySet, String aBranch, boolean createBranch)
+            throws GitAPIException {
+        aRepositorySet.getLocalRepoGit().checkout().setCreateBranch(createBranch).setName(aBranch).call();
     }
 
     /**
@@ -265,6 +307,93 @@ public class GitExecution {
     }
 
     /**
+     * Asserts that working directory of the local repository is clean
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @throws GitAPIException
+     *             if an error occurs on git command execution
+     */
+    public void assertClean(RepositorySet repositorySet) throws GitAPIException {
+        assertTrue("working directory is not clean", status(repositorySet).isClean());
+    }
+
+    /**
+     * Asserts that passes config entry exists in local repository and has
+     * passed expected value.
+     *
+     * @param aRepositorySet
+     *            the repository to be used
+     * @param configKey
+     *            the key of the config entry
+     * @param expectedConfigValue
+     *            the expected value of the config entry
+     */
+    public void assertConfigValue(RepositorySet repositorySet, String configSection, String configSubsection,
+            String configName, String expectedConfigValue) {
+        StoredConfig config = repositorySet.getLocalRepoGit().getRepository().getConfig();
+        String value = config.getString(configSection, configSubsection, configName);
+        assertNotNull("git config [section='" + configSection + "', subsection='" + configSubsection + "', name='"
+                + configName + "'] not found", value);
+        assertEquals("git config value is wrong", expectedConfigValue, value);
+    }
+
+    /**
+     * Assert that the current branch is equal to the passed one.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param expectedBranch
+     *            expected current branch
+     * @throws IOException
+     *             if an error occurs on git command execution
+     */
+    public void assertCurrentBranch(RepositorySet repositorySet, String expectedBranch) throws IOException {
+        assertEquals("current branch is wrong", expectedBranch, currentBranch(repositorySet));
+    }
+
+    /**
+     * Asserts that local repository consists of passed expected tags.
+     *
+     * @param aRepositorySet
+     *            the repository to be used
+     * @param expectedTags
+     *            the expected tags
+     * @throws GitAPIException
+     *             if an error occurs on git command execution
+     */
+    public void assertLocalTags(RepositorySet aRepositorySet, String... expectedTags) throws GitAPIException {
+        List<String> tags = tags(aRepositorySet.getLocalRepoGit());
+        this.assertArrayEquals("Tags in local repository are different from expected", expectedTags,
+                tags.toArray(new String[tags.size()]));
+    }
+
+    /**
+     * Asserts that remote repository consists of passed expected tags.
+     *
+     * @param aRepositorySet
+     *            the repository to be used
+     * @param expectedTags
+     *            the expected tags
+     * @throws GitAPIException
+     *             if an error occurs on git command execution
+     */
+    public void assertRemoteTags(RepositorySet aRepositorySet, String... expectedTags) throws GitAPIException {
+        List<String> tags = tags(aRepositorySet.getRemoteRepoGit());
+        this.assertArrayEquals("Tags in remote repository are different from expected", expectedTags,
+                tags.toArray(new String[tags.size()]));
+    }
+
+    public List<String> tags(Git git) throws GitAPIException {
+        List<String> tags = new ArrayList<String>();
+        List<Ref> tagRefs = git.tagList().call();
+        for (Ref tagRef : tagRefs) {
+            tags.add(tagNameByRef(tagRef));
+        }
+        return tags;
+    }
+
+    /**
      * Asserts that local repository consists of passed expected branches.
      *
      * @param aRepositorySet
@@ -274,8 +403,7 @@ public class GitExecution {
      * @throws GitAPIException
      *             if an error occurs on git command execution
      */
-    public void assertLocalBranches(RepositorySet aRepositorySet, String... expectedBranches)
-            throws GitAPIException {
+    public void assertLocalBranches(RepositorySet aRepositorySet, String... expectedBranches) throws GitAPIException {
         List<String> branches = localBranches(aRepositorySet);
         assertBranches(expectedBranches, branches, "local");
     }
@@ -290,8 +418,7 @@ public class GitExecution {
      * @throws GitAPIException
      *             if an error occurs on git command execution
      */
-    public void assertRemoteBranches(RepositorySet aRepositorySet, String... expectedBranches)
-            throws GitAPIException {
+    public void assertRemoteBranches(RepositorySet aRepositorySet, String... expectedBranches) throws GitAPIException {
         List<String> branches = remoteBranches(aRepositorySet);
         assertBranches(expectedBranches, branches, "remote");
     }
@@ -325,8 +452,8 @@ public class GitExecution {
      * @throws IOException
      *             in case of an I/O error
      */
-    public void assertCommitsInLocalBranch(RepositorySet repositorySet, String branch,
-            String... expectedCommitMessages) throws GitAPIException, IOException {
+    public void assertCommitsInLocalBranch(RepositorySet repositorySet, String branch, String... expectedCommitMessages)
+            throws GitAPIException, IOException {
         List<String> commitMessages = commitMessagesInBranch(repositorySet.getLocalRepoGit(), branch);
         assertCommitMessages(expectedCommitMessages, commitMessages, branch, "local");
     }
@@ -369,6 +496,10 @@ public class GitExecution {
                 expectedCommitMessages, commitMessages.toArray(new String[commitMessages.size()]));
     }
 
+    private void assertArrayEquals(String message, String[] expected, String[] actual) {
+        assertEquals(message, Arrays.toString(expected), Arrays.toString(actual));
+    }
+
     /**
      * Asserts that passed local and remote branches are identical (reference
      * same commit).
@@ -390,6 +521,27 @@ public class GitExecution {
                 remoteBranchObjectId.getName());
     }
 
+    /**
+     * Asserts that passed local and remote branches are different (reference
+     * different commits).
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param localBranch
+     *            the local branch to be checked
+     * @param remoteBranch
+     *            the remote branch to be checked
+     * @throws IOException
+     *             in case of an I/O error
+     */
+    public void assertLocalAndRemoteBranchesAreDifferent(RepositorySet repositorySet, String localBranch,
+            String remoteBranch) throws IOException {
+        ObjectId localBranchObjectId = objectIdOfBranch(repositorySet.getLocalRepoGit(), localBranch);
+        ObjectId remoteBranchObjectId = objectIdOfBranch(repositorySet.getRemoteRepoGit(), remoteBranch);
+        assertNotEquals("remote branch reference same commit as local branch", localBranchObjectId.getName(),
+                remoteBranchObjectId.getName());
+    }
+
     private List<RevCommit> readCommits(Git git, String branch, String... commitMessagesToBeExcluded)
             throws GitAPIException, IOException {
         List<RevCommit> commits = new ArrayList<RevCommit>();
@@ -400,6 +552,97 @@ public class GitExecution {
             commits.add(tempRevCommit);
         }
         return commits;
+    }
+
+    /**
+     * Returns the last local commit in passed branch or <code>null</code> if no
+     * commits found in branch.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param branch
+     *            the local branch to be checked
+     * @return the last local commit in passed branch or <code>null</code> if no
+     *         commits found in branch
+     * @throws IOException
+     *             in case of an I/O error
+     * @throws GitAPIException
+     *             if an error occurs on git command execution
+     */
+    public RevCommit lastLocalCommitInBranch(RepositorySet repositorySet, String branch)
+            throws IOException, GitAPIException {
+        ObjectId branchObjectId = objectIdOfBranch(repositorySet.getLocalRepoGit(), branch);
+        Iterator<RevCommit> commitsIterator = repositorySet.getLocalRepoGit().log().add(branchObjectId).setMaxCount(1)
+                .call().iterator();
+        if (commitsIterator.hasNext()) {
+            return commitsIterator.next();
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Tries to read passed properties file from the passed branch in local
+     * repository.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param branch
+     *            the local branch to be checked
+     * @param filepath
+     *            the relative path to the properties file to be read
+     * @return the properties from the properties file
+     * @throws IOException
+     *             in case of an I/O error
+     * @throws GitAPIException
+     *             if an error occurs on git command execution
+     */
+    public Properties readPropertiesFileInLocalBranch(RepositorySet repositorySet, String branch, String filepath)
+            throws IOException, GitAPIException {
+        try (ObjectStream stream = readFileInLocalBranch(repositorySet, branch, filepath)) {
+            if (stream != null) {
+                Properties props = new Properties();
+                props.load(stream);
+                return props;
+            }
+            throw new IllegalStateException("File '" + filepath + "' couldn't be found");
+        }
+    }
+
+    /**
+     * Returns the stream of the passed file from the passed branch in local
+     * repository or <code>null</code> if file can't be found.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param branch
+     *            the local branch to be checked
+     * @param filepath
+     *            the relative path to the file to be read
+     * @return the stream of the file or <code>null</code> if file can't be
+     *         found
+     * @throws IOException
+     *             in case of an I/O error
+     * @throws GitAPIException
+     *             if an error occurs on git command execution
+     */
+    public ObjectStream readFileInLocalBranch(RepositorySet repositorySet, String branch, String filepath)
+            throws IOException, GitAPIException {
+        RevCommit lastCommit = lastLocalCommitInBranch(repositorySet, branch);
+        if (lastCommit != null) {
+            RevTree tree = lastCommit.getTree();
+            try (TreeWalk treeWalk = new TreeWalk(repositorySet.getLocalRepoGit().getRepository())) {
+                treeWalk.addTree(tree);
+                treeWalk.setRecursive(true);
+                treeWalk.setFilter(PathFilter.create(filepath));
+                if (treeWalk.next()) {
+                    ObjectId objectId = treeWalk.getObjectId(0);
+                    ObjectLoader loader = repositorySet.getLocalRepoGit().getRepository().open(objectId);
+                    return loader.openStream();
+                }
+            }
+        }
+        return null;
     }
 
     private ObjectId objectIdOfBranch(Git git, String branch) throws IOException {

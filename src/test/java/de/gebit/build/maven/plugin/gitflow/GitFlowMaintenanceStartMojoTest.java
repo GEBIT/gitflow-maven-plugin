@@ -8,8 +8,6 @@
 //
 package de.gebit.build.maven.plugin.gitflow;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
@@ -30,13 +28,13 @@ public class GitFlowMaintenanceStartMojoTest extends AbstractGitFlowMojoTestCase
 
     private static final String MAINTENANCE_VERSION = "1.42";
 
-    private static final String MAINTENANCE_BRANCH = "maintenance/gebit-build-" + MAINTENANCE_VERSION;
+    private static final String MAINTENANCE_BRANCH = "maintenance/gitflow-tests-" + MAINTENANCE_VERSION;
 
     private static final String MAINTENANCE_FIRST_VERSION = "1.42.0-SNAPSHOT";
 
     @Test
     public void testExecute() throws Exception {
-        try (RepositorySet repositorySet = git.createGitRepositorySet(TestProjects.BASIC)) {
+        try (RepositorySet repositorySet = git.createGitRepositorySet(TestProjects.BASIC.basedir)) {
             // set up
             when(promptControllerMock.prompt(ExecutorHelper.MAINTENANCE_START_PROMPT_SELECTING_RELEASE,
                     Arrays.asList("0", "T"))).thenReturn("0");
@@ -53,8 +51,8 @@ public class GitFlowMaintenanceStartMojoTest extends AbstractGitFlowMojoTestCase
             verify(promptControllerMock).prompt(ExecutorHelper.MAINTENANCE_START_PROMPT_MAINTENANCE_FIRST_VERSION);
             verifyNoMoreInteractions(promptControllerMock);
 
-            assertTrue("working directory is not clean", git.status(repositorySet).isClean());
-            assertEquals("current branch is wrong", MAINTENANCE_BRANCH, git.currentBranch(repositorySet));
+            git.assertClean(repositorySet);
+            git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
             git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH);
             git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH);
 

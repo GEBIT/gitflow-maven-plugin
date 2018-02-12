@@ -28,7 +28,7 @@
 	<parent>
 		<groupId>de.gebit.build</groupId>
 		<artifactId>gebit-build</artifactId>
-		<version>1.2.19</version>
+		<version>1.2.23</version>
 		<relativePath/>
 	</parent>
 
@@ -184,6 +184,7 @@
 				<extensions>true</extensions>
 				<configuration>
 					<tiles>
+						<tile>de.gebit.build.tile:coverage:${version.build}</tile>
 						<tile>de.gebit.build.tile:enforce-maven:${version.build}</tile>
 						<!--
 						<tile>de.gebit.build.tile:enforce-java:${version.build}</tile>
@@ -274,6 +275,18 @@
 			<groupId>org.eclipse.aether</groupId>
 			<artifactId>aether-transport-http</artifactId>
 			<version>1.0.2.v20150114</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.eclipse.aether</groupId>
+			<artifactId>aether-transport-file</artifactId>
+			<version>1.0.2.v20150114</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.maven.wagon</groupId>
+			<artifactId>wagon-file</artifactId>
+			<version>3.0.0</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>

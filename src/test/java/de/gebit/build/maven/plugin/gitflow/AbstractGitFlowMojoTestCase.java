@@ -8,7 +8,9 @@
 //
 package de.gebit.build.maven.plugin.gitflow;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.Closeable;
 import java.io.File;
@@ -83,7 +85,8 @@ public abstract class AbstractGitFlowMojoTestCase {
     private ClassWorld classWorld;
 
     /**
-     * Geit execution provides methods to execute different git operation using jGit.
+     * Geit execution provides methods to execute different git operation using
+     * jGit.
      */
     protected GitExecution git;
 
@@ -313,6 +316,7 @@ public abstract class AbstractGitFlowMojoTestCase {
         userProperties.put(AbstractGitFlowMojo.USER_PROPERTY_KEY_CMD_MVN_ARGS_APPEND,
                 mvnArgs.toArray(new String[mvnArgs.size()]));
         userProperties.put(GITFLOW_PLUGIN_VERSION_PROPERTY, pluginVersion);
+        userProperties.put(AbstractGitFlowMojo.USER_PROPERTY_KEY_EXTERNAL_GIT_EDITOR_USED, "true");
     }
 
     /**
@@ -331,5 +335,88 @@ public abstract class AbstractGitFlowMojoTestCase {
     protected Model readPom(File basedir) throws ComponentLookupException, ModelParseException, IOException {
         ModelProcessor modelProcessor = container.lookup(ModelProcessor.class);
         return modelProcessor.read(new File(basedir, "pom.xml"), null);
+    }
+
+    /**
+     * Asserts that the project version and the value of the version.build
+     * property in pom.xml file equals to passed expected version.
+     *
+     * @param projectPath
+     *            the pass to the maven project
+     * @throws ComponentLookupException
+     *             if an error occurs while preparing maven processor
+     * @throws ModelParseException
+     *             if an error occurs while parsing pom.xml file
+     * @throws IOException
+     *             if an error occurs while reading pom.xml file
+     */
+    protected void assertVersionInPom(File projectPath, String expectedVersion)
+            throws ComponentLookupException, ModelParseException, IOException {
+        Model workingPom = readPom(projectPath);
+        assertEquals("project version in local pom.xml file is wrong", expectedVersion, workingPom.getVersion());
+        assertEquals("version.build property in local pom.xml file is wrong", expectedVersion,
+                workingPom.getProperties().getProperty("version.build"));
+    }
+
+    /**
+     * Asserts that the site for the project was deployed. The site deployment
+     * and this test works only if the distribution management configuration for
+     * site is copied from parent-pom.xml to the pom.xml file of the test
+     * project.
+     *
+     * @param projectPath
+     *            the pass to the maven project
+     * @throws ComponentLookupException
+     *             if an error occurs while preparing maven processor
+     * @throws ModelParseException
+     *             if an error occurs while parsing pom.xml file
+     * @throws IOException
+     *             if an error occurs while reading pom.xml file
+     */
+    protected void assertReleaseSiteDeployed(File projectPath)
+            throws ComponentLookupException, ModelParseException, IOException {
+        Model pom = readPom(projectPath);
+        String artifactId = pom.getArtifactId();
+        File siteIndexFile = new File(projectPath, "../mvnrepo/gebit-site/" + artifactId + "/index.html");
+        assertTrue("release site was not deployed [" + siteIndexFile.getAbsolutePath() + "]", siteIndexFile.exists());
+    }
+
+    /**
+     * Asserts that the project artifact with expected version was deployed.
+     *
+     * @param projectPath
+     *            the pass to the maven project
+     * @param releaseVersion
+     *            the expected project version that was deployed
+     * @throws ComponentLookupException
+     *             if an error occurs while preparing maven processor
+     * @throws ModelParseException
+     *             if an error occurs while parsing pom.xml file
+     * @throws IOException
+     *             if an error occurs while reading pom.xml file
+     */
+    protected void assertReleaseArtifactDeployed(File workingDir, String releaseVersion)
+            throws ComponentLookupException, ModelParseException, IOException {
+        Model pom = readPom(workingDir);
+        String groupId = pom.getGroupId();
+        String artifactId = pom.getArtifactId();
+        String relativePath = createRelativeRepoPath(groupId, artifactId, releaseVersion);
+        File artifact = new File(workingDir, "../mvnrepo/gebit-releases/" + relativePath);
+        assertTrue("release artifact was not deployed [" + artifact.getAbsolutePath() + "]", artifact.exists());
+    }
+
+    private String createRelativeRepoPath(String aGroupId, String aArtifactId, String aVersion) {
+        StringBuilder path = new StringBuilder();
+        path.append(aGroupId.replace(".", "/"));
+        path.append("/");
+        path.append(aArtifactId);
+        path.append("/");
+        path.append(aVersion);
+        path.append("/");
+        path.append(aArtifactId);
+        path.append("-");
+        path.append(aVersion);
+        path.append(".jar");
+        return path.toString();
     }
 }

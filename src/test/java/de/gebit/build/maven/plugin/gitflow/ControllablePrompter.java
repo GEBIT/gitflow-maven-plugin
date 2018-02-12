@@ -14,6 +14,7 @@ import java.util.List;
 import org.codehaus.plexus.component.annotations.Component;
 import org.codehaus.plexus.components.interactivity.Prompter;
 import org.codehaus.plexus.components.interactivity.PrompterException;
+import org.codehaus.plexus.util.StringUtils;
 
 import com.google.common.base.Objects;
 
@@ -55,6 +56,9 @@ public class ControllablePrompter implements Prompter {
     public String prompt(String aMessage, String aDefaultReply) throws PrompterException {
         checkControllerAndMessage(aMessage);
         String answer = controller.prompt(aMessage, aDefaultReply);
+        if (StringUtils.isEmpty(answer)) {
+            answer = aDefaultReply;
+        }
         logPrompt(formatMessageForLog(aMessage, null, aDefaultReply), answer);
         return answer;
     }
@@ -71,6 +75,9 @@ public class ControllablePrompter implements Prompter {
     public String prompt(String aMessage, List aPossibleValues, String aDefaultReply) throws PrompterException {
         checkControllerAndMessage(aMessage);
         String answer = controller.prompt(aMessage, aPossibleValues, aDefaultReply);
+        if (StringUtils.isEmpty(answer)) {
+            answer = aDefaultReply;
+        }
         logPrompt(formatMessageForLog(aMessage, aPossibleValues, aDefaultReply), answer);
         return answer;
     }
@@ -92,7 +99,7 @@ public class ControllablePrompter implements Prompter {
 
     private void checkControllerAndMessage(String aMessage) throws PrompterException {
         if (controller == null) {
-            throw new PrompterException("Prompter is used but no prompt controller is configured. "
+            throw new IllegalStateException("Prompter is used but no prompt controller is configured. "
                     + "Pass your promt controller or mock to the method for mojo execution.");
         }
         if (Objects.equal(lastMessage, aMessage)) {
@@ -101,7 +108,8 @@ public class ControllablePrompter implements Prompter {
                 int tries = repeatsWithSameMessage;
                 repeatsWithSameMessage = 0;
                 lastMessage = null;
-                throw new PrompterException("Too many prompt tries (" + tries + ") with same mesage");
+                throw new IllegalStateException(
+                        "Too many prompt tries (" + tries + ") with same mesage [" + aMessage + "]");
             }
         } else {
             repeatsWithSameMessage = 0;
