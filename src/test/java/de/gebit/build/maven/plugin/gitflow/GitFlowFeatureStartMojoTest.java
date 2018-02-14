@@ -12,6 +12,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import java.util.Properties;
+
+import org.apache.maven.execution.MavenExecutionResult;
 import org.junit.Test;
 
 import de.gebit.build.maven.plugin.gitflow.jgit.RepositorySet;
@@ -33,7 +36,7 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
             + "-SNAPSHOT";
 
     @Test
-    public void testExecuteWithPrompt() throws Exception {
+    public void testExecute() throws Exception {
         try (RepositorySet repositorySet = git.createGitRepositorySet(TestProjects.BASIC.basedir)) {
             // set up
             when(promptControllerMock.prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME))
@@ -50,6 +53,91 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
             git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
             git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
             assertVersionInPom(repositorySet.getWorkingDirectory(), EXPECTED_BRANCH_VERSION);
+        }
+    }
+
+    @Test
+    public void testExecuteSkipFeatureVersion() throws Exception {
+        try (RepositorySet repositorySet = git.createGitRepositorySet(TestProjects.BASIC.basedir)) {
+            // set up
+            when(promptControllerMock.prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME))
+                    .thenReturn(FEATURE_NUMBER);
+            Properties userProperties = new Properties();
+            userProperties.setProperty("flow.skipFeatureVersion", "true");
+            // test
+            executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+            // verify
+            verify(promptControllerMock).prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME);
+            verifyNoMoreInteractions(promptControllerMock);
+
+            git.assertClean(repositorySet);
+            git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+            git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+            git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+            git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH);
+            assertVersionInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+        }
+    }
+
+    @Test
+    public void testExecuteNoCommandsAfterFeatureVersion() throws Exception {
+        try (RepositorySet repositorySet = git.createGitRepositorySet(TestProjects.BASIC.basedir)) {
+            // set up
+            when(promptControllerMock.prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME))
+                    .thenReturn(FEATURE_NUMBER);
+            Properties userProperties = new Properties();
+            userProperties.setProperty("flow.commandsAfterFeatureVersion", "");
+            // test
+            executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+            // verify
+            verify(promptControllerMock).prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME);
+            verifyNoMoreInteractions(promptControllerMock);
+
+            assertVersionInPom(repositorySet.getWorkingDirectory(), EXPECTED_BRANCH_VERSION);
+            git.assertClean(repositorySet);
+            git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+            git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+            git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+            git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
+        }
+    }
+
+    @Test
+    public void testExecuteNoCommandsAfterFeatureVersionAndNoCommandsAfterVersion() throws Exception {
+        try (RepositorySet repositorySet = git.createGitRepositorySet(TestProjects.BASIC.basedir)) {
+            // set up
+            when(promptControllerMock.prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME))
+                    .thenReturn(FEATURE_NUMBER);
+            Properties userProperties = new Properties();
+            userProperties.setProperty("flow.commandsAfterVersion", "");
+            userProperties.setProperty("flow.commandsAfterFeatureVersion", "");
+            // test
+            executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+            // verify
+            verify(promptControllerMock).prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME);
+            verifyNoMoreInteractions(promptControllerMock);
+
+            assertProjectVersionInPom(repositorySet.getWorkingDirectory(), EXPECTED_BRANCH_VERSION);
+            assertVersionBuildPropertyInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+            git.assertClean(repositorySet);
+            git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+            git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+            git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+            git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
+        }
+    }
+
+    @Test
+    public void testExecuteWithUncommitedChanges() throws Exception {
+        try (RepositorySet repositorySet = git.createGitRepositorySet(TestProjects.BASIC.basedir)) {
+            // set up
+            git.createAndAddToIndexTestfile(repositorySet);
+            // test
+            MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                    promptControllerMock);
+            // verify
+            String message = "You have some uncommitted files. Commit or discard local changes in order to proceed.";
+            assertMavenFailureException(result, message);
         }
     }
 

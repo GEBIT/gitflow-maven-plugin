@@ -145,6 +145,41 @@ public class GitExecution {
     }
 
     /**
+     * Creates a test file in local repository and adds it to the repository
+     * index.
+     *
+     * @param repositorySet
+     *            the repository where git command should be executed
+     * @throws GitAPIException
+     *             if an error occurs on git command execution
+     * @throws IOException
+     *             in case of an I/O error
+     */
+    public void createAndAddToIndexTestfile(RepositorySet repositorySet) throws GitAPIException, IOException {
+        createAndAddToIndexTestfile(repositorySet, "testfile.txt");
+    }
+
+    /**
+     * Creates a test file in local repository and adds it to the repository
+     * index.
+     *
+     * @param repositorySet
+     *            the repository where git command should be executed
+     * @param filename
+     *            the name of the file to be created
+     * @throws GitAPIException
+     *             if an error occurs on git command execution
+     * @throws IOException
+     *             in case of an I/O error
+     */
+    public void createAndAddToIndexTestfile(RepositorySet repositorySet, String filename)
+            throws GitAPIException, IOException {
+        File testFile = new File(repositorySet.getWorkingDirectory(), filename);
+        FileUtils.write(testFile, "dummy content", "UTF-8");
+        repositorySet.getLocalRepoGit().add().addFilepattern(".").call();
+    }
+
+    /**
      * Creates a test file in local repository and commits it.
      *
      * @param repositorySet
@@ -165,6 +200,8 @@ public class GitExecution {
      *            the repository where git command should be executed
      * @param filename
      *            the name of the file to be created and commited
+     * @param commitMessage
+     *            the message to be used for commit
      * @throws GitAPIException
      *             if an error occurs on git command execution
      * @throws IOException
