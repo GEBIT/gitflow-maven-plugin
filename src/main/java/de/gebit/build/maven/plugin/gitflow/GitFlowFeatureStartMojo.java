@@ -33,9 +33,9 @@ import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
  * The git flow feature start mojo.
- * 
+ *
  * @author Aleksandr Mashchenko
- * 
+ *
  */
 @Mojo(name = "feature-start", aggregator = true)
 public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
@@ -43,7 +43,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
     /**
      * Whether to skip changing project version. Default is <code>false</code>
      * (the feature name will be appended to project version).
-     * 
+     *
      * @since 1.0.5
      */
     @Parameter(property = "skipFeatureVersion", defaultValue = "false")
@@ -53,7 +53,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
      * Additional maven commands/goals after the feature version has been updated. Will be committed together with the version
      * change. Can contain an {@literal @}{version} placeholder which will be replaced with the new version before
      * execution. If empty the <code>commandsAfterVersion</code> property is used.
-     * 
+     *
      * @since 1.3.2
      */
     @Parameter(property = "commandsAfterFeatureVersion", defaultValue = "")
@@ -62,7 +62,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
     /**
      * A natual language description of the <code>featureNamePattern</code> which is used to print an error message.
      * If not specified the pattern is printed in the error message as is, which can be hard to understand.
-     * 
+     *
      * @since 1.3.1
      */
     @Parameter(property = "featureNamePatternDescription", required = false)
@@ -80,15 +80,15 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
 
             // fetch and check remote
             String currentBranch = gitCurrentBranch();
-            String baseBranch = currentBranch.startsWith(gitFlowConfig.getMaintenanceBranchPrefix()) 
+            String baseBranch = currentBranch.startsWith(gitFlowConfig.getMaintenanceBranchPrefix())
                     ? currentBranch : gitFlowConfig.getDevelopmentBranch();
-            
+
             // use integration branch?
             final String integrationBranch = gitFlowConfig.getIntegrationBranchPrefix() + baseBranch;
             if (!gitBranchExists(integrationBranch) || fetchRemote) {
                 // first try to fetch it
                 gitFetchRemoteAndCompare(integrationBranch, new Callable<Void>() {
-                    
+
                     @Override
                     public Void call() throws Exception {
                         gitUpdateRef(integrationBranch, "refs/remotes/" + gitFlowConfig.getOrigin() + "/" + integrationBranch);
@@ -118,7 +118,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
                 if (useIntegrationBranch) {
                     getLog().info("Using integration branch '" + integrationBranch + "'");
                     baseBranch = integrationBranch;
-                    
+
                     String branchPoint = gitBranchPoint(integrationBranch, baseBranch);
                     if (StringUtils.isEmpty(branchPoint)) {
                         throw new MojoFailureException("Failed to determine branch base of '" + integrationBranch
@@ -189,7 +189,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
                             featureIssue = m.group(1);
                         }
                     }
-                    
+
                     final DefaultVersionInfo versionInfo = new DefaultVersionInfo(
                             currentVersion);
                     version = versionInfo.getReleaseVersionString() + "-"
@@ -224,7 +224,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
      */
     @Override
     protected List<String> getCommandsAfterVersion(boolean processAdditionalCommands) throws MojoFailureException {
-        if (commandsAfterFeatureVersion.isEmpty()) {
+        if (StringUtils.isEmpty(commandsAfterFeatureVersion)) {
             return super.getCommandsAfterVersion(processAdditionalCommands);
         }
         List<String> result = new ArrayList<String>();

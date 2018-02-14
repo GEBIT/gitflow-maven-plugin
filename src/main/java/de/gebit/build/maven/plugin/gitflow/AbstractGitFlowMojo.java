@@ -1642,7 +1642,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected List<String> getCommandsAfterVersion(boolean processAdditionalCommands) throws MojoFailureException {
         List<String> result = new ArrayList<String>();
-        if (!commandsAfterVersion.isEmpty()) {
+        if (!StringUtils.isEmpty(commandsAfterVersion)) {
             result.add(commandsAfterVersion);
         }
         if (processAdditionalCommands) {
