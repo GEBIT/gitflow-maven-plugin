@@ -23,6 +23,8 @@ public class RepositorySet implements AutoCloseable {
 
     private Git localRepoGit;
 
+    private Git clonedRemoteGit;
+
     /**
      * Initializes repository set with Git APIs for remote and local
      * repositories.
@@ -31,10 +33,13 @@ public class RepositorySet implements AutoCloseable {
      *            the Git API for remote repository
      * @param aLocalRepoGit
      *            the Git API for local repository
+     * @param aLocalRepoGit
+     *            the Git API for remote clone repository
      */
-    public RepositorySet(Git aRemoteRepoGit, Git aLocalRepoGit) {
+    public RepositorySet(Git aRemoteRepoGit, Git aLocalRepoGit, Git aClonedRemoteGit) {
         remoteRepoGit = aRemoteRepoGit;
         localRepoGit = aLocalRepoGit;
+        clonedRemoteGit = aClonedRemoteGit;
     }
 
     @Override
@@ -46,6 +51,10 @@ public class RepositorySet implements AutoCloseable {
         if (localRepoGit != null) {
             localRepoGit.getRepository().close();
             localRepoGit.close();
+        }
+        if (clonedRemoteGit != null) {
+            clonedRemoteGit.getRepository().close();
+            clonedRemoteGit.close();
         }
     }
 
@@ -68,6 +77,20 @@ public class RepositorySet implements AutoCloseable {
      */
     public File getWorkingDirectory() {
         return localRepoGit.getRepository().getDirectory().getParentFile();
+    }
+
+    /**
+     * @return the Git API for remote clone repository.
+     */
+    public Git getClonedRemoteRepoGit() {
+        return clonedRemoteGit;
+    }
+
+    /**
+     * @return the working directory of remote clone repository
+     */
+    public File getClonedRemoteWorkingDirectory() {
+        return clonedRemoteGit.getRepository().getDirectory().getParentFile();
     }
 
 }

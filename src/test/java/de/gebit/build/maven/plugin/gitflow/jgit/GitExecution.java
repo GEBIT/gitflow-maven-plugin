@@ -53,6 +53,12 @@ import de.gebit.build.maven.plugin.gitflow.jgit.GitRebaseTodo.GitRebaseTodoEntry
  */
 public class GitExecution {
 
+    public static final String TESTFILE_CONTENT = "dummy content";
+
+    public static final String TESTFILE_CONTENT_MODIFIED = "dummy content 2";
+
+    public static final String TESTFILE_NAME = "testfile.txt";
+
     public static final String COMMIT_MESSAGE_FOR_TESTFILE = "Unit test dummy file commit";
 
     private static final String COMMIT_MESSAGE_FOR_UNIT_TEST_SETUP = "Unit test set-up initial commit";
@@ -60,6 +66,8 @@ public class GitExecution {
     private static final String GIT_BASEDIR_REMOTE_SUFFIX = "origin.git";
 
     private static final String GIT_BASEDIR_LOCAL_SUFFIX = "working";
+
+    private static final String GIT_BASEDIR_REMOTE_CLONE_SUFFIX = "cloned-origin";
 
     private static final String REFS_HEADS_PATH = "refs/heads/";
 
@@ -123,9 +131,11 @@ public class GitExecution {
         File repoBasedir = new File(gitBaseDir, basedirName);
         File remoteRepoBasedir = new File(repoBasedir, GIT_BASEDIR_REMOTE_SUFFIX);
         File localRepoBasedir = new File(repoBasedir, GIT_BASEDIR_LOCAL_SUFFIX);
+        File clonedRemoteRepoBasedir = new File(repoBasedir, GIT_BASEDIR_REMOTE_CLONE_SUFFIX);
         FileUtils.copyFileToDirectory(new File(sourceBasedir.getParentFile(), "parent-pom.xml"), repoBasedir);
         Git remoteGit = Git.init().setDirectory(remoteRepoBasedir).setBare(true).call();
         Git localGit = null;
+        Git clonedRemoteGit = null;
         try {
             localGit = Git.cloneRepository().setURI(remoteGit.getRepository().getDirectory().getAbsolutePath())
                     .setDirectory(localRepoBasedir).call();
@@ -134,7 +144,9 @@ public class GitExecution {
             localGit.add().addFilepattern(".").call();
             localGit.commit().setMessage(COMMIT_MESSAGE_FOR_UNIT_TEST_SETUP).call();
             localGit.push().call();
-            return new RepositorySet(remoteGit, localGit);
+            clonedRemoteGit = Git.cloneRepository().setURI(remoteGit.getRepository().getDirectory().getAbsolutePath())
+                    .setDirectory(clonedRemoteRepoBasedir).call();
+            return new RepositorySet(remoteGit, localGit, clonedRemoteGit);
         } catch (GitAPIException | IOException tempExc) {
             remoteGit.close();
             if (localGit != null) {
@@ -142,6 +154,64 @@ public class GitExecution {
             }
             throw tempExc;
         }
+    }
+
+    /**
+     * Creates a test file in local repository.
+     *
+     * @param repositorySet
+     *            the repository where file should be created
+     * @throws IOException
+     *             in case of an I/O error
+     */
+    public void createTestfile(RepositorySet repositorySet) throws IOException {
+        createTestfile(repositorySet, TESTFILE_NAME);
+    }
+
+    /**
+     * Creates a test file in local repository.
+     *
+     * @param repositorySet
+     *            the repository where file should be created
+     * @param filename
+     *            the name of the file to be created
+     * @throws IOException
+     *             in case of an I/O error
+     */
+    public void createTestfile(RepositorySet repositorySet, String filename) throws IOException {
+        createTestfile(repositorySet.getWorkingDirectory(), filename);
+    }
+
+    private void createTestfile(File dir, String filename) throws IOException {
+        File testFile = new File(dir, filename);
+        FileUtils.write(testFile, TESTFILE_CONTENT, "UTF-8");
+    }
+
+    /**
+     * Modifies the test file in local repository.
+     *
+     * @param repositorySet
+     *            the repository where file is located
+     * @throws IOException
+     *             in case of an I/O error
+     */
+    public void modifyTestfile(RepositorySet repositorySet) throws IOException {
+        modifyTestfile(repositorySet, TESTFILE_NAME);
+    }
+
+    /**
+     * Modifies the test file in local repository.
+     *
+     * @param repositorySet
+     *            the repository where file is located
+     * @param filename
+     *            the name of the file to be modified
+     * @throws IOException
+     *             in case of an I/O error
+     */
+    public void modifyTestfile(RepositorySet repositorySet, String filename) throws IOException {
+        File testFile = new File(repositorySet.getWorkingDirectory(), filename);
+        FileUtils.write(testFile, TESTFILE_CONTENT_MODIFIED, "UTF-8");
     }
 
     /**
@@ -156,7 +226,7 @@ public class GitExecution {
      *             in case of an I/O error
      */
     public void createAndAddToIndexTestfile(RepositorySet repositorySet) throws GitAPIException, IOException {
-        createAndAddToIndexTestfile(repositorySet, "testfile.txt");
+        createAndAddToIndexTestfile(repositorySet, TESTFILE_NAME);
     }
 
     /**
@@ -174,8 +244,7 @@ public class GitExecution {
      */
     public void createAndAddToIndexTestfile(RepositorySet repositorySet, String filename)
             throws GitAPIException, IOException {
-        File testFile = new File(repositorySet.getWorkingDirectory(), filename);
-        FileUtils.write(testFile, "dummy content", "UTF-8");
+        createTestfile(repositorySet, filename);
         repositorySet.getLocalRepoGit().add().addFilepattern(".").call();
     }
 
@@ -190,7 +259,7 @@ public class GitExecution {
      *             in case of an I/O error
      */
     public void createAndCommitTestfile(RepositorySet repositorySet) throws GitAPIException, IOException {
-        createAndCommitTestfile(repositorySet, "testfile.txt", COMMIT_MESSAGE_FOR_TESTFILE);
+        createAndCommitTestfile(repositorySet, TESTFILE_NAME, COMMIT_MESSAGE_FOR_TESTFILE);
     }
 
     /**
@@ -209,10 +278,103 @@ public class GitExecution {
      */
     public void createAndCommitTestfile(RepositorySet repositorySet, String filename, String commitMessage)
             throws GitAPIException, IOException {
-        File testFile = new File(repositorySet.getWorkingDirectory(), filename);
-        FileUtils.write(testFile, "dummy content", "UTF-8");
-        repositorySet.getLocalRepoGit().add().addFilepattern(".").call();
+        createAndAddToIndexTestfile(repositorySet, filename);
         repositorySet.getLocalRepoGit().commit().setMessage(commitMessage).call();
+    }
+
+    /**
+     * Creates a test file in remote repository.
+     *
+     * @param repositorySet
+     *            the repository where git command should be executed
+     * @throws GitAPIException
+     *             if an error occurs on git command execution
+     * @throws IOException
+     *             in case of an I/O error
+     */
+    public void remoteCreateTestfile(RepositorySet repositorySet) throws GitAPIException, IOException {
+        remoteCreateTestfile(repositorySet, TESTFILE_NAME, COMMIT_MESSAGE_FOR_TESTFILE);
+    }
+
+    /**
+     * Creates a test file in remote repository.
+     *
+     * @param repositorySet
+     *            the repository where git command should be executed
+     * @param filename
+     *            the name of the file to be created and commited
+     * @param commitMessage
+     *            the message to be used for commit
+     * @throws GitAPIException
+     *             if an error occurs on git command execution
+     * @throws IOException
+     *             in case of an I/O error
+     */
+    public void remoteCreateTestfile(RepositorySet repositorySet, String filename, String commitMessage)
+            throws GitAPIException, IOException {
+        createTestfile(repositorySet.getClonedRemoteWorkingDirectory(), filename);
+        repositorySet.getClonedRemoteRepoGit().add().addFilepattern(".").call();
+        repositorySet.getClonedRemoteRepoGit().commit().setMessage(commitMessage).call();
+        repositorySet.getClonedRemoteRepoGit().push().call();
+    }
+
+    /**
+     * Asserts that the content of the test file is not changed.
+     *
+     * @param repositorySet
+     *            the repository where test file is located
+     * @throws IOException
+     *             in case of an I/O error
+     */
+    public void assertTestfileContent(RepositorySet repositorySet) throws IOException {
+        assertTestfileContent(repositorySet, TESTFILE_NAME);
+    }
+
+    /**
+     * Asserts that the content of the test file is not changed.
+     *
+     * @param repositorySet
+     *            the repository where test file is located
+     * @param filename
+     *            the name of the test file
+     * @throws IOException
+     *             in case of an I/O error
+     */
+    public void assertTestfileContent(RepositorySet repositorySet, String filename) throws IOException {
+        assertTestfileContent(repositorySet, filename, TESTFILE_CONTENT);
+    }
+
+    /**
+     * Asserts that the content of the test file is modified.
+     *
+     * @param repositorySet
+     *            the repository where test file is located
+     * @throws IOException
+     *             in case of an I/O error
+     */
+    public void assertTestfileContentModified(RepositorySet repositorySet) throws IOException {
+        assertTestfileContentModified(repositorySet, TESTFILE_NAME);
+    }
+
+    /**
+     * Asserts that the content of the test file is modified.
+     *
+     * @param repositorySet
+     *            the repository where test file is located
+     * @param filename
+     *            the name of the test file
+     * @throws IOException
+     *             in case of an I/O error
+     */
+    public void assertTestfileContentModified(RepositorySet repositorySet, String filename) throws IOException {
+        assertTestfileContent(repositorySet, filename, TESTFILE_CONTENT_MODIFIED);
+    }
+
+    private void assertTestfileContent(RepositorySet repositorySet, String filename, String expectedContent)
+            throws IOException {
+        File testFile = new File(repositorySet.getWorkingDirectory(), filename);
+        String content = FileUtils.readFileToString(testFile, "UTF-8");
+        assertEquals("testfile content ist different", expectedContent, content);
     }
 
     /**
@@ -341,6 +503,18 @@ public class GitExecution {
      */
     public void push(RepositorySet aRepositorySet) throws GitAPIException {
         aRepositorySet.getLocalRepoGit().push().call();
+    }
+
+    /**
+     * Fetches the remote repository.
+     *
+     * @param aRepositorySet
+     *            the repository to be used
+     * @throws GitAPIException
+     *             if an error occurs on git command execution
+     */
+    public void fetch(RepositorySet aRepositorySet) throws GitAPIException {
+        aRepositorySet.getLocalRepoGit().fetch().call();
     }
 
     /**
