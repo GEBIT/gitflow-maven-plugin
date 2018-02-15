@@ -68,6 +68,14 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
     @Parameter(property = "featureNamePatternDescription", required = false)
     protected String featureNamePatternDescription;
 
+    /**
+     * The feature name that will be used for feature branch.
+     *
+     * @since 1.5.14
+     */
+    @Parameter(property = "featureName", defaultValue = "${featureName}", required = false)
+    protected String featureName;
+
     /** {@inheritDoc} */
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
@@ -127,24 +135,26 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
                 }
             }
 
-            String featureName = null;
-            try {
-                while (StringUtils.isBlank(featureName)) {
-                    featureName = prompter
-                            .prompt("What is a name of feature branch? "
-                                    + gitFlowConfig.getFeatureBranchPrefix());
-                    if (!validateFeatureName(featureName)) {
-                        if (featureNamePatternDescription != null) {
-                            prompter.showMessage(featureNamePatternDescription);
-                        } else {
-                            prompter.showMessage("Feature name does not match the required pattern: " + featureNamePattern);
+            featureName = promptRequiredValueIfInteractiveMode(
+                    "What is a name of feature branch? " + gitFlowConfig.getFeatureBranchPrefix(), "feature name",
+                    featureName, new StringValidator() {
+
+                        @Override
+                        public ValidationResult validate(String value) {
+                            if (!validateFeatureName(value)) {
+                                String invalidMessage;
+                                if (featureNamePatternDescription != null) {
+                                    invalidMessage = featureNamePatternDescription;
+                                } else {
+                                    invalidMessage = "Feature name does not match the required pattern: "
+                                            + featureNamePattern;
+                                }
+                                return new ValidationResult(invalidMessage);
+                            } else {
+                                return ValidationResult.VALID;
+                            }
                         }
-                        featureName = null;
-                    }
-                }
-            } catch (PrompterException e) {
-                getLog().error(e);
-            }
+                    });
 
             featureName = StringUtils.deleteWhitespace(featureName);
 

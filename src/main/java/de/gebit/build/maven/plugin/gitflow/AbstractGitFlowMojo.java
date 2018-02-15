@@ -83,7 +83,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     public static final String USER_PROPERTY_KEY_CMD_MVN_ARGS_APPEND = "cmd.mvn.args.append";
 
     /**
-     * A property key for a flag that determines if an external git editor is used.
+     * A property key for a flag that determines if an external git editor is
+     * used.
      */
     public static final String USER_PROPERTY_KEY_EXTERNAL_GIT_EDITOR_USED = "external.git.editor.used";
 
@@ -2056,6 +2057,185 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                     .join(versionInfo.getDigits().subList(4, versionInfo.getDigits().size() - 1).iterator(), "_");
         }
         return result;
+    }
+
+    /**
+     * Prompts for a value if interactive mode is enabled. Propmts in a loop
+     * until non-empty value is entered.<br>
+     * In case of batch mode an {@link MojoFailureException} will be thrown.
+     *
+     * @param promptMessage
+     *            the message to be shown in prompt
+     * @param propertyName
+     *            the name of the property (value) to be used in exception
+     *            messages
+     * @return a non-empty value
+     * @throws MojoFailureException
+     *             in case of batch mode or error while prompting
+     */
+    protected String promptRequiredValueIfInteractiveMode(String promptMessage, String propertyName)
+            throws MojoFailureException {
+        return promptRequiredValueIfInteractiveMode(promptMessage, propertyName, null, null, null);
+    }
+
+    /**
+     * Prompts for a value if interactive mode is enabled. Propmts in a loop
+     * until non-empty value is entered. If a non-empty init value provided it
+     * will be returned without prompting.<br>
+     * In case of batch mode an {@link MojoFailureException} will be thrown if
+     * no non-empty init value provided.
+     *
+     * @param promptMessage
+     *            the message to be shown in prompt
+     * @param propertyName
+     *            the name of the property (value) to be used in exception
+     *            messages
+     * @param initValue
+     *            the init value (can be <code>null</code>)
+     * @return a non-empty value
+     * @throws MojoFailureException
+     *             in case of empty init value in batch mode or error while
+     *             prompting
+     */
+    protected String promptRequiredValueIfInteractiveMode(String promptMessage, String propertyName, String initValue)
+            throws MojoFailureException {
+        return promptRequiredValueIfInteractiveMode(promptMessage, propertyName, initValue, null, null);
+    }
+
+    /**
+     * Prompts for a value if interactive mode is enabled. Propmts in a loop
+     * until non-empty value is entered. If a non-empty init value provided it
+     * will be returned without prompting.<br>
+     * In case of batch mode an {@link MojoFailureException} will be thrown if
+     * no non-empty init value provided.
+     *
+     * @param promptMessage
+     *            the message to be shown in prompt
+     * @param propertyName
+     *            the name of the property (value) to be used in exception
+     *            messages
+     * @param initValue
+     *            the init value (can be <code>null</code>)
+     * @param defaultValue
+     *            the default value to be used in prompt (can be
+     *            <code>null</code>)
+     * @return a non-empty value
+     * @throws MojoFailureException
+     *             in case of empty init value in batch mode or error while
+     *             prompting
+     */
+    protected String promptRequiredValueIfInteractiveMode(String promptMessage, String propertyName, String initValue,
+            String defaultValue) throws MojoFailureException {
+        return promptRequiredValueIfInteractiveMode(promptMessage, propertyName, initValue, defaultValue, null);
+    }
+
+    /**
+     * Prompts for a value if interactive mode is enabled. Propmts in a loop
+     * until non-empty valid value is entered.<br>
+     * In case of batch mode an {@link MojoFailureException} will be thrown.
+     *
+     * @param promptMessage
+     *            the message to be shown in prompt
+     * @param propertyName
+     *            the name of the property (value) to be used in exception
+     *            messages
+     * @param validator
+     *            the optional validator to validate the non-empty value
+     * @return a non-empty valid value
+     * @throws MojoFailureException
+     *             in case of batch mode or error while prompting
+     */
+    protected String promptRequiredValueIfInteractiveMode(String promptMessage, String propertyName,
+            StringValidator validator) throws MojoFailureException {
+        return promptRequiredValueIfInteractiveMode(promptMessage, propertyName, null, null, validator);
+    }
+
+    /**
+     * Prompts for a value if interactive mode is enabled. Propmts in a loop
+     * until non-empty valid value is entered. If a valid init value provided it
+     * will be returned without prompting.<br>
+     * In case of batch mode an {@link MojoFailureException} will be thrown if
+     * no valid init value provided.
+     *
+     * @param promptMessage
+     *            the message to be shown in prompt
+     * @param propertyName
+     *            the name of the property (value) to be used in exception
+     *            messages
+     * @param initValue
+     *            the init value (can be <code>null</code>)
+     * @param validator
+     *            the optional validator to validate the non-empty value
+     * @return a non-empty valid value
+     * @throws MojoFailureException
+     *             in case of invalid init value in batch mode or error while
+     *             prompting
+     */
+    protected String promptRequiredValueIfInteractiveMode(String promptMessage, String propertyName, String initValue,
+            StringValidator validator) throws MojoFailureException {
+        return promptRequiredValueIfInteractiveMode(promptMessage, propertyName, initValue, null, validator);
+    }
+
+    /**
+     * Prompts for a value if interactive mode is enabled. Propmts in a loop
+     * until non-empty valid value is entered. If a valid init value provided it
+     * will be returned without prompting.<br>
+     * In case of batch mode an {@link MojoFailureException} will be thrown if
+     * no valid init value provided.
+     *
+     * @param promptMessage
+     *            the message to be shown in prompt
+     * @param propertyName
+     *            the name of the property (value) to be used in exception
+     *            messages
+     * @param initValue
+     *            the init value (can be <code>null</code>)
+     * @param defaultValue
+     *            the default value to be used in prompt (can be
+     *            <code>null</code>)
+     * @param validator
+     *            the optional validator to validate the non-empty value
+     * @return a non-empty valid value
+     * @throws MojoFailureException
+     *             in case of invalid init value in batch mode or error while
+     *             prompting
+     */
+    protected String promptRequiredValueIfInteractiveMode(String promptMessage, String propertyName, String initValue,
+            String defaultValue, StringValidator validator) throws MojoFailureException {
+        String value = initValue;
+        if (settings.isInteractiveMode()) {
+            try {
+                do {
+                    if (StringUtils.isBlank(value)) {
+                        if (StringUtils.isBlank(defaultValue)) {
+                            value = prompter.prompt(promptMessage);
+                        } else {
+                            value = prompter.prompt(promptMessage, defaultValue);
+                        }
+                    }
+                    if (validator != null) {
+                        ValidationResult validationResult = validator.validate(value);
+                        if (!validationResult.isValid()) {
+                            String invalidMessage = validationResult.getInvalidMessage();
+                            if (!StringUtils.isBlank(invalidMessage)) {
+                                prompter.showMessage(invalidMessage);
+                            }
+                            value = null;
+                        }
+                    }
+                } while (StringUtils.isBlank(value));
+            } catch (PrompterException e) {
+                throw new MojoFailureException("Failed to get " + propertyName, e);
+            }
+        } else {
+            if (StringUtils.isBlank(value)) {
+                throw new MojoFailureException("No " + propertyName + " set, aborting...");
+            }
+            if (validator != null && !validator.validate(value).isValid()) {
+                throw new MojoFailureException("Set " + propertyName + " is not valid, aborting...");
+            }
+        }
+        return value;
     }
 
     /**
