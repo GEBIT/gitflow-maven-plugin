@@ -14,6 +14,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
+import java.util.Properties;
 
 import org.codehaus.plexus.components.interactivity.Prompter;
 
@@ -98,5 +99,17 @@ public class ExecutorHelper {
         verify(promptControllerMock).prompt(MAINTENANCE_START_PROMPT_MAINTENANCE_VERSION);
         verify(promptControllerMock).prompt(MAINTENANCE_START_PROMPT_MAINTENANCE_FIRST_VERSION);
         verifyNoMoreInteractions(promptControllerMock);
+    }
+
+    public static void executeIntegerated(AbstractGitFlowMojoTestCase testCase, RepositorySet repositorySet,
+            String integrationBranch) throws Exception {
+        Properties userProperties = new Properties();
+        userProperties.setProperty("integrationBranch", integrationBranch);
+        testCase.executeMojo(repositorySet.getWorkingDirectory(), "integrated", userProperties);
+    }
+
+    public static void execute(AbstractGitFlowMojoTestCase testCase, RepositorySet repositorySet, String goal)
+            throws Exception {
+        testCase.executeMojo(repositorySet.getWorkingDirectory(), goal);
     }
 }

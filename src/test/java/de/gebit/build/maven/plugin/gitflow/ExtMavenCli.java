@@ -9,9 +9,11 @@
 package de.gebit.build.maven.plugin.gitflow;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.maven.cli.ExtCliRequest;
 import org.apache.maven.cli.MavenCli;
 import org.apache.maven.execution.MavenExecutionRequest;
@@ -29,6 +31,11 @@ import org.eclipse.aether.repository.WorkspaceRepository;
  * @author VMedvid
  */
 public class ExtMavenCli extends MavenCli {
+
+    /**
+     * The name of the file with executed maven commands.
+     */
+    public static final String MVN_CMDS_LOG_FILENAME = "mvn-cmds.log";
 
     /**
      * The system property key for the version of gitflow-maven-plugin to be
@@ -63,6 +70,7 @@ public class ExtMavenCli extends MavenCli {
         if (pluginBasedir == null) {
             throw new IllegalArgumentException("Missing system property '" + PROPERTY_KEY_PLUGIN_BASEDIR + "'");
         }
+        logMavenCall(pluginBasedir, aCliRequest.getArgs());
         final String pluginVersion = System.getProperty(PROPERTY_KEY_PLUGIN_VERSION);
         if (pluginVersion == null) {
             throw new IllegalArgumentException("Missing system property '" + PROPERTY_KEY_PLUGIN_VERSION + "'");
@@ -113,5 +121,38 @@ public class ExtMavenCli extends MavenCli {
             }
         };
         request.setWorkspaceReader(workspaceReader);
+    }
+
+    private static void logMavenCall(String pluginBasedir, String[] args) {
+        StringBuilder content = new StringBuilder();
+        boolean first = true;
+        boolean skip = false;
+        for (String arg : args) {
+            if (skip) {
+                skip = false;
+                continue;
+            }
+            if ("-P".equals(arg) || "-s".equals(arg) || "-f".equals(arg)) {
+                skip = true;
+                continue;
+            }
+            if (arg.startsWith("-Dversion.gitflow-maven-plugin=")) {
+                continue;
+            }
+            if (first) {
+                first = false;
+            } else {
+                content.append(" ");
+            }
+            content.append(arg);
+        }
+        content.append("\n");
+        try {
+            FileUtils.write(
+                    new File(new File(pluginBasedir, AbstractGitFlowMojoTestCase.GIT_BASEDIR), MVN_CMDS_LOG_FILENAME),
+                    content, "UTF-8", true);
+        } catch (IOException exc) {
+            exc.printStackTrace();
+        }
     }
 }

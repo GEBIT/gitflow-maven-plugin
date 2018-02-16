@@ -56,9 +56,9 @@ public class GitFlowReleaseMojoTest extends AbstractGitFlowMojoTestCase {
             git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
             git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
                     COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
-            assertVersionInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
-            assertReleaseArtifactDeployed(repositorySet.getWorkingDirectory(), RELEASE_VERSION);
-            assertReleaseSiteDeployed(repositorySet.getWorkingDirectory());
+            assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
+            assertArtifactDeployed(repositorySet.getWorkingDirectory(), RELEASE_VERSION);
+            assertSiteDeployed(repositorySet.getWorkingDirectory());
         }
     }
 

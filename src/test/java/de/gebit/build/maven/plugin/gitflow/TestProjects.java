@@ -29,6 +29,12 @@ public class TestProjects {
      */
     public static final TestProjectData BASIC = new TestProjectData("basic-project", "1.2.3-SNAPSHOT", "GFTST");
 
+    /**
+     * The directory of the test project with invalid project version.
+     */
+    public static final TestProjectData INVALID_VERSION = new TestProjectData("invalid-version-project",
+            "invalid-version", "GFTST");
+
     private static File getProjectBasedir(String projectName) {
         return new File(PROJECTS_BASEDIR, projectName);
     }
@@ -42,23 +48,30 @@ public class TestProjects {
         public final String nextReleaseVersion;
         public final String nextSnepshotVersion;
         public final String jiraProject;
+        public final String buildName;
 
         public TestProjectData(String aProjectName, String aVersion, String aJiraProject) {
+            this(aProjectName, aVersion, aJiraProject, "gitflow-tests");
+        }
+
+        public TestProjectData(String aProjectName, String aVersion, String aJiraProject, String aBuildName) {
             basedir = getProjectBasedir(aProjectName);
             artifactId = aProjectName;
             version = aVersion;
             releaseVersion = StringUtils.substringBeforeLast(version, "-SNAPSHOT");
             maintenanceVersion = StringUtils.substringBeforeLast(releaseVersion, ".");
+            String tempNextReleaseVersion;
             try {
-                nextReleaseVersion = new DefaultVersionInfo(version).getNextVersion().getReleaseVersionString();
+                tempNextReleaseVersion = new DefaultVersionInfo(version).getNextVersion().getReleaseVersionString();
             } catch (VersionParseException exc) {
-                throw new IllegalStateException("version [" + version + "] can't be parsed", exc);
+                tempNextReleaseVersion = releaseVersion;
             }
+            nextReleaseVersion = tempNextReleaseVersion;
             nextSnepshotVersion = nextReleaseVersion + "-SNAPSHOT";
             jiraProject = aJiraProject;
+            buildName = aBuildName;
         }
 
     }
-
 
 }

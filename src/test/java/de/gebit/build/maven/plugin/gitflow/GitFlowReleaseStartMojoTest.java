@@ -52,7 +52,7 @@ public class GitFlowReleaseStartMojoTest extends AbstractGitFlowMojoTestCase {
             git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
             git.assertCommitsInLocalBranch(repositorySet, RELEASE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
             git.assertConfigValue(repositorySet, "branch", RELEASE_BRANCH, "development", GIT_CONFIG_VALUE);
-            assertVersionInPom(repositorySet.getWorkingDirectory(), RELEASE_VERSION);
+            assertVersionsInPom(repositorySet.getWorkingDirectory(), RELEASE_VERSION);
         }
     }
 

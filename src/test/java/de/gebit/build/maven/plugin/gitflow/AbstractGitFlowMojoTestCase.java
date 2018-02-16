@@ -17,10 +17,12 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.maven.Maven;
 import org.apache.maven.classrealm.ClassRealmManagerDelegate;
 import org.apache.maven.classrealm.ClassRealmRequest;
@@ -81,7 +83,7 @@ public abstract class AbstractGitFlowMojoTestCase {
 
     private static final String GOAL_PREFIX = "flow";
 
-    private static final String GIT_BASEDIR = "target/git";
+    public static final String GIT_BASEDIR = "target/git";
 
     public static final String MASTER_BRANCH = "master";
 
@@ -531,7 +533,7 @@ public abstract class AbstractGitFlowMojoTestCase {
      * @throws IOException
      *             if an error occurs while reading pom.xml file
      */
-    protected void assertVersionInPom(File projectPath, String expectedVersion)
+    protected void assertVersionsInPom(File projectPath, String expectedVersion)
             throws ComponentLookupException, ModelParseException, IOException {
         Model workingPom = readPom(projectPath);
         assertEquals("project version in local pom.xml file is wrong", expectedVersion, workingPom.getVersion());
@@ -593,12 +595,12 @@ public abstract class AbstractGitFlowMojoTestCase {
      * @throws IOException
      *             if an error occurs while reading pom.xml file
      */
-    protected void assertReleaseSiteDeployed(File projectPath)
+    protected void assertSiteDeployed(File projectPath)
             throws ComponentLookupException, ModelParseException, IOException {
         Model pom = readPom(projectPath);
         String artifactId = pom.getArtifactId();
         File siteIndexFile = new File(projectPath, "../mvnrepo/gebit-site/" + artifactId + "/index.html");
-        assertTrue("release site was not deployed [" + siteIndexFile.getAbsolutePath() + "]", siteIndexFile.exists());
+        assertTrue("project site was not deployed [" + siteIndexFile.getAbsolutePath() + "]", siteIndexFile.exists());
     }
 
     /**
@@ -606,7 +608,7 @@ public abstract class AbstractGitFlowMojoTestCase {
      *
      * @param projectPath
      *            the pass to the maven project
-     * @param releaseVersion
+     * @param version
      *            the expected project version that was deployed
      * @throws ComponentLookupException
      *             if an error occurs while preparing maven processor
@@ -615,14 +617,57 @@ public abstract class AbstractGitFlowMojoTestCase {
      * @throws IOException
      *             if an error occurs while reading pom.xml file
      */
-    protected void assertReleaseArtifactDeployed(File workingDir, String releaseVersion)
+    protected void assertArtifactDeployed(File projectPath, String version)
             throws ComponentLookupException, ModelParseException, IOException {
-        Model pom = readPom(workingDir);
+        Model pom = readPom(projectPath);
         String groupId = pom.getGroupId();
         String artifactId = pom.getArtifactId();
-        String relativePath = createRelativeRepoPath(groupId, artifactId, releaseVersion);
-        File artifact = new File(workingDir, "../mvnrepo/gebit-releases/" + relativePath);
-        assertTrue("release artifact was not deployed [" + artifact.getAbsolutePath() + "]", artifact.exists());
+        String relativePath = createRelativeRepoPath(groupId, artifactId, version);
+        File artifact = new File(projectPath, "../mvnrepo/gebit-releases/" + relativePath);
+        assertTrue("project artifact was not deployed [" + artifact.getAbsolutePath() + "]", artifact.exists());
+    }
+
+    /**
+     * Asserts that the project artifact was installed.
+     *
+     * @throws IOException
+     *             if an error occurs while reading pom.xml file
+     */
+    protected void assertArtifactInstalled() throws IOException {
+        assertMavenCommandExecuted("clean install");
+    }
+
+    /**
+     * Asserts that the project artifact with expected version was installed.
+     *
+     * @throws IOException
+     *             if an error occurs while reading pom.xml file
+     */
+    protected void assertArtifactNotInstalled() throws IOException {
+        assertMavenCommandNotExecuted("clean install");
+    }
+
+    protected void assertMavenCommandExecuted(String expectedMvnCommand) throws IOException {
+        List<String> executedMavenCommands = loadExecutedMavenCommands();
+        assertTrue("expected mmaven command '" + expectedMvnCommand + "' was not executed",
+                executedMavenCommands.contains(expectedMvnCommand));
+    }
+
+    protected void assertMavenCommandNotExecuted(String expectedMvnCommand) throws IOException {
+        List<String> executedMavenCommands = loadExecutedMavenCommands();
+        assertFalse("expected mmaven command '" + expectedMvnCommand + "' was executed",
+                executedMavenCommands.contains(expectedMvnCommand));
+    }
+
+    /**
+     * @return
+     */
+    private List<String> loadExecutedMavenCommands() throws IOException {
+        File mvnCommandsFile = new File(GIT_BASEDIR, ExtMavenCli.MVN_CMDS_LOG_FILENAME);
+        if (!mvnCommandsFile.exists()) {
+            return Collections.EMPTY_LIST;
+        }
+        return FileUtils.readLines(mvnCommandsFile, "UTF-8");
     }
 
     private String createRelativeRepoPath(String aGroupId, String aArtifactId, String aVersion) {

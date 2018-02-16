@@ -48,7 +48,7 @@ public class GitFlowBuildVersionMojoTest extends AbstractGitFlowMojoTestCase {
             Set<String> modified = git.status(repositorySet).getModified();
             assertEquals("wrong number of modified and not commited files", 1, modified.size());
             assertEquals("pom.xml should be modified and not commited", "pom.xml", modified.iterator().next());
-            assertVersionInPom(repositorySet.getWorkingDirectory(), NEW_VERSION);
+            assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_VERSION);
         }
     }
 }

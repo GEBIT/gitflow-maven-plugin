@@ -48,7 +48,7 @@ public class GitFlowHotfixStartMojoTest extends AbstractGitFlowMojoTestCase {
             git.assertLocalBranches(repositorySet, MASTER_BRANCH, HOTFIX_BRANCH);
             git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
             git.assertCommitsInLocalBranch(repositorySet, HOTFIX_BRANCH, COMMIT_MESSAGE_HOTFIX_SET_VERSION);
-            assertVersionInPom(repositorySet.getWorkingDirectory(), HOTFIX_VERSION);
+            assertVersionsInPom(repositorySet.getWorkingDirectory(), HOTFIX_VERSION);
         }
     }
 

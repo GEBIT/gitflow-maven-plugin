@@ -28,7 +28,6 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
-import org.codehaus.plexus.components.interactivity.PrompterException;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
@@ -111,17 +110,13 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
             if (gitBranchExists(integrationBranch)) {
                 boolean useIntegrationBranch = true;
                 if (!Objects.equals(getCurrentCommit(integrationBranch), getCurrentCommit(baseBranch))) {
-                    if (settings.isInteractiveMode()) {
-                        try {
-                            String answer = prompter.prompt("The current commit on " + baseBranch
+                    String answer = getPrompter().promptRequiredValueIfInteractiveMode(
+                            "The current commit on " + baseBranch
                                     + " is not integrated. Create a branch of the last integrated commit ("
-                                    + integrationBranch + ")?", Arrays.asList("y", "n"), "y");
-                            if (!"y".equalsIgnoreCase(answer)) {
-                                useIntegrationBranch = false;
-                            }
-                        } catch (PrompterException e) {
-                            getLog().error(e);
-                        }
+                                    + integrationBranch + ")?",
+                            "answer to use last integrated commit", null, "y", Arrays.asList("y", "n"));
+                    if (!"y".equalsIgnoreCase(answer)) {
+                        useIntegrationBranch = false;
                     }
                 }
                 if (useIntegrationBranch) {
@@ -135,8 +130,8 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
                 }
             }
 
-            featureName = promptRequiredValueIfInteractiveMode(
-                    "What is a name of feature branch? " + gitFlowConfig.getFeatureBranchPrefix(), "feature name",
+            featureName = getPrompter().promptRequiredValueIfInteractiveMode(
+                    "What is a name of feature branch? " + gitFlowConfig.getFeatureBranchPrefix(), "featureName",
                     featureName, new StringValidator() {
 
                         @Override
@@ -182,21 +177,16 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
                     if (featureNamePattern != null) {
                         // extract the issue number only
                         Matcher m = Pattern.compile(featureNamePattern).matcher(featureName);
-                        if (!m.matches()) {
-                            // retry with prefixe removed
-                            if (featureName.startsWith(gitFlowConfig.getFeatureBranchPrefix())) {
-                                m = Pattern.compile(featureNamePattern).matcher(
-                                        featureName.substring(gitFlowConfig.getFeatureBranchPrefix().length()));
+                        if (m.matches()) {
+                            if (m.groupCount() == 0) {
+                                getLog().warn("Feature branch conforms to <featureNamePattern>, but ther is no matching"
+                                        + " group to extract the issue number.");
+                            } else {
+                                featureIssue = m.group(1);
                             }
-                            if (!m.matches()) {
-                                getLog().warn(
-                                        "Feature branch does not conform to <featureNamePattern> specified, cannot extract issue number.");
-                            }
-                        } else if (m.groupCount() == 0){
-                            getLog().warn(
-                                    "Feature branch conforms to <featureNamePattern>, but ther is no matching group to extract the issue number.");
                         } else {
-                            featureIssue = m.group(1);
+                            getLog().warn("Feature branch does not conform to <featureNamePattern> specified, cannot "
+                                    + "extract issue number.");
                         }
                     }
 

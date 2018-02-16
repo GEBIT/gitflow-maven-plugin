@@ -29,9 +29,8 @@ public class ExtCliRequest extends CliRequest {
      * @throws ParseException
      *             if maven arguments couldn't be parsed
      */
-    public ExtCliRequest(String[] aArgs) throws ParseException {
-        super(aArgs, null);
-        this.commandLine = new CLIManager().parse(aArgs);
+    public ExtCliRequest(String[] aArgs) {
+        this(aArgs, null);
     }
 
     /**
@@ -45,6 +44,15 @@ public class ExtCliRequest extends CliRequest {
      */
     public ExtCliRequest(String[] aArgs, ClassWorld aClassWorld) {
         super(aArgs, aClassWorld);
+        parseCommandLine(aArgs);
+    }
+
+    private void parseCommandLine(String[] aArgs) {
+        try {
+            this.commandLine = new CLIManager().parse(aArgs);
+        } catch (ParseException exc) {
+            exc.printStackTrace();
+        }
     }
 
     /**

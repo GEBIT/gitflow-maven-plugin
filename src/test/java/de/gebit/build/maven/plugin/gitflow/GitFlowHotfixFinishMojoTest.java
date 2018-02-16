@@ -67,7 +67,7 @@ public class GitFlowHotfixFinishMojoTest extends AbstractGitFlowMojoTestCase {
             git.assertLocalTags(repositorySet, HOTFIX_TAG);
             git.assertRemoteTags(repositorySet, HOTFIX_TAG);
 
-            assertVersionInPom(repositorySet.getWorkingDirectory(), NEXT_DEVELPMENT_VERSION);
+            assertVersionsInPom(repositorySet.getWorkingDirectory(), NEXT_DEVELPMENT_VERSION);
         }
     }
 
