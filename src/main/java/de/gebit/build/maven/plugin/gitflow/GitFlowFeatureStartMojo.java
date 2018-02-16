@@ -18,6 +18,7 @@ package de.gebit.build.maven.plugin.gitflow;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -109,11 +110,11 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
             }
             if (gitBranchExists(integrationBranch)) {
                 boolean useIntegrationBranch = true;
-                if (getCurrentCommit(integrationBranch) != getCurrentCommit(baseBranch)) {
+                if (!Objects.equals(getCurrentCommit(integrationBranch), getCurrentCommit(baseBranch))) {
                     if (settings.isInteractiveMode()) {
                         try {
                             String answer = prompter.prompt("The current commit on " + baseBranch
-                                    + " is not integrated. Create a branch off the last integrated commit ("
+                                    + " is not integrated. Create a branch of the last integrated commit ("
                                     + integrationBranch + ")?", Arrays.asList("y", "n"), "y");
                             if (!"y".equalsIgnoreCase(answer)) {
                                 useIntegrationBranch = false;
