@@ -125,14 +125,13 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
                     }
                 }
                 if (useIntegrationBranch) {
-                    getLog().info("Using integration branch '" + integrationBranch + "'");
-                    baseBranch = integrationBranch;
-
-                    String branchPoint = gitBranchPoint(integrationBranch, baseBranch);
-                    if (StringUtils.isEmpty(branchPoint)) {
+                    if (!gitIsAncestorBranch(integrationBranch, baseBranch)) {
                         throw new MojoFailureException("Failed to determine branch base of '" + integrationBranch
                                 + "' in respect to '" + baseBranch + "'.");
                     }
+
+                    getLog().info("Using integration branch '" + integrationBranch + "'");
+                    baseBranch = integrationBranch;
                 }
             }
 

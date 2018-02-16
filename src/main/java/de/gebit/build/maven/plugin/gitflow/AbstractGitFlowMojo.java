@@ -1227,6 +1227,25 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
+     * Check if the first branch is an ancestor of the second branch.
+     *
+     * @param ancestorBranchName
+     *            the branch to check for. Use HEAD for current branch.
+     * @param childBranchName
+     *            the branch to compare to. Use HEAD for current branch.
+     * @return <code>true</code> if the first branch is an ancestor of the
+     *         second branch
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected boolean gitIsAncestorBranch(final String ancestorBranchName, final String childBranchName)
+            throws MojoFailureException, CommandLineException {
+        CommandResult result = executeGitCommandExitCode("merge-base", "--is-ancestor", ancestorBranchName,
+                childBranchName);
+        return (result.getExitCode() == SUCCESS_EXIT_CODE);
+    }
+
+    /**
      * Executes <code>git for-each-ref refs/tags/[tag name]</code> to find an
      * existing tag.
      *
