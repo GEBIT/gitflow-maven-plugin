@@ -23,9 +23,9 @@ import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
  * The git flow release finish mojo.
- * 
+ *
  * @author Aleksandr Mashchenko
- * 
+ *
  */
 @Mojo(name = "release-finish", aggregator = true)
 public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
@@ -40,7 +40,7 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
 
     /**
      * Whether to skip calling Maven test goal before merging the branch.
-     * 
+     *
      * @since 1.0.5
      */
     @Parameter(property = "skipTestProject", defaultValue = "false")
@@ -48,7 +48,7 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
 
     /**
      * Whether to skip calling Maven deploy if it is part of the release goals.
-     * 
+     *
      * @since 1.3.0
      * @since 1.4.1
      */
@@ -58,7 +58,7 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
     /**
      * Whether to rebase branch or merge. If <code>true</code> then rebase will
      * be performed.
-     * 
+     *
      * @since 1.2.3
      */
     @Parameter(property = "releaseRebase", defaultValue = "false")
@@ -66,7 +66,7 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
 
     /**
      * Whether to use <code>--no-ff</code> option when merging.
-     * 
+     *
      * @since 1.2.3
      */
     @Parameter(property = "releaseMergeNoFF", defaultValue = "true")
@@ -74,7 +74,7 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
 
     /**
      * Whether to use <code>--no-ff</code> option when merging the release branch to production.
-     * 
+     *
      * @since 1.5.0
      */
     @Parameter(property = "releaseMergeProductionNoFF", defaultValue = "true")
@@ -82,8 +82,8 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
 
     /**
      * Goals to perform on release, before tagging and pushing. A useful combination is <code>deploy site</code>. You
-     * may specifify multiple entries, they are perfored 
-     * 
+     * may specifify multiple entries, they are perfored
+     *
      * @since 1.3.0
      * @since 1.3.9 you can specify multiple entries
      */
@@ -92,8 +92,8 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
 
     /**
      * When {@link #skipDeployProject} is activated the invocation of 'deploy' in {@link #releaseGoals} is suppressed.
-     * You can specify a replacement goal that is substituted here (the default is empty). 
-     * 
+     * You can specify a replacement goal that is substituted here (the default is empty).
+     *
      * @since 1.5.10
      */
     @Parameter(property = "deployReplacement", defaultValue = "${deployReplacement}")
@@ -104,7 +104,7 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
      * will be asked for the version (in interactive mode), in batch mode the
      * default will be used (current version with stripped SNAPSHOT incremented
      * and SNAPSHOT added).
-     * 
+     *
      * @since 1.3.10
      */
     @Parameter(property = "developmentVersion", required = false)
@@ -112,7 +112,7 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
 
     /**
      * A release branch can be pushed to the remote to prevent concurrent releases. The default is <code>false</code>.
-     * 
+     *
      * @since 1.5.0
      */
     @Parameter(property = "pushReleaseBranch", required = false)
@@ -123,13 +123,13 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
      * is finished (to make sure every module is deployable). But at this point your checkout is already in the state
      * for the next development version. Enable this option to checkout the release commit after finishing, which will
      * result in a detached HEAD (you are on no branch then).
-     * 
+     *
      * Note that this option implies installProject=false, as otherwise the build artifacts could not be preserved.
-     * 
+     *
      * @since 1.3.11
      */
     @Parameter(property = "detachReleaseCommit", required = false, defaultValue = "false")
-    private boolean detachReleaseCommit; 
+    private boolean detachReleaseCommit;
 
     @Override
     protected boolean isSkipTestProject() {
@@ -208,13 +208,14 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
             // check uncommitted changes
             checkUncommittedChanges();
 
-            String gitConfigName = "branch.\"" + gitCurrentBranch() + "\".development";
+            String gitConfigName = "branch." + gitCurrentBranch() + ".development";
             String branch = gitGetConfig(gitConfigName);
             if (branch == null || branch.isEmpty()) {
-                getLog().error("The release branch has no development branch configured. Use 'git config " + gitConfigName + " [development branch name]' to configure it.");
-                return;
+                throw new MojoFailureException(
+                        "The release branch has no development branch configured. Use 'git config " + gitConfigName
+                                + " [development branch name]' to configure it.");
             }
-            boolean releaseOnMaintenanceBranch = branch.startsWith(gitFlowConfig.getMaintenanceBranchPrefix());  
+            boolean releaseOnMaintenanceBranch = branch.startsWith(gitFlowConfig.getMaintenanceBranchPrefix());
             if (fetchRemote) {
                 // no changes in release branch
                 gitFetchRemoteAndCompare(gitCurrentBranch());
