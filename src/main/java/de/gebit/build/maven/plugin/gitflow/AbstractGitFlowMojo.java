@@ -1385,6 +1385,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected boolean gitRebaseInteractive(String commitId) throws MojoFailureException, CommandLineException {
         getLog().info("Rebasing interactively on " + commitId);
+        initExecutables();
         cmdGit.clearArgs();
         cmdGit.addArguments(new String[] { "rebase", "--interactive", commitId });
 
@@ -1457,8 +1458,9 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         // get rid of stale worktrees
         executeGitCommand("worktree", "prune");
 
+        initExecutables();
         Commandline worktreeCmd = new ShellCommandLine();
-        worktreeCmd.setExecutable(cmdGit.getExecutable());
+        worktreeCmd.setExecutable(gitExecutable);
         worktreeCmd.setWorkingDirectory(branchConfigWorktree);
 
         // fetch remote reference first to be up-to-date
