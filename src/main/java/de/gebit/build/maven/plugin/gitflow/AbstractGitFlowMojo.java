@@ -2136,7 +2136,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             throw new MojoFailureException(errorStr);
         }
 
-        return new CommandResult(exitCode, outStr, errorStr);
+        return new CommandResult(exitCode, StringUtils.trim(outStr), errorStr);
     }
 
     private static class CommandResult {
