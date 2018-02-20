@@ -81,7 +81,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
 
 	/**
 	 * Get a replacement for the 'deploy' goal/phase when {@link #isSkipDeployProject()} is activated.
-	 * 
+	 *
 	 * @since 1.5.10
 	 */
 	protected abstract String getDeployReplacement();
@@ -102,7 +102,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
 
 	/**
 	 * Perfom the steps to start a release. Create a release branch and sets the version
-	 * 
+	 *
 	 * @return <code>true</code> if the release is on a support/maintenance branch
 	 * @throws MojoExecutionException
 	 * @throws MojoFailureException
@@ -199,7 +199,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
 				releaseOnMaintenanceBranch ? currentBranch : gitFlowConfig.getDevelopmentBranch());
 
 		// store development branch in branch config
-		gitSetConfig("branch.\"" + releaseBranchName + "\".development", currentBranch);
+		gitSetConfig("branch." + releaseBranchName + ".development", currentBranch);
 
 		// execute if version changed
 		if (!version.equals(currentVersion)) {
