@@ -661,9 +661,9 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     private String getDefaultMergeMessageFor(String aBranchToMerge, String aCurrentBranchName) {
         if ("master".equals(aCurrentBranchName)) {
-            return MessageFormat.format("Merge branch \"{0}\"", aBranchToMerge);
+            return MessageFormat.format("Merge branch {0}", aBranchToMerge);
         } else {
-            return MessageFormat.format("Merge branch \"{0}\" into {1}", aBranchToMerge, aCurrentBranchName);
+            return MessageFormat.format("Merge branch {0} into {1}", aBranchToMerge, aCurrentBranchName);
         }
     }
 
