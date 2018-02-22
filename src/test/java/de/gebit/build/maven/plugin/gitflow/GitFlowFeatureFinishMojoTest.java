@@ -23,15 +23,7 @@ import java.util.Set;
 
 import org.apache.maven.execution.MavenExecutionResult;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
-import org.eclipse.jgit.api.errors.CheckoutConflictException;
-import org.eclipse.jgit.api.errors.ConcurrentRefUpdateException;
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.api.errors.InvalidMergeHeadsException;
-import org.eclipse.jgit.api.errors.NoHeadException;
-import org.eclipse.jgit.api.errors.NoMessageException;
-import org.eclipse.jgit.api.errors.WrongRepositoryStateException;
-import org.eclipse.jgit.errors.AmbiguousObjectException;
-import org.eclipse.jgit.errors.IncorrectObjectTypeException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -499,7 +491,7 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
         git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MARGE,
+        git.assertCommitsInLocalBranchIgnoringOrder(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MARGE,
                 COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_MASTER_TESTFILE, COMMIT_MESSAGE_FEATURE_TESTFILE,
                 COMMIT_MESSAGE_MERGE_BETWEEN_START_AND_FINISH, COMMIT_MESSAGE_SET_VERSION);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
