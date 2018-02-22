@@ -29,7 +29,14 @@ import org.apache.commons.lang3.StringUtils;
 import org.eclipse.jgit.api.CreateBranchCommand.SetupUpstreamMode;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.Status;
+import org.eclipse.jgit.api.errors.CheckoutConflictException;
+import org.eclipse.jgit.api.errors.ConcurrentRefUpdateException;
 import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.api.errors.InvalidMergeHeadsException;
+import org.eclipse.jgit.api.errors.NoHeadException;
+import org.eclipse.jgit.api.errors.NoMessageException;
+import org.eclipse.jgit.api.errors.WrongRepositoryStateException;
+import org.eclipse.jgit.errors.AmbiguousObjectException;
 import org.eclipse.jgit.errors.IncorrectObjectTypeException;
 import org.eclipse.jgit.errors.MissingObjectException;
 import org.eclipse.jgit.errors.StopWalkException;
@@ -614,6 +621,27 @@ public class GitExecution {
      */
     public void fetch(RepositorySet repositorySet) throws GitAPIException {
         repositorySet.getLocalRepoGit().fetch().call();
+    }
+
+    /**
+     * Merges passed branch to current branch and commits the merge.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param fromBranch
+     *            the local branch to merge from
+     * @param mergeMessage
+     *            the merge message
+     * @throws GitAPIException
+     *             if an error occurs on git command execution
+     * @throws IOException
+     *             in case of an I/O error
+     */
+    public void mergeAndCommit(RepositorySet repositorySet, String fromBranch, String mergeMessage)
+            throws GitAPIException, IOException {
+        repositorySet.getLocalRepoGit().merge()
+                .include(repositorySet.getLocalRepoGit().getRepository().resolve(REFS_HEADS_PATH + fromBranch))
+                .setCommit(true).setMessage(mergeMessage).call();
     }
 
     /**

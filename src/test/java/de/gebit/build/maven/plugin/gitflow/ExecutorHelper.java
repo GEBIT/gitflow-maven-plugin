@@ -54,12 +54,15 @@ public class ExecutorHelper {
     public static final String MAINTENANCE_START_MAINTENANCE_FIRST_VERSION = "1.42.0-SNAPSHOT";
 
     public static void executeFeatureStart(AbstractGitFlowMojoTestCase testCase, RepositorySet repositorySet,
-            String featureNumber) throws Exception {
-        Prompter promptControllerMock = mock(Prompter.class);
-        when(promptControllerMock.prompt(FEATURE_START_PROMPT_FEATURE_BRANCH_NAME)).thenReturn(featureNumber);
-        testCase.executeMojo(repositorySet.getWorkingDirectory(), "feature-start", promptControllerMock);
-        verify(promptControllerMock).prompt(FEATURE_START_PROMPT_FEATURE_BRANCH_NAME);
-        verifyNoMoreInteractions(promptControllerMock);
+            String featureName) throws Exception {
+        executeFeatureStart(testCase, repositorySet, featureName, null);
+    }
+
+    public static void executeFeatureStart(AbstractGitFlowMojoTestCase testCase, RepositorySet repositorySet,
+            String featureName, Properties properties) throws Exception {
+        Properties userProperties = properties != null ? properties : new Properties();
+        userProperties.setProperty("featureName", featureName);
+        testCase.executeMojo(repositorySet.getWorkingDirectory(), "feature-start", userProperties);
     }
 
     public static void executeHotfixStart(AbstractGitFlowMojoTestCase testCase, RepositorySet repositorySet,
