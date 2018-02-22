@@ -88,11 +88,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
                 // is the current branch a feature branch?
                 String currentBranch = gitCurrentBranch();
 
-                List<String> numberedList = new ArrayList<String>();
-                StringBuilder str = new StringBuilder("Feature branches:").append(LS);
                 for (int i = 0; i < branches.length; i++) {
-                    str.append((i + 1) + ". " + branches[i] + LS);
-                    numberedList.add(String.valueOf(i + 1));
                     if (branches[i].equals(currentBranch)) {
                         // we're on a feature branch, no need to ask
                         featureBranchName = currentBranch;
@@ -101,26 +97,12 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
                     }
                 }
 
-                if (featureBranchName == null || StringUtils.isBlank(featureBranchName)) {
-                    str.append("Choose feature branch to finish");
-
-                    String featureNumber = null;
-                    try {
-                        while (StringUtils.isBlank(featureNumber)) {
-                            featureNumber = prompter.prompt(str.toString(), numberedList);
-                        }
-                    } catch (PrompterException e) {
-                        getLog().error(e);
-                    }
-
-                    if (featureNumber != null) {
-                        int num = Integer.parseInt(featureNumber);
-                        featureBranchName = branches[num - 1];
-                    }
-
-                    if (StringUtils.isBlank(featureBranchName)) {
-                        throw new MojoFailureException("Feature branch name to finish is blank.");
-                    }
+                if (StringUtils.isBlank(featureBranchName)) {
+                    featureBranchName = getPrompter().promptToSelectFromOrderedList("Feature branches:",
+                            "Choose feature branch to finish", branches,
+                            "Feature finish in batch mode can be executed only from feature branch. "
+                                    + "Please switch to the feature branch you want to finish or execute feature finish"
+                                    + " in interactive mode.");
 
                     // git checkout feature/...
                     if (fetchRemote) {

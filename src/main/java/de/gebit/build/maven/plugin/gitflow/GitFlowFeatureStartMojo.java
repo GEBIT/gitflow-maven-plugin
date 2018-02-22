@@ -16,7 +16,6 @@
 package de.gebit.build.maven.plugin.gitflow;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Callable;
@@ -110,14 +109,9 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
             if (gitBranchExists(integrationBranch)) {
                 boolean useIntegrationBranch = true;
                 if (!Objects.equals(getCurrentCommit(integrationBranch), getCurrentCommit(baseBranch))) {
-                    String answer = getPrompter().promptRequiredValueIfInteractiveMode(
-                            "The current commit on " + baseBranch
-                                    + " is not integrated. Create a branch of the last integrated commit ("
-                                    + integrationBranch + ")?",
-                            "answer to use last integrated commit", null, "y", Arrays.asList("y", "n"));
-                    if (!"y".equalsIgnoreCase(answer)) {
-                        useIntegrationBranch = false;
-                    }
+                    useIntegrationBranch = getPrompter().promptConfirmation("The current commit on " + baseBranch
+                            + " is not integrated. Create a branch of the last integrated commit (" + integrationBranch
+                            + ")?", true, true);
                 }
                 if (useIntegrationBranch) {
                     if (!gitIsAncestorBranch(integrationBranch, baseBranch)) {
@@ -130,7 +124,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
                 }
             }
 
-            featureName = getPrompter().promptRequiredValueIfInteractiveMode(
+            featureName = getPrompter().promptRequiredParameterValue(
                     "What is a name of feature branch? " + gitFlowConfig.getFeatureBranchPrefix(), "featureName",
                     featureName, new StringValidator() {
 

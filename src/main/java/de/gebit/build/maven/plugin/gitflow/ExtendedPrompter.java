@@ -8,6 +8,8 @@
 //
 package de.gebit.build.maven.plugin.gitflow;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.collections.CollectionUtils;
@@ -17,16 +19,25 @@ import org.codehaus.plexus.components.interactivity.PrompterException;
 import org.codehaus.plexus.util.StringUtils;
 
 /**
+ * Wrapper class for a promptem that provides additional usefull methods for
+ * prompts.
  *
  * @author VMedvid
  */
 public class ExtendedPrompter implements Prompter {
 
+    private static final String LS = System.getProperty("line.separator");
+
     private Prompter prompter;
     private boolean interactiveMode;
 
     /**
+     * Creates an instance of {@link ExtendedPrompter}.
+     *
      * @param aPrompter
+     *            the prompter to be used
+     * @param isInteractiveMode
+     *            <code>true</code> if interactive mode is active
      */
     public ExtendedPrompter(Prompter aPrompter, boolean isInteractiveMode) {
         prompter = aPrompter;
@@ -70,16 +81,14 @@ public class ExtendedPrompter implements Prompter {
      *
      * @param promptMessage
      *            the message to be shown in prompt
-     * @param propertyName
-     *            the name of the property (value) to be used in exception
-     *            messages
+     * @param parameterName
+     *            the name of the parameter to be used in exception messages
      * @return a non-empty value
      * @throws MojoFailureException
      *             in case of batch mode or error while prompting
      */
-    protected String promptRequiredValueIfInteractiveMode(String promptMessage, String propertyName)
-            throws MojoFailureException {
-        return promptRequiredValueIfInteractiveMode(promptMessage, propertyName, null, null, null, null);
+    public String promptRequiredParameterValue(String promptMessage, String parameterName) throws MojoFailureException {
+        return promptRequiredParameterValue(promptMessage, parameterName, null, null, null, null);
     }
 
     /**
@@ -91,9 +100,8 @@ public class ExtendedPrompter implements Prompter {
      *
      * @param promptMessage
      *            the message to be shown in prompt
-     * @param propertyName
-     *            the name of the property (value) to be used in exception
-     *            messages
+     * @param parameterName
+     *            the name of the parameter to be used in exception messages
      * @param initValue
      *            the init value (can be <code>null</code>)
      * @return a non-empty value
@@ -101,9 +109,9 @@ public class ExtendedPrompter implements Prompter {
      *             in case of empty init value in batch mode or error while
      *             prompting
      */
-    protected String promptRequiredValueIfInteractiveMode(String promptMessage, String propertyName, String initValue)
+    public String promptRequiredParameterValue(String promptMessage, String parameterName, String initValue)
             throws MojoFailureException {
-        return promptRequiredValueIfInteractiveMode(promptMessage, propertyName, initValue, null, null, null);
+        return promptRequiredParameterValue(promptMessage, parameterName, initValue, null, null, null);
     }
 
     /**
@@ -115,9 +123,8 @@ public class ExtendedPrompter implements Prompter {
      *
      * @param promptMessage
      *            the message to be shown in prompt
-     * @param propertyName
-     *            the name of the property (value) to be used in exception
-     *            messages
+     * @param parameterName
+     *            the name of the parameter to be used in exception messages
      * @param initValue
      *            the init value (can be <code>null</code>)
      * @param defaultValue
@@ -128,9 +135,9 @@ public class ExtendedPrompter implements Prompter {
      *             in case of empty init value in batch mode or error while
      *             prompting
      */
-    protected String promptRequiredValueIfInteractiveMode(String promptMessage, String propertyName, String initValue,
+    public String promptRequiredParameterValue(String promptMessage, String parameterName, String initValue,
             String defaultValue) throws MojoFailureException {
-        return promptRequiredValueIfInteractiveMode(promptMessage, propertyName, initValue, defaultValue, null, null);
+        return promptRequiredParameterValue(promptMessage, parameterName, initValue, defaultValue, null, null);
     }
 
     /**
@@ -142,9 +149,8 @@ public class ExtendedPrompter implements Prompter {
      *
      * @param promptMessage
      *            the message to be shown in prompt
-     * @param propertyName
-     *            the name of the property (value) to be used in exception
-     *            messages
+     * @param parameterName
+     *            the name of the parameter to be used in exception messages
      * @param initValue
      *            the init value (can be <code>null</code>)
      * @param defaultValue
@@ -157,10 +163,10 @@ public class ExtendedPrompter implements Prompter {
      *             in case of empty init value in batch mode or error while
      *             prompting
      */
-    protected String promptRequiredValueIfInteractiveMode(String promptMessage, String propertyName, String initValue,
+    public String promptRequiredParameterValue(String promptMessage, String parameterName, String initValue,
             String defaultValue, List<String> possibleValues) throws MojoFailureException {
-        return promptRequiredValueIfInteractiveMode(promptMessage, propertyName, initValue, defaultValue,
-                possibleValues, null);
+        return promptRequiredParameterValue(promptMessage, parameterName, initValue, defaultValue, possibleValues,
+                null);
     }
 
     /**
@@ -170,18 +176,17 @@ public class ExtendedPrompter implements Prompter {
      *
      * @param promptMessage
      *            the message to be shown in prompt
-     * @param propertyName
-     *            the name of the property (value) to be used in exception
-     *            messages
+     * @param parameterName
+     *            the name of the parameter to be used in exception messages
      * @param validator
      *            the optional validator to validate the non-empty value
      * @return a non-empty valid value
      * @throws MojoFailureException
      *             in case of batch mode or error while prompting
      */
-    protected String promptRequiredValueIfInteractiveMode(String promptMessage, String propertyName,
-            StringValidator validator) throws MojoFailureException {
-        return promptRequiredValueIfInteractiveMode(promptMessage, propertyName, null, null, validator);
+    public String promptRequiredParameterValue(String promptMessage, String parameterName, StringValidator validator)
+            throws MojoFailureException {
+        return promptRequiredParameterValue(promptMessage, parameterName, null, null, validator);
     }
 
     /**
@@ -193,9 +198,8 @@ public class ExtendedPrompter implements Prompter {
      *
      * @param promptMessage
      *            the message to be shown in prompt
-     * @param propertyName
-     *            the name of the property (value) to be used in exception
-     *            messages
+     * @param parameterName
+     *            the name of the parameter to be used in exception messages
      * @param initValue
      *            the init value (can be <code>null</code>)
      * @param validator
@@ -205,9 +209,9 @@ public class ExtendedPrompter implements Prompter {
      *             in case of invalid init value in batch mode or error while
      *             prompting
      */
-    protected String promptRequiredValueIfInteractiveMode(String promptMessage, String propertyName, String initValue,
+    public String promptRequiredParameterValue(String promptMessage, String parameterName, String initValue,
             StringValidator validator) throws MojoFailureException {
-        return promptRequiredValueIfInteractiveMode(promptMessage, propertyName, initValue, null, validator);
+        return promptRequiredParameterValue(promptMessage, parameterName, initValue, null, validator);
     }
 
     /**
@@ -219,9 +223,8 @@ public class ExtendedPrompter implements Prompter {
      *
      * @param promptMessage
      *            the message to be shown in prompt
-     * @param propertyName
-     *            the name of the property (value) to be used in exception
-     *            messages
+     * @param parameterName
+     *            the name of the parameter to be used in exception messages
      * @param initValue
      *            the init value (can be <code>null</code>)
      * @param defaultValue
@@ -234,10 +237,9 @@ public class ExtendedPrompter implements Prompter {
      *             in case of invalid init value in batch mode or error while
      *             prompting
      */
-    protected String promptRequiredValueIfInteractiveMode(String promptMessage, String propertyName, String initValue,
+    public String promptRequiredParameterValue(String promptMessage, String parameterName, String initValue,
             String defaultValue, StringValidator validator) throws MojoFailureException {
-        return promptRequiredValueIfInteractiveMode(promptMessage, propertyName, initValue, defaultValue, null,
-                validator);
+        return promptRequiredParameterValue(promptMessage, parameterName, initValue, defaultValue, null, validator);
     }
 
     /**
@@ -249,9 +251,8 @@ public class ExtendedPrompter implements Prompter {
      *
      * @param promptMessage
      *            the message to be shown in prompt
-     * @param propertyName
-     *            the name of the property (value) to be used in exception
-     *            messages
+     * @param parameterName
+     *            the name of the parameter to be used in exception messages
      * @param initValue
      *            the init value (can be <code>null</code>)
      * @param defaultValue
@@ -266,7 +267,7 @@ public class ExtendedPrompter implements Prompter {
      *             in case of invalid init value in batch mode or error while
      *             prompting
      */
-    protected String promptRequiredValueIfInteractiveMode(String promptMessage, String propertyName, String initValue,
+    public String promptRequiredParameterValue(String promptMessage, String parameterName, String initValue,
             String defaultValue, List<String> possibleValues, StringValidator validator) throws MojoFailureException {
         String value = initValue;
         if (interactiveMode) {
@@ -299,26 +300,173 @@ public class ExtendedPrompter implements Prompter {
                     }
                 } while (StringUtils.isBlank(value));
             } catch (PrompterException e) {
-                throw new MojoFailureException("Failed to get " + propertyName, e);
+                throw new MojoFailureException("Failed to get " + parameterName, e);
             }
         } else {
             if (StringUtils.isBlank(value)) {
                 value = defaultValue;
             }
             if (StringUtils.isBlank(value)) {
-                throw new MojoFailureException("No " + propertyName + " set, aborting...");
+                throw new MojoFailureException("No " + parameterName + " set, aborting...");
             }
             if (!CollectionUtils.isEmpty(possibleValues)) {
                 if (!possibleValues.contains(value)) {
-                    throw new MojoFailureException("Set " + propertyName + " is not valid, aborting...");
+                    throw new MojoFailureException("Set " + parameterName + " is not valid, aborting...");
                 }
             }
 
             if (validator != null && !validator.validate(value).isValid()) {
-                throw new MojoFailureException("Set " + propertyName + " is not valid, aborting...");
+                throw new MojoFailureException("Set " + parameterName + " is not valid, aborting...");
             }
         }
         return value;
+    }
+
+    /**
+     * Prompts for a confirmation with yes/no options. The batchModeValue will
+     * be returned in batch mode.
+     *
+     * @param promptMessage
+     *            the message to be shown in prompt
+     * @param defaultValue
+     *            the deafult answer for confirmation (no default answer if
+     *            <code>null</code>)
+     * @param batchModeValue
+     *            the answer to be returned if batch mode active
+     * @return <code>true</code> in case of positive answer, otherwise
+     *         <code>false</code>
+     * @throws MojoFailureException
+     *             in case oferror while prompting
+     */
+    public boolean promptConfirmation(String promptMessage, Boolean defaultValue, boolean batchModeValue)
+            throws MojoFailureException {
+        return promptConfirmation(promptMessage, defaultValue, batchModeValue, null);
+    }
+
+    /**
+     * Prompts for a confirmation with yes/no options. If a non-null
+     * batchModeValue provided than this value will be returned in batch mode.
+     * Otherwise a {@link MojoFailureException} with batchModeErrorMessage will
+     * be thrown.
+     *
+     * @param promptMessage
+     *            the message to be shown in prompt
+     * @param defaultValue
+     *            the deafult answer for confirmation (no default answer if
+     *            <code>null</code>)
+     * @param batchModeValue
+     *            the answer to be returned if batch mode active (exception will
+     *            be thrown if <code>null</code> in batch mode)
+     * @param batchModeErrorMessage
+     *            the error message to be used in exception in batch mode
+     * @return <code>true</code> in case of positive answer, otherwise
+     *         <code>false</code>
+     * @throws MojoFailureException
+     *             in case of batchModeValue=<code>null</code> in batch mode or
+     *             error while prompting
+     */
+    public boolean promptConfirmation(String promptMessage, Boolean defaultValue, Boolean batchModeValue,
+            String batchModeErrorMessage) throws MojoFailureException {
+        if (interactiveMode) {
+            try {
+                String answer;
+                if (defaultValue != null) {
+                    answer = prompt(promptMessage, Arrays.asList("y", "n"), defaultValue ? "y" : "n");
+                } else {
+                    answer = prompt(promptMessage, Arrays.asList("y", "n"));
+                }
+                return "y".equalsIgnoreCase(answer);
+            } catch (PrompterException e) {
+                throw new MojoFailureException("Failed to get user confirmation", e);
+            }
+        } else {
+            if (batchModeValue == null) {
+                throw new MojoFailureException(
+                        batchModeErrorMessage != null ? batchModeErrorMessage : "Interactive mode is required.");
+            }
+            return batchModeValue;
+        }
+    }
+
+    /**
+     * Propmpts to select a value from the passed list of possible values by
+     * entering a value number. If batch mode is active a
+     * {@link MojoFailureException} with batchModeErrorMessage will be thrown.
+     *
+     * @param promptMessagePrefix
+     *            the message prefix that will be shown in prompt before the
+     *            list of possible values (can be <code>null</code>)
+     * @param promptMessageSuffix
+     *            the message suffix that will be shown in prompt after the list
+     *            of possible values (can be <code>null</code>)
+     * @param possibleValues
+     *            the list of possible values (should be not not empty)
+     * @param batchModeErrorMessage
+     *            the error message to be used in exception in batch mode
+     * @return the selected value
+     * @throws MojoFailureException
+     *             in case of active batch mode, empty list of possible values
+     *             or error while prompting
+     */
+    public String promptToSelectFromOrderedList(String promptMessagePrefix, String promptMessageSuffix,
+            List<String> possibleValues, String batchModeErrorMessage) throws MojoFailureException {
+        return promptToSelectFromOrderedList(promptMessagePrefix, promptMessageSuffix,
+                possibleValues == null ? null : possibleValues.toArray(new String[possibleValues.size()]),
+                batchModeErrorMessage);
+    }
+
+    /**
+     * Propmpts to select a value from the passed list of possible values by
+     * entering a value number. If batch mode is active a
+     * {@link MojoFailureException} with batchModeErrorMessage will be thrown.
+     *
+     * @param promptMessagePrefix
+     *            the message prefix that will be shown in prompt before the
+     *            list of possible values (can be <code>null</code>)
+     * @param promptMessageSuffix
+     *            the message suffix that will be shown in prompt after the list
+     *            of possible values (can be <code>null</code>)
+     * @param possibleValues
+     *            the list of possible values (should be not not empty)
+     * @param batchModeErrorMessage
+     *            the error message to be used in exception in batch mode
+     * @return the selected value
+     * @throws MojoFailureException
+     *             in case of active batch mode, empty list of possible values
+     *             or error while prompting
+     */
+    public String promptToSelectFromOrderedList(String promptMessagePrefix, String promptMessageSuffix,
+            String[] possibleValues, String batchModeErrorMessage) throws MojoFailureException {
+        if (interactiveMode) {
+            if (possibleValues == null || possibleValues.length == 0) {
+                throw new MojoFailureException("Empty list of possible values provided for user selection");
+            }
+            StringBuilder promptMessage = new StringBuilder();
+            if (!StringUtils.isBlank(promptMessagePrefix)) {
+                promptMessage.append(promptMessagePrefix);
+                promptMessage.append(LS);
+            }
+            List<String> numberedList = new ArrayList<String>();
+            int index = 0;
+            for (String possibleValue : possibleValues) {
+                String pos = String.valueOf(++index);
+                promptMessage.append(pos + ". " + possibleValue + LS);
+                numberedList.add(pos);
+            }
+            if (!StringUtils.isBlank(promptMessageSuffix)) {
+                promptMessage.append(promptMessageSuffix);
+            }
+            try {
+                String answer = prompt(promptMessage.toString(), numberedList);
+                int pos = Integer.parseInt(answer);
+                return possibleValues[pos - 1];
+            } catch (PrompterException e) {
+                throw new MojoFailureException("Failed to get user selection", e);
+            }
+        } else {
+            throw new MojoFailureException(
+                    batchModeErrorMessage != null ? batchModeErrorMessage : "Interactive mode is required.");
+        }
     }
 
 }
