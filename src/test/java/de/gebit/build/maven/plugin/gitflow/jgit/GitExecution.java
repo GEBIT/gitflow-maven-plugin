@@ -541,6 +541,20 @@ public class GitExecution {
     }
 
     /**
+     * Deletes the passed local branch.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param aBranch
+     *            the branch to be deleted
+     * @throws GitAPIException
+     *             if an error occurs on git command execution
+     */
+    public void deleteLocalBranch(RepositorySet repositorySet, String aBranch) throws GitAPIException {
+        repositorySet.getLocalRepoGit().branchDelete().setBranchNames(aBranch).call();
+    }
+
+    /**
      * Creates passed branch in remote repository.
      *
      * @param repositorySet

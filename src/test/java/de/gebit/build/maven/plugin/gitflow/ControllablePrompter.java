@@ -68,7 +68,21 @@ public class ControllablePrompter implements Prompter {
         checkControllerAndMessage(aMessage);
         String answer = controller.prompt(aMessage, aPossibleValues);
         logPrompt(formatMessageForLog(aMessage, aPossibleValues, null), answer);
+        checkAnwer(answer, aPossibleValues);
         return answer;
+    }
+
+    private void checkAnwer(String answer, List possibleValues) {
+        if (possibleValues == null || possibleValues.size() == 0) {
+            throw new IllegalStateException("TEST ERROR: list of possible values is empty");
+        }
+        if (answer == null) {
+            throw new IllegalStateException("TEST ERROR: answer can't be null");
+        }
+        if (!possibleValues.contains(answer)) {
+            throw new IllegalStateException("TEST ERROR: prompt answer [" + answer + "] doesn't match possible values "
+                    + formatPossibleValues(possibleValues));
+        }
     }
 
     @Override
@@ -79,6 +93,7 @@ public class ControllablePrompter implements Prompter {
             answer = aDefaultReply;
         }
         logPrompt(formatMessageForLog(aMessage, aPossibleValues, aDefaultReply), answer);
+        checkAnwer(answer, aPossibleValues);
         return answer;
     }
 
@@ -99,7 +114,7 @@ public class ControllablePrompter implements Prompter {
 
     private void checkControllerAndMessage(String aMessage) throws PrompterException {
         if (controller == null) {
-            throw new IllegalStateException("Prompter is used but no prompt controller is configured. "
+            throw new IllegalStateException("TEST ERROR: Prompter is used but no prompt controller is configured. "
                     + "Pass your promt controller or mock to the method for mojo execution.");
         }
         if (Objects.equal(lastMessage, aMessage)) {
@@ -109,7 +124,7 @@ public class ControllablePrompter implements Prompter {
                 repeatsWithSameMessage = 0;
                 lastMessage = null;
                 throw new IllegalStateException(
-                        "Too many prompt tries (" + tries + ") with same mesage [" + aMessage + "]");
+                        "TEST ERROR: Too many prompt tries (" + tries + ") with same mesage [" + aMessage + "]");
             }
         } else {
             repeatsWithSameMessage = 0;
@@ -130,19 +145,25 @@ public class ControllablePrompter implements Prompter {
         StringBuffer formatted = new StringBuffer(message.length() * 2);
         formatted.append(message);
         if (possibleValues != null && !possibleValues.isEmpty()) {
-            formatted.append(" (");
-            for (Iterator it = possibleValues.iterator(); it.hasNext();) {
-                String possibleValue = (String) it.next();
-                formatted.append(possibleValue);
-                if (it.hasNext()) {
-                    formatted.append('/');
-                }
-            }
-            formatted.append(')');
+            formatted.append(" ").append(formatPossibleValues(possibleValues));
         }
         if (defaultReply != null) {
             formatted.append(' ').append(defaultReply).append(": ");
         }
+        return formatted.toString();
+    }
+
+    private String formatPossibleValues(List possibleValues) {
+        StringBuffer formatted = new StringBuffer();
+        formatted.append("(");
+        for (Iterator it = possibleValues.iterator(); it.hasNext();) {
+            String possibleValue = (String) it.next();
+            formatted.append(possibleValue);
+            if (it.hasNext()) {
+                formatted.append('/');
+            }
+        }
+        formatted.append(')');
         return formatted.toString();
     }
 

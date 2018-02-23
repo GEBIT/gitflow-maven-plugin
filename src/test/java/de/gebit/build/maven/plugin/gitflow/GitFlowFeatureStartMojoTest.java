@@ -52,6 +52,17 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
             + " is not integrated. Create a branch of the last integrated commit (" + INTEGRATION_BRANCH + ")?";
 
     @Test
+    public void testExecuteWithCommandLineException() throws Exception {
+        try (RepositorySet repositorySet = git.createGitRepositorySet(TestProjects.BASIC.basedir)) {
+            // test
+            MavenExecutionResult result = executeMojoWithCommandLineException(repositorySet.getWorkingDirectory(),
+                    GOAL);
+            // verify
+            assertMavenExecutionException(result, "Error while executing external command.");
+        }
+    }
+
+    @Test
     public void testExecute() throws Exception {
         try (RepositorySet repositorySet = git.createGitRepositorySet(TestProjects.BASIC.basedir)) {
             // set up

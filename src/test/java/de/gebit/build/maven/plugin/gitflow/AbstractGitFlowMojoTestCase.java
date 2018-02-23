@@ -167,6 +167,24 @@ public abstract class AbstractGitFlowMojoTestCase {
     }
 
     /**
+     * Executes mojo for passed goal for a project in passed basedir. If a
+     * command line for external execution of git or maven commands will be used
+     * than {@link org.codehaus.plexus.util.cli.CommandLineException} will be
+     * thrown.
+     *
+     * @param basedir
+     *            the basedir of the project which goal should be executed for
+     * @param goal
+     *            the flow goal to be executed (without 'flow' prefix)
+     * @return the maven execution result
+     * @throws Exception
+     *             if an error occurs while preparing maven for mojo execution
+     */
+    protected MavenExecutionResult executeMojoWithCommandLineException(File basedir, String goal) throws Exception {
+        return executeMojoWithResult(basedir, goal, WITH_DEFAULTS, null, null, true);
+    }
+
+    /**
      * Executes mojo (with default configurations) for passed goal for a project
      * in passed basedir.
      *
@@ -388,10 +406,16 @@ public abstract class AbstractGitFlowMojoTestCase {
      */
     protected MavenExecutionResult executeMojoWithResult(File basedir, String goal, boolean useProfileWithDefaults,
             Properties properties, Prompter promptController) throws Exception {
+        return executeMojoWithResult(basedir, goal, useProfileWithDefaults, properties, promptController, false);
+    }
+
+    private MavenExecutionResult executeMojoWithResult(File basedir, String goal, boolean useProfileWithDefaults,
+            Properties properties, Prompter promptController, boolean throwCommandLineExceptionOnCommandLineExecution)
+            throws Exception {
         String pluginVersion = readPom(new File(".")).getVersion();
         String fullGoal = GOAL_PREFIX + ":" + goal;
         MavenExecutionRequest request = createMavenExecutionRequest(basedir, fullGoal, useProfileWithDefaults,
-                properties, pluginVersion);
+                properties, pluginVersion, throwCommandLineExceptionOnCommandLineExecution);
         request.setInteractiveMode(promptController != null);
         MavenExecutionResult result;
         ClassLoader originClassLoader = Thread.currentThread().getContextClassLoader();
@@ -417,7 +441,8 @@ public abstract class AbstractGitFlowMojoTestCase {
     }
 
     private MavenExecutionRequest createMavenExecutionRequest(File basedir, String fullGoal,
-            boolean useProfileWithDefaults, Properties properties, final String pluginVersion) throws Exception {
+            boolean useProfileWithDefaults, Properties properties, final String pluginVersion,
+            boolean throwCommandLineExceptionOnCommandLineExecution) throws Exception {
         Properties userProperties = properties != null ? properties : new Properties();
         File pom = new File(basedir, "pom.xml");
         MavenExecutionRequest request = new DefaultMavenExecutionRequest();
@@ -462,7 +487,8 @@ public abstract class AbstractGitFlowMojoTestCase {
         };
         request.setWorkspaceReader(workspaceReader);
         request = executionRequestPopulator.populateDefaults(request);
-        request.setBaseDirectory(basedir);
+        request.setBaseDirectory(
+                throwCommandLineExceptionOnCommandLineExecution ? new File(basedir, "notExistingDir") : basedir);
         request.setGoals(Arrays.asList(fullGoal));
         request.setPom(pom);
         request.setUserProperties(userProperties);
