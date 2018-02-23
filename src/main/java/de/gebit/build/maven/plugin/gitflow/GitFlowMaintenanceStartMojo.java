@@ -23,7 +23,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
  * The git flow maintenance branch start mojo.
- * 
+ *
  * @author Erwin Tratar
  * @since 1.5.3
  */
@@ -32,7 +32,7 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
 
     /**
      * The release version to create the maintenance branch from.
-     * 
+     *
      * @since 1.3.0
      */
     @Parameter(defaultValue = "${releaseVersion}", required = false)
@@ -40,16 +40,16 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
 
     /**
      * The version used for the branch itself.
-     * 
+     *
      * @since 1.3.0
      * @deprecated use {@link #maintenanceVersion}
      */
     @Parameter(defaultValue = "${supportVersion}", required = false)
     protected String supportVersion;
-    
+
     /**
      * The version used for the branch itself.
-     * 
+     *
      * @since 1.5.3
      */
     @Parameter(defaultValue = "${maintenanceVersion}", required = false)
@@ -57,16 +57,16 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
 
     /**
      * The first version to set on the branch.
-     * 
+     *
      * @since 1.3.0
      * @deprecated use {@link #firstMaintenanceVersion}
      */
     @Parameter(defaultValue = "${firstSupportVersion}", required = false)
     protected String firstSupportVersion;
-    
+
     /**
      * The first version to set on the branch.
-     * 
+     *
      * @since 1.5.3
      */
     @Parameter(defaultValue = "${firstMaintenanceVersion}", required = false)
@@ -74,8 +74,8 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
 
     /**
      * Filter to query for release branches to limit the results. The value is a shell glob pattern if not starting
-     * with a ^ and as a regular expression otherwise. 
-     * 
+     * with a ^ and as a regular expression otherwise.
+     *
      * @since 1.3.0
      * @since 1.5.9
      */
@@ -85,7 +85,7 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
     /**
      * Number of release versions to offer. If not specified the selection is unlimited. The order is from highest to
      * lowest.
-     * 
+     *
      * @since 1.5.9
      */
     @Parameter(defaultValue = "${releaseVersionLimit}", required = false)
@@ -182,15 +182,15 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
             // get default maintenance version
             String maintenanceBranchVersion = maintenanceVersion != null ? maintenanceVersion : supportVersion;
             String maintenanceBranchFirstVersion = firstMaintenanceVersion != null ? firstMaintenanceVersion : firstSupportVersion;
-            
+
             if (maintenanceBranchVersion == null && firstMaintenanceVersion == null) {
                 try {
                     final DefaultVersionInfo versionInfo = new DefaultVersionInfo(currentVersion);
                     getLog().info("Version info: " +versionInfo);
                     final DefaultVersionInfo branchVersionInfo = new DefaultVersionInfo(versionInfo.getDigits().subList(0, versionInfo.getDigits().size()-1),
-                            versionInfo.getAnnotation(), 
+                            versionInfo.getAnnotation(),
                             versionInfo.getAnnotationRevision(),
-                            versionInfo.getBuildSpecifier() != null  ? "-" + versionInfo.getBuildSpecifier() : null, 
+                            versionInfo.getBuildSpecifier() != null  ? "-" + versionInfo.getBuildSpecifier() : null,
                             null, null, null);
                     getLog().info("Branch Version info: " +branchVersionInfo);
                     maintenanceBranchVersion = branchVersionInfo.getReleaseVersionString();
@@ -220,7 +220,7 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
             } catch (PrompterException e) {
                 getLog().error(e);
             }
-            
+
             if (StringUtils.isBlank(branchFirstVersion)) {
                 branchFirstVersion = maintenanceBranchFirstVersion;
             }
@@ -237,7 +237,7 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
             if (!currentVersion.equals(branchFirstVersion)) {
                 // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
                 mvnSetVersions(branchFirstVersion, "On maintenance branch: ");
-    
+
                 // git commit -a -m updating poms for maintenance
                 gitCommit(commitMessages.getMaintenanceStartMessage());
             }
@@ -245,13 +245,13 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
             if (pushRemote)  {
                 gitPush(gitFlowConfig.getMaintenanceBranchPrefix() + branchVersion, false, false);
             }
-            
+
             if (installProject) {
                 // mvn clean install
                 mvnCleanInstall();
             }
         } catch (CommandLineException e) {
-            getLog().error(e);
+            throw new MojoExecutionException("Error while executing external command.", e);
         }
     }
 }

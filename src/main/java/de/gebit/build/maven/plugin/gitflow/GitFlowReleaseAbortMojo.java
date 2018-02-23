@@ -23,7 +23,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
  * The git flow release abort mojo.
- * 
+ *
  * @author Erwin Tratar
  * @since 1.3.1
  */
@@ -62,7 +62,7 @@ public class GitFlowReleaseAbortMojo extends AbstractGitFlowMojo {
             gitBranchDeleteForce(releaseBranch);
 
         } catch (CommandLineException e) {
-            getLog().error(e);
+            throw new MojoExecutionException("Error while executing external command.", e);
         }
     }
 }

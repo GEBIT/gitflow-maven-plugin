@@ -26,7 +26,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
 /**
  * The git flow integrated marker mojo. Will update the integration branch associated with the current branch to
  * the same reference to mark a successful integration (e.g. after a build is run without any errors).
- * 
+ *
  * @since 1.5.10
  * @author Erwin Tratar
  */
@@ -48,7 +48,7 @@ public class GitFlowIntegratedMojo extends AbstractGitFlowMojo {
 
             if (StringUtils.isBlank(integrationBranch)) {
                 integrationBranch = gitFlowConfig.getIntegrationBranchPrefix() + gitCurrentBranch();
-                
+
                 if (settings.isInteractiveMode()) {
                     try {
                         integrationBranch = prompter.prompt("What is the integration branch name?", integrationBranch);
@@ -64,7 +64,7 @@ public class GitFlowIntegratedMojo extends AbstractGitFlowMojo {
             }
 
         } catch (CommandLineException e) {
-            getLog().error(e);
+            throw new MojoExecutionException("Error while executing external command.", e);
         }
     }
 }

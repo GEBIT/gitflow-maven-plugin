@@ -193,7 +193,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
                 gitPush(baseBranch, false, false);
             }
         } catch (CommandLineException e) {
-            getLog().error(e);
+            throw new MojoExecutionException("Error while executing external command.", e);
         }
     }
 }

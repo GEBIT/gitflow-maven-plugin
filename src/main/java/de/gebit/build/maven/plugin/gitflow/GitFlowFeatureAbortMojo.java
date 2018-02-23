@@ -27,7 +27,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
  * The git flow feature abort mojo.
- * 
+ *
  * @author Erwin Tratar
  * @since 1.3.1
  */
@@ -39,11 +39,11 @@ public class GitFlowFeatureAbortMojo extends AbstractGitFlowMojo {
     public void execute() throws MojoExecutionException, MojoFailureException {
         try {
             // check if rebase in process
-            String featureBranchName = gitRebaseBranchInProcess(); 
+            String featureBranchName = gitRebaseBranchInProcess();
             if (featureBranchName != null) {
                 throw new MojoFailureException("A rebase of the feature branch is in process. Cannot abort now.");
             }
-            
+
             // check uncommitted changes
             checkUncommittedChanges();
 
@@ -108,7 +108,7 @@ public class GitFlowFeatureAbortMojo extends AbstractGitFlowMojo {
             // git branch -D feature/...
             gitBranchDeleteForce(featureBranchName);
         } catch (CommandLineException e) {
-            getLog().error(e);
+            throw new MojoExecutionException("Error while executing external command.", e);
         }
     }
 }

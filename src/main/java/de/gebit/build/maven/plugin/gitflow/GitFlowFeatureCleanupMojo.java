@@ -29,7 +29,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
 /**
  * The git flow feature rebase cleanup mojo. Will find out the matching development branch and start a rebase --interactive
  * to allow you to reorder/squash/reword your commits.
- * 
+ *
  * @author Erwin Tratar
  * @since 1.5.11
  */
@@ -46,7 +46,7 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowMojo {
     /**
      * If fast forward pushes on feature branches are not allowed, the remote branch is deleted before pushing
      * the rebased branch.
-     * 
+     *
      * @since 1.5.11
      */
     @Parameter(property = "deleteRemoteBranchOnRebase", defaultValue = "false")
@@ -56,7 +56,7 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowMojo {
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         try {
-            String featureBranchName = gitRebaseBranchInProcess(); 
+            String featureBranchName = gitRebaseBranchInProcess();
             if (featureBranchName == null) {
                 // check uncommitted changes
                 checkUncommittedChanges();
@@ -90,7 +90,7 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowMojo {
 
                 if (featureBranchName == null || StringUtils.isBlank(featureBranchName)) {
                     str.append("Choose feature branch to clean up");
-    
+
                     String featureNumber = null;
                     try {
                         while (StringUtils.isBlank(featureNumber)) {
@@ -100,17 +100,17 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowMojo {
                     } catch (PrompterException e) {
                         getLog().error(e);
                     }
-    
+
                     if (featureNumber != null) {
                         int num = Integer.parseInt(featureNumber);
                         featureBranchName = branches[num - 1];
                     }
-    
+
                     if (StringUtils.isBlank(featureBranchName)) {
                         throw new MojoFailureException(
                                 "Feature branch name to clean up is blank.");
                     }
-    
+
                     // git checkout feature/...
                     gitCheckout(featureBranchName);
                 }
@@ -163,7 +163,7 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowMojo {
                 gitPush(featureBranchName, false, true);
             }
         } catch (CommandLineException e) {
-            getLog().error(e);
+            throw new MojoExecutionException("Error while executing external command.", e);
         }
     }
 }

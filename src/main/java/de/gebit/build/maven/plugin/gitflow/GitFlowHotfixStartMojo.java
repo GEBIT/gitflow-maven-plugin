@@ -26,9 +26,9 @@ import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
  * The git flow hotfix start mojo.
- * 
+ *
  * @author Aleksandr Mashchenko
- * 
+ *
  */
 @Mojo(name = "hotfix-start", aggregator = true)
 public class GitFlowHotfixStartMojo extends AbstractGitFlowMojo {
@@ -118,7 +118,7 @@ public class GitFlowHotfixStartMojo extends AbstractGitFlowMojo {
                 mvnCleanInstall();
             }
         } catch (CommandLineException e) {
-            getLog().error(e);
+            throw new MojoExecutionException("Error while executing external command.", e);
         }
     }
 }

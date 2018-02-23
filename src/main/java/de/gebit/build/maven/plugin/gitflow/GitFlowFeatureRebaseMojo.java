@@ -29,7 +29,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
 /**
  * The git flow feature update mojo. Will either rebase the feature branch on the current development branch or merge
  * the development branch into the feature branch.
- * 
+ *
  * @author Erwin Tratar
  * @since 1.3.1
  */
@@ -46,7 +46,7 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
     /**
      * This property applies mainly to <code>feature-finish</code>, but if it is set a merge at this point would
      * make a later rebase impossible. So we use this property to decide wheter a warning needs to be issued.
-     * 
+     *
      * @since 1.3.0
      */
     @Parameter(property = "rebaseWithoutVersionChange", defaultValue = "false")
@@ -55,7 +55,7 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
     /**
      * If fast forward pushes on feature branches are not allowed, the remote branch is deleted before pushing
      * the rebased branch.
-     * 
+     *
      * @since 1.5.11
      */
     @Parameter(property = "deleteRemoteBranchOnRebase", defaultValue = "false")
@@ -65,7 +65,7 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         try {
-            String featureBranchName = updateWithMerge ? gitMergeBranchInProcess() : gitRebaseBranchInProcess(); 
+            String featureBranchName = updateWithMerge ? gitMergeBranchInProcess() : gitRebaseBranchInProcess();
             if (featureBranchName == null) {
                 // check uncommitted changes
                 checkUncommittedChanges();
@@ -99,7 +99,7 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
 
                 if (featureBranchName == null || StringUtils.isBlank(featureBranchName)) {
                     str.append("Choose feature branch to update");
-    
+
                     String featureNumber = null;
                     try {
                         while (StringUtils.isBlank(featureNumber)) {
@@ -109,17 +109,17 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
                     } catch (PrompterException e) {
                         getLog().error(e);
                     }
-    
+
                     if (featureNumber != null) {
                         int num = Integer.parseInt(featureNumber);
                         featureBranchName = branches[num - 1];
                     }
-    
+
                     if (StringUtils.isBlank(featureBranchName)) {
                         throw new MojoFailureException(
                                 "Feature branch name to finish is blank.");
                     }
-    
+
                     // git checkout feature/...
                     gitCheckout(featureBranchName);
                 }
@@ -187,7 +187,7 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
                 gitPush(featureBranchName, false, true);
             }
         } catch (CommandLineException e) {
-            getLog().error(e);
+            throw new MojoExecutionException("Error while executing external command.", e);
         }
     }
 }

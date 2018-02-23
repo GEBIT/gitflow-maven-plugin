@@ -87,7 +87,7 @@ public class GitFlowBuildVersionMojo extends AbstractGitFlowMojo {
 			}
 
 		} catch (CommandLineException e) {
-			getLog().error(e);
+		    throw new MojoExecutionException("Error while executing external command.", e);
 		}
 	}
 }

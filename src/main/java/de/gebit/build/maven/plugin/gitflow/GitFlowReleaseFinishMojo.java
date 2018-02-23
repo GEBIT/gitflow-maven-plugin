@@ -228,7 +228,7 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
 
             releaseFinish(branch, releaseOnMaintenanceBranch);
         } catch (CommandLineException e) {
-            getLog().error(e);
+            throw new MojoExecutionException("Error while executing external command.", e);
         }
     }
 }

@@ -105,7 +105,7 @@ public class GitFlowBranchConfigMojo extends AbstractGitFlowMojo {
 			gitBranchConfigWorktree(currentBranch, configBranchName, configBranchDir, propertyName, propertyValue);
 
 		} catch (CommandLineException e) {
-			getLog().error(e);
+		    throw new MojoExecutionException("Error while executing external command.", e);
 		}
 	}
 }

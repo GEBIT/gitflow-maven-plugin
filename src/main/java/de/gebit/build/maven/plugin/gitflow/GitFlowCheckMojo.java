@@ -42,9 +42,9 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * <li>Access to site repository without password prompt</li>
  * <li>Commandline ssh available</li>
  * <li>Access to site repository without password prompt</li>
- * 
+ *
  * </ul>
- * 
+ *
  * @author Erwin Tratar
  * @since 1.5.6
  */
@@ -52,10 +52,10 @@ import org.codehaus.plexus.util.cli.CommandLineException;
 public class GitFlowCheckMojo extends AbstractGitFlowMojo {
     @Component(role = WagonManager.class)
     private WagonManager wagonManager;
-    
+
     @Component(role = ArtifactRepositoryLayout.class)
     private ArtifactRepositoryLayout artifactRepositoryLayout;
-    
+
     @Parameter(required = false, defaultValue = "${project.distributionManagement.repository.id}|${project.distributionManagement.repository.url},${project.distributionManagement.snapshotRepository.id}|${project.distributionManagement.snapshotRepository.url}")
     private Repository[] deploymentRepositories;
 
@@ -104,7 +104,7 @@ public class GitFlowCheckMojo extends AbstractGitFlowMojo {
                 getLog().error("");
                 tempFailures = true;
             }
-            
+
             if (deploymentRepositories != null) {
                 for (Repository repository : deploymentRepositories) {
                     tempFailures &= checkRepository("deployment repository", repository.getId(), repository.getUrl(), repository.isMandatory());
@@ -121,7 +121,7 @@ public class GitFlowCheckMojo extends AbstractGitFlowMojo {
                         "Your environment is not configured correctly (see above for details). After correcting the errors please re-run to check again.");
             }
         } catch (CommandLineException e) {
-            getLog().error(e);
+            throw new MojoExecutionException("Error while executing external command.", e);
         }
     }
 
@@ -156,7 +156,7 @@ public class GitFlowCheckMojo extends AbstractGitFlowMojo {
                     if (!command.getErr().trim().isEmpty()) {
                         getLog().warn("   " + command.getErr());
                     }
-                    
+
                     // try to cleanup directory
                     getLog().debug("   trying cleanup directory");
                     command = ((CommandExecutor) tempWagon).executeCommand("rmdir "

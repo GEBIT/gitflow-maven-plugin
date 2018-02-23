@@ -209,7 +209,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
                 mvnCleanInstall();
             }
         } catch (CommandLineException e) {
-            getLog().error(e);
+            throw new MojoExecutionException("Error while executing external command.", e);
         }
     }
 

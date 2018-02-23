@@ -25,7 +25,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
  * The git flow build version mojo. Used to explicitly set the version in all projects.
- * 
+ *
  * @author Erwin Tratar
  */
 @Mojo(name = "set-version", aggregator = true)
@@ -33,7 +33,7 @@ public class GitFlowSetVersionMojo extends AbstractGitFlowMojo {
 
     /**
      * Specifies a specific (complete) version to update the project to.
-     * 
+     *
      * @since 1.3.0
      */
     @Parameter(property = "newVersion", defaultValue = "${newVersion}", required = false)
@@ -57,12 +57,12 @@ public class GitFlowSetVersionMojo extends AbstractGitFlowMojo {
                         getLog().debug(e);
                     }
                 }
-                
+
                 if (newVersion == null) {
                     throw new MojoFailureException(
                             "Cannot get default project version.");
                 }
-                
+
                 try {
                     newVersion = prompter.prompt("What is the new version?", newVersion);
                 } catch (PrompterException e) {
@@ -74,13 +74,13 @@ public class GitFlowSetVersionMojo extends AbstractGitFlowMojo {
                 throw new MojoFailureException("No new version set, aborting....");
             }
 
-            
+
 
             // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
             mvnSetVersions(newVersion, "");
 
         } catch (CommandLineException e) {
-            getLog().error(e);
+            throw new MojoExecutionException("Error while executing external command.", e);
         }
     }
 }
