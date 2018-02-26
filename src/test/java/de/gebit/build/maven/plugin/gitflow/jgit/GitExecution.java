@@ -18,25 +18,22 @@ import static org.junit.Assert.fail;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.jgit.api.CreateBranchCommand.SetupUpstreamMode;
 import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.RemoteSetUrlCommand;
+import org.eclipse.jgit.api.ResetCommand.ResetType;
 import org.eclipse.jgit.api.Status;
-import org.eclipse.jgit.api.errors.CheckoutConflictException;
-import org.eclipse.jgit.api.errors.ConcurrentRefUpdateException;
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.api.errors.InvalidMergeHeadsException;
-import org.eclipse.jgit.api.errors.NoHeadException;
-import org.eclipse.jgit.api.errors.NoMessageException;
-import org.eclipse.jgit.api.errors.WrongRepositoryStateException;
-import org.eclipse.jgit.errors.AmbiguousObjectException;
 import org.eclipse.jgit.errors.IncorrectObjectTypeException;
 import org.eclipse.jgit.errors.MissingObjectException;
 import org.eclipse.jgit.errors.StopWalkException;
@@ -49,6 +46,7 @@ import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.revwalk.filter.RevFilter;
+import org.eclipse.jgit.transport.URIish;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.eclipse.jgit.treewalk.filter.PathFilter;
 
@@ -73,6 +71,8 @@ public class GitExecution {
     private static final String COMMIT_MESSAGE_FOR_UNIT_TEST_SETUP = "Unit test set-up initial commit";
 
     private static final String GIT_BASEDIR_REMOTE_SUFFIX = "origin.git";
+
+    private static final String GIT_BASEDIR_OFFLINE_SUFFIX = "offline-dummy.git";
 
     private static final String GIT_BASEDIR_LOCAL_SUFFIX = "working";
 
@@ -336,14 +336,27 @@ public class GitExecution {
             String commitMessage) throws GitAPIException, IOException {
         repositorySet.getClonedRemoteRepoGit().pull().call();
         String currentBranch = currentBranch(repositorySet.getClonedRemoteRepoGit());
-        repositorySet.getClonedRemoteRepoGit().checkout().setName(branch).setCreateBranch(true)
-                .setUpstreamMode(SetupUpstreamMode.TRACK).setStartPoint("origin/" + branch).call();
+        ObjectId branchObjectId = repositorySet.getClonedRemoteRepoGit().getRepository()
+                .resolve(REFS_HEADS_PATH + branch);
+        if (branchObjectId == null) {
+            repositorySet.getClonedRemoteRepoGit().checkout().setName(branch).setCreateBranch(true)
+                    .setUpstreamMode(SetupUpstreamMode.TRACK).setStartPoint("origin/" + branch).call();
+        } else {
+            repositorySet.getClonedRemoteRepoGit().reset().setMode(ResetType.HARD).setRef("origin/" + branch).call();
+        }
         createTestfile(repositorySet.getClonedRemoteWorkingDirectory(), filename);
         repositorySet.getClonedRemoteRepoGit().add().addFilepattern(".").call();
         repositorySet.getClonedRemoteRepoGit().commit().setMessage(commitMessage).call();
         repositorySet.getClonedRemoteRepoGit().push().call();
         switchToBranch(repositorySet.getClonedRemoteRepoGit(), currentBranch, false);
 
+    }
+
+    /**
+     * @param aRepositorySet
+     */
+    public void commitAll(RepositorySet repositorySet, String commitMessage) throws GitAPIException {
+        repositorySet.getLocalRepoGit().commit().setAll(true).setMessage(commitMessage).call();
     }
 
     /**
@@ -1102,6 +1115,50 @@ public class GitExecution {
         cmdBuilder.append("' ");
         cmdBuilder.append(GitDummyEditor.class.getName());
         return cmdBuilder.toString();
+    }
+
+    public void setOffline(RepositorySet repositorySet) throws GitAPIException, URISyntaxException {
+        RemoteSetUrlCommand remoteSetUrlCommand = repositorySet.getLocalRepoGit().remoteSetUrl();
+        remoteSetUrlCommand.setName("origin");
+        remoteSetUrlCommand.setUri(
+                new URIish(new File(repositorySet.getWorkingDirectory().getParentFile(), GIT_BASEDIR_OFFLINE_SUFFIX)
+                        .getAbsolutePath()));
+        remoteSetUrlCommand.call();
+    }
+
+    public void setOnline(RepositorySet repositorySet) throws GitAPIException, URISyntaxException {
+        RemoteSetUrlCommand remoteSetUrlCommand = repositorySet.getLocalRepoGit().remoteSetUrl();
+        remoteSetUrlCommand.setName("origin");
+        remoteSetUrlCommand.setUri(
+                new URIish(new File(repositorySet.getWorkingDirectory().getParentFile(), GIT_BASEDIR_REMOTE_SUFFIX)
+                        .getAbsolutePath()));
+        remoteSetUrlCommand.call();
+    }
+
+    public void assertRebaseBranchInProcess(RepositorySet repositorySet, String branch) throws IOException {
+        File headNameFile = FileUtils.getFile(repositorySet.getWorkingDirectory(), ".git/rebase-apply/head-name");
+        assertTrue("no rebase in process found", headNameFile.exists());
+        String branchRef = StringUtils.trim(FileUtils.readFileToString(headNameFile, "UTF-8"));
+        String rebaseBranch = StringUtils.substringAfter(branchRef, REFS_HEADS_PATH);
+        assertEquals("reabes in process for wrong branch", branch, rebaseBranch);
+    }
+
+    public void assertRebaseBranchInProcess(RepositorySet repositorySet, String branch,
+            String... expectedConflictingFiles) throws GitAPIException, IOException {
+        File headNameFile = FileUtils.getFile(repositorySet.getWorkingDirectory(), ".git/rebase-apply/head-name");
+        assertTrue("no rebase in process found", headNameFile.exists());
+        String branchRef = StringUtils.trim(FileUtils.readFileToString(headNameFile, "UTF-8"));
+        String rebaseBranch = StringUtils.substringAfter(branchRef, REFS_HEADS_PATH);
+        assertEquals("reabes in process for wrong branch", branch, rebaseBranch);
+        if (expectedConflictingFiles != null && expectedConflictingFiles.length > 0) {
+            Set<String> conflictingFiles = status(repositorySet).getConflicting();
+            assertEquals("number of conflicting files is wrong", expectedConflictingFiles.length,
+                    conflictingFiles.size());
+            for (String expectedConflictingFile : expectedConflictingFiles) {
+                assertTrue("file '" + expectedConflictingFile + "' is not in conflict",
+                        conflictingFiles.contains(expectedConflictingFile));
+            }
+        }
     }
 
     private class CommitRevFilter extends RevFilter {

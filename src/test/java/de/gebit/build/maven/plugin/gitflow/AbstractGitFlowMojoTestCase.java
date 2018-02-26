@@ -11,6 +11,7 @@ package de.gebit.build.maven.plugin.gitflow;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.Closeable;
 import java.io.File;
@@ -379,11 +380,22 @@ public abstract class AbstractGitFlowMojoTestCase {
 
     private void handleMavenExecutionResult(MavenExecutionResult result) {
         int errorCnt = 0;
+        StringBuilder errorMessages = new StringBuilder();
         for (Throwable exc : result.getExceptions()) {
             System.err.println("Error " + (++errorCnt) + ":");
             exc.printStackTrace();
+            if (errorCnt > 1) {
+                errorMessages.append(", ");
+            }
+            errorMessages.append("[");
+            errorMessages.append(exc.getMessage());
+            errorMessages.append("]");
         }
-        assertFalse("maven command executed with errors", result.hasExceptions());
+        if (errorCnt == 1 && errorMessages.toString().contains("offline-dummy.git")) {
+            fail("Tried to access remote repository while offline mode. See log output.");
+        } else {
+            assertFalse("maven command executed with errors: " + errorMessages, result.hasExceptions());
+        }
     }
 
     /**

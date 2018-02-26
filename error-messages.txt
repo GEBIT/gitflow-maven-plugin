@@ -1,0 +1,98 @@
+=====================
+=== feature-start ===
+=====================
+
+- Uncommitted changes:
+You have some uncommitted files. Commit or discard local changes in order to proceed.
+
+- Committed (and not pushed) local changes:
+Local branch is ahead of the remote branch master. Execute git push.
+
+- Remote (not pulled) changes:
+Remote branch is ahead of the local branch master. Execute git pull.
+
+- Batch mode, featureName property not set:
+No featureName set, aborting...
+
+- Batch mode, invalid value for featureName property set:
+Set featureName is not valid, aborting...
+
+- Feature branch already exists (locally):
+Feature branch with that name already exists. Cannot start feature.
+
+- Feature branch already exists (remote):
+Remote feature branch with that name already exists. Cannot start feature.
+
+- Remote integration branch is ahead of local:
+Failed to determine branch base of 'integration/master' in respect to 'master'.
+
+- CommandLineException thrown:
+Error while executing external command.
+
+
+======================
+=== feature-finish ===
+======================
+
+- Uncommitted changes:
+You have some uncommitted files. Commit or discard local changes in order to proceed.
+
+- No feature branches in git repository:
+There are no feature branches.
+
+- batch mode, not on a feature branch:
+Feature finish in batch mode can be executed only from feature branch. Please switch to the feature branch you want to finish or execute feature finish in interactive mode.
+
+- No changes in feature branch:
+Failed to find base branch for 'feature/GFTST-42'.
+
+- Selected feature branch has changes locally and remote:
+Remote branch is ahead of the local branch feature/GFTST-42, but cannot reset as local is not an ancestor of remote.
+
+- Current feature branch has changes locally and remote:
+Remote branch is ahead of the local branch feature/GFTST-42. Execute git pull.
+
+- Base branch has changes locally and remote:
+Remote branch is ahead of the local branch master. Execute git pull.
+
+- Conflict on rebase that removes version change commit:
+error: Failed to merge in the changes.<CR><LF>
+*** LOG INFO: Automatic rebase failed. Fix your merge conflicts and git add your changes. After that, run mvn flow:feature-finish again. Do NOT run git rebase --continue.
+
+- CommandLineException thrown:
+Error while executing external command.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

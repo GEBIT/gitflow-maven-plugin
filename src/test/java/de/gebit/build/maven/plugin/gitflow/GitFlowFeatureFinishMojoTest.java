@@ -22,6 +22,8 @@ import java.util.Set;
 
 import org.apache.maven.execution.MavenExecutionResult;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
+import org.eclipse.jgit.api.CheckoutCommand.Stage;
+import org.eclipse.jgit.api.Status;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.junit.After;
 import org.junit.Before;
@@ -41,6 +43,9 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
     private static final String FEATURE_NUMBER = TestProjects.BASIC.jiraProject + "-42";
 
     private static final String FEATURE_BRANCH = "feature/" + FEATURE_NUMBER;
+
+    private static final String FEATURE_VERSION = TestProjects.BASIC.releaseVersion + "-" + FEATURE_NUMBER
+            + "-SNAPSHOT";
 
     private static final String FEATURE_NUMBER_2 = TestProjects.BASIC.jiraProject + "-4711";
 
@@ -740,7 +745,7 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     @Test
-    public void testExecuteOnFeatureStartFeatureStartedOnMasterIntegrationBranch() throws Exception {
+    public void testExecuteOnFeatureBranchFeatureStartedOnMasterIntegrationBranch() throws Exception {
         // set up
         ExecutorHelper.executeIntegerated(this, repositorySet, INTEGRATION_MASTER_BRANCH);
         final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
@@ -763,7 +768,7 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     @Test
-    public void testExecuteOnFeatureStartFeatureStartedOnMaintenanceIntegrationBranch() throws Exception {
+    public void testExecuteOnFeatureBranchFeatureStartedOnMaintenanceIntegrationBranch() throws Exception {
         // set up
         ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION);
         ExecutorHelper.executeIntegerated(this, repositorySet, INTEGRATION_MAINTENANCE_BRANCH);
@@ -789,6 +794,417 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_MAINTENACE_TESTFILE,
                 COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
+    }
+
+    @Test
+    public void testExecuteFeatureWithoutChanges() throws Exception {
+        // set up
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NUMBER);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertMavenFailureException(result, "Failed to find base branch for '" + FEATURE_BRANCH + "'.");
+
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH);
+    }
+
+    @Test
+    public void testExecuteSelectedLocalFeatureBranchAheadOfRemote() throws Exception {
+        // set up
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NUMBER);
+        git.push(repositorySet);
+        git.createAndCommitTestfile(repositorySet);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        String PROMPT_MESSAGE = "Feature branches:" + LS + "1. " + FEATURE_BRANCH + LS
+                + "Choose feature branch to finish";
+        when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1"))).thenReturn("1");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1"));
+        verifyNoMoreInteractions(promptControllerMock);
+        assertFeatureFinishedCorrectly();
+    }
+
+    @Test
+    public void testExecuteSelectedRemoteFeatureBranchAheadOfLocal() throws Exception {
+        // set up
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NUMBER);
+        git.push(repositorySet);
+        git.remoteCreateTestfileInBranch(repositorySet, FEATURE_BRANCH);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        String PROMPT_MESSAGE = "Feature branches:" + LS + "1. " + FEATURE_BRANCH + LS
+                + "Choose feature branch to finish";
+        when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1"))).thenReturn("1");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1"));
+        verifyNoMoreInteractions(promptControllerMock);
+        assertFeatureFinishedCorrectly();
+    }
+
+    @Test
+    public void testExecuteSelectedFeatureBranchHasChangesLocallyAndRemote() throws Exception {
+        // set up
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NUMBER);
+        git.push(repositorySet);
+        final String COMMIT_MESSAGE_LOCAL_TESTFILE = "LOCAL: Unit test dummy file commit";
+        git.createAndCommitTestfile(repositorySet, "local_testfile.txt", COMMIT_MESSAGE_LOCAL_TESTFILE);
+        final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
+        git.remoteCreateTestfileInBranch(repositorySet, FEATURE_BRANCH, "remote_testfile.txt",
+                COMMIT_MESSAGE_REMOTE_TESTFILE);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        String PROMPT_MESSAGE = "Feature branches:" + LS + "1. " + FEATURE_BRANCH + LS
+                + "Choose feature branch to finish";
+        when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1"))).thenReturn("1");
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1"));
+        verifyNoMoreInteractions(promptControllerMock);
+        assertMavenFailureException(result, "Remote branch is ahead of the local branch " + FEATURE_BRANCH
+                + ", but cannot reset as local is not an ancestor of remote.");
+
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_LOCAL_TESTFILE,
+                COMMIT_MESSAGE_SET_VERSION);
+    }
+
+    @Test
+    public void testExecuteCurrentLocalFeatureBranchAheadOfRemote() throws Exception {
+        // set up
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NUMBER);
+        git.push(repositorySet);
+        git.createAndCommitTestfile(repositorySet);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertFeatureFinishedCorrectly();
+    }
+
+    @Ignore("Should be activated whan update-ref + reset will be implemented")
+    @Test
+    public void testExecuteCurrentRemoteFeatureBranchAheadOfLocal() throws Exception {
+        // set up
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NUMBER);
+        git.push(repositorySet);
+        git.remoteCreateTestfileInBranch(repositorySet, FEATURE_BRANCH);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertFeatureFinishedCorrectly();
+    }
+
+    @Test
+    public void testExecuteCurrentFeatureBranchHasChangesLocallyAndRemote() throws Exception {
+        // set up
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NUMBER);
+        git.push(repositorySet);
+        final String COMMIT_MESSAGE_LOCAL_TESTFILE = "LOCAL: Unit test dummy file commit";
+        git.createAndCommitTestfile(repositorySet, "local_testfile.txt", COMMIT_MESSAGE_LOCAL_TESTFILE);
+        final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
+        git.remoteCreateTestfileInBranch(repositorySet, FEATURE_BRANCH, "remote_testfile.txt",
+                COMMIT_MESSAGE_REMOTE_TESTFILE);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertMavenFailureException(result,
+                "Remote branch is ahead of the local branch " + FEATURE_BRANCH + ". Execute git pull.");
+
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_LOCAL_TESTFILE,
+                COMMIT_MESSAGE_SET_VERSION);
+    }
+
+    @Test
+    public void testExecuteLocalBaseBranchAheadOfRemote() throws Exception {
+        // set up
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NUMBER);
+        git.createAndCommitTestfile(repositorySet);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        final String COMMIT_MESSAGE_LOCAL_TESTFILE = "LOCAL: Unit test dummy file commit";
+        git.createAndCommitTestfile(repositorySet, "local_testfile.txt", COMMIT_MESSAGE_LOCAL_TESTFILE);
+        git.switchToBranch(repositorySet, FEATURE_BRANCH);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE, COMMIT_MESSAGE_FOR_TESTFILE,
+                COMMIT_MESSAGE_LOCAL_TESTFILE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+    }
+
+    @Ignore("Should be activated whan update-ref + reset will be implemented")
+    @Test
+    public void testExecuteRemoteBaseBranchAheadOfLocal() throws Exception {
+        // set up
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NUMBER);
+        git.createAndCommitTestfile(repositorySet);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
+        git.remoteCreateTestfileInBranch(repositorySet, MASTER_BRANCH, "remote_testfile.txt",
+                COMMIT_MESSAGE_REMOTE_TESTFILE);
+        git.switchToBranch(repositorySet, FEATURE_BRANCH);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE, COMMIT_MESSAGE_FOR_TESTFILE,
+                COMMIT_MESSAGE_REMOTE_TESTFILE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+    }
+
+    @Test
+    public void testExecuteBaseBranchHasChangesLocallyAndRemote() throws Exception {
+        // set up
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NUMBER);
+        git.createAndCommitTestfile(repositorySet);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        final String COMMIT_MESSAGE_LOCAL_TESTFILE = "LOCAL: Unit test dummy file commit";
+        git.createAndCommitTestfile(repositorySet, "local_testfile.txt", COMMIT_MESSAGE_LOCAL_TESTFILE);
+        final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
+        git.remoteCreateTestfileInBranch(repositorySet, MASTER_BRANCH, "remote_testfile.txt",
+                COMMIT_MESSAGE_REMOTE_TESTFILE);
+        git.switchToBranch(repositorySet, FEATURE_BRANCH);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertMavenFailureException(result,
+                "Remote branch is ahead of the local branch " + MASTER_BRANCH + ". Execute git pull.");
+
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_LOCAL_TESTFILE);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FOR_TESTFILE,
+                COMMIT_MESSAGE_SET_VERSION);
+    }
+
+    @Ignore("Should be activated again before storing of base branch into branch config will be implemented")
+    @Test
+    public void testExecuteSelectedLocalFeatureBranchAheadOfRemoteAndFetchRemoteFalse() throws Exception {
+        // set up
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NUMBER);
+        git.push(repositorySet);
+        git.createAndCommitTestfile(repositorySet);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        String PROMPT_MESSAGE = "Feature branches:" + LS + "1. " + FEATURE_BRANCH + LS
+                + "Choose feature branch to finish";
+        when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1"))).thenReturn("1");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.fetchRemote", "false");
+        userProperties.setProperty("flow.push", "false");
+        git.setOffline(repositorySet);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1"));
+        verifyNoMoreInteractions(promptControllerMock);
+        assertFeatureFinishedCorrectlyOffline();
+    }
+
+    @Ignore("Should be activated again before storing of base branch into branch config will be implemented")
+    @Test
+    public void testExecuteSelectedRemoteFeatureBranchAheadOfLocalRemoteFalse() throws Exception {
+        // set up
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NUMBER);
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
+        git.remoteCreateTestfileInBranch(repositorySet, FEATURE_BRANCH, "remote_testfile.txt",
+                COMMIT_MESSAGE_REMOTE_TESTFILE);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        String PROMPT_MESSAGE = "Feature branches:" + LS + "1. " + FEATURE_BRANCH + LS
+                + "Choose feature branch to finish";
+        when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1"))).thenReturn("1");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.fetchRemote", "false");
+        userProperties.setProperty("flow.push", "false");
+        git.setOffline(repositorySet);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1"));
+        verifyNoMoreInteractions(promptControllerMock);
+        assertFeatureFinishedCorrectlyOffline();
+    }
+
+    @Ignore("Should be activated again before storing of base branch into branch config will be implemented")
+    @Test
+    public void testExecuteSelectedFeatureBranchHasChangesLocallyAndRemoteRemoteFalse() throws Exception {
+        // set up
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NUMBER);
+        git.push(repositorySet);
+        git.createAndCommitTestfile(repositorySet);
+        final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
+        git.remoteCreateTestfileInBranch(repositorySet, FEATURE_BRANCH, "remote_testfile.txt",
+                COMMIT_MESSAGE_REMOTE_TESTFILE);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        String PROMPT_MESSAGE = "Feature branches:" + LS + "1. " + FEATURE_BRANCH + LS
+                + "Choose feature branch to finish";
+        when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1"))).thenReturn("1");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.fetchRemote", "false");
+        userProperties.setProperty("flow.push", "false");
+        git.setOffline(repositorySet);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1"));
+        verifyNoMoreInteractions(promptControllerMock);
+        assertFeatureFinishedCorrectlyOffline();
+    }
+
+    private void assertFeatureFinishedCorrectlyOffline() throws Exception {
+        git.setOnline(repositorySet);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE, COMMIT_MESSAGE_FOR_TESTFILE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+    }
+
+    @Ignore("Should be activated again before storing of base branch into branch config will be implemented")
+    @Test
+    public void testExecuteSelectedRemoteFeatureBranchAheadOfLocalRemoteFalseWithPrefetch() throws Exception {
+        // set up
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NUMBER);
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
+        git.remoteCreateTestfileInBranch(repositorySet, FEATURE_BRANCH, "remote_testfile.txt",
+                COMMIT_MESSAGE_REMOTE_TESTFILE);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        String PROMPT_MESSAGE = "Feature branches:" + LS + "1. " + FEATURE_BRANCH + LS
+                + "Choose feature branch to finish";
+        when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1"))).thenReturn("1");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.fetchRemote", "false");
+        userProperties.setProperty("flow.push", "false");
+        git.fetch(repositorySet);
+        git.setOffline(repositorySet);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1"));
+        verifyNoMoreInteractions(promptControllerMock);
+        git.setOnline(repositorySet);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE,
+                COMMIT_MESSAGE_REMOTE_TESTFILE, COMMIT_MESSAGE_FOR_TESTFILE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+    }
+
+    @Ignore("Should be activated again before storing of base branch into branch config will be implemented")
+    @Test
+    public void testExecuteSelectedFeatureBranchHasChangesLocallyAndRemoteRemoteFalseWithPrefetch() throws Exception {
+        // set up
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NUMBER);
+        git.push(repositorySet);
+        git.createAndCommitTestfile(repositorySet);
+        final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
+        git.remoteCreateTestfileInBranch(repositorySet, FEATURE_BRANCH, "remote_testfile.txt",
+                COMMIT_MESSAGE_REMOTE_TESTFILE);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        String PROMPT_MESSAGE = "Feature branches:" + LS + "1. " + FEATURE_BRANCH + LS
+                + "Choose feature branch to finish";
+        when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1"))).thenReturn("1");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.fetchRemote", "false");
+        userProperties.setProperty("flow.push", "false");
+        git.fetch(repositorySet);
+        git.setOffline(repositorySet);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1"));
+        verifyNoMoreInteractions(promptControllerMock);
+        assertMavenFailureException(result, "Remote branch is ahead of the local branch " + FEATURE_BRANCH
+                + ", but cannot reset as local is not an ancestor of remote.");
+
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FOR_TESTFILE,
+                COMMIT_MESSAGE_SET_VERSION);
+    }
+
+    @Test
+    public void testExecuteWithRemovingVersionCommitRebaseConflict() throws Exception {
+        // set up
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NUMBER);
+        ExecutorHelper.executeSetVersion(this, repositorySet, "2.0.0-SNAPSHOT");
+        git.commitAll(repositorySet, "new version");
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertMavenFailureException(result, "error: Failed to merge in the changes." + LS);
+        git.assertRebaseBranchInProcess(repositorySet, FEATURE_BRANCH, "pom.xml");
+    }
+
+    @Ignore("not finished test")
+    @Test
+    public void testExecuteContinueRebaseAfterRemovingVersionCommitRebaseConflict() throws Exception {
+        // set up
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NUMBER);
+        ExecutorHelper.executeSetVersion(this, repositorySet, "2.0.0-SNAPSHOT");
+        git.commitAll(repositorySet, "new version");
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        verifyZeroInteractions(promptControllerMock);
+        assertMavenFailureException(result, "error: Failed to merge in the changes." + LS);
+        git.assertRebaseBranchInProcess(repositorySet, FEATURE_BRANCH, "pom.xml");
+        repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath("pom.xml").call();
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertFeatureFinishedCorrectly();
     }
 
 }

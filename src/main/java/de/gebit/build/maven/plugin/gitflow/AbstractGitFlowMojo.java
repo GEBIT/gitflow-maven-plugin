@@ -867,7 +867,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         }
 
         if (devBranch == null) {
-            throw new MojoFailureException("Failed to find base branch for'" + featureBranch + "'.");
+            throw new MojoFailureException("Failed to find base branch for '" + featureBranch + "'.");
         }
         getLog().debug("Feature branch is based on " + devBranch + ".");
         return devBranch;
