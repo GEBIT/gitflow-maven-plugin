@@ -1273,6 +1273,10 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     protected String gitRebaseBranchInProcess() throws MojoFailureException, CommandLineException {
         final String gitDir = executeGitCommandReturn("rev-parse", "--git-dir").trim();
         File headNameFile = FileUtils.getFile(gitDir, "rebase-apply/head-name");
+        if (!headNameFile.isAbsolute()) {
+            String basedir = this.session.getRequest().getBaseDirectory();
+            headNameFile = new File(basedir, headNameFile.getPath());
+        }
         if (!headNameFile.exists()) {
             // try with rebase-merge instead
             headNameFile = FileUtils.getFile(gitDir, "rebase-merge/head-name");
@@ -1333,7 +1337,11 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected String gitMergeBranchInProcess() throws MojoFailureException, CommandLineException {
         final String gitDir = executeGitCommandReturn("rev-parse", "--git-dir").trim();
-        final File mergeHeadNameFile = FileUtils.getFile(gitDir, "MERGE_HEAD");
+        File mergeHeadNameFile = FileUtils.getFile(gitDir, "MERGE_HEAD");
+        if (!mergeHeadNameFile.isAbsolute()) {
+            String basedir = this.session.getRequest().getBaseDirectory();
+            mergeHeadNameFile = new File(basedir, mergeHeadNameFile.getPath());
+        }
         if (!mergeHeadNameFile.exists()) {
             if (getLog().isDebugEnabled()) {
                 getLog().debug(mergeHeadNameFile + " not found in " + gitDir);
