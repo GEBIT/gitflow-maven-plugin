@@ -732,7 +732,8 @@ public abstract class AbstractGitFlowMojoTestCase {
      * @param expectedExceptionClass
      *            the class of expected exception
      * @param expectedExceptionMessage
-     *            the message of expected exception
+     *            the message of expected exception or <code>null</code> if
+     *            exception message shouldn't be checked
      */
     protected void assertExceptionOnMavenExecution(MavenExecutionResult mavenExecutionResult,
             Class<? extends Throwable> expectedExceptionClass, String expectedExceptionMessage) {
@@ -749,7 +750,32 @@ public abstract class AbstractGitFlowMojoTestCase {
             String expectedExceptionMessage) {
         assertEquals("unexpected maven execution exception", expectedExceptionClass.getName(),
                 exception.getClass().getName());
-        assertEquals("unexpected maven execution exception message", expectedExceptionMessage, exception.getMessage());
+        if (expectedExceptionMessage != null) {
+            assertEquals("unexpected maven execution exception message", expectedExceptionMessage,
+                    exception.getMessage());
+        }
+    }
+
+    /**
+     * Asserts that the passed maven execution result consists of failure
+     * exception.
+     *
+     * @param mavenExecutionResult
+     *            the maven execution result to be tested
+     */
+    protected void assertMavenFailureException(MavenExecutionResult mavenExecutionResult) {
+        assertMavenFailureException(mavenExecutionResult, null);
+    }
+
+    /**
+     * Asserts that the passed maven execution result consists of failure
+     * exception.
+     *
+     * @param mavenExecutionResult
+     *            the maven execution result to be tested
+     */
+    protected void assertMavenExecutionException(MavenExecutionResult mavenExecutionResult) {
+        assertMavenExecutionException(mavenExecutionResult, null);
     }
 
     /**
@@ -759,7 +785,8 @@ public abstract class AbstractGitFlowMojoTestCase {
      * @param mavenExecutionResult
      *            the maven execution result to be tested
      * @param expectedMessage
-     *            the expected message of failure exception
+     *            the expected message of failure exception or <code>null</code>
+     *            if exception message shouldn't be checked
      */
     protected void assertMavenFailureException(MavenExecutionResult mavenExecutionResult, String expectedMessage) {
         assertExceptionOnMavenExecution(mavenExecutionResult, MojoFailureException.class, expectedMessage);
@@ -772,7 +799,8 @@ public abstract class AbstractGitFlowMojoTestCase {
      * @param mavenExecutionResult
      *            the maven execution result to be tested
      * @param expectedMessage
-     *            the expected message of failure exception
+     *            the expected message of failure exception or <code>null</code>
+     *            if exception message shouldn't be checked
      */
     protected void assertMavenExecutionException(MavenExecutionResult mavenExecutionResult, String expectedMessage) {
         assertExceptionOnMavenExecution(mavenExecutionResult, MojoExecutionException.class, expectedMessage);

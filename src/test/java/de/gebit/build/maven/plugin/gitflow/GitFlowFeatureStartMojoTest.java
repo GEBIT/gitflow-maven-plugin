@@ -335,10 +335,12 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
             git.createAndCommitTestfile(repositorySet);
             Properties userProperties = new Properties();
             userProperties.setProperty("flow.fetchRemote", "false");
+            git.setOffline(repositorySet);
             // test
             MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
                     userProperties, promptControllerMock);
             // verify
+            git.setOnline(repositorySet);
             assertMavenFailureException(result,
                     "Local branch is ahead of the remote branch " + MASTER_BRANCH + ". Execute git push.");
 
@@ -356,9 +358,11 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
             git.remoteCreateTestfile(repositorySet);
             Properties userProperties = new Properties();
             userProperties.setProperty("flow.fetchRemote", "false");
+            git.setOffline(repositorySet);
             // test
             executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
             // verify
+            git.setOnline(repositorySet);
             verify(promptControllerMock).prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME);
             verifyNoMoreInteractions(promptControllerMock);
 
@@ -375,10 +379,12 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
             git.fetch(repositorySet);
             Properties userProperties = new Properties();
             userProperties.setProperty("flow.fetchRemote", "false");
+            git.setOffline(repositorySet);
             // test
             MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
                     userProperties);
             // verify
+            git.setOnline(repositorySet);
             assertMavenFailureException(result,
                     "Remote branch is ahead of the local branch " + MASTER_BRANCH + ". Execute git pull.");
             assertNoChanges(repositorySet);
@@ -766,9 +772,11 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
             Properties userProperties = new Properties();
             userProperties.setProperty("featureName", FEATURE_NUMBER);
             userProperties.setProperty("flow.fetchRemote", "false");
+            git.setOffline(repositorySet);
             // test
             executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
             // verify
+            git.setOnline(repositorySet);
             assertVersionsInPom(repositorySet.getWorkingDirectory(), EXPECTED_BRANCH_VERSION);
             git.assertClean(repositorySet);
             git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
@@ -790,14 +798,16 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
             ExecutorHelper.executeIntegerated(this, repositorySet, INTEGRATION_BRANCH);
             git.remoteCreateTestfileInBranch(repositorySet, INTEGRATION_BRANCH);
             git.fetch(repositorySet);
+            when(promptControllerMock.prompt(PROMPT_BRANCH_OF_LAST_INTEGRATED, Arrays.asList("y", "n"), "y"))
+            .thenReturn("y");
             Properties userProperties = new Properties();
             userProperties.setProperty("flow.fetchRemote", "false");
-            when(promptControllerMock.prompt(PROMPT_BRANCH_OF_LAST_INTEGRATED, Arrays.asList("y", "n"), "y"))
-                    .thenReturn("y");
+            git.setOffline(repositorySet);
             // test
             MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
                     userProperties, promptControllerMock);
             // verify
+            git.setOnline(repositorySet);
             assertMavenFailureException(result, "Failed to determine branch base of '" + INTEGRATION_BRANCH
                     + "' in respect to '" + MASTER_BRANCH + "'.");
             verify(promptControllerMock).prompt(PROMPT_BRANCH_OF_LAST_INTEGRATED, Arrays.asList("y", "n"), "y");

@@ -178,10 +178,12 @@ public class GitFlowFeatureStartMojoOnMaintenanceTest extends AbstractGitFlowMoj
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.fetchRemote", "false");
+        git.setOffline(repositorySet);
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
                 promptControllerMock);
         // verify
+        git.setOnline(repositorySet);
         assertMavenFailureException(result,
                 "Local branch is ahead of the remote branch " + MAINTENANCE_BRANCH + ". Execute git push.");
 
@@ -198,9 +200,11 @@ public class GitFlowFeatureStartMojoOnMaintenanceTest extends AbstractGitFlowMoj
         git.remoteCreateTestfileInBranch(repositorySet, MAINTENANCE_BRANCH);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.fetchRemote", "false");
+        git.setOffline(repositorySet);
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
+        git.setOnline(repositorySet);
         verify(promptControllerMock).prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME);
         verifyNoMoreInteractions(promptControllerMock);
 
@@ -215,9 +219,11 @@ public class GitFlowFeatureStartMojoOnMaintenanceTest extends AbstractGitFlowMoj
         git.fetch(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.fetchRemote", "false");
+        git.setOffline(repositorySet);
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
+        git.setOnline(repositorySet);
         assertMavenFailureException(result,
                 "Remote branch is ahead of the local branch " + MAINTENANCE_BRANCH + ". Execute git pull.");
         assertNoChanges();

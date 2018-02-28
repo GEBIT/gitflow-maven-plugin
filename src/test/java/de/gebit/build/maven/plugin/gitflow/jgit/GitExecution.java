@@ -356,7 +356,8 @@ public class GitExecution {
      * @param aRepositorySet
      */
     public void commitAll(RepositorySet repositorySet, String commitMessage) throws GitAPIException {
-        repositorySet.getLocalRepoGit().commit().setAll(true).setMessage(commitMessage).call();
+        repositorySet.getLocalRepoGit().add().addFilepattern(".").call();
+        repositorySet.getLocalRepoGit().commit().setMessage(commitMessage).call();
     }
 
     /**
@@ -1150,6 +1151,36 @@ public class GitExecution {
         String branchRef = StringUtils.trim(FileUtils.readFileToString(headNameFile, "UTF-8"));
         String rebaseBranch = StringUtils.substringAfter(branchRef, REFS_HEADS_PATH);
         assertEquals("reabes in process for wrong branch", branch, rebaseBranch);
+        if (expectedConflictingFiles != null && expectedConflictingFiles.length > 0) {
+            Set<String> conflictingFiles = status(repositorySet).getConflicting();
+            assertEquals("number of conflicting files is wrong", expectedConflictingFiles.length,
+                    conflictingFiles.size());
+            for (String expectedConflictingFile : expectedConflictingFiles) {
+                assertTrue("file '" + expectedConflictingFile + "' is not in conflict",
+                        conflictingFiles.contains(expectedConflictingFile));
+            }
+        }
+    }
+
+    public void assertMergeInProcess(RepositorySet repositorySet, String... expectedConflictingFiles)
+            throws GitAPIException, IOException {
+        File headNameFile = FileUtils.getFile(repositorySet.getWorkingDirectory(), ".git/MERGE_HEAD");
+        assertTrue("no merge in process found", headNameFile.exists());
+        if (expectedConflictingFiles != null && expectedConflictingFiles.length > 0) {
+            Set<String> conflictingFiles = status(repositorySet).getConflicting();
+            assertEquals("number of conflicting files is wrong", expectedConflictingFiles.length,
+                    conflictingFiles.size());
+            for (String expectedConflictingFile : expectedConflictingFiles) {
+                assertTrue("file '" + expectedConflictingFile + "' is not in conflict",
+                        conflictingFiles.contains(expectedConflictingFile));
+            }
+        }
+    }
+
+    public void assertMergeWithSquashInProcess(RepositorySet repositorySet, String... expectedConflictingFiles)
+            throws GitAPIException, IOException {
+        File headNameFile = FileUtils.getFile(repositorySet.getWorkingDirectory(), ".git/SQUASH_MSG");
+        assertTrue("no merge in process found", headNameFile.exists());
         if (expectedConflictingFiles != null && expectedConflictingFiles.length > 0) {
             Set<String> conflictingFiles = status(repositorySet).getConflicting();
             assertEquals("number of conflicting files is wrong", expectedConflictingFiles.length,

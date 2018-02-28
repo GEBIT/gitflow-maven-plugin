@@ -49,9 +49,11 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
     private boolean skipFeatureVersion = false;
 
     /**
-     * Additional maven commands/goals after the feature version has been updated. Will be committed together with the version
-     * change. Can contain an {@literal @}{version} placeholder which will be replaced with the new version before
-     * execution. If empty the <code>commandsAfterVersion</code> property is used.
+     * Additional maven commands/goals after the feature version has been
+     * updated. Will be committed together with the version change. Can contain
+     * an {@literal @}{version} placeholder which will be replaced with the new
+     * version before execution. If empty the <code>commandsAfterVersion</code>
+     * property is used.
      *
      * @since 1.3.2
      */
@@ -59,8 +61,9 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
     protected String commandsAfterFeatureVersion;
 
     /**
-     * A natual language description of the <code>featureNamePattern</code> which is used to print an error message.
-     * If not specified the pattern is printed in the error message as is, which can be hard to understand.
+     * A natual language description of the <code>featureNamePattern</code>
+     * which is used to print an error message. If not specified the pattern is
+     * printed in the error message as is, which can be hard to understand.
      *
      * @since 1.3.1
      */
@@ -87,8 +90,8 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
 
             // fetch and check remote
             String currentBranch = gitCurrentBranch();
-            String baseBranch = currentBranch.startsWith(gitFlowConfig.getMaintenanceBranchPrefix())
-                    ? currentBranch : gitFlowConfig.getDevelopmentBranch();
+            String baseBranch = currentBranch.startsWith(gitFlowConfig.getMaintenanceBranchPrefix()) ? currentBranch
+                    : gitFlowConfig.getDevelopmentBranch();
 
             // use integration branch?
             final String integrationBranch = gitFlowConfig.getIntegrationBranchPrefix() + baseBranch;
@@ -98,7 +101,8 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
 
                     @Override
                     public Void call() throws Exception {
-                        gitUpdateRef(integrationBranch, "refs/remotes/" + gitFlowConfig.getOrigin() + "/" + integrationBranch);
+                        gitUpdateRef(integrationBranch,
+                                "refs/remotes/" + gitFlowConfig.getOrigin() + "/" + integrationBranch);
                         return null;
                     }
                 });
@@ -148,12 +152,10 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
             featureName = StringUtils.deleteWhitespace(featureName);
 
             // git for-each-ref refs/heads/feature/...
-            final String featureBranch = gitFindBranch(gitFlowConfig
-                    .getFeatureBranchPrefix() + featureName);
+            final String featureBranch = gitFindBranch(gitFlowConfig.getFeatureBranchPrefix() + featureName);
 
             if (StringUtils.isNotBlank(featureBranch)) {
-                throw new MojoFailureException(
-                        "Feature branch with that name already exists. Cannot start feature.");
+                throw new MojoFailureException("Feature branch with that name already exists. Cannot start feature.");
             }
             final String featureStartMessage = substituteInMessage(commitMessages.getFeatureStartMessage(),
                     gitFlowConfig.getFeatureBranchPrefix() + featureName);
@@ -184,10 +186,9 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
                         }
                     }
 
-                    final DefaultVersionInfo versionInfo = new DefaultVersionInfo(
-                            currentVersion);
-                    version = versionInfo.getReleaseVersionString() + "-"
-                            + featureIssue + "-" + Artifact.SNAPSHOT_VERSION;
+                    final DefaultVersionInfo versionInfo = new DefaultVersionInfo(currentVersion);
+                    version = versionInfo.getReleaseVersionString() + "-" + featureIssue + "-"
+                            + Artifact.SNAPSHOT_VERSION;
                 } catch (VersionParseException e) {
                     if (getLog().isDebugEnabled()) {
                         getLog().debug(e);
@@ -214,7 +215,8 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
     }
 
     /**
-     * If {@link #commandsAfterFeatureVersion} is set use it to replace the {@link AbstractGitFlowMojo#commandsAfterVersion}.
+     * If {@link #commandsAfterFeatureVersion} is set use it to replace the
+     * {@link AbstractGitFlowMojo#commandsAfterVersion}.
      */
     @Override
     protected List<String> getCommandsAfterVersion(boolean processAdditionalCommands) throws MojoFailureException {
@@ -230,7 +232,8 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
     }
 
     /**
-     * Check whether the given feature name matches the required pattern, if any.
+     * Check whether the given feature name matches the required pattern, if
+     * any.
      */
     protected boolean validateFeatureName(String featureName) {
         if (featureNamePattern == null) {
