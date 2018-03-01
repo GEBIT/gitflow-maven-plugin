@@ -227,6 +227,35 @@ public class ExtendedPrompter implements Prompter {
      *            the name of the parameter to be used in exception messages
      * @param initValue
      *            the init value (can be <code>null</code>)
+     * @param validator
+     *            the optional validator to validate the non-empty value
+     * @param missingValueInBatchModeMessage
+     *            the message to be used in exception if an empty init value
+     *            provided in batch mode
+     * @return a non-empty valid value
+     * @throws MojoFailureException
+     *             in case of invalid init value in batch mode or error while
+     *             prompting
+     */
+    public String promptRequiredParameterValue(String promptMessage, String parameterName, String initValue,
+            StringValidator validator, String missingValueInBatchModeMessage) throws MojoFailureException {
+        return promptRequiredParameterValue(promptMessage, parameterName, initValue, null, null, validator,
+                missingValueInBatchModeMessage);
+    }
+
+    /**
+     * Prompts for a value if interactive mode is enabled. Propmts in a loop
+     * until non-empty valid value is entered. If a valid init value provided it
+     * will be returned without prompting.<br>
+     * In case of batch mode an {@link MojoFailureException} will be thrown if
+     * no valid init value provided.
+     *
+     * @param promptMessage
+     *            the message to be shown in prompt
+     * @param parameterName
+     *            the name of the parameter to be used in exception messages
+     * @param initValue
+     *            the init value (can be <code>null</code>)
      * @param defaultValue
      *            the default value to be used in prompt (can be
      *            <code>null</code>)
@@ -269,6 +298,41 @@ public class ExtendedPrompter implements Prompter {
      */
     public String promptRequiredParameterValue(String promptMessage, String parameterName, String initValue,
             String defaultValue, List<String> possibleValues, StringValidator validator) throws MojoFailureException {
+        return promptRequiredParameterValue(promptMessage, parameterName, initValue, defaultValue, possibleValues,
+                validator, null);
+    }
+
+    /**
+     * Prompts for a value if interactive mode is enabled. Propmts in a loop
+     * until non-empty valid value is entered. If a valid init value provided it
+     * will be returned without prompting.<br>
+     * In case of batch mode an {@link MojoFailureException} will be thrown if
+     * no valid init value provided.
+     *
+     * @param promptMessage
+     *            the message to be shown in prompt
+     * @param parameterName
+     *            the name of the parameter to be used in exception messages
+     * @param initValue
+     *            the init value (can be <code>null</code>)
+     * @param defaultValue
+     *            the default value to be used in prompt (can be
+     *            <code>null</code>)
+     * @param possibleValues
+     *            the possible values (can be <code>null</code>)
+     * @param validator
+     *            the optional validator to validate the non-empty value
+     * @param missingValueInBatchModeMessage
+     *            the message to be used in exception if an empty init value
+     *            provided in batch mode
+     * @return a non-empty valid value
+     * @throws MojoFailureException
+     *             in case of invalid init value in batch mode or error while
+     *             prompting
+     */
+    public String promptRequiredParameterValue(String promptMessage, String parameterName, String initValue,
+            String defaultValue, List<String> possibleValues, StringValidator validator,
+            String missingValueInBatchModeMessage) throws MojoFailureException {
         String value = initValue;
         if (interactiveMode) {
             try {
@@ -307,7 +371,13 @@ public class ExtendedPrompter implements Prompter {
                 value = defaultValue;
             }
             if (StringUtils.isBlank(value)) {
-                throw new MojoFailureException("No " + parameterName + " set, aborting...");
+                String errorMessage;
+                if (!StringUtils.isBlank(missingValueInBatchModeMessage)) {
+                    errorMessage = missingValueInBatchModeMessage;
+                } else {
+                    errorMessage = "No " + parameterName + " set, aborting...";
+                }
+                throw new MojoFailureException(errorMessage);
             }
             if (!CollectionUtils.isEmpty(possibleValues)) {
                 if (!possibleValues.contains(value)) {
@@ -315,8 +385,18 @@ public class ExtendedPrompter implements Prompter {
                 }
             }
 
-            if (validator != null && !validator.validate(value).isValid()) {
-                throw new MojoFailureException("Set " + parameterName + " is not valid, aborting...");
+            if (validator != null) {
+                ValidationResult validationResult = validator.validate(value);
+                if (!validationResult.isValid()) {
+                    String errorMessage;
+                    String invalidMessage = validationResult.getInvalidMessage();
+                    if (!StringUtils.isBlank(invalidMessage)) {
+                        errorMessage = invalidMessage;
+                    } else {
+                        errorMessage = "Set " + parameterName + " is not valid, aborting...";
+                    }
+                    throw new MojoFailureException(errorMessage);
+                }
             }
         }
         return value;

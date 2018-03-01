@@ -137,9 +137,11 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
                             if (!validateFeatureName(value)) {
                                 String invalidMessage;
                                 if (featureNamePatternDescription != null) {
-                                    invalidMessage = featureNamePatternDescription;
+                                    invalidMessage = "The feature name '" + value
+                                            + "' is invalid. " + featureNamePatternDescription;
                                 } else {
-                                    invalidMessage = "Feature name does not match the required pattern: "
+                                    invalidMessage = "The feature name '" + value
+                                            + "' is invalid. It does not match the required pattern: "
                                             + featureNamePattern;
                                 }
                                 return new ValidationResult(invalidMessage);
@@ -147,21 +149,24 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
                                 return ValidationResult.VALID;
                             }
                         }
-                    });
+                    }, "You must specify a featureName, e.g. using 'mvn flow:feature-start -DfeatureName=XXX'");
 
             featureName = StringUtils.deleteWhitespace(featureName);
 
+            String featureBranchName = gitFlowConfig.getFeatureBranchPrefix() + featureName;
             // git for-each-ref refs/heads/feature/...
-            final String featureBranch = gitFindBranch(gitFlowConfig.getFeatureBranchPrefix() + featureName);
+            final String featureBranchInfo = gitFindBranch(featureBranchName);
 
-            if (StringUtils.isNotBlank(featureBranch)) {
-                throw new MojoFailureException("Feature branch with that name already exists. Cannot start feature.");
+            if (StringUtils.isNotBlank(featureBranchInfo)) {
+                throw new MojoFailureException("Feature branch '" + featureBranchName
+                        + "' already exists. Either checkout the existing feature branch using 'git checkout "
+                        + featureBranchName + "' or start a new feature with another name.");
             }
             final String featureStartMessage = substituteInMessage(commitMessages.getFeatureStartMessage(),
-                    gitFlowConfig.getFeatureBranchPrefix() + featureName);
+                    featureBranchName);
 
             // git checkout -b ... develop
-            gitCreateAndCheckout(gitFlowConfig.getFeatureBranchPrefix() + featureName, baseBranch);
+            gitCreateAndCheckout(featureBranchName, baseBranch);
 
             if (!skipFeatureVersion && !tychoBuild) {
                 // get current project version from pom
@@ -210,7 +215,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
                 mvnCleanInstall();
             }
         } catch (CommandLineException e) {
-            throw new MojoExecutionException("Error while executing external command.", e);
+            throwMojoExecutionExceptionForCommandLineException(e);
         }
     }
 

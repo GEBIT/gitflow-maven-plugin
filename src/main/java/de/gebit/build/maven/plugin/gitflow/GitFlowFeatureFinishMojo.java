@@ -76,7 +76,8 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
                 final String featureBranches = gitFindBranches(gitFlowConfig.getFeatureBranchPrefix(), false);
 
                 if (StringUtils.isBlank(featureBranches)) {
-                    throw new MojoFailureException("There are no feature branches.");
+                    throw new MojoFailureException("There are no feature branches in your repository."
+                            + " Please start a feature first with 'mvn flow:feature-start'");
                 }
 
                 final String[] branches = featureBranches.split("\\r?\\n");
@@ -96,9 +97,9 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
                 if (StringUtils.isBlank(featureBranchName)) {
                     featureBranchName = getPrompter().promptToSelectFromOrderedList("Feature branches:",
                             "Choose feature branch to finish", branches,
-                            "Feature finish in batch mode can be executed only from feature branch. "
-                                    + "Please switch to the feature branch you want to finish or execute feature finish"
-                                    + " in interactive mode.");
+                            "In non-interactive mode you must execute 'mvn flow:feature-finish' on the feature branch."
+                                    + " Please switch to a feature branch first using 'git checkout BRANCH' or execute"
+                                    + " 'mvn flow:feature-finish' in interactive mode.");
 
                     // git checkout feature/...
                     if (fetchRemote) {
@@ -158,7 +159,14 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
                 }
             } else {
                 // continue with the rebase
-                gitRebaseContinue();
+                try {
+                    gitRebaseContinue();
+                } catch (MojoFailureException exc) {
+                    throw new MojoFailureException("There are unresolved conflicts after rebase."
+                            + " Fix the rebase conflicts and mark them as resolved using 'git add'."
+                            + " After that, run 'mvn flow:feature-finish' again in order to proceed.\n"
+                            + "Git error message:\n" + exc.getMessage(), exc);
+                }
             }
 
             // git checkout develop
@@ -193,7 +201,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
                 gitPush(baseBranch, false, false);
             }
         } catch (CommandLineException e) {
-            throw new MojoExecutionException("Error while executing external command.", e);
+            throwMojoExecutionExceptionForCommandLineException(e);
         }
     }
 }

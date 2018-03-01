@@ -40,6 +40,7 @@ import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.apache.maven.plugin.AbstractMojo;
+import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Parameter;
@@ -342,7 +343,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         getLog().info("Checking for uncommitted changes.");
         if (executeGitHasUncommitted()) {
             throw new MojoFailureException(
-                    "You have some uncommitted files. Commit or discard local changes in order to proceed.");
+                    "You have some uncommitted files. Commit or discard local changes in order to proceed,"
+                            + " i.e. using 'git add' and 'git commit' or 'git reset --hard' to throw away.");
         }
     }
 
@@ -813,13 +815,14 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         try {
             executeGitCommand("rebase", "--no-ff", "--onto", branchPoint, versionChangeCommitId, featureBranch);
         } catch (MojoFailureException ex) {
+            String message = "Automatic rebase failed. Fix the rebase conflicts and mark them as resolved using 'git add'. After that, run 'mvn flow:feature-finish' again. Do NOT run 'git rebase --continue'.";
             getLog().info("");
             getLog().info("####");
-            getLog().info(
-                    "Automatic rebase failed. Fix your merge conflicts and git add your changes. After that, run mvn flow:feature-finish again. Do NOT run git rebase --continue.");
+            getLog().info(message);
             getLog().info("####");
             getLog().info("");
-            throw ex;
+            message += "\nGit error message:\n" + ex.getMessage();
+            throw new MojoFailureException(message, ex);
         }
         return true;
     }
@@ -2147,6 +2150,12 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         }
 
         return new CommandResult(exitCode, StringUtils.trim(outStr), errorStr);
+    }
+
+    protected void throwMojoExecutionExceptionForCommandLineException(CommandLineException exception)
+            throws MojoExecutionException {
+        throw new MojoExecutionException("External command execution failed: " + exception.getMessage()
+                + " Please report the error in the GBLD JIRA.", exception);
     }
 
     private static class CommandResult {
