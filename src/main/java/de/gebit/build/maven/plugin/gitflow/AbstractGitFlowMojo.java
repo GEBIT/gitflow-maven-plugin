@@ -1018,6 +1018,23 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         return firstCommitOnBranch;
     }
 
+    protected boolean hasCommitsExceptVersionChangeCommitOnBranch(String featureBranch, String baseBranch)
+            throws MojoFailureException, CommandLineException {
+        String branchPoint = gitBranchPoint(featureBranch, baseBranch);
+        String gitOutput = executeGitCommandReturn("rev-list", branchPoint + ".." + featureBranch, "--count");
+        if (!StringUtils.isBlank(gitOutput)) {
+            int commits = Integer.parseInt(StringUtils.trim(gitOutput));
+            if (commits == 0) {
+                return false;
+            } else if (commits == 1) {
+                return StringUtils.isBlank(gitVersionChangeCommitOnBranch(featureBranch, branchPoint));
+            } else {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * Returns <code>true</code> if the given branch exists on the configured
      * origin remote.

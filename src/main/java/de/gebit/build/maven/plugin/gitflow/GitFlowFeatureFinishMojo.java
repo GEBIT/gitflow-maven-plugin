@@ -83,17 +83,17 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
 
             // is the current branch a feature branch?
             String currentBranch = gitCurrentBranch();
-
+            boolean isOnFeatureBranch = false;
             for (int i = 0; i < branches.length; i++) {
                 if (branches[i].equals(currentBranch)) {
                     // we're on a feature branch, no need to ask
-                    featureBranchName = currentBranch;
-                    getLog().info("Current feature branch: " + featureBranchName);
+                    isOnFeatureBranch = true;
+                    getLog().info("Current feature branch: " + currentBranch);
                     break;
                 }
             }
 
-            if (StringUtils.isBlank(featureBranchName)) {
+            if (!isOnFeatureBranch) {
                 featureBranchName = getPrompter().promptToSelectFromOrderedList("Feature branches:",
                         "Choose feature branch to finish", branches,
                         new GitFlowFailureInfo(
@@ -107,11 +107,23 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
                         "Remote and local feature branches '" + featureBranchName + "' diverge.",
                         "Rebase or merge the changes in local feature branch '" + featureBranchName + "' first.",
                         "'git rebase'"));
-                gitCheckout(featureBranchName);
             } else {
+                featureBranchName = currentBranch;
                 gitEnsureCurrentLocalBranchIsUpToDate(
                         new GitFlowFailureInfo("Remote and local feature branches '{0}' diverge.",
                                 "Rebase or merge the changes in local feature branch '{0}' first.", "'git rebase'"));
+            }
+            String baseBranch = gitFeatureBranchBaseBranch(featureBranchName);
+            if (!hasCommitsExceptVersionChangeCommitOnBranch(featureBranchName, baseBranch)) {
+                throw new GitFlowFailureException(
+                        "There are no real changes in feature branch '" + featureBranchName + "'.",
+                        "Delete the feature branch or commit some changes first.",
+                        "'mvn flow:feature-abort' to delete the feature branch",
+                        "'git add' and 'git commit' to commit some changes into feature branch and "
+                                + "'mvn flow:feature-finish' to run the feature finish again");
+            }
+            if (!isOnFeatureBranch) {
+                gitCheckout(featureBranchName);
             }
 
             final String featureFinishMessage = substituteInMessage(commitMessages.getFeatureFinishMessage(),
@@ -128,7 +140,6 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
             final String featureName = featureBranchName.replaceFirst(gitFlowConfig.getFeatureBranchPrefix(), "");
 
             // git checkout develop after fetch and check remote
-            String baseBranch = gitFeatureBranchBaseBranch(featureBranchName);
             gitEnsureLocalBranchIsUpToDateIfExists(baseBranch,
                     new GitFlowFailureInfo("Remote and local base branches '" + baseBranch + "' diverge.",
                             "Rebase the changes in local branch '" + baseBranch
@@ -211,4 +222,5 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
             gitPush(baseBranch, false, false);
         }
     }
+
 }
