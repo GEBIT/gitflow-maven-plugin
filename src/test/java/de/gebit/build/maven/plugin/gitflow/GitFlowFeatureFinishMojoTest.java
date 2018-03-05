@@ -1100,7 +1100,6 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 COMMIT_MESSAGE_SET_VERSION);
     }
 
-    @Ignore("Should be activated again when feature gitFeatureBranchBaseBranch can be used also locally")
     @Test
     public void testExecuteSelectedLocalFeatureBranchAheadOfRemoteAndFetchRemoteFalse() throws Exception {
         // set up
@@ -1123,7 +1122,6 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertFeatureFinishedCorrectlyOffline();
     }
 
-    @Ignore("Should be activated again when feature gitFeatureBranchBaseBranch can be used also locally")
     @Test
     public void testExecuteSelectedRemoteFeatureBranchAheadOfLocalRemoteFalse() throws Exception {
         // set up
@@ -1149,7 +1147,6 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertFeatureFinishedCorrectlyOffline();
     }
 
-    @Ignore("Should be activated again when feature gitFeatureBranchBaseBranch can be used also locally")
     @Test
     public void testExecuteSelectedFeatureBranchHasChangesLocallyAndRemoteRemoteFalse() throws Exception {
         // set up
@@ -1186,7 +1183,6 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
     }
 
-    @Ignore("Should be activated again when feature gitFeatureBranchBaseBranch can be used also locally")
     @Test
     public void testExecuteSelectedRemoteFeatureBranchAheadOfLocalRemoteFalseWithPrefetch() throws Exception {
         // set up
@@ -1221,7 +1217,6 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
     }
 
-    @Ignore("Should be activated again when feature gitFeatureBranchBaseBranch can be used also locally")
     @Test
     public void testExecuteSelectedFeatureBranchHasChangesLocallyAndRemoteRemoteFalseWithPrefetch() throws Exception {
         // set up
@@ -1241,20 +1236,13 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.fetch(repositorySet);
         git.setOffline(repositorySet);
         // test
-        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
                 promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1"));
         verifyNoMoreInteractions(promptControllerMock);
-        assertGitFlowFailureException(result, "Remote and local base branches '" + MASTER_BRANCH + "' diverge.",
-                "Rebase the changes in local branch '" + MASTER_BRANCH
-                        + "' and then include these changes in the feature branch '" + FEATURE_BRANCH
-                        + "' in order to proceed.",
-                "'git checkout " + MASTER_BRANCH + "' and 'git rebase' to rebase the changes in base branch '"
-                        + MASTER_BRANCH + "'",
-                "'git checkout " + FEATURE_BRANCH
-                        + "' and 'mvn flow:feature-rebase' to include these changes in the feature branch '"
-                        + FEATURE_BRANCH + "'");
+        assertGitFlowFailureException(result, "Remote and local feature branches '" + FEATURE_BRANCH + "' diverge.",
+                "Rebase or merge the changes in local feature branch '" + FEATURE_BRANCH + "' first.", "'git rebase'");
 
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);

@@ -395,6 +395,9 @@ public abstract class AbstractGitFlowMojoTestCase {
                 errorMessages.append(", ");
             }
             errorMessages.append("[");
+            if (exc instanceof LifecycleExecutionException) {
+                exc = exc.getCause();
+            }
             errorMessages.append(exc.getMessage());
             errorMessages.append("]");
         }
