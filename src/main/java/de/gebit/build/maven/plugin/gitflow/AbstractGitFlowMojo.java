@@ -1056,13 +1056,17 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * List all maintenance branches
      */
     protected List<String> gitRemoteMaintenanceBranches() throws MojoFailureException, CommandLineException {
-        String tempCmdResult = executeGitCommandReturn("ls-remote", "--heads", gitFlowConfig.getOrigin());
+        String tempCmdResult;
+        if (fetchRemote) {
+            tempCmdResult = executeGitCommandReturn("ls-remote", "--heads", gitFlowConfig.getOrigin());
+        } else {
+            tempCmdResult = executeGitCommandReturn("for-each-ref", "refs/remotes/" + gitFlowConfig.getOrigin() + "/");
+        }
         if (tempCmdResult != null) {
             String[] lines = tempCmdResult.split("\r?\n");
-
-            List<String> result = new ArrayList<>();
             Pattern p = Pattern
                     .compile("[a-zA-Z0-9]+\\s*refs/heads/(\\Q" + gitFlowConfig.getMaintenanceBranchPrefix() + "\\E.*)");
+            List<String> result = new ArrayList<>();
             for (int i = 0; i < lines.length; ++i) {
                 Matcher m = p.matcher(lines[i]);
                 if (m.matches()) {
