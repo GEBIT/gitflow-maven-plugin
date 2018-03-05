@@ -825,33 +825,6 @@ public class GitExecution {
     }
 
     /**
-     * Asserts that the log of passed branch in local repository consists of
-     * passed expected commit messages. The order of commits is ignored.
-     *
-     * @param repositorySet
-     *            the repository to be used
-     * @param branch
-     *            the branch to be checked
-     * @param expectedCommitMessages
-     *            the expected commit messages
-     * @throws GitAPIException
-     *             if an error occurs on git command execution
-     * @throws IOException
-     *             in case of an I/O error
-     */
-    public void assertCommitsInLocalBranchIgnoringOrder(RepositorySet repositorySet, String branch,
-            String... expectedCommitMessages) throws GitAPIException, IOException {
-        List<String> commitMessages = commitMessagesInBranch(repositorySet.getLocalRepoGit(), branch);
-        if (expectedCommitMessages.length != commitMessages.size()
-                || !commitMessages.containsAll(Arrays.asList(expectedCommitMessages))) {
-            fail("Commit messages in branch '" + branch
-                    + "' of 'local' repository are different from expected. Expected: "
-                    + Arrays.toString(expectedCommitMessages) + ", actual: "
-                    + Arrays.toString(commitMessages.toArray(new String[commitMessages.size()])));
-        }
-    }
-
-    /**
      * Asserts that the log of passed branch in remote repository consists of
      * passed expected commit messages.
      *
@@ -883,10 +856,13 @@ public class GitExecution {
 
     private void assertCommitMessages(String[] expectedCommitMessages, List<String> commitMessages, String branch,
             String repoName) {
-        assertArrayEquals(
-                "Commit messages in branch '" + branch + "' of '" + repoName
-                        + "' repository are different from expected",
-                expectedCommitMessages, commitMessages.toArray(new String[commitMessages.size()]));
+        if (expectedCommitMessages.length != commitMessages.size()
+                || !commitMessages.containsAll(Arrays.asList(expectedCommitMessages))) {
+            fail("Commit messages in branch '" + branch
+                    + "' of " + repoName + " repository are different from expected. Expected: "
+                    + Arrays.toString(expectedCommitMessages) + ", actual: "
+                    + Arrays.toString(commitMessages.toArray(new String[commitMessages.size()])));
+        }
     }
 
     private void assertArrayEquals(String message, String[] expected, String[] actual) {

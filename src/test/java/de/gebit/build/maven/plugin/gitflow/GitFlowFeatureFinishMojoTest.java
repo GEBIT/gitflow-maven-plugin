@@ -535,7 +535,7 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
         git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
-        git.assertCommitsInLocalBranchIgnoringOrder(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE,
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE,
                 COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_MASTER_TESTFILE, COMMIT_MESSAGE_FEATURE_TESTFILE,
                 COMMIT_MESSAGE_MERGE_BETWEEN_START_AND_FINISH, COMMIT_MESSAGE_SET_VERSION);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
@@ -823,7 +823,6 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
     }
 
-    @Ignore("Should be activated when the check will be implemented")
     @Test
     public void testExecuteFeatureWithoutChanges() throws Exception {
         // set up
@@ -839,12 +838,37 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 "'git add' and 'git commit' to commit some changes into feature branch "
                         + "and 'mvn flow:feature-finish' to run the feature finish again");
 
-        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
         git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
+    }
+
+    @Test
+    public void testExecuteFeatureWithoutChangesAndRebaseWithoutVersionChangeFalse() throws Exception {
+        // set up
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NUMBER);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.rebaseWithoutVersionChange", "false");
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertGitFlowFailureException(result, "There are no real changes in feature branch '" + FEATURE_BRANCH + "'.",
+                "Delete the feature branch or commit some changes first.",
+                "'mvn flow:feature-abort' to delete the feature branch",
+                "'git add' and 'git commit' to commit some changes into feature branch "
+                        + "and 'mvn flow:feature-finish' to run the feature finish again");
+
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
     }
 
     @Test
