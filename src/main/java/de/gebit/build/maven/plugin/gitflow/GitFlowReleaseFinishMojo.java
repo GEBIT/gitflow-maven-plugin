@@ -73,7 +73,8 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
     private boolean releaseMergeNoFF = true;
 
     /**
-     * Whether to use <code>--no-ff</code> option when merging the release branch to production.
+     * Whether to use <code>--no-ff</code> option when merging the release
+     * branch to production.
      *
      * @since 1.5.0
      */
@@ -81,8 +82,9 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
     private boolean releaseMergeProductionNoFF = true;
 
     /**
-     * Goals to perform on release, before tagging and pushing. A useful combination is <code>deploy site</code>. You
-     * may specifify multiple entries, they are perfored
+     * Goals to perform on release, before tagging and pushing. A useful
+     * combination is <code>deploy site</code>. You may specifify multiple
+     * entries, they are perfored
      *
      * @since 1.3.0
      * @since 1.3.9 you can specify multiple entries
@@ -91,8 +93,9 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
     private String[] releaseGoals;
 
     /**
-     * When {@link #skipDeployProject} is activated the invocation of 'deploy' in {@link #releaseGoals} is suppressed.
-     * You can specify a replacement goal that is substituted here (the default is empty).
+     * When {@link #skipDeployProject} is activated the invocation of 'deploy'
+     * in {@link #releaseGoals} is suppressed. You can specify a replacement
+     * goal that is substituted here (the default is empty).
      *
      * @since 1.5.10
      */
@@ -111,7 +114,8 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
     private String developmentVersion;
 
     /**
-     * A release branch can be pushed to the remote to prevent concurrent releases. The default is <code>false</code>.
+     * A release branch can be pushed to the remote to prevent concurrent
+     * releases. The default is <code>false</code>.
      *
      * @since 1.5.0
      */
@@ -119,12 +123,15 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
     private boolean pushReleaseBranch;
 
     /**
-     * When you are releasing using a CI infrastructure the actual deployment might be suppressed until the task
-     * is finished (to make sure every module is deployable). But at this point your checkout is already in the state
-     * for the next development version. Enable this option to checkout the release commit after finishing, which will
-     * result in a detached HEAD (you are on no branch then).
+     * When you are releasing using a CI infrastructure the actual deployment
+     * might be suppressed until the task is finished (to make sure every module
+     * is deployable). But at this point your checkout is already in the state
+     * for the next development version. Enable this option to checkout the
+     * release commit after finishing, which will result in a detached HEAD (you
+     * are on no branch then).
      *
-     * Note that this option implies installProject=false, as otherwise the build artifacts could not be preserved.
+     * Note that this option implies installProject=false, as otherwise the
+     * build artifacts could not be preserved.
      *
      * @since 1.3.11
      */
@@ -203,32 +210,28 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
 
     /** {@inheritDoc} */
     @Override
-    public void execute() throws MojoExecutionException, MojoFailureException {
-        try {
-            // check uncommitted changes
-            checkUncommittedChanges();
+    protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
+        // check uncommitted changes
+        checkUncommittedChanges();
 
-            String gitConfigName = "branch." + gitCurrentBranch() + ".development";
-            String branch = gitGetConfig(gitConfigName);
-            if (branch == null || branch.isEmpty()) {
-                throw new MojoFailureException(
-                        "The release branch has no development branch configured. Use 'git config " + gitConfigName
-                                + " [development branch name]' to configure it.");
-            }
-            boolean releaseOnMaintenanceBranch = branch.startsWith(gitFlowConfig.getMaintenanceBranchPrefix());
-            if (fetchRemote) {
-                // no changes in release branch
-                gitFetchRemoteAndCompare(gitCurrentBranch());
-
-                // if we want to push to production branch it needs to be up-to-date, too
-                if (!releaseOnMaintenanceBranch && !gitFlowConfig.isNoProduction()) {
-                    gitFetchRemoteAndCompare(gitFlowConfig.getProductionBranch());
-                }
-            }
-
-            releaseFinish(branch, releaseOnMaintenanceBranch);
-        } catch (CommandLineException e) {
-            throw new MojoExecutionException("Error while executing external command.", e);
+        String gitConfigName = "branch." + gitCurrentBranch() + ".development";
+        String branch = gitGetConfig(gitConfigName);
+        if (branch == null || branch.isEmpty()) {
+            throw new MojoFailureException("The release branch has no development branch configured. Use 'git config "
+                    + gitConfigName + " [development branch name]' to configure it.");
         }
+        boolean releaseOnMaintenanceBranch = branch.startsWith(gitFlowConfig.getMaintenanceBranchPrefix());
+        if (fetchRemote) {
+            // no changes in release branch
+            gitFetchRemoteAndCompare(gitCurrentBranch());
+
+            // if we want to push to production branch it needs to be
+            // up-to-date, too
+            if (!releaseOnMaintenanceBranch && !gitFlowConfig.isNoProduction()) {
+                gitFetchRemoteAndCompare(gitFlowConfig.getProductionBranch());
+            }
+        }
+
+        releaseFinish(branch, releaseOnMaintenanceBranch);
     }
 }

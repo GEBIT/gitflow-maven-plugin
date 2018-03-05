@@ -2,118 +2,339 @@
 === feature-start ===
 =====================
 
+=====================================
 - Uncommitted changes:
-You have some uncommitted files. Commit or discard local changes in order to proceed, i.e. using 'git add' and 'git commit' or 'git reset --hard' to throw away.
+-------------------------------------
+You have some uncommitted files.
 
+Commit or discard local changes in order to proceed.
+
+How to continue:
+'git add' and 'git commit' to commit your changes
+'git reset --hard' to throw away your changes
+-------------------------------------
+
+
+=====================================
 - Committed (and not pushed) local changes:
-Local branch is ahead of the remote branch master. Execute git push.
-PROPOSAL: Local branch is ahead of the remote branch 'master'. Push commits made on local branch to the remote branch in order to proceed, e.g. using 'git push master'
+-------------------------------------
+Local branch is ahead of the remote branch 'master'.
 
+Push commits made on local branch to the remote branch in order to proceed.
+
+How to continue:
+'git push master'
+-------------------------------------
+
+
+=====================================
 - Remote (not pulled) changes:
-Remote branch is ahead of the local branch master. Execute git pull.
-PROPOSAL: Remote branch is ahead of the local branch 'master'. Pull changes on remote branch to the local branch in order to proceed, e.g. using 'git pull'
+-------------------------------------
+Remote branch is ahead of the local branch 'master'.
 
+Pull changes on remote branch to the local branch in order to proceed.
+
+How to continue:
+'git pull'
+-------------------------------------
+
+
+=====================================
 - Local (not pushed) and remote (not pulled) changes:
-Remote branch is ahead of the local branch master. Execute git pull.
-PROPOSAL: Local and remote branches 'master' diverge. Rebase or merge the changes in local branch in order to proceed, e.g. using 'git pull'.
+-------------------------------------
+Local and remote branches 'master' diverge.
 
+Rebase or merge the changes in local branch in order to proceed.
+
+How to continue:
+'git pull'
+-------------------------------------
+
+
+=====================================
 - Batch mode. FeatureName property not set:
-No featureName set, aborting...
-PROPOSAL: You must specify a featureName, e.g. using 'mvn flow:feature-start -DfeatureName=XXX'
+-------------------------------------
+Property 'featureName' is required in non-interactive mode but was not set.
 
+Specify a featureName or run in interactive mode.
+
+How to continue:
+'mvn flow:feature-start -DfeatureName=XXX -B' to specify 'featureName' in non-interactive mode
+'mvn flow:feature-start' to run in interactive mode
+-------------------------------------
+
+
+=====================================
 - Batch mode. invalid value for featureName property set:
-Set featureName is not valid, aborting...
-PROPOSAL: The feature name XXX is invalid, it must match the pattern 'YYY'
+-------------------------------------
+The feature name 'XXX' is invalid. A feature name must start with the project's JIRA issue key, e.g. GFTST-[number][-optional-short-description]
 
+Specify correct value for parameter 'featureName' and run again.
+-------------------------------------
+
+
+=====================================
+- Batch mode. invalid value for featureName property set (default feature name pattern description):
+-------------------------------------
+The feature name 'XXX' is invalid. It does not match the required pattern: ^(GFTST-\\d+)(?:-[^\\s]*)?$
+
+Specify correct value for parameter 'featureName' and run again.
+-------------------------------------
+
+
+=====================================
 - Feature branch already exists (locally):
-Feature branch with that name already exists. Cannot start feature.
-PROPOSAL: Feature branch 'feature/GFTST-42' already exists. Either checkout the existing feature branch using 'git checkout feature/GSTST-42' or start a new feature with another name.
+-------------------------------------
+Feature branch 'feature/GFTST-42' already exists.
 
+Either checkout the existing feature branch or start a new feature with another name.
+
+How to continue:
+'git checkout feature/GSTST-42' to checkout the feature branch
+'mvn flow:feature-start' to run again and specify another feature name
+-------------------------------------
+
+
+=====================================
 - Feature branch already exists (remote):
-Remote feature branch with that name already exists. Cannot start feature.
-PROPOSAL: Remote feature branch 'feature/GFTST-42' already exists on the remote. Either checkout the existing feature branch using 'git checkout feature/GSTST-42' or start a new feature with another name.
+-------------------------------------
+Remote feature branch 'feature/GFTST-42' already exists on the remote 'origin'.
 
+Either checkout the existing feature branch or start a new feature with another name.
+
+How to continue:
+'git checkout feature/GSTST-42' to checkout the feature branch
+'mvn flow:feature-start' to run again and specify another feature name
+-------------------------------------
+
+
+=====================================
+- Local and remote integration branch diverge (not possible if workflow is not misused):
+-------------------------------------
+Local and remote integration branches 'integration/master' diverge, this indicates a severe error condition on your branches.
+
+Please consult a gitflow expert on how to fix this!
+-------------------------------------
+
+
+=====================================
 - Integration branch is ahead of base branch (not possible if workflow is not misused):
-Failed to determine branch base of 'integration/master' in respect to 'master'.
-PROPOSAL: Integration branch XYZ is ahead of base branch ZYX, this indicates a severe error condition on your branches. Please consult a gitflow expert on how to fix this!
+-------------------------------------
+Integration branch 'integration/master' is ahead of base branch 'master', this indicates a severe error condition on your branches.
 
+Please consult a gitflow expert on how to fix this!
+-------------------------------------
+
+
+=====================================
 - CommandLineException thrown:
-Error while executing external command.
-PROPOSAL: External command execution failed: MESSAGE. Please report the error in the GBLD JIRA.
+-------------------------------------
+External command execution failed with error:
+<message of the CommandLineException>
+
+Please report the error in the GBLD JIRA.
+-------------------------------------
+
+
 
 
 ======================
 === feature-finish ===
 ======================
 
+=====================================
 - Uncommitted changes:
-(siehe oben) You have some uncommitted files. Commit or discard local changes in order to proceed, i.e. using 'git add' and 'git commit' or 'git reset --hard' to throw away.
+-------------------------------------
+You have some uncommitted files.
 
+Commit or discard local changes in order to proceed.
+
+How to continue:
+'git add' and 'git commit' to commit your changes
+'git reset --hard' to throw away your changes
+-------------------------------------
+
+
+=====================================
 - No feature branches in git repository:
-There are no feature branches in your repository. Please start a feature first with 'mvn flow:feature-start'
+-------------------------------------
+There are no feature branches in your repository.
 
+Please start a feature first.
+
+How to continue:
+'mvn flow:feature-start'
+-------------------------------------
+
+
+=====================================
 - Batch mode. Not on a feature branch:
-In non-interactive mode you must execute 'mvn flow:feature-finish' on the feature branch. Please switch to a feature branch first using 'git checkout BRANCH' or execute 'mvn flow:feature-finish' in interactive mode.
+-------------------------------------
+In non-interactive mode 'mvn flow:feature-finish' can be executed only on a feature branch.
 
+Please switch to a feature branch first or run in interactive mode.
+
+How to continue:
+'git checkout BRANCH' to switch to the feature branch
+'mvn flow:feature-finish' to run in interactive mode
+-------------------------------------
+
+
+=====================================
 - No changes in feature branch (maybe user can be prompted to confirm the deletion of feature branch and branch should be deleted automatically?):
-Failed to find base branch for 'feature/GFTST-42'.
-PROPOSAL: There are no real changes in feature branch 'XYZ'. Delete the feature branch using 'mvn flow:feature-abort' or commit some changes first.
+-------------------------------------
+There are no real changes in feature branch 'feature/GFTST-42'.
 
+Delete the feature branch or commit some changes first.
+
+How to continue:
+'mvn flow:feature-abort' to delete the feature branch
+'git add' and 'git commit' to commit some changes into feature branch and 'mvn flow:feature-finish' to run the feature finish again
+-------------------------------------
+
+
+=====================================
 - Selected feature branch has changes locally and remote:
-Remote branch is ahead of the local branch feature/GFTST-42, but cannot reset as local is not an ancestor of remote.
-PROPOSAL: Remote and local feature branches 'feature/GFTST-42' diverge. Rebase or merge the changes in local feature branch 'feature/GFTST-42' first, e.g. using 'git rebase'.
+-------------------------------------
+Remote and local feature branches 'feature/GFTST-42' diverge.
 
+Rebase or merge the changes in local feature branch 'feature/GFTST-42' first.
+
+How to continue:
+'git rebase'
+-------------------------------------
+
+
+=====================================
 - Current feature branch has changes locally and remote:
-Remote branch is ahead of the local branch feature/GFTST-42. Execute git pull.
-(s.o.) PROPOSAL: Remote and local feature branches 'feature/GFTST-42' diverge. Rebase or merge the changes in local feature branch 'feature/GFTST-42' first, e.g. using 'git rebase'.
+-------------------------------------
+Remote and local feature branches 'feature/GFTST-42' diverge.
 
+Rebase or merge the changes in local feature branch 'feature/GFTST-42' first.
+
+How to continue:
+'git rebase'
+-------------------------------------
+
+
+=====================================
 - Base branch has changes locally and remote:
-Remote branch is ahead of the local branch master. Execute git pull.
-PROPOSAL: Remote and local branches 'master' diverge. Rebase the changes in local branch 'master' using 'git checkout MASTER; git rebase' and then include these changes in the feature branch in order to proceed, e.g. using 'git checkout FEATURE; mvn flow:feature-rebase'
+-------------------------------------
+Remote and local base branches 'master' diverge.
 
+Rebase the changes in local branch 'master' and then include these changes in the feature branch 'feature/GFTST-42' in order to proceed.
+
+How to continue:
+'git checkout master' and 'git rebase' to rebase the changes in base branch 'master'
+'git checkout feature/GFTST-42' and 'mvn flow:feature-rebase' to include these changes in the feature branch 'feature/GFTST-42'
+-------------------------------------
+
+
+=====================================
 - Batch mode. Base branch has changes that feature branch doesn't have (base branch is not direct ancestor of feature branch):
-Base branch 'master' has changes that are not yet included in feature branch 'feature/GFTST-42'. Run 'mvn flow:feature-rebase' first in order to proceed.
+-------------------------------------
+Base branch 'master' has changes that are not yet included in feature branch 'feature/GFTST-42'.
 
+Rebase the feature branch first in order to proceed.
+
+How to continue:
+'mvn flow:feature-rebase' to rebase the feature branch
+-------------------------------------
+
+
+=====================================
 - Interactive mode. Base branch has changes that feature branch doesn't have (base branch is not direct ancestor of feature branch). User answered 'no' on prompt to continue with merging of not rebased feature:
-Base branch 'master' has changes that are not yet included in feature branch 'feature/GFTST-42'. Run 'mvn flow:feature-rebase' first in order to proceed.
+-------------------------------------
+Base branch 'master' has changes that are not yet included in feature branch 'feature/GFTST-42'.
 
+Rebase the feature branch first in order to proceed.
+
+How to continue:
+'mvn flow:feature-rebase' to rebase the feature branch
+-------------------------------------
+
+
+=====================================
 - Conflict on rebase that removes version change commit:
-[from git, depends on system locale] error: Failed to merge in the changes.<CR><LF>
-*** LOG INFO: Automatic rebase failed. Fix your merge conflicts and 'git add' your changes. After that, run 'mvn flow:feature-finish' again. Do NOT run git rebase --continue.
-PROPOSAL: Automatic rebase failed. Fix the rebase conflicts and mark them as resolved using 'git add'. After that, run 'mvn flow:feature-finish' again. Do NOT run 'git rebase --continue'.
-Git error message:<CR><LF>
+-------------------------------------
+Automatic rebase failed.
+Git error message:
 <output from git>
 
+Fix the rebase conflicts and mark them as resolved. After that, run 'mvn flow:feature-finish' again. Do NOT run 'git rebase --continue'.
+
+How to continue:
+'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved
+'mvn flow:feature-finish' to continue feature finish process
+-------------------------------------
+
+
+=====================================
 - Manually resolved but not added conflict on rebase that removes version change commit
-[from git, depends on system locale] pom.xml: needs merge<CR><LF>
-You must edit all merge conflicts and then<CR><LF>
-mark them as resolved using git add<CR><LF>
-PROPOSAL: There are unresolved conflicts after rebase. Fix the rebase conflicts and mark them as resolved using 'git add'. After that, run 'mvn flow:feature-finish' again in order to proceed.
-Git error message:<CR><LF>
+-------------------------------------
+There are unresolved conflicts after rebase.
+Git error message:
 <output from git>
 
+Fix the rebase conflicts and mark them as resolved. After that, run 'mvn flow:feature-finish' again. Do NOT run 'git rebase --continue'.
+
+How to continue:
+'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved
+'mvn flow:feature-finish' to continue feature finish process
+-------------------------------------
+
+
+=====================================
 - Conflict on final merge:
-[from git, depends on system locale] Auto-merging testfile.txt<CR><LF>
-CONFLICT (add/add): Merge conflict in testfile.txt<CR><LF>
-Automatic merge failed; fix conflicts and then commit the result.<CR><LF>
-PROPOSAL: Automatic merge failed. Fix the merge conflicts and mark them as resolved using 'git add'. After that, run 'mvn flow:feature-finish' again in order to proceed. Do NOT run 'git merge --continue'.
-Git error message:<CR><LF>
+-------------------------------------
+Automatic merge failed.
+Git error message:
 <output from git>
 
+Fix the merge conflicts and mark them as resolved. After that, run 'mvn flow:feature-finish' again. Do NOT run 'git merge --continue'.
+
+How to continue:
+'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved
+'mvn flow:feature-finish' to continue feature finish process
+-------------------------------------
+
+
+=====================================
 - Conflict on final merge with commits squash:
-[from git, depends on system locale] Auto-merging testfile.txt<CR><LF>
-CONFLICT (add/add): Merge conflict in testfile.txt<CR><LF>
-Squash commit -- not updating HEAD<CR><LF>
-Automatic merge failed; fix conflicts and then commit the result.<CR><LF>
-PROPOSAL: Automatic merge failed. Fix the merge conflicts and mark them as resolved using 'git add'. After that, run 'mvn flow:feature-finish' again in order to proceed. Do NOT run 'git merge --continue'.
-Git error message:<CR><LF>
+-------------------------------------
+Automatic merge failed.
+Git error message:
 <output from git>
 
+Fix the merge conflicts and mark them as resolved. After that, run 'mvn flow:feature-finish' again. Do NOT run 'git merge --continue'.
+
+How to continue:
+'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved
+'mvn flow:feature-finish' to continue feature finish process
+-------------------------------------
+
+
+=====================================
 - Manually resolved but not added conflict on final merge
-PROPOSAL: There are unresolved conflicts after merge. Fix the merge conflicts and mark them as resolved using 'git add'. After that, run 'mvn flow:feature-finish' again in order to proceed.
-Git error message:<CR><LF>
+-------------------------------------
+There are unresolved conflicts after merge.
+Git error message:
 <output from git>
 
+Fix the merge conflicts and mark them as resolved. After that, run 'mvn flow:feature-finish' again. Do NOT run 'git merge --continue'.
+
+How to continue:
+'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved
+'mvn flow:feature-finish' to continue feature finish process
+-------------------------------------
+
+
+=====================================
 - CommandLineException thrown:
-Error while executing external command.
-PROPOSAL: External command execution failed: MESSAGE. Please report the error in the GBLD JIRA.
+-------------------------------------
+External command execution failed with error:
+<message of the CommandLineException>
+
+Please report the error in the GBLD JIRA.
+-------------------------------------
+

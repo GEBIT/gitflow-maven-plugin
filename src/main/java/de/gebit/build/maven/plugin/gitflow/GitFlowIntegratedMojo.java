@@ -24,8 +24,9 @@ import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
- * The git flow integrated marker mojo. Will update the integration branch associated with the current branch to
- * the same reference to mark a successful integration (e.g. after a build is run without any errors).
+ * The git flow integrated marker mojo. Will update the integration branch
+ * associated with the current branch to the same reference to mark a successful
+ * integration (e.g. after a build is run without any errors).
  *
  * @since 1.5.10
  * @author Erwin Tratar
@@ -34,37 +35,33 @@ import org.codehaus.plexus.util.cli.CommandLineException;
 public class GitFlowIntegratedMojo extends AbstractGitFlowMojo {
 
     /**
-     * Specifies an integration branch to update. If not provided a default is computed using  {@link GitFlowConfig#getIntegrationBranchSuffix()}.
+     * Specifies an integration branch to update. If not provided a default is
+     * computed using {@link GitFlowConfig#getIntegrationBranchSuffix()}.
      */
     @Parameter(property = "integrationBranch", defaultValue = "${integrationBranch}", required = false)
     private String integrationBranch;
 
     /** {@inheritDoc} */
     @Override
-    public void execute() throws MojoExecutionException, MojoFailureException {
-        try {
-            // set git flow configuration
-            initGitFlowConfig();
+    protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
+        // set git flow configuration
+        initGitFlowConfig();
 
-            if (StringUtils.isBlank(integrationBranch)) {
-                integrationBranch = gitFlowConfig.getIntegrationBranchPrefix() + gitCurrentBranch();
+        if (StringUtils.isBlank(integrationBranch)) {
+            integrationBranch = gitFlowConfig.getIntegrationBranchPrefix() + gitCurrentBranch();
 
-                if (settings.isInteractiveMode()) {
-                    try {
-                        integrationBranch = prompter.prompt("What is the integration branch name?", integrationBranch);
-                    } catch (PrompterException e) {
-                        throw new MojoFailureException("Failed to get integration branch name", e);
-                    }
+            if (settings.isInteractiveMode()) {
+                try {
+                    integrationBranch = prompter.prompt("What is the integration branch name?", integrationBranch);
+                } catch (PrompterException e) {
+                    throw new MojoFailureException("Failed to get integration branch name", e);
                 }
             }
+        }
 
-            gitUpdateRef(integrationBranch, "HEAD");
-            if (pushRemote)  {
-                gitPush(integrationBranch, false, false);
-            }
-
-        } catch (CommandLineException e) {
-            throw new MojoExecutionException("Error while executing external command.", e);
+        gitUpdateRef(integrationBranch, "HEAD");
+        if (pushRemote) {
+            gitPush(integrationBranch, false, false);
         }
     }
 }

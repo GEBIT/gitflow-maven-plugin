@@ -25,87 +25,80 @@ import org.codehaus.plexus.util.cli.CommandLineException;
 @Mojo(name = "branch-config", aggregator = true)
 public class GitFlowBranchConfigMojo extends AbstractGitFlowMojo {
 
-	/**
-	 * Set the property name to specify. If not set in interactive mode you will be asked.
-	 *
-	 * @since 1.4.0
-	 */
-	@Parameter(property = "propertyName")
-	private String propertyName;
+    /**
+     * Set the property name to specify. If not set in interactive mode you will
+     * be asked.
+     *
+     * @since 1.4.0
+     */
+    @Parameter(property = "propertyName")
+    private String propertyName;
 
-	/**
-	 * Specify the property value to set. If not specified, the property is removed (in interactive mode you will be
-	 * asked).
-	 *
-	 * @since 1.4.0
-	 */
-	@Parameter(property = "propertyValue")
-	private String propertyValue;
+    /**
+     * Specify the property value to set. If not specified, the property is
+     * removed (in interactive mode you will be asked).
+     *
+     * @since 1.4.0
+     */
+    @Parameter(property = "propertyValue")
+    private String propertyValue;
 
-	/**
-	 * Name of the branch to configure. If not specified the current branch is used.
-	 *
-	 * @since 1.4.0
-	 */
-	@Parameter(property = "branchName")
-	private String branchName;
+    /**
+     * Name of the branch to configure. If not specified the current branch is
+     * used.
+     *
+     * @since 1.4.0
+     */
+    @Parameter(property = "branchName")
+    private String branchName;
 
-	/**
-	 * Name of the branch used to hold the branch configuration properties.
-	 *
-	 * @since 1.4.0
-	 */
-	@Parameter(property = "configBranchName", defaultValue = "branch-config")
-	private String configBranchName;
+    /**
+     * Name of the branch used to hold the branch configuration properties.
+     *
+     * @since 1.4.0
+     */
+    @Parameter(property = "configBranchName", defaultValue = "branch-config")
+    private String configBranchName;
 
-	/**
-	 * Name of the directory used to temporarily and locally checkout the configuration branch.
-	 *
-	 * @since 1.4.0
-	 */
-	@Parameter(property = "configBranchDir", defaultValue = ".branch-config")
-	private String configBranchDir;
+    /**
+     * Name of the directory used to temporarily and locally checkout the
+     * configuration branch.
+     *
+     * @since 1.4.0
+     */
+    @Parameter(property = "configBranchDir", defaultValue = ".branch-config")
+    private String configBranchDir;
 
-	/** {@inheritDoc} */
-	@Override
-	public void execute() throws MojoExecutionException, MojoFailureException {
-		try {
-			// set git flow configuration
-			initGitFlowConfig();
+    /** {@inheritDoc} */
+    @Override
+    protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
+        // set git flow configuration
+        initGitFlowConfig();
 
-			if (settings.isInteractiveMode() && propertyName == null) {
-				try {
-					propertyName = prompter.prompt("Which property to modify?");
-				} catch (PrompterException e) {
-					getLog().error(e);
-				}
-			}
+        if (settings.isInteractiveMode() && propertyName == null) {
+            try {
+                propertyName = prompter.prompt("Which property to modify?");
+            } catch (PrompterException e) {
+                getLog().error(e);
+            }
+        }
 
-			if (settings.isInteractiveMode() && propertyValue == null) {
-				try {
-					propertyValue = prompter.prompt("Set the value to (empty to delete)");
-				} catch (PrompterException e) {
-					getLog().error(e);
-				}
-			}
+        if (settings.isInteractiveMode() && propertyValue == null) {
+            try {
+                propertyValue = prompter.prompt("Set the value to (empty to delete)");
+            } catch (PrompterException e) {
+                getLog().error(e);
+            }
+        }
 
-			if (StringUtils.isBlank(propertyName)) {
-				throw new MojoFailureException("No property name set, aborting....");
-			}
+        if (StringUtils.isBlank(propertyName)) {
+            throw new MojoFailureException("No property name set, aborting....");
+        }
 
-			// modify the branch config
-			String currentBranch = branchName != null ? branchName : gitCurrentBranch();
-			getLog().info("Settting branch property '"
-					+ propertyName
-					+ "' for '"
-					+ currentBranch
-					+ "' to '"
-					+ propertyValue
-					+ "'");
-			gitBranchConfigWorktree(currentBranch, configBranchName, configBranchDir, propertyName, propertyValue);
-
-		} catch (CommandLineException e) {
-		    throw new MojoExecutionException("Error while executing external command.", e);
-		}
-	}
+        // modify the branch config
+        String currentBranch = branchName != null ? branchName : gitCurrentBranch();
+        getLog().info("Settting branch property '" + propertyName + "' for '" + currentBranch + "' to '" + propertyValue
+                + "'");
+        gitBranchConfigWorktree(currentBranch, configBranchName, configBranchDir, propertyName, propertyValue);
+    }
 }

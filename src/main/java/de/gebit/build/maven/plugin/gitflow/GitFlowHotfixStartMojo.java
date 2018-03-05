@@ -35,90 +35,80 @@ public class GitFlowHotfixStartMojo extends AbstractGitFlowMojo {
 
     /** {@inheritDoc} */
     @Override
-    public void execute() throws MojoExecutionException, MojoFailureException {
+    protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
+        // set git flow configuration
+        initGitFlowConfig();
+
+        // check uncommitted changes
+        checkUncommittedChanges();
+
+        // need to be in master to get correct project version
+        // git checkout master
+        gitCheckout(gitFlowConfig.isNoProduction() ? gitFlowConfig.getDevelopmentBranch()
+                : gitFlowConfig.getProductionBranch());
+
+        // fetch and check remote
+        if (fetchRemote) {
+            gitFetchRemoteAndCompare(gitFlowConfig.isNoProduction() ? gitFlowConfig.getDevelopmentBranch()
+                    : gitFlowConfig.getProductionBranch());
+        }
+
+        // get current project version from pom
+        final String currentVersion = getCurrentProjectVersion();
+
+        String defaultVersion = null;
+        // get default hotfix version
         try {
-            // set git flow configuration
-            initGitFlowConfig();
+            final DefaultVersionInfo versionInfo = new DefaultVersionInfo(currentVersion);
+            defaultVersion = versionInfo.getNextVersion().getReleaseVersionString();
 
-            // check uncommitted changes
-            checkUncommittedChanges();
-
-            // need to be in master to get correct project version
-            // git checkout master
-            gitCheckout(gitFlowConfig.isNoProduction() ?
-                    gitFlowConfig.getDevelopmentBranch() : gitFlowConfig.getProductionBranch());
-
-            // fetch and check remote
-            if (fetchRemote) {
-                gitFetchRemoteAndCompare(gitFlowConfig.isNoProduction() ?
-                        gitFlowConfig.getDevelopmentBranch() : gitFlowConfig.getProductionBranch());
+            if (tychoBuild && ArtifactUtils.isSnapshot(currentVersion)) {
+                defaultVersion += "-" + Artifact.SNAPSHOT_VERSION;
             }
-
-            // get current project version from pom
-            final String currentVersion = getCurrentProjectVersion();
-
-            String defaultVersion = null;
-            // get default hotfix version
-            try {
-                final DefaultVersionInfo versionInfo = new DefaultVersionInfo(
-                        currentVersion);
-                defaultVersion = versionInfo.getNextVersion()
-                        .getReleaseVersionString();
-
-                if (tychoBuild && ArtifactUtils.isSnapshot(currentVersion)) {
-                    defaultVersion += "-" + Artifact.SNAPSHOT_VERSION;
-                }
-            } catch (VersionParseException e) {
-                if (getLog().isDebugEnabled()) {
-                    getLog().debug(e);
-                }
+        } catch (VersionParseException e) {
+            if (getLog().isDebugEnabled()) {
+                getLog().debug(e);
             }
+        }
 
-            if (defaultVersion == null) {
-                throw new MojoFailureException(
-                        "Cannot get default project version.");
-            }
+        if (defaultVersion == null) {
+            throw new MojoFailureException("Cannot get default project version.");
+        }
 
-            String version = null;
-            try {
-                version = prompter.prompt("What is the hotfix version? ["
-                        + defaultVersion + "]");
-            } catch (PrompterException e) {
-                getLog().error(e);
-            }
+        String version = null;
+        try {
+            version = prompter.prompt("What is the hotfix version? [" + defaultVersion + "]");
+        } catch (PrompterException e) {
+            getLog().error(e);
+        }
 
-            if (StringUtils.isBlank(version)) {
-                version = defaultVersion;
-            }
+        if (StringUtils.isBlank(version)) {
+            version = defaultVersion;
+        }
 
-            // git for-each-ref refs/heads/hotfix/...
-            final String hotfixBranch = gitFindBranch(gitFlowConfig
-                    .getHotfixBranchPrefix() + version);
+        // git for-each-ref refs/heads/hotfix/...
+        final String hotfixBranch = gitFindBranch(gitFlowConfig.getHotfixBranchPrefix() + version);
 
-            if (StringUtils.isNotBlank(hotfixBranch)) {
-                throw new MojoFailureException(
-                        "Hotfix branch with that name already exists. Cannot start hotfix.");
-            }
+        if (StringUtils.isNotBlank(hotfixBranch)) {
+            throw new MojoFailureException("Hotfix branch with that name already exists. Cannot start hotfix.");
+        }
 
-            // git checkout -b hotfix/... master
-            gitCreateAndCheckout(gitFlowConfig.getHotfixBranchPrefix() + version, gitFlowConfig.isNoProduction() ?
-                    gitFlowConfig.getDevelopmentBranch() : gitFlowConfig.getProductionBranch());
+        // git checkout -b hotfix/... master
+        gitCreateAndCheckout(gitFlowConfig.getHotfixBranchPrefix() + version, gitFlowConfig.isNoProduction()
+                ? gitFlowConfig.getDevelopmentBranch() : gitFlowConfig.getProductionBranch());
 
-            // execute if version changed
-            if (!version.equals(currentVersion)) {
-                // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
-                mvnSetVersions(version, null);
+        // execute if version changed
+        if (!version.equals(currentVersion)) {
+            // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
+            mvnSetVersions(version, null);
 
-                // git commit -a -m updating versions for hotfix
-                gitCommit(commitMessages.getHotfixStartMessage());
-            }
+            // git commit -a -m updating versions for hotfix
+            gitCommit(commitMessages.getHotfixStartMessage());
+        }
 
-            if (installProject) {
-                // mvn clean install
-                mvnCleanInstall();
-            }
-        } catch (CommandLineException e) {
-            throw new MojoExecutionException("Error while executing external command.", e);
+        if (installProject) {
+            // mvn clean install
+            mvnCleanInstall();
         }
     }
 }

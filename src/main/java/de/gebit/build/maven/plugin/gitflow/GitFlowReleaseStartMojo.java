@@ -56,7 +56,8 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
     private String releaseVersion;
 
     /**
-     * A release branch can be pushed to the remote to prevent concurrent releases. The default is <code>false</code>.
+     * A release branch can be pushed to the remote to prevent concurrent
+     * releases. The default is <code>false</code>.
      *
      * @since 1.5.0
      */
@@ -135,17 +136,13 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
 
     /** {@inheritDoc} */
     @Override
-    public void execute() throws MojoExecutionException, MojoFailureException {
-        try {
-            // set git flow configuration
-            initGitFlowConfig();
+    protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
+        // set git flow configuration
+        initGitFlowConfig();
 
-            // check uncommitted changes
-            checkUncommittedChanges();
+        // check uncommitted changes
+        checkUncommittedChanges();
 
-            releaseStart();
-        } catch (CommandLineException e) {
-            throw new MojoExecutionException("Error while executing external command.", e);
-        }
+        releaseStart();
     }
 }

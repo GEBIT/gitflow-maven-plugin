@@ -17,77 +17,74 @@ import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
- * The git flow build version mojo. Used to temporarily append a build identifier to the version, e.g. for a CI build.
- * Always operates on the current branch.
+ * The git flow build version mojo. Used to temporarily append a build
+ * identifier to the version, e.g. for a CI build. Always operates on the
+ * current branch.
  *
  * @author Erwin Tratar
  */
 @Mojo(name = "build-version", aggregator = true)
 public class GitFlowBuildVersionMojo extends AbstractGitFlowMojo {
 
-	/**
-	 * Specifies the build version that is appended to the version using a `-' separator.
-	 *
-	 * @since 1.3.0
-	 */
-	@Parameter(property = "buildVersion", defaultValue = "${buildVersion}", required = false)
-	private String buildVersion;
+    /**
+     * Specifies the build version that is appended to the version using a `-'
+     * separator.
+     *
+     * @since 1.3.0
+     */
+    @Parameter(property = "buildVersion", defaultValue = "${buildVersion}", required = false)
+    private String buildVersion;
 
-	/** {@inheritDoc} */
-	@Override
-	public void execute() throws MojoExecutionException, MojoFailureException {
-		try {
-			// set git flow configuration
-			initGitFlowConfig();
+    /** {@inheritDoc} */
+    @Override
+    protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
+        // set git flow configuration
+        initGitFlowConfig();
 
-			// get current project version from pom
-			final String currentVersion = getCurrentProjectVersion();
+        // get current project version from pom
+        final String currentVersion = getCurrentProjectVersion();
 
-			String baseVersion = null;
-			// get default release version
-			try {
-				DefaultVersionInfo versionInfo = new DefaultVersionInfo(currentVersion);
-				baseVersion = versionInfo.getReleaseVersionString();
-				if (tychoBuild) {
-					baseVersion = makeValidTychoVersion(baseVersion);
-				}
-			} catch (VersionParseException e) {
-				if (getLog().isDebugEnabled()) {
-					getLog().debug(e);
-				}
-			}
+        String baseVersion = null;
+        // get default release version
+        try {
+            DefaultVersionInfo versionInfo = new DefaultVersionInfo(currentVersion);
+            baseVersion = versionInfo.getReleaseVersionString();
+            if (tychoBuild) {
+                baseVersion = makeValidTychoVersion(baseVersion);
+            }
+        } catch (VersionParseException e) {
+            if (getLog().isDebugEnabled()) {
+                getLog().debug(e);
+            }
+        }
 
-			if (baseVersion == null) {
-				throw new MojoFailureException("Cannot get default project version.");
-			}
+        if (baseVersion == null) {
+            throw new MojoFailureException("Cannot get default project version.");
+        }
 
-			if (settings.isInteractiveMode() && buildVersion == null) {
-				try {
-					buildVersion = prompter.prompt("What is build version? ");
-				} catch (PrompterException e) {
-					getLog().error(e);
-				}
-			}
+        if (settings.isInteractiveMode() && buildVersion == null) {
+            try {
+                buildVersion = prompter.prompt("What is build version? ");
+            } catch (PrompterException e) {
+                getLog().error(e);
+            }
+        }
 
-			if (StringUtils.isBlank(buildVersion)) {
-				getLog().info("No Build version set, aborting....");
-				return;
-			}
+        if (StringUtils.isBlank(buildVersion)) {
+            getLog().info("No Build version set, aborting....");
+            return;
+        }
 
-			// mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
-			if (tychoBuild) {
-				// convert the base Version to OSGi
-				if (StringUtils.countMatches(baseVersion, ".") < 4) {
-					mvnSetVersions(baseVersion + "." + buildVersion, "");
-				} else {
-					mvnSetVersions(baseVersion + "_" + buildVersion, "");
-				}
-			} else {
-				mvnSetVersions(baseVersion + "-" + buildVersion, "");
-			}
-
-		} catch (CommandLineException e) {
-		    throw new MojoExecutionException("Error while executing external command.", e);
-		}
-	}
+        // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
+        if (tychoBuild) {
+            // convert the base Version to OSGi
+            if (StringUtils.countMatches(baseVersion, ".") < 4) {
+                mvnSetVersions(baseVersion + "." + buildVersion, "");
+            } else {
+                mvnSetVersions(baseVersion + "_" + buildVersion, "");
+            }
+        } else {
+            mvnSetVersions(baseVersion + "-" + buildVersion, "");
+        }
+    }
 }

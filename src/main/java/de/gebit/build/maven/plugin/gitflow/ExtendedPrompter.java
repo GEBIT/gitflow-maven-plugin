@@ -13,7 +13,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.maven.plugin.MojoFailureException;
 import org.codehaus.plexus.components.interactivity.Prompter;
 import org.codehaus.plexus.components.interactivity.PrompterException;
 import org.codehaus.plexus.util.StringUtils;
@@ -77,17 +76,18 @@ public class ExtendedPrompter implements Prompter {
     /**
      * Prompts for a value if interactive mode is enabled. Propmts in a loop
      * until non-empty value is entered.<br>
-     * In case of batch mode an {@link MojoFailureException} will be thrown.
+     * In case of batch mode an {@link GitFlowFailureException} will be thrown.
      *
      * @param promptMessage
      *            the message to be shown in prompt
      * @param parameterName
      *            the name of the parameter to be used in exception messages
      * @return a non-empty value
-     * @throws MojoFailureException
+     * @throws GitFlowFailureException
      *             in case of batch mode or error while prompting
      */
-    public String promptRequiredParameterValue(String promptMessage, String parameterName) throws MojoFailureException {
+    public String promptRequiredParameterValue(String promptMessage, String parameterName)
+            throws GitFlowFailureException {
         return promptRequiredParameterValue(promptMessage, parameterName, null, null, null, null);
     }
 
@@ -95,8 +95,8 @@ public class ExtendedPrompter implements Prompter {
      * Prompts for a value if interactive mode is enabled. Propmts in a loop
      * until non-empty value is entered. If a non-empty init value provided it
      * will be returned without prompting.<br>
-     * In case of batch mode an {@link MojoFailureException} will be thrown if
-     * no non-empty init value provided.
+     * In case of batch mode an {@link GitFlowFailureException} will be thrown
+     * if no non-empty init value provided.
      *
      * @param promptMessage
      *            the message to be shown in prompt
@@ -105,12 +105,12 @@ public class ExtendedPrompter implements Prompter {
      * @param initValue
      *            the init value (can be <code>null</code>)
      * @return a non-empty value
-     * @throws MojoFailureException
+     * @throws GitFlowFailureException
      *             in case of empty init value in batch mode or error while
      *             prompting
      */
     public String promptRequiredParameterValue(String promptMessage, String parameterName, String initValue)
-            throws MojoFailureException {
+            throws GitFlowFailureException {
         return promptRequiredParameterValue(promptMessage, parameterName, initValue, null, null, null);
     }
 
@@ -118,8 +118,8 @@ public class ExtendedPrompter implements Prompter {
      * Prompts for a value if interactive mode is enabled. Propmts in a loop
      * until non-empty value is entered. If a non-empty init value provided it
      * will be returned without prompting.<br>
-     * In case of batch mode an {@link MojoFailureException} will be thrown if
-     * no non-empty init value provided.
+     * In case of batch mode an {@link GitFlowFailureException} will be thrown
+     * if no non-empty init value provided.
      *
      * @param promptMessage
      *            the message to be shown in prompt
@@ -131,12 +131,12 @@ public class ExtendedPrompter implements Prompter {
      *            the default value to be used in prompt (can be
      *            <code>null</code>)
      * @return a non-empty value
-     * @throws MojoFailureException
+     * @throws GitFlowFailureException
      *             in case of empty init value in batch mode or error while
      *             prompting
      */
     public String promptRequiredParameterValue(String promptMessage, String parameterName, String initValue,
-            String defaultValue) throws MojoFailureException {
+            String defaultValue) throws GitFlowFailureException {
         return promptRequiredParameterValue(promptMessage, parameterName, initValue, defaultValue, null, null);
     }
 
@@ -144,8 +144,8 @@ public class ExtendedPrompter implements Prompter {
      * Prompts for a value if interactive mode is enabled. Propmts in a loop
      * until non-empty value is entered. If a non-empty init value provided it
      * will be returned without prompting.<br>
-     * In case of batch mode an {@link MojoFailureException} will be thrown if
-     * no non-empty init value provided.
+     * In case of batch mode an {@link GitFlowFailureException} will be thrown
+     * if no non-empty init value provided.
      *
      * @param promptMessage
      *            the message to be shown in prompt
@@ -159,12 +159,12 @@ public class ExtendedPrompter implements Prompter {
      * @param possibleValues
      *            the possible values (can be <code>null</code>)
      * @return a non-empty value
-     * @throws MojoFailureException
+     * @throws GitFlowFailureException
      *             in case of empty init value in batch mode or error while
      *             prompting
      */
     public String promptRequiredParameterValue(String promptMessage, String parameterName, String initValue,
-            String defaultValue, List<String> possibleValues) throws MojoFailureException {
+            String defaultValue, List<String> possibleValues) throws GitFlowFailureException {
         return promptRequiredParameterValue(promptMessage, parameterName, initValue, defaultValue, possibleValues,
                 null);
     }
@@ -172,7 +172,7 @@ public class ExtendedPrompter implements Prompter {
     /**
      * Prompts for a value if interactive mode is enabled. Propmts in a loop
      * until non-empty valid value is entered.<br>
-     * In case of batch mode an {@link MojoFailureException} will be thrown.
+     * In case of batch mode an {@link GitFlowFailureException} will be thrown.
      *
      * @param promptMessage
      *            the message to be shown in prompt
@@ -181,11 +181,11 @@ public class ExtendedPrompter implements Prompter {
      * @param validator
      *            the optional validator to validate the non-empty value
      * @return a non-empty valid value
-     * @throws MojoFailureException
+     * @throws GitFlowFailureException
      *             in case of batch mode or error while prompting
      */
     public String promptRequiredParameterValue(String promptMessage, String parameterName, StringValidator validator)
-            throws MojoFailureException {
+            throws GitFlowFailureException {
         return promptRequiredParameterValue(promptMessage, parameterName, null, null, validator);
     }
 
@@ -193,8 +193,8 @@ public class ExtendedPrompter implements Prompter {
      * Prompts for a value if interactive mode is enabled. Propmts in a loop
      * until non-empty valid value is entered. If a valid init value provided it
      * will be returned without prompting.<br>
-     * In case of batch mode an {@link MojoFailureException} will be thrown if
-     * no valid init value provided.
+     * In case of batch mode an {@link GitFlowFailureException} will be thrown
+     * if no valid init value provided.
      *
      * @param promptMessage
      *            the message to be shown in prompt
@@ -205,12 +205,12 @@ public class ExtendedPrompter implements Prompter {
      * @param validator
      *            the optional validator to validate the non-empty value
      * @return a non-empty valid value
-     * @throws MojoFailureException
+     * @throws GitFlowFailureException
      *             in case of invalid init value in batch mode or error while
      *             prompting
      */
     public String promptRequiredParameterValue(String promptMessage, String parameterName, String initValue,
-            StringValidator validator) throws MojoFailureException {
+            StringValidator validator) throws GitFlowFailureException {
         return promptRequiredParameterValue(promptMessage, parameterName, initValue, null, validator);
     }
 
@@ -218,8 +218,8 @@ public class ExtendedPrompter implements Prompter {
      * Prompts for a value if interactive mode is enabled. Propmts in a loop
      * until non-empty valid value is entered. If a valid init value provided it
      * will be returned without prompting.<br>
-     * In case of batch mode an {@link MojoFailureException} will be thrown if
-     * no valid init value provided.
+     * In case of batch mode an {@link GitFlowFailureException} will be thrown
+     * if no valid init value provided.
      *
      * @param promptMessage
      *            the message to be shown in prompt
@@ -233,12 +233,13 @@ public class ExtendedPrompter implements Prompter {
      *            the message to be used in exception if an empty init value
      *            provided in batch mode
      * @return a non-empty valid value
-     * @throws MojoFailureException
+     * @throws GitFlowFailureException
      *             in case of invalid init value in batch mode or error while
      *             prompting
      */
     public String promptRequiredParameterValue(String promptMessage, String parameterName, String initValue,
-            StringValidator validator, String missingValueInBatchModeMessage) throws MojoFailureException {
+            StringValidator validator, GitFlowFailureInfo missingValueInBatchModeMessage)
+            throws GitFlowFailureException {
         return promptRequiredParameterValue(promptMessage, parameterName, initValue, null, null, validator,
                 missingValueInBatchModeMessage);
     }
@@ -247,8 +248,8 @@ public class ExtendedPrompter implements Prompter {
      * Prompts for a value if interactive mode is enabled. Propmts in a loop
      * until non-empty valid value is entered. If a valid init value provided it
      * will be returned without prompting.<br>
-     * In case of batch mode an {@link MojoFailureException} will be thrown if
-     * no valid init value provided.
+     * In case of batch mode an {@link GitFlowFailureException} will be thrown
+     * if no valid init value provided.
      *
      * @param promptMessage
      *            the message to be shown in prompt
@@ -262,12 +263,12 @@ public class ExtendedPrompter implements Prompter {
      * @param validator
      *            the optional validator to validate the non-empty value
      * @return a non-empty valid value
-     * @throws MojoFailureException
+     * @throws GitFlowFailureException
      *             in case of invalid init value in batch mode or error while
      *             prompting
      */
     public String promptRequiredParameterValue(String promptMessage, String parameterName, String initValue,
-            String defaultValue, StringValidator validator) throws MojoFailureException {
+            String defaultValue, StringValidator validator) throws GitFlowFailureException {
         return promptRequiredParameterValue(promptMessage, parameterName, initValue, defaultValue, null, validator);
     }
 
@@ -275,8 +276,8 @@ public class ExtendedPrompter implements Prompter {
      * Prompts for a value if interactive mode is enabled. Propmts in a loop
      * until non-empty valid value is entered. If a valid init value provided it
      * will be returned without prompting.<br>
-     * In case of batch mode an {@link MojoFailureException} will be thrown if
-     * no valid init value provided.
+     * In case of batch mode an {@link GitFlowFailureException} will be thrown
+     * if no valid init value provided.
      *
      * @param promptMessage
      *            the message to be shown in prompt
@@ -292,12 +293,13 @@ public class ExtendedPrompter implements Prompter {
      * @param validator
      *            the optional validator to validate the non-empty value
      * @return a non-empty valid value
-     * @throws MojoFailureException
+     * @throws GitFlowFailureException
      *             in case of invalid init value in batch mode or error while
      *             prompting
      */
     public String promptRequiredParameterValue(String promptMessage, String parameterName, String initValue,
-            String defaultValue, List<String> possibleValues, StringValidator validator) throws MojoFailureException {
+            String defaultValue, List<String> possibleValues, StringValidator validator)
+            throws GitFlowFailureException {
         return promptRequiredParameterValue(promptMessage, parameterName, initValue, defaultValue, possibleValues,
                 validator, null);
     }
@@ -306,8 +308,8 @@ public class ExtendedPrompter implements Prompter {
      * Prompts for a value if interactive mode is enabled. Propmts in a loop
      * until non-empty valid value is entered. If a valid init value provided it
      * will be returned without prompting.<br>
-     * In case of batch mode an {@link MojoFailureException} will be thrown if
-     * no valid init value provided.
+     * In case of batch mode an {@link GitFlowFailureException} will be thrown
+     * if no valid init value provided.
      *
      * @param promptMessage
      *            the message to be shown in prompt
@@ -326,13 +328,13 @@ public class ExtendedPrompter implements Prompter {
      *            the message to be used in exception if an empty init value
      *            provided in batch mode
      * @return a non-empty valid value
-     * @throws MojoFailureException
+     * @throws GitFlowFailureException
      *             in case of invalid init value in batch mode or error while
      *             prompting
      */
     public String promptRequiredParameterValue(String promptMessage, String parameterName, String initValue,
             String defaultValue, List<String> possibleValues, StringValidator validator,
-            String missingValueInBatchModeMessage) throws MojoFailureException {
+            GitFlowFailureInfo missingValueInBatchModeMessage) throws GitFlowFailureException {
         String value = initValue;
         if (interactiveMode) {
             try {
@@ -364,24 +366,26 @@ public class ExtendedPrompter implements Prompter {
                     }
                 } while (StringUtils.isBlank(value));
             } catch (PrompterException e) {
-                throw new MojoFailureException("Failed to get " + parameterName, e);
+                throw new GitFlowFailureException(e,
+                        createPromptErrorMessage("Failed to get '" + parameterName + "' from user prompt"));
             }
         } else {
             if (StringUtils.isBlank(value)) {
                 value = defaultValue;
             }
             if (StringUtils.isBlank(value)) {
-                String errorMessage;
-                if (!StringUtils.isBlank(missingValueInBatchModeMessage)) {
-                    errorMessage = missingValueInBatchModeMessage;
+                if (missingValueInBatchModeMessage != null) {
+                    throw new GitFlowFailureException(missingValueInBatchModeMessage);
                 } else {
-                    errorMessage = "No " + parameterName + " set, aborting...";
+                    throw new GitFlowFailureException(
+                            "Parameter '" + parameterName + "' is required in non-interactive mode.",
+                            "Specify a value for '" + parameterName + "' or run in interactive mode.");
                 }
-                throw new MojoFailureException(errorMessage);
             }
             if (!CollectionUtils.isEmpty(possibleValues)) {
                 if (!possibleValues.contains(value)) {
-                    throw new MojoFailureException("Set " + parameterName + " is not valid, aborting...");
+                    throw new GitFlowFailureException("Parameter '" + parameterName + "' is not valid.",
+                            "Specify correct value for parameter '" + parameterName + "' and run again.");
                 }
             }
 
@@ -393,13 +397,20 @@ public class ExtendedPrompter implements Prompter {
                     if (!StringUtils.isBlank(invalidMessage)) {
                         errorMessage = invalidMessage;
                     } else {
-                        errorMessage = "Set " + parameterName + " is not valid, aborting...";
+                        errorMessage = "Parameter '" + parameterName + "' is not valid.";
                     }
-                    throw new MojoFailureException(errorMessage);
+                    throw new GitFlowFailureException(errorMessage,
+                            "Specify correct value for parameter '" + parameterName + "' and run again.");
                 }
             }
         }
         return value;
+    }
+
+    private GitFlowFailureInfo createPromptErrorMessage(final String promptError) {
+        return new GitFlowFailureInfo(promptError,
+                "Either run in non-interactive mode using '-B' parameter or run in an environment where user "
+                        + "interaction is possible.");
     }
 
     /**
@@ -415,19 +426,19 @@ public class ExtendedPrompter implements Prompter {
      *            the answer to be returned if batch mode active
      * @return <code>true</code> in case of positive answer, otherwise
      *         <code>false</code>
-     * @throws MojoFailureException
+     * @throws GitFlowFailureException
      *             in case oferror while prompting
      */
     public boolean promptConfirmation(String promptMessage, Boolean defaultValue, boolean batchModeValue)
-            throws MojoFailureException {
+            throws GitFlowFailureException {
         return promptConfirmation(promptMessage, defaultValue, batchModeValue, null);
     }
 
     /**
      * Prompts for a confirmation with yes/no options. If a non-null
      * batchModeValue provided than this value will be returned in batch mode.
-     * Otherwise a {@link MojoFailureException} with batchModeErrorMessage will
-     * be thrown.
+     * Otherwise a {@link GitFlowFailureException} with batchModeErrorMessage
+     * will be thrown.
      *
      * @param promptMessage
      *            the message to be shown in prompt
@@ -441,12 +452,12 @@ public class ExtendedPrompter implements Prompter {
      *            the error message to be used in exception in batch mode
      * @return <code>true</code> in case of positive answer, otherwise
      *         <code>false</code>
-     * @throws MojoFailureException
+     * @throws GitFlowFailureException
      *             in case of batchModeValue=<code>null</code> in batch mode or
      *             error while prompting
      */
     public boolean promptConfirmation(String promptMessage, Boolean defaultValue, Boolean batchModeValue,
-            String batchModeErrorMessage) throws MojoFailureException {
+            GitFlowFailureInfo batchModeErrorMessage) throws GitFlowFailureException {
         if (interactiveMode) {
             try {
                 String answer;
@@ -457,21 +468,29 @@ public class ExtendedPrompter implements Prompter {
                 }
                 return "y".equalsIgnoreCase(answer);
             } catch (PrompterException e) {
-                throw new MojoFailureException("Failed to get user confirmation", e);
+                throw new GitFlowFailureException(e,
+                        createPromptErrorMessage("Failed to get confirmation from user prompt."));
             }
         } else {
             if (batchModeValue == null) {
-                throw new MojoFailureException(
-                        batchModeErrorMessage != null ? batchModeErrorMessage : "Interactive mode is required.");
+                throw new GitFlowFailureException(
+                        batchModeErrorMessage != null ? batchModeErrorMessage : getInteractiveModeRequiredMessage());
             }
             return batchModeValue;
         }
     }
 
+    private GitFlowFailureInfo getInteractiveModeRequiredMessage() {
+        return new GitFlowFailureInfo("Interactive mode is required to execute the goal.",
+                "Please run again in interactive mode or report the problem in the GBLD JIRA if the goal should be "
+                        + "executable also in non-interactive mode.");
+    }
+
     /**
      * Propmpts to select a value from the passed list of possible values by
      * entering a value number. If batch mode is active a
-     * {@link MojoFailureException} with batchModeErrorMessage will be thrown.
+     * {@link GitFlowFailureException} with batchModeErrorMessage will be
+     * thrown.
      *
      * @param promptMessagePrefix
      *            the message prefix that will be shown in prompt before the
@@ -484,12 +503,12 @@ public class ExtendedPrompter implements Prompter {
      * @param batchModeErrorMessage
      *            the error message to be used in exception in batch mode
      * @return the selected value
-     * @throws MojoFailureException
+     * @throws GitFlowFailureException
      *             in case of active batch mode, empty list of possible values
      *             or error while prompting
      */
     public String promptToSelectFromOrderedList(String promptMessagePrefix, String promptMessageSuffix,
-            List<String> possibleValues, String batchModeErrorMessage) throws MojoFailureException {
+            List<String> possibleValues, GitFlowFailureInfo batchModeErrorMessage) throws GitFlowFailureException {
         return promptToSelectFromOrderedList(promptMessagePrefix, promptMessageSuffix,
                 possibleValues == null ? null : possibleValues.toArray(new String[possibleValues.size()]),
                 batchModeErrorMessage);
@@ -498,7 +517,8 @@ public class ExtendedPrompter implements Prompter {
     /**
      * Propmpts to select a value from the passed list of possible values by
      * entering a value number. If batch mode is active a
-     * {@link MojoFailureException} with batchModeErrorMessage will be thrown.
+     * {@link GitFlowFailureException} with batchModeErrorMessage will be
+     * thrown.
      *
      * @param promptMessagePrefix
      *            the message prefix that will be shown in prompt before the
@@ -511,15 +531,16 @@ public class ExtendedPrompter implements Prompter {
      * @param batchModeErrorMessage
      *            the error message to be used in exception in batch mode
      * @return the selected value
-     * @throws MojoFailureException
+     * @throws GitFlowFailureException
      *             in case of active batch mode, empty list of possible values
      *             or error while prompting
      */
     public String promptToSelectFromOrderedList(String promptMessagePrefix, String promptMessageSuffix,
-            String[] possibleValues, String batchModeErrorMessage) throws MojoFailureException {
+            String[] possibleValues, GitFlowFailureInfo batchModeErrorMessage) throws GitFlowFailureException {
         if (interactiveMode) {
             if (possibleValues == null || possibleValues.length == 0) {
-                throw new MojoFailureException("Empty list of possible values provided for user selection");
+                throw new GitFlowFailureException("Empty list of possible values provided for user selection",
+                        "Please report the error in the GBLD JIRA.");
             }
             StringBuilder promptMessage = new StringBuilder();
             if (!StringUtils.isBlank(promptMessagePrefix)) {
@@ -541,11 +562,12 @@ public class ExtendedPrompter implements Prompter {
                 int pos = Integer.parseInt(answer);
                 return possibleValues[pos - 1];
             } catch (PrompterException e) {
-                throw new MojoFailureException("Failed to get user selection", e);
+                throw new GitFlowFailureException(e,
+                        createPromptErrorMessage("Failed to get user selection from user prompt"));
             }
         } else {
-            throw new MojoFailureException(
-                    batchModeErrorMessage != null ? batchModeErrorMessage : "Interactive mode is required.");
+            throw new GitFlowFailureException(
+                    batchModeErrorMessage != null ? batchModeErrorMessage : getInteractiveModeRequiredMessage());
         }
     }
 

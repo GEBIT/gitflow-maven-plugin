@@ -73,8 +73,9 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
     protected String firstMaintenanceVersion;
 
     /**
-     * Filter to query for release branches to limit the results. The value is a shell glob pattern if not starting
-     * with a ^ and as a regular expression otherwise.
+     * Filter to query for release branches to limit the results. The value is a
+     * shell glob pattern if not starting with a ^ and as a regular expression
+     * otherwise.
      *
      * @since 1.3.0
      * @since 1.5.9
@@ -83,8 +84,8 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
     protected String releaseBranchFilter;
 
     /**
-     * Number of release versions to offer. If not specified the selection is unlimited. The order is from highest to
-     * lowest.
+     * Number of release versions to offer. If not specified the selection is
+     * unlimited. The order is from highest to lowest.
      *
      * @since 1.5.9
      */
@@ -93,165 +94,167 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
 
     /** {@inheritDoc} */
     @Override
-    public void execute() throws MojoExecutionException, MojoFailureException {
-        try {
-            // set git flow configuration
-            initGitFlowConfig();
+    protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
+        // set git flow configuration
+        initGitFlowConfig();
 
-            // check uncommitted changes
-            checkUncommittedChanges();
+        // check uncommitted changes
+        checkUncommittedChanges();
 
-            String baseName = null;
-            if (releaseVersion == null) {
-                boolean regexMode = releaseBranchFilter != null && releaseBranchFilter.startsWith("^");
-                List<String> releaseTags = gitListReleaseTags(gitFlowConfig.getVersionTagPrefix(), regexMode ? null : releaseBranchFilter);
+        String baseName = null;
+        if (releaseVersion == null) {
+            boolean regexMode = releaseBranchFilter != null && releaseBranchFilter.startsWith("^");
+            List<String> releaseTags = gitListReleaseTags(gitFlowConfig.getVersionTagPrefix(),
+                    regexMode ? null : releaseBranchFilter);
 
-                // post process selection
-                if (regexMode) {
-                    Pattern versionFilter = Pattern.compile("^\\Q" + gitFlowConfig.getVersionTagPrefix() + "\\E" + releaseBranchFilter.substring(1));
-                    for (Iterator<String> it = releaseTags.iterator(); it.hasNext(); ) {
-                        if (!versionFilter.matcher(it.next()).matches()) {
-                            it.remove();
-                        }
+            // post process selection
+            if (regexMode) {
+                Pattern versionFilter = Pattern.compile(
+                        "^\\Q" + gitFlowConfig.getVersionTagPrefix() + "\\E" + releaseBranchFilter.substring(1));
+                for (Iterator<String> it = releaseTags.iterator(); it.hasNext();) {
+                    if (!versionFilter.matcher(it.next()).matches()) {
+                        it.remove();
                     }
                 }
-                if (releaseVersionLimit != null && releaseTags.size() > releaseVersionLimit) {
-                    releaseTags = releaseTags.subList(0, releaseVersionLimit);
+            }
+            if (releaseVersionLimit != null && releaseTags.size() > releaseVersionLimit) {
+                releaseTags = releaseTags.subList(0, releaseVersionLimit);
+            }
+            List<String> numberedList = new ArrayList<String>();
+            StringBuilder str = new StringBuilder("Release:").append(LS);
+            str.append("0. <current commit>" + LS);
+            numberedList.add(String.valueOf(0));
+            for (int i = 0; i < releaseTags.size(); i++) {
+                str.append((i + 1) + ". " + releaseTags.get(i) + LS);
+                numberedList.add(String.valueOf(i + 1));
+            }
+
+            // add explicit choice
+            str.append("T. <prompt for explicit tag name>" + LS);
+            numberedList.add("T");
+
+            str.append("Choose release to create the maintenance branch from or enter a custom tag or release name");
+
+            String releaseNumber = null;
+            try {
+                while (StringUtils.isBlank(releaseNumber)) {
+                    releaseNumber = prompter.prompt(str.toString(), numberedList);
                 }
-                List<String> numberedList = new ArrayList<String>();
-                StringBuilder str = new StringBuilder("Release:").append(LS);
-                str.append("0. <current commit>" + LS);
-                numberedList.add(String.valueOf(0));
-                for (int i = 0; i < releaseTags.size(); i++) {
-                    str.append((i + 1) + ". " + releaseTags.get(i) + LS);
-                    numberedList.add(String.valueOf(i + 1));
-                }
+            } catch (PrompterException e) {
+                getLog().error(e);
+            }
 
-                // add explicit choice
-                str.append("T. <prompt for explicit tag name>" + LS);
-                numberedList.add("T");
-
-                str.append("Choose release to create the maintenance branch from or enter a custom tag or release name");
-
-                String releaseNumber = null;
+            if (StringUtils.isBlank(releaseNumber) || "0".equals(releaseNumber)) {
+                // get off current commit
+                baseName = getCurrentCommit();
+            } else if ("T".equals(releaseNumber)) {
+                // prompt for tag name
                 try {
-                    while (StringUtils.isBlank(releaseNumber)) {
-                        releaseNumber = prompter.prompt(str.toString(),numberedList);
-                    }
+                    baseName = prompter.prompt("Enter explicit tag name");
                 } catch (PrompterException e) {
                     getLog().error(e);
                 }
-
-                if (StringUtils.isBlank(releaseNumber) || "0".equals(releaseNumber)) {
-                    // get off current commit
-                    baseName = getCurrentCommit();
-                } else if ("T".equals(releaseNumber)) {
-                    // prompt for tag name
-                    try {
-                        baseName = prompter.prompt("Enter explicit tag name");
-                    } catch (PrompterException e) {
-                        getLog().error(e);
-                    }
-                } else {
-                    int num = Integer.parseInt(releaseNumber);
-                    baseName = releaseTags.get(num - 1);
-                }
-
             } else {
-                if (gitTagExists(releaseVersion)) {
-                    baseName = releaseVersion;
+                int num = Integer.parseInt(releaseNumber);
+                baseName = releaseTags.get(num - 1);
+            }
+
+        } else {
+            if (gitTagExists(releaseVersion)) {
+                baseName = releaseVersion;
+            } else {
+                if (gitTagExists(gitFlowConfig.getVersionTagPrefix() + releaseVersion)) {
+                    baseName = gitFlowConfig.getVersionTagPrefix() + releaseVersion;
                 } else {
-                    if (gitTagExists(gitFlowConfig.getVersionTagPrefix() + releaseVersion)) {
-                        baseName = gitFlowConfig.getVersionTagPrefix() + releaseVersion;
-                    } else {
-                        throw new MojoFailureException("Release '" + releaseVersion + "' does not exist.");
-                    }
+                    throw new MojoFailureException("Release '" + releaseVersion + "' does not exist.");
                 }
             }
+        }
 
-            if (StringUtils.isBlank(baseName)) {
-                throw new MojoFailureException("Release to create maintenance branch from is blank.");
-            }
+        if (StringUtils.isBlank(baseName)) {
+            throw new MojoFailureException("Release to create maintenance branch from is blank.");
+        }
 
-            // checkout the tag
-            gitCheckout(baseName);
+        // checkout the tag
+        gitCheckout(baseName);
 
-            // get current project version from pom
-            String currentVersion = getCurrentProjectVersion();
+        // get current project version from pom
+        String currentVersion = getCurrentProjectVersion();
 
-            // get default maintenance version
-            String maintenanceBranchVersion = maintenanceVersion != null ? maintenanceVersion : supportVersion;
-            String maintenanceBranchFirstVersion = firstMaintenanceVersion != null ? firstMaintenanceVersion : firstSupportVersion;
+        // get default maintenance version
+        String maintenanceBranchVersion = maintenanceVersion != null ? maintenanceVersion : supportVersion;
+        String maintenanceBranchFirstVersion = firstMaintenanceVersion != null ? firstMaintenanceVersion
+                : firstSupportVersion;
 
-            if (maintenanceBranchVersion == null && firstMaintenanceVersion == null) {
-                try {
-                    final DefaultVersionInfo versionInfo = new DefaultVersionInfo(currentVersion);
-                    getLog().info("Version info: " +versionInfo);
-                    final DefaultVersionInfo branchVersionInfo = new DefaultVersionInfo(versionInfo.getDigits().subList(0, versionInfo.getDigits().size()-1),
-                            versionInfo.getAnnotation(),
-                            versionInfo.getAnnotationRevision(),
-                            versionInfo.getBuildSpecifier() != null  ? "-" + versionInfo.getBuildSpecifier() : null,
-                            null, null, null);
-                    getLog().info("Branch Version info: " +branchVersionInfo);
-                    maintenanceBranchVersion = branchVersionInfo.getReleaseVersionString();
-                    maintenanceBranchFirstVersion = versionInfo.getNextVersion().getSnapshotVersionString();
-                } catch (VersionParseException e) {
-                    throw new MojoFailureException("Failed to calculate maintenance versions", e);
-                }
-            } else if (maintenanceBranchVersion == null || firstMaintenanceVersion == null) {
-                throw new MojoFailureException(
-                        "Either both <maintenanceVersion> and <firstMaintenanceVersion> must be specified or none");
-            }
-
-            String branchVersion = null;
+        if (maintenanceBranchVersion == null && firstMaintenanceVersion == null) {
             try {
-                branchVersion = prompter.prompt("What is the maintenance version? [" + maintenanceBranchVersion + "]");
-            } catch (PrompterException e) {
-                getLog().error(e);
+                final DefaultVersionInfo versionInfo = new DefaultVersionInfo(currentVersion);
+                getLog().info("Version info: " + versionInfo);
+                final DefaultVersionInfo branchVersionInfo = new DefaultVersionInfo(
+                        versionInfo.getDigits().subList(0, versionInfo.getDigits().size() - 1),
+                        versionInfo.getAnnotation(), versionInfo.getAnnotationRevision(),
+                        versionInfo.getBuildSpecifier() != null ? "-" + versionInfo.getBuildSpecifier() : null, null,
+                        null, null);
+                getLog().info("Branch Version info: " + branchVersionInfo);
+                maintenanceBranchVersion = branchVersionInfo.getReleaseVersionString();
+                maintenanceBranchFirstVersion = versionInfo.getNextVersion().getSnapshotVersionString();
+            } catch (VersionParseException e) {
+                throw new MojoFailureException("Failed to calculate maintenance versions", e);
             }
+        } else if (maintenanceBranchVersion == null || firstMaintenanceVersion == null) {
+            throw new MojoFailureException(
+                    "Either both <maintenanceVersion> and <firstMaintenanceVersion> must be specified or none");
+        }
 
-            if (StringUtils.isBlank(branchVersion)) {
-                branchVersion = maintenanceBranchVersion;
-            }
+        String branchVersion = null;
+        try {
+            branchVersion = prompter.prompt("What is the maintenance version? [" + maintenanceBranchVersion + "]");
+        } catch (PrompterException e) {
+            getLog().error(e);
+        }
 
-            String branchFirstVersion = null;
-            try {
-                branchFirstVersion = prompter.prompt("What is the first version on the maintenance branch? [" + maintenanceBranchFirstVersion + "]");
-            } catch (PrompterException e) {
-                getLog().error(e);
-            }
+        if (StringUtils.isBlank(branchVersion)) {
+            branchVersion = maintenanceBranchVersion;
+        }
 
-            if (StringUtils.isBlank(branchFirstVersion)) {
-                branchFirstVersion = maintenanceBranchFirstVersion;
-            }
+        String branchFirstVersion = null;
+        try {
+            branchFirstVersion = prompter.prompt(
+                    "What is the first version on the maintenance branch? [" + maintenanceBranchFirstVersion + "]");
+        } catch (PrompterException e) {
+            getLog().error(e);
+        }
 
-            // git for-each-ref refs/heads/maintenance/...
-            final boolean maintenanceBranchExists = gitBranchExists(gitFlowConfig.getMaintenanceBranchPrefix() + branchVersion);
-            if (maintenanceBranchExists) {
-                throw new MojoFailureException("Maintenance branch with that name already exists. Cannot start maintenance.");
-            }
+        if (StringUtils.isBlank(branchFirstVersion)) {
+            branchFirstVersion = maintenanceBranchFirstVersion;
+        }
 
-            // git checkout -b maintenance/... master
-            gitCreateAndCheckout(gitFlowConfig.getMaintenanceBranchPrefix() + branchVersion, baseName);
+        // git for-each-ref refs/heads/maintenance/...
+        final boolean maintenanceBranchExists = gitBranchExists(
+                gitFlowConfig.getMaintenanceBranchPrefix() + branchVersion);
+        if (maintenanceBranchExists) {
+            throw new MojoFailureException(
+                    "Maintenance branch with that name already exists. Cannot start maintenance.");
+        }
 
-            if (!currentVersion.equals(branchFirstVersion)) {
-                // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
-                mvnSetVersions(branchFirstVersion, "On maintenance branch: ");
+        // git checkout -b maintenance/... master
+        gitCreateAndCheckout(gitFlowConfig.getMaintenanceBranchPrefix() + branchVersion, baseName);
 
-                // git commit -a -m updating poms for maintenance
-                gitCommit(commitMessages.getMaintenanceStartMessage());
-            }
+        if (!currentVersion.equals(branchFirstVersion)) {
+            // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
+            mvnSetVersions(branchFirstVersion, "On maintenance branch: ");
 
-            if (pushRemote)  {
-                gitPush(gitFlowConfig.getMaintenanceBranchPrefix() + branchVersion, false, false);
-            }
+            // git commit -a -m updating poms for maintenance
+            gitCommit(commitMessages.getMaintenanceStartMessage());
+        }
 
-            if (installProject) {
-                // mvn clean install
-                mvnCleanInstall();
-            }
-        } catch (CommandLineException e) {
-            throw new MojoExecutionException("Error while executing external command.", e);
+        if (pushRemote) {
+            gitPush(gitFlowConfig.getMaintenanceBranchPrefix() + branchVersion, false, false);
+        }
+
+        if (installProject) {
+            // mvn clean install
+            mvnCleanInstall();
         }
     }
 }

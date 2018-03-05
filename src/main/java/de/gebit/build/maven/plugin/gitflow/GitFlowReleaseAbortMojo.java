@@ -32,37 +32,30 @@ public class GitFlowReleaseAbortMojo extends AbstractGitFlowMojo {
 
     /** {@inheritDoc} */
     @Override
-    public void execute() throws MojoExecutionException, MojoFailureException {
-        try {
-            // check uncommitted changes
-            checkUncommittedChanges();
+    protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
+        // check uncommitted changes
+        checkUncommittedChanges();
 
-            // git for-each-ref --format='%(refname:short)' refs/heads/release/*
-            final String releaseBranch = gitFindBranches(
-                    gitFlowConfig.getReleaseBranchPrefix(), false).trim();
+        // git for-each-ref --format='%(refname:short)' refs/heads/release/*
+        final String releaseBranch = gitFindBranches(gitFlowConfig.getReleaseBranchPrefix(), false).trim();
 
-            if (StringUtils.isBlank(releaseBranch)) {
-                throw new MojoFailureException("There is no release branch.");
-            } else if (StringUtils.countMatches(releaseBranch,
-                    gitFlowConfig.getReleaseBranchPrefix()) > 1) {
-                throw new MojoFailureException(
-                        "More than one release branch exists. Cannot abort release.");
-            }
-
-            String gitConfigName = "branch.\"" + releaseBranch + "\".development";
-            String developmentBranch = gitGetConfig(gitConfigName);
-            if (developmentBranch == null || developmentBranch.isEmpty()) {
-                developmentBranch = gitFlowConfig.getDevelopmentBranch();
-            }
-
-            // back to the development branch
-            gitCheckout(developmentBranch);
-
-            // git branch -D release/...
-            gitBranchDeleteForce(releaseBranch);
-
-        } catch (CommandLineException e) {
-            throw new MojoExecutionException("Error while executing external command.", e);
+        if (StringUtils.isBlank(releaseBranch)) {
+            throw new MojoFailureException("There is no release branch.");
+        } else if (StringUtils.countMatches(releaseBranch, gitFlowConfig.getReleaseBranchPrefix()) > 1) {
+            throw new MojoFailureException("More than one release branch exists. Cannot abort release.");
         }
+
+        String gitConfigName = "branch.\"" + releaseBranch + "\".development";
+        String developmentBranch = gitGetConfig(gitConfigName);
+        if (developmentBranch == null || developmentBranch.isEmpty()) {
+            developmentBranch = gitFlowConfig.getDevelopmentBranch();
+        }
+
+        // back to the development branch
+        gitCheckout(developmentBranch);
+
+        // git branch -D release/...
+        gitBranchDeleteForce(releaseBranch);
+
     }
 }
