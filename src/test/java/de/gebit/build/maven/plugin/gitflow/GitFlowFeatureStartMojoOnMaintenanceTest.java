@@ -23,7 +23,6 @@ import org.codehaus.plexus.component.repository.exception.ComponentLookupExcepti
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import de.gebit.build.maven.plugin.gitflow.jgit.GitExecution;
@@ -119,7 +118,6 @@ public class GitFlowFeatureStartMojoOnMaintenanceTest extends AbstractGitFlowMoj
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_MAINTENANCE_SET_VERSION);
     }
 
-    @Ignore("Should be activated again before refactoring of AbstractGitFlowMojo.gitFetchRemoteAndCompare() method")
     @Test
     public void testExecuteWithLocalChanges() throws Exception {
         // set up
@@ -128,8 +126,10 @@ public class GitFlowFeatureStartMojoOnMaintenanceTest extends AbstractGitFlowMoj
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
                 promptControllerMock);
         // verify
-        assertMavenFailureException(result,
-                "Local branch is ahead of the remote branch " + MAINTENANCE_BRANCH + ". Execute git push.");
+        assertGitFlowFailureException(result,
+                "Local branch is ahead of the remote branch '" + MAINTENANCE_BRANCH + "'.",
+                "Push commits made on local branch to the remote branch in order to proceed.",
+                "'git push " + MAINTENANCE_BRANCH + "'");
 
         assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
         assertNoChangesInRepositoriesExceptCommitedTestfile();
@@ -144,8 +144,9 @@ public class GitFlowFeatureStartMojoOnMaintenanceTest extends AbstractGitFlowMoj
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
                 promptControllerMock);
         // verify
-        assertMavenFailureException(result,
-                "Remote branch is ahead of the local branch " + MAINTENANCE_BRANCH + ". Execute git pull.");
+        assertGitFlowFailureException(result,
+                "Remote branch is ahead of the local branch '" + MAINTENANCE_BRANCH + "'.",
+                "Pull changes on remote branch to the local branch in order to proceed.", "'git pull'");
         assertNoChanges();
     }
 
@@ -171,7 +172,6 @@ public class GitFlowFeatureStartMojoOnMaintenanceTest extends AbstractGitFlowMoj
                 COMMIT_MESSAGE_MAINTENANCE_SET_VERSION);
     }
 
-    @Ignore("Should be activated again before refactoring of AbstractGitFlowMojo.gitFetchRemoteAndCompare() method")
     @Test
     public void testExecuteWithLocalChangesAndFetchRemoteFalse() throws Exception {
         // set up
@@ -184,8 +184,10 @@ public class GitFlowFeatureStartMojoOnMaintenanceTest extends AbstractGitFlowMoj
                 promptControllerMock);
         // verify
         git.setOnline(repositorySet);
-        assertMavenFailureException(result,
-                "Local branch is ahead of the remote branch " + MAINTENANCE_BRANCH + ". Execute git push.");
+        assertGitFlowFailureException(result,
+                "Local branch is ahead of the remote branch '" + MAINTENANCE_BRANCH + "'.",
+                "Push commits made on local branch to the remote branch in order to proceed.",
+                "'git push " + MAINTENANCE_BRANCH + "'");
 
         assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
         assertNoChangesInRepositoriesExceptCommitedTestfile();
@@ -211,7 +213,6 @@ public class GitFlowFeatureStartMojoOnMaintenanceTest extends AbstractGitFlowMoj
         assertFeatureStartedCorrectlyOnMaintenance();
     }
 
-    @Ignore("Should be activated again before refactoring of AbstractGitFlowMojo.gitFetchRemoteAndCompare() method")
     @Test
     public void testExecuteWithFetchedRemoteChangesAndFetchRemoteFalse() throws Exception {
         // set up
@@ -224,8 +225,9 @@ public class GitFlowFeatureStartMojoOnMaintenanceTest extends AbstractGitFlowMoj
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
         git.setOnline(repositorySet);
-        assertMavenFailureException(result,
-                "Remote branch is ahead of the local branch " + MAINTENANCE_BRANCH + ". Execute git pull.");
+        assertGitFlowFailureException(result,
+                "Remote branch is ahead of the local branch '" + MAINTENANCE_BRANCH + "'.",
+                "Pull changes on remote branch to the local branch in order to proceed.", "'git pull'");
         assertNoChanges();
     }
 
@@ -336,8 +338,10 @@ public class GitFlowFeatureStartMojoOnMaintenanceTest extends AbstractGitFlowMoj
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
                 promptControllerMock);
         // verify
-        assertMavenFailureException(result, "Failed to determine branch base of '" + INTEGRATION_BRANCH
-                + "' in respect to '" + MAINTENANCE_BRANCH + "'.");
+        assertGitFlowFailureException(result,
+                "Integration branch '" + INTEGRATION_BRANCH + "' is ahead of base branch '" + MAINTENANCE_BRANCH
+                        + "', this indicates a severe error condition on your branches.",
+                " Please consult a gitflow expert on how to fix this!");
         verify(promptControllerMock).prompt(PROMPT_BRANCH_OF_LAST_INTEGRATED, Arrays.asList("y", "n"), "y");
         verifyNoMoreInteractions(promptControllerMock);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);

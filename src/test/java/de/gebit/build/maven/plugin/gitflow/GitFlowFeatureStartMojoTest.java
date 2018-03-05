@@ -8,7 +8,7 @@
 //
 package de.gebit.build.maven.plugin.gitflow;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -24,7 +24,6 @@ import org.apache.maven.execution.MavenExecutionResult;
 import org.apache.maven.model.io.ModelParseException;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import de.gebit.build.maven.plugin.gitflow.jgit.GitExecution;
@@ -58,7 +57,7 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
             MavenExecutionResult result = executeMojoWithCommandLineException(repositorySet.getWorkingDirectory(),
                     GOAL);
             // verify
-            assertMavenExecutionException(result, "Error while executing external command.");
+            assertGitflowFailureOnCommandLineException(repositorySet, result);
         }
     }
 
@@ -234,8 +233,10 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
             MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
                     promptControllerMock);
             // verify
-            assertMavenFailureException(result,
-                    "You have some uncommitted files. Commit or discard local changes in order to proceed.");
+            assertGitFlowFailureException(result, "You have some uncommitted files.",
+                    "Commit or discard local changes in order to proceed.",
+                    "'git add' and 'git commit' to commit your changes",
+                    "'git reset --hard' to throw away your changes");
 
             assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
             assertNoChangesInRepositories(repositorySet);
@@ -257,8 +258,10 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
             MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
                     promptControllerMock);
             // verify
-            assertMavenFailureException(result,
-                    "You have some uncommitted files. Commit or discard local changes in order to proceed.");
+            assertGitFlowFailureException(result, "You have some uncommitted files.",
+                    "Commit or discard local changes in order to proceed.",
+                    "'git add' and 'git commit' to commit your changes",
+                    "'git reset --hard' to throw away your changes");
 
             assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
             assertNoChangesInRepositoriesExceptCommitedTestfile(repositorySet);
@@ -270,7 +273,6 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         }
     }
 
-    @Ignore("Should be activated again before refactoring of AbstractGitFlowMojo.gitFetchRemoteAndCompare() method")
     @Test
     public void testExecuteWithLocalChanges() throws Exception {
         try (RepositorySet repositorySet = git.createGitRepositorySet(TestProjects.BASIC.basedir)) {
@@ -280,8 +282,9 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
             MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
                     promptControllerMock);
             // verify
-            assertMavenFailureException(result,
-                    "Local branch is ahead of the remote branch " + MASTER_BRANCH + ". Execute git push.");
+            assertGitFlowFailureException(result, "Local branch is ahead of the remote branch '" + MASTER_BRANCH + "'.",
+                    "Push commits made on local branch to the remote branch in order to proceed.",
+                    "'git push " + MASTER_BRANCH + "'");
 
             assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
             assertNoChangesInRepositoriesExceptCommitedTestfile(repositorySet);
@@ -298,9 +301,28 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
             MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
                     promptControllerMock);
             // verify
-            assertMavenFailureException(result,
-                    "Remote branch is ahead of the local branch " + MASTER_BRANCH + ". Execute git pull.");
+            assertGitFlowFailureException(result, "Remote branch is ahead of the local branch '" + MASTER_BRANCH + "'.",
+                    "Pull changes on remote branch to the local branch in order to proceed.", "'git pull'");
             assertNoChanges(repositorySet);
+        }
+    }
+
+    @Test
+    public void testExecuteWithLocalAndRemoteChanges() throws Exception {
+        try (RepositorySet repositorySet = git.createGitRepositorySet(TestProjects.BASIC.basedir)) {
+            // set up
+            git.createAndCommitTestfile(repositorySet);
+            final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
+            git.remoteCreateTestfile(repositorySet, "remote_testfile.txt", COMMIT_MESSAGE_REMOTE_TESTFILE);
+            // test
+            MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                    promptControllerMock);
+            // verify
+            assertGitFlowFailureException(result, "Local and remote branches '" + MASTER_BRANCH + "' diverge.",
+                    "Rebase or merge the changes in local branch in order to proceed.", "'git pull'");
+            assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+            git.assertClean(repositorySet);
+            assertNoChangesInRepositoriesExceptCommitedTestfile(repositorySet);
         }
     }
 
@@ -327,7 +349,6 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
     }
 
-    @Ignore("Should be activated again before refactoring of AbstractGitFlowMojo.gitFetchRemoteAndCompare() method")
     @Test
     public void testExecuteWithLocalChangesAndFetchRemoteFalse() throws Exception {
         try (RepositorySet repositorySet = git.createGitRepositorySet(TestProjects.BASIC.basedir)) {
@@ -341,8 +362,9 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
                     userProperties, promptControllerMock);
             // verify
             git.setOnline(repositorySet);
-            assertMavenFailureException(result,
-                    "Local branch is ahead of the remote branch " + MASTER_BRANCH + ". Execute git push.");
+            assertGitFlowFailureException(result, "Local branch is ahead of the remote branch '" + MASTER_BRANCH + "'.",
+                    "Push commits made on local branch to the remote branch in order to proceed.",
+                    "'git push " + MASTER_BRANCH + "'");
 
             assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
             git.assertTestfileContent(repositorySet);
@@ -370,7 +392,6 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         }
     }
 
-    @Ignore("Should be activated again before refactoring of AbstractGitFlowMojo.gitFetchRemoteAndCompare() method")
     @Test
     public void testExecuteWithFetchedRemoteChangesAndFetchRemoteFalse() throws Exception {
         try (RepositorySet repositorySet = git.createGitRepositorySet(TestProjects.BASIC.basedir)) {
@@ -385,9 +406,33 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
                     userProperties);
             // verify
             git.setOnline(repositorySet);
-            assertMavenFailureException(result,
-                    "Remote branch is ahead of the local branch " + MASTER_BRANCH + ". Execute git pull.");
+            assertGitFlowFailureException(result, "Remote branch is ahead of the local branch '" + MASTER_BRANCH + "'.",
+                    "Pull changes on remote branch to the local branch in order to proceed.", "'git pull'");
             assertNoChanges(repositorySet);
+        }
+    }
+
+    @Test
+    public void testExecuteWithLocalAndFetchedRemoteChangesAndFetchRemoteFalse() throws Exception {
+        try (RepositorySet repositorySet = git.createGitRepositorySet(TestProjects.BASIC.basedir)) {
+            // set up
+            git.createAndCommitTestfile(repositorySet);
+            final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
+            git.remoteCreateTestfile(repositorySet, "remote_testfile.txt", COMMIT_MESSAGE_REMOTE_TESTFILE);
+            git.fetch(repositorySet);
+            Properties userProperties = new Properties();
+            userProperties.setProperty("flow.fetchRemote", "false");
+            git.setOffline(repositorySet);
+            // test
+            MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                    userProperties);
+            // verify
+            git.setOnline(repositorySet);
+            assertGitFlowFailureException(result, "Local and remote branches '" + MASTER_BRANCH + "' diverge.",
+                    "Rebase or merge the changes in local branch in order to proceed.", "'git pull'");
+            assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+            git.assertClean(repositorySet);
+            assertNoChangesInRepositoriesExceptCommitedTestfile(repositorySet);
         }
     }
 
@@ -410,7 +455,10 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
             // test
             MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
             // verify
-            assertMavenFailureException(result, "No featureName set, aborting...");
+            assertGitFlowFailureException(result,
+                    "Property 'featureName' is required in non-interactive mode but was not set.",
+                    "Specify a featureName or run in interactive mode.",
+                    "'mvn flow:feature-start -DfeatureName=XXX -B'", "'mvn flow:feature-start'");
             assertNoChanges(repositorySet);
         }
     }
@@ -425,7 +473,50 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
             MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
                     userProperties);
             // verify
-            assertMavenFailureException(result, "Set featureName is not valid, aborting...");
+            assertGitFlowFailureException(result,
+                    "The feature name 'Invalid-feature-name' is invalid. "
+                            + "A feature name must start with the project's JIRA issue key, e.g. "
+                            + TestProjects.BASIC.jiraProject + "-[number][-optional-short-description]",
+                    "Specify correct value for parameter 'featureName' and run again.");
+            assertNoChanges(repositorySet);
+        }
+    }
+
+    @Test
+    public void testExecuteWithCustomFeatureNamePatternDescriptionAndInvalidFeatureNameInBatchMode() throws Exception {
+        try (RepositorySet repositorySet = git.createGitRepositorySet(TestProjects.BASIC.basedir)) {
+            // set up
+            final String FEATURE_NAME_PATTERN_DESCRIPTION = "Test feature name pattern description";
+            Properties userProperties = new Properties();
+            userProperties.setProperty("featureName", "Invalid-feature-name");
+            userProperties.setProperty("flow.featureNamePatternDescription", FEATURE_NAME_PATTERN_DESCRIPTION);
+            // test
+            MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                    userProperties);
+            // verify
+            assertGitFlowFailureException(result,
+                    "The feature name 'Invalid-feature-name' is invalid. " + FEATURE_NAME_PATTERN_DESCRIPTION,
+                    "Specify correct value for parameter 'featureName' and run again.");
+            assertNoChanges(repositorySet);
+        }
+    }
+
+    @Test
+    public void testExecuteWithDefaultFeatureNamePatternDescriptionAndInvalidFeatureNameInBatchMode() throws Exception {
+        try (RepositorySet repositorySet = git.createGitRepositorySet(TestProjects.BASIC.basedir)) {
+            // set up
+            Properties userProperties = new Properties();
+            userProperties.setProperty("featureName", "Invalid-feature-name");
+            userProperties.setProperty("flow.featureNamePatternDescription", "");
+            // test
+            MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                    userProperties);
+            // verify
+            assertGitFlowFailureException(result,
+                    "The feature name 'Invalid-feature-name' is invalid. "
+                            + "It does not match the required pattern: ^(" + TestProjects.BASIC.jiraProject
+                            + "-\\d+)(?:-[^\\s]*)?$",
+                    "Specify correct value for parameter 'featureName' and run again.");
             assertNoChanges(repositorySet);
         }
     }
@@ -442,9 +533,9 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
             executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
             // verify
             verify(promptControllerMock).prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME);
-            verify(promptControllerMock)
-                    .showMessage("A feature name must start with the project's JIRA issue key, e.g. "
-                            + TestProjects.BASIC.jiraProject + "-[number][-optional-short-description]");
+            verify(promptControllerMock).showMessage("The feature name 'Invalid-feature-name' is invalid."
+                    + " A feature name must start with the project's JIRA issue key, e.g. "
+                    + TestProjects.BASIC.jiraProject + "-[number][-optional-short-description]");
             verifyNoMoreInteractions(promptControllerMock);
 
             assertFeatureStartedCorrectly(repositorySet);
@@ -461,9 +552,9 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
             executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
             // verify
             verify(promptControllerMock, times(3)).prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME);
-            verify(promptControllerMock, times(2))
-                    .showMessage("A feature name must start with the project's JIRA issue key, e.g. "
-                            + TestProjects.BASIC.jiraProject + "-[number][-optional-short-description]");
+            verify(promptControllerMock, times(2)).showMessage("The feature name 'Invalid-feature-name' is invalid."
+                    + " A feature name must start with the project's JIRA issue key, e.g. "
+                    + TestProjects.BASIC.jiraProject + "-[number][-optional-short-description]");
             verifyNoMoreInteractions(promptControllerMock);
 
             assertFeatureStartedCorrectly(repositorySet);
@@ -483,7 +574,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
             executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
             // verify
             verify(promptControllerMock, times(3)).prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME);
-            verify(promptControllerMock, times(2)).showMessage(FEATURE_NAME_PATTERN_DESCRIPTION);
+            verify(promptControllerMock, times(2)).showMessage(
+                    "The feature name 'Invalid-feature-name' is invalid. " + FEATURE_NAME_PATTERN_DESCRIPTION);
             verifyNoMoreInteractions(promptControllerMock);
 
             assertFeatureStartedCorrectly(repositorySet);
@@ -502,8 +594,9 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
             executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
             // verify
             verify(promptControllerMock, times(3)).prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME);
-            verify(promptControllerMock, times(2)).showMessage("Feature name does not match the required pattern: ^("
-                    + TestProjects.BASIC.jiraProject + "-\\d+)(?:-[^\\s]*)?$");
+            verify(promptControllerMock, times(2)).showMessage(
+                    "The feature name 'Invalid-feature-name' is invalid. It does not match the required pattern: ^("
+                            + TestProjects.BASIC.jiraProject + "-\\d+)(?:-[^\\s]*)?$");
             verifyNoMoreInteractions(promptControllerMock);
 
             assertFeatureStartedCorrectly(repositorySet);
@@ -592,7 +685,10 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
             MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
                     userProperties);
             // verify
-            assertMavenFailureException(result, "Feature branch with that name already exists. Cannot start feature.");
+            assertGitFlowFailureException(result, "Feature branch '" + FEATURE_BRANCH + "' already exists.",
+                    "Either checkout the existing feature branch or start a new feature with another name.",
+                    "'git checkout " + FEATURE_BRANCH + "' to checkout the feature branch",
+                    "'mvn flow:feature-start' to run again and specify another feature name");
 
             assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
             git.assertClean(repositorySet);
@@ -603,7 +699,6 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         }
     }
 
-    @Ignore("Should be activated again before remote check will be implemented")
     @Test
     public void testExecuteFeatureBranchAlreadyExistsRemotely() throws Exception {
         try (RepositorySet repositorySet = git.createGitRepositorySet(TestProjects.BASIC.basedir)) {
@@ -615,9 +710,69 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
             MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
                     userProperties);
             // verify
-            assertMavenFailureException(result,
-                    "Remote feature branch with that name already exists. Cannot start feature.");
-            assertNoChanges(repositorySet);
+            assertGitFlowFailureException(result,
+                    "Remote feature branch '" + FEATURE_BRANCH + "' already exists on the remote 'origin'.",
+                    "Either checkout the existing feature branch or start a new feature with another name.",
+                    "'git checkout " + FEATURE_BRANCH + "' to checkout the feature branch",
+                    "'mvn flow:feature-start' to run again and specify another feature name");
+            assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+            git.assertClean(repositorySet);
+            git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+            git.assertLocalBranches(repositorySet, MASTER_BRANCH);
+            git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+            git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
+        }
+    }
+
+    @Test
+    public void testExecuteFeatureBranchAlreadyExistsRemotelyAndFetchRemoteFalse() throws Exception {
+        try (RepositorySet repositorySet = git.createGitRepositorySet(TestProjects.BASIC.basedir)) {
+            // set up
+            Properties userProperties = new Properties();
+            userProperties.setProperty("featureName", FEATURE_NUMBER);
+            userProperties.setProperty("flow.fetchRemote", "false");
+            git.createRemoteBranch(repositorySet, FEATURE_BRANCH);
+            git.setOffline(repositorySet);
+            // test
+            executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+            // verify
+            git.setOnline(repositorySet);
+            assertVersionsInPom(repositorySet.getWorkingDirectory(), EXPECTED_BRANCH_VERSION);
+            git.assertClean(repositorySet);
+            git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+            git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+            git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+            git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, FEATURE_BRANCH, FEATURE_BRANCH);
+            git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
+        }
+    }
+
+    @Test
+    public void testExecuteFetchedFeatureBranchAlreadyExistsRemotelyAndFetchRemoteFalse() throws Exception {
+        try (RepositorySet repositorySet = git.createGitRepositorySet(TestProjects.BASIC.basedir)) {
+            // set up
+            Properties userProperties = new Properties();
+            userProperties.setProperty("featureName", FEATURE_NUMBER);
+            userProperties.setProperty("flow.fetchRemote", "false");
+            git.createRemoteBranch(repositorySet, FEATURE_BRANCH);
+            git.fetch(repositorySet);
+            git.setOffline(repositorySet);
+            // test
+            MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                    userProperties);
+            // verify
+            git.setOnline(repositorySet);
+            assertGitFlowFailureException(result,
+                    "Remote feature branch '" + FEATURE_BRANCH + "' already exists on the remote 'origin'.",
+                    "Either checkout the existing feature branch or start a new feature with another name.",
+                    "'git checkout " + FEATURE_BRANCH + "' to checkout the feature branch",
+                    "'mvn flow:feature-start' to run again and specify another feature name");
+            assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+            git.assertClean(repositorySet);
+            git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+            git.assertLocalBranches(repositorySet, MASTER_BRANCH);
+            git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+            git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         }
     }
 
@@ -748,8 +903,10 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
             MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
                     promptControllerMock);
             // verify
-            assertMavenFailureException(result, "Failed to determine branch base of '" + INTEGRATION_BRANCH
-                    + "' in respect to '" + MASTER_BRANCH + "'.");
+            assertGitFlowFailureException(result,
+                    "Integration branch '" + INTEGRATION_BRANCH + "' is ahead of base branch '" + MASTER_BRANCH
+                            + "', this indicates a severe error condition on your branches.",
+                    " Please consult a gitflow expert on how to fix this!");
             verify(promptControllerMock).prompt(PROMPT_BRANCH_OF_LAST_INTEGRATED, Arrays.asList("y", "n"), "y");
             verifyNoMoreInteractions(promptControllerMock);
             assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
@@ -789,7 +946,6 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         }
     }
 
-    @Ignore("Should be activated again before refactoring of AbstractGitFlowMojo.gitFetchRemoteAndCompare() method")
     @Test
     public void testExecuteWithIntegrationBranchAndFetchedNewerRemoteIntegartionBranchAndFetchRemoteFalse()
             throws Exception {
@@ -799,7 +955,7 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
             git.remoteCreateTestfileInBranch(repositorySet, INTEGRATION_BRANCH);
             git.fetch(repositorySet);
             when(promptControllerMock.prompt(PROMPT_BRANCH_OF_LAST_INTEGRATED, Arrays.asList("y", "n"), "y"))
-            .thenReturn("y");
+                    .thenReturn("y");
             Properties userProperties = new Properties();
             userProperties.setProperty("flow.fetchRemote", "false");
             git.setOffline(repositorySet);
@@ -808,10 +964,43 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
                     userProperties, promptControllerMock);
             // verify
             git.setOnline(repositorySet);
-            assertMavenFailureException(result, "Failed to determine branch base of '" + INTEGRATION_BRANCH
-                    + "' in respect to '" + MASTER_BRANCH + "'.");
+            assertGitFlowFailureException(result,
+                    "Integration branch '" + INTEGRATION_BRANCH + "' is ahead of base branch '" + MASTER_BRANCH
+                            + "', this indicates a severe error condition on your branches.",
+                    " Please consult a gitflow expert on how to fix this!");
             verify(promptControllerMock).prompt(PROMPT_BRANCH_OF_LAST_INTEGRATED, Arrays.asList("y", "n"), "y");
             verifyNoMoreInteractions(promptControllerMock);
+            assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+            git.assertClean(repositorySet);
+            git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+            git.assertLocalBranches(repositorySet, MASTER_BRANCH, INTEGRATION_BRANCH);
+            git.assertRemoteBranches(repositorySet, MASTER_BRANCH, INTEGRATION_BRANCH);
+            git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+            git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, INTEGRATION_BRANCH, MASTER_BRANCH);
+            git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
+        }
+    }
+
+    @Test
+    public void testExecuteWithDivergentLocalAndRemoteIntegrationBranches() throws Exception {
+        try (RepositorySet repositorySet = git.createGitRepositorySet(TestProjects.BASIC.basedir)) {
+            // set up
+            ExecutorHelper.executeIntegerated(this, repositorySet, INTEGRATION_BRANCH);
+            git.switchToBranch(repositorySet, INTEGRATION_BRANCH);
+            git.createAndCommitTestfile(repositorySet);
+            git.switchToBranch(repositorySet, MASTER_BRANCH);
+            final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
+            git.remoteCreateTestfileInBranch(repositorySet, INTEGRATION_BRANCH, "remote_testfile.txt",
+                    COMMIT_MESSAGE_REMOTE_TESTFILE);
+            // test
+            MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                    promptControllerMock);
+            // verify
+            assertGitFlowFailureException(result,
+                    "Local and remote integration branches '" + INTEGRATION_BRANCH
+                            + "' diverge, this indicates a severe error condition on your branches.",
+                    "Please consult a gitflow expert on how to fix this!");
+            verifyZeroInteractions(promptControllerMock);
             assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
             git.assertClean(repositorySet);
             git.assertCurrentBranch(repositorySet, MASTER_BRANCH);

@@ -16,12 +16,14 @@ import static org.junit.Assert.fail;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.regex.Pattern;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.maven.Maven;
@@ -63,6 +65,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Module;
 
 import de.gebit.build.maven.plugin.gitflow.jgit.GitExecution;
+import de.gebit.build.maven.plugin.gitflow.jgit.RepositorySet;
 
 /**
  * The abstract test case for all GitFlowMojo test cases.
@@ -86,7 +89,11 @@ public abstract class AbstractGitFlowMojoTestCase {
 
     public static final String GIT_BASEDIR = "target/git";
 
+    private static final String NOT_EXISTING_DIR = "notExistingDir";
+
     public static final String MASTER_BRANCH = "master";
+
+    public static final String COMMAND_LINE_EXCEPTION_MESSAGE_PATTERN = "Working directory \"{0}\" does not exist!";
 
     private PlexusContainer container;
 
@@ -500,7 +507,7 @@ public abstract class AbstractGitFlowMojoTestCase {
         request.setWorkspaceReader(workspaceReader);
         request = executionRequestPopulator.populateDefaults(request);
         request.setBaseDirectory(
-                throwCommandLineExceptionOnCommandLineExecution ? new File(basedir, "notExistingDir") : basedir);
+                throwCommandLineExceptionOnCommandLineExecution ? new File(basedir, NOT_EXISTING_DIR) : basedir);
         request.setGoals(Arrays.asList(fullGoal));
         request.setPom(pom);
         request.setUserProperties(userProperties);
@@ -734,48 +741,41 @@ public abstract class AbstractGitFlowMojoTestCase {
      * @param expectedExceptionMessage
      *            the message of expected exception or <code>null</code> if
      *            exception message shouldn't be checked
+     * @param regex
+     *            <code>true</code> if <code>expectedExceptionMessage</code> is
+     *            a regular exprssion that should be matched
      */
     protected void assertExceptionOnMavenExecution(MavenExecutionResult mavenExecutionResult,
-            Class<? extends Throwable> expectedExceptionClass, String expectedExceptionMessage) {
+            Class<? extends Throwable> expectedExceptionClass, String expectedExceptionMessage, boolean regex) {
         List<Throwable> exceptions = mavenExecutionResult.getExceptions();
         assertEquals("number of maven execution exceptions is different from expected", 1, exceptions.size());
         Throwable exception = exceptions.get(0);
         if (exception instanceof LifecycleExecutionException) {
             exception = exception.getCause();
         }
-        assertException(exception, expectedExceptionClass, expectedExceptionMessage);
+        assertException(exception, expectedExceptionClass, expectedExceptionMessage, regex);
     }
 
     private void assertException(Throwable exception, Class<? extends Throwable> expectedExceptionClass,
-            String expectedExceptionMessage) {
+            String expectedExceptionMessage, boolean regex) {
         assertEquals("unexpected maven execution exception", expectedExceptionClass.getName(),
                 exception.getClass().getName());
+        assertExceptionMessage(exception, expectedExceptionMessage, regex);
+    }
+
+    private void assertExceptionMessage(Throwable exception, String expectedExceptionMessage, boolean regex) {
         if (expectedExceptionMessage != null) {
-            assertEquals("unexpected maven execution exception message", expectedExceptionMessage,
-                    exception.getMessage());
+            if (regex) {
+                assertTrue(
+                        "maven execution exception message doesn't matches expected pattern.\nPattern: "
+                                + expectedExceptionMessage + "\nMessage: " + exception.getMessage(),
+                        Pattern.compile(expectedExceptionMessage, Pattern.MULTILINE | Pattern.DOTALL)
+                                .matcher(exception.getMessage()).matches());
+            } else {
+                assertEquals("unexpected maven execution exception message", expectedExceptionMessage,
+                        exception.getMessage());
+            }
         }
-    }
-
-    /**
-     * Asserts that the passed maven execution result consists of failure
-     * exception.
-     *
-     * @param mavenExecutionResult
-     *            the maven execution result to be tested
-     */
-    protected void assertMavenFailureException(MavenExecutionResult mavenExecutionResult) {
-        assertMavenFailureException(mavenExecutionResult, null);
-    }
-
-    /**
-     * Asserts that the passed maven execution result consists of failure
-     * exception.
-     *
-     * @param mavenExecutionResult
-     *            the maven execution result to be tested
-     */
-    protected void assertMavenExecutionException(MavenExecutionResult mavenExecutionResult) {
-        assertMavenExecutionException(mavenExecutionResult, null);
     }
 
     /**
@@ -789,7 +789,22 @@ public abstract class AbstractGitFlowMojoTestCase {
      *            if exception message shouldn't be checked
      */
     protected void assertMavenFailureException(MavenExecutionResult mavenExecutionResult, String expectedMessage) {
-        assertExceptionOnMavenExecution(mavenExecutionResult, MojoFailureException.class, expectedMessage);
+        assertExceptionOnMavenExecution(mavenExecutionResult, MojoFailureException.class, expectedMessage, false);
+    }
+
+    /**
+     * Asserts that the passed maven execution result consists of failure
+     * exception with message that matches the passed pattern.
+     *
+     * @param mavenExecutionResult
+     *            the maven execution result to be tested
+     * @param expectedMessagePattern
+     *            the pattern of expected message of failure exception or
+     *            <code>null</code> if exception message shouldn't be checked
+     */
+    protected void assertMavenFailureExceptionRegEx(MavenExecutionResult mavenExecutionResult,
+            String expectedMessagePattern) {
+        assertExceptionOnMavenExecution(mavenExecutionResult, MojoFailureException.class, expectedMessagePattern, true);
     }
 
     /**
@@ -803,6 +818,77 @@ public abstract class AbstractGitFlowMojoTestCase {
      *            if exception message shouldn't be checked
      */
     protected void assertMavenExecutionException(MavenExecutionResult mavenExecutionResult, String expectedMessage) {
-        assertExceptionOnMavenExecution(mavenExecutionResult, MojoExecutionException.class, expectedMessage);
+        assertExceptionOnMavenExecution(mavenExecutionResult, MojoExecutionException.class, expectedMessage, false);
+    }
+
+    /**
+     * Asserts that the passed maven execution result consists of failure
+     * exception with message that matches the passed pattern.
+     *
+     * @param mavenExecutionResult
+     *            the maven execution result to be tested
+     * @param expectedMessage
+     *            the pattern of expected message of failure exception or
+     *            <code>null</code> if exception message shouldn't be checked
+     */
+    protected void assertMavenExecutionExceptionRegEx(MavenExecutionResult mavenExecutionResult,
+            String expectedMessage) {
+        assertExceptionOnMavenExecution(mavenExecutionResult, MojoExecutionException.class, expectedMessage, true);
+    }
+
+    protected void assertGitFlowFailureException(MavenExecutionResult mavenExecutionResult, String expectedProblem,
+            String expectedSolutionProposal, String... expectedSteps) {
+        String expectedMessage = createGitFlowMessage(expectedProblem, expectedSolutionProposal, expectedSteps);
+        assertExceptionOnMavenExecution(mavenExecutionResult, GitFlowFailureException.class, expectedMessage, false);
+    }
+
+    private String createGitFlowMessage(String problem, String solutionProposal, String... stepsToContinue) {
+        StringBuilder message = new StringBuilder();
+        if (problem != null) {
+            message.append(problem);
+        }
+        if (solutionProposal != null) {
+            if (message.length() > 0) {
+                message.append("\n\n");
+            }
+            message.append(solutionProposal);
+        }
+        if (stepsToContinue != null && stepsToContinue.length > 0) {
+            if (message.length() > 0) {
+                message.append("\n\n");
+            }
+            message.append("How to continue:");
+            message.append("\n");
+            for (int i = 0; i < stepsToContinue.length; i++) {
+                if (i > 0) {
+                    message.append("\n");
+                }
+                message.append(stepsToContinue[i]);
+            }
+        }
+        message.insert(0, "\n\n############################ Gitflow problem ###########################\n");
+        message.append("\n########################################################################\n");
+        return message.toString();
+    }
+
+    private String createGitFlowMessage(GitFlowFailureInfo expectedFailureInfoPattern) {
+        return createGitFlowMessage(expectedFailureInfoPattern.getProblem(),
+                expectedFailureInfoPattern.getSolutionProposal(), expectedFailureInfoPattern.getStepsToContinue());
+    }
+
+    protected void assertGitFlowFailureExceptionRegEx(MavenExecutionResult mavenExecutionResult,
+            GitFlowFailureInfo expectedFailureInfoPattern) {
+        String expectedMessage = createGitFlowMessage(expectedFailureInfoPattern);
+        assertExceptionOnMavenExecution(mavenExecutionResult, GitFlowFailureException.class, expectedMessage, true);
+    }
+
+    protected void assertGitflowFailureOnCommandLineException(RepositorySet repositorySet,
+            MavenExecutionResult mavenExecutionResult) {
+        String expectedProblem = "External command execution failed with error:\n"
+                + MessageFormat.format(COMMAND_LINE_EXCEPTION_MESSAGE_PATTERN,
+                        new File(repositorySet.getWorkingDirectory(), NOT_EXISTING_DIR).getAbsolutePath());
+        String expectedSolutionProposal = "Please report the error in the GBLD JIRA.";
+        String expectedMessage = createGitFlowMessage(expectedProblem, expectedSolutionProposal);
+        assertMavenExecutionException(mavenExecutionResult, expectedMessage);
     }
 }
