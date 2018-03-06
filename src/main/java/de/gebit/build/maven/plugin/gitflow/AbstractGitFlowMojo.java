@@ -1700,13 +1700,15 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Checks whether a rebase is in progress by looking at .git/rebase-apply.
+     * Checks whether a merge is in progress by checking MERGE_HEAD file and the
+     * current branch is a feature branch.
      *
-     * @return true if a branch with the passed name exists.
+     * @return the name of the current (feature) branch or <code>null</code> if
+     *         no merge is in process
      * @throws MojoFailureException
      * @throws CommandLineException
      */
-    protected String gitMergeBranchInProcess() throws MojoFailureException, CommandLineException {
+    protected String gitMergeIntoFeatureBranchInProcess() throws MojoFailureException, CommandLineException {
         final String gitDir = executeGitCommandReturn("rev-parse", "--git-dir").trim();
         File mergeHeadNameFile = FileUtils.getFile(gitDir, "MERGE_HEAD");
         if (!mergeHeadNameFile.isAbsolute()) {
@@ -1727,6 +1729,55 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             throw new MojoFailureException("Merge target branch is not a feature branch: " + currentBranchName);
         }
         return currentBranchName;
+    }
+
+    /**
+     * Checks whether a merge is in process by checking MERGE_HEAD file and that
+     * the MERGE_HEAD points a feature branch.
+     *
+     * @return the name of the feature branch that is being merged into current
+     *         branch or <code>null</code> if no merge is in process
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected String gitMergeFromFeatureBranchInProcess() throws MojoFailureException, CommandLineException {
+        final String gitDir = executeGitCommandReturn("rev-parse", "--git-dir").trim();
+        File mergeHeadNameFile = FileUtils.getFile(gitDir, "MERGE_HEAD");
+        if (!mergeHeadNameFile.isAbsolute()) {
+            String basedir = this.session.getRequest().getBaseDirectory();
+            mergeHeadNameFile = new File(basedir, mergeHeadNameFile.getPath());
+        }
+        if (!mergeHeadNameFile.exists()) {
+            if (getLog().isDebugEnabled()) {
+                getLog().debug(mergeHeadNameFile + " not found in " + gitDir);
+            }
+            return null;
+        }
+        String headName;
+        try {
+            headName = FileUtils.readFileToString(mergeHeadNameFile, "UTF-8").trim();
+        } catch (IOException e) {
+            throw new MojoFailureException("Failed to check for currently merging branch.", e);
+        }
+        String featureBranch = null;
+        if (!headName.startsWith("refs/heads/")) {
+            String barnchesStr = executeGitCommandReturn("branch", "--contains", headName).trim();
+            String[] barnches = barnchesStr.split("\r?\n");
+            for (String barnch : barnches) {
+                if (barnch.startsWith(gitFlowConfig.getFeatureBranchPrefix())) {
+                    featureBranch = barnch;
+                }
+            }
+        } else {
+            String barnch = headName.substring("refs/heads/".length());
+            if (barnch.startsWith(gitFlowConfig.getFeatureBranchPrefix())) {
+                featureBranch = barnch;
+            }
+        }
+        if (featureBranch == null) {
+            throw new MojoFailureException("Merging branch is not a feature branch: " + headName);
+        }
+        return featureBranch;
     }
 
     /**

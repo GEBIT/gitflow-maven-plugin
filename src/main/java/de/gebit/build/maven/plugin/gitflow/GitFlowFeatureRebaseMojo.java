@@ -68,7 +68,7 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
-        String featureBranchName = updateWithMerge ? gitMergeBranchInProcess() : gitRebaseBranchInProcess();
+        String featureBranchName = updateWithMerge ? gitMergeIntoFeatureBranchInProcess() : gitRebaseBranchInProcess();
         if (featureBranchName == null) {
             // check uncommitted changes
             checkUncommittedChanges();
