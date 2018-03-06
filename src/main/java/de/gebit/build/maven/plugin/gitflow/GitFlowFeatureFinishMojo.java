@@ -36,15 +36,6 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
     private boolean skipTestProject = false;
 
     /**
-     * Whether to squash feature branch commits into a single commit upon
-     * merging.
-     *
-     * @since 1.2.3
-     */
-    @Parameter(property = "featureSquash", defaultValue = "false")
-    private boolean featureSquash = false;
-
-    /**
      * You can try a rebase of the feature branch skipping the initial commit
      * that update the pom versions just before finishing a feature. The
      * operation will peform a rebase, which may not finish successfully. You
@@ -214,33 +205,17 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
             baseBranch = gitFeatureBranchBaseBranch(featureBranchName);
             gitCheckout(baseBranch);
 
-            if (featureSquash) {
-                // git merge --squash feature/...
-                try {
-                    gitMergeSquash(featureBranchName);
-                } catch (MojoFailureException ex) {
-                    throw new GitFlowFailureException(ex,
-                            "Automatic merge failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage()),
-                            "Fix the merge conflicts and mark them as resolved. After that, run "
-                                    + "'mvn flow:feature-finish' again. Do NOT run 'git merge --continue'.",
-                            "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
-                                    + "conflicts as resolved",
-                            "'mvn flow:feature-finish' to continue feature finish process");
-                }
-                gitCommit(featureBranchName);
-            } else {
-                // git merge --no-ff feature/...
-                try {
-                    gitMergeNoff(featureBranchName);
-                } catch (MojoFailureException ex) {
-                    throw new GitFlowFailureException(ex,
-                            "Automatic merge failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage()),
-                            "Fix the merge conflicts and mark them as resolved. After that, run "
-                                    + "'mvn flow:feature-finish' again. Do NOT run 'git merge --continue'.",
-                            "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
-                                    + "conflicts as resolved",
-                            "'mvn flow:feature-finish' to continue feature finish process");
-                }
+            // git merge --no-ff feature/...
+            try {
+                gitMergeNoff(featureBranchName);
+            } catch (MojoFailureException ex) {
+                throw new GitFlowFailureException(ex,
+                        "Automatic merge failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage()),
+                        "Fix the merge conflicts and mark them as resolved. After that, run "
+                                + "'mvn flow:feature-finish' again. Do NOT run 'git merge --continue'.",
+                        "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
+                                + "conflicts as resolved",
+                        "'mvn flow:feature-finish' to continue feature finish process");
             }
         } else {
             try {
