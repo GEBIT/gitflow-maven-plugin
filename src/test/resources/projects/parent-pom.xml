@@ -101,6 +101,7 @@
 				<flow.releaseMergeProductionNoFF>true</flow.releaseMergeProductionNoFF>
 				<flow.releaseGoals>deploy site site:deploy</flow.releaseGoals>
 				<flow.pushReleaseBranch>false</flow.pushReleaseBranch>
+				<flow.deleteRemoteBranchOnRebase>false</flow.deleteRemoteBranchOnRebase>
 			</properties>
 			<build>
 				<pluginManagement>
@@ -134,6 +135,7 @@
 								<statusBeforeCheck>true</statusBeforeCheck>
 								<copyProperties>${flow.copyProperties}</copyProperties>
 								<tychoBuild>${flow.tychoBuild}</tychoBuild>
+								<deleteRemoteBranchOnRebase>${flow.deleteRemoteBranchOnRebase}</deleteRemoteBranchOnRebase>
 								<gitFlowConfig>
 									<noProduction>true</noProduction>
 									<developmentBranch>master</developmentBranch>

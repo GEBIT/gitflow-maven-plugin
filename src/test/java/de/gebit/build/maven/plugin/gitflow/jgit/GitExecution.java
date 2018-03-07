@@ -858,10 +858,11 @@ public class GitExecution {
             String repoName) {
         if (expectedCommitMessages.length != commitMessages.size()
                 || !commitMessages.containsAll(Arrays.asList(expectedCommitMessages))) {
-            fail("Commit messages in branch '" + branch
-                    + "' of " + repoName + " repository are different from expected. Expected: "
-                    + Arrays.toString(expectedCommitMessages) + ", actual: "
-                    + Arrays.toString(commitMessages.toArray(new String[commitMessages.size()])));
+            assertEquals(
+                    "Commit messages in branch '" + branch + "' of " + repoName
+                            + " repository are different from expected.",
+                    Arrays.toString(expectedCommitMessages),
+                    Arrays.toString(commitMessages.toArray(new String[commitMessages.size()])));
         }
     }
 
