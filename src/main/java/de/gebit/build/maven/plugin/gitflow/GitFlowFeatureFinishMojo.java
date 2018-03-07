@@ -8,6 +8,8 @@
  */
 package de.gebit.build.maven.plugin.gitflow;
 
+import java.util.List;
+
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
@@ -64,22 +66,16 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
                 // check uncommitted changes
                 checkUncommittedChanges();
 
-                // git for-each-ref --format='%(refname:short)'
-                // refs/heads/feature/*
-                final String featureBranches = gitFindBranches(gitFlowConfig.getFeatureBranchPrefix(), false);
-
-                if (StringUtils.isBlank(featureBranches)) {
+                List<String> branches = gitAllBranches(gitFlowConfig.getFeatureBranchPrefix());
+                if (branches.isEmpty()) {
                     throw new GitFlowFailureException("There are no feature branches in your repository.",
                             "Please start a feature first.", "'mvn flow:feature-start'");
                 }
-
-                final String[] branches = featureBranches.split("\\r?\\n");
-
                 // is the current branch a feature branch?
                 String currentBranch = gitCurrentBranch();
                 boolean isOnFeatureBranch = false;
-                for (int i = 0; i < branches.length; i++) {
-                    if (branches[i].equals(currentBranch)) {
+                for (String branch : branches) {
+                    if (branch.equals(currentBranch)) {
                         // we're on a feature branch, no need to ask
                         isOnFeatureBranch = true;
                         getLog().info("Current feature branch: " + currentBranch);

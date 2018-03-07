@@ -32,6 +32,7 @@ import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder;
 import org.apache.commons.configuration2.builder.fluent.Parameters;
 import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.text.StrLookup;
 import org.apache.commons.lang3.text.StrSubstitutor;
 import org.apache.maven.artifact.Artifact;
@@ -588,6 +589,79 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         return branches;
     }
 
+    protected List<String> gitAllFeatureBranches() throws MojoFailureException, CommandLineException {
+        return gitAllBranches(gitFlowConfig.getFeatureBranchPrefix());
+    }
+
+    protected List<String> gitAllBranches(String branchNamePrefix) throws MojoFailureException, CommandLineException {
+        List<String> branches = new ArrayList<String>();
+        branches.addAll(gitRemoteBranches(branchNamePrefix));
+        List<String> localBranches = gitLocalBranches(branchNamePrefix);
+        for (String localBranche : localBranches) {
+            if (!branches.contains(localBranche)) {
+                branches.add(localBranche);
+            }
+        }
+        return branches;
+    }
+
+    protected List<String> gitLocalBranches(String branchNamePrefix) throws MojoFailureException, CommandLineException {
+        String tempCmdResult = executeGitCommandReturn("for-each-ref", "--format=%(refname)", "refs/heads/").trim();
+        if (!StringUtils.isBlank(tempCmdResult)) {
+            String[] lines = tempCmdResult.split("\r?\n");
+            List<String> result = new ArrayList<>();
+            String prefix = "refs/heads/" + branchNamePrefix;
+            for (int i = 0; i < lines.length; ++i) {
+                if (lines[i].startsWith(prefix)) {
+                    result.add(lines[i].substring("refs/heads/".length()));
+                }
+            }
+            return result;
+        }
+        return Collections.emptyList();
+    }
+
+    protected List<String> gitRemoteBranches(String branchNamePrefix)
+            throws MojoFailureException, CommandLineException {
+        if (fetchRemote) {
+            String tempCmdResult = executeGitCommandReturn("ls-remote", "--heads", gitFlowConfig.getOrigin());
+            String pattern = "[a-zA-Z0-9]+\\s*refs/heads/(\\Q" + branchNamePrefix + "\\E.*)";
+            if (tempCmdResult != null) {
+                String[] lines = tempCmdResult.split("\r?\n");
+                Pattern p = Pattern.compile(pattern);
+                List<String> result = new ArrayList<>();
+                for (int i = 0; i < lines.length; ++i) {
+                    Matcher m = p.matcher(lines[i]);
+                    if (m.matches()) {
+                        result.add(m.group(1));
+                    }
+                }
+                return result;
+            }
+        } else {
+            return gitFetchedRemoteBranches(branchNamePrefix);
+        }
+        return Collections.emptyList();
+    }
+
+    protected List<String> gitFetchedRemoteBranches(String branchNamePrefix)
+            throws MojoFailureException, CommandLineException {
+        String originPrefix = "refs/remotes/" + gitFlowConfig.getOrigin() + "/";
+        String tempCmdResult = executeGitCommandReturn("for-each-ref", "--format=%(refname)", originPrefix).trim();
+        if (!StringUtils.isBlank(tempCmdResult)) {
+            String[] lines = tempCmdResult.split("\r?\n");
+            List<String> result = new ArrayList<>();
+            String prefix = originPrefix + branchNamePrefix;
+            for (int i = 0; i < lines.length; ++i) {
+                if (lines[i].startsWith(prefix)) {
+                    result.add(lines[i].substring(originPrefix.length()));
+                }
+            }
+            return result;
+        }
+        return Collections.emptyList();
+    }
+
     protected String gitFindBranch(final String branchName) throws MojoFailureException, CommandLineException {
         return executeGitCommandReturn("for-each-ref", "refs/heads/" + branchName);
     }
@@ -945,10 +1019,14 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         Map<String, String> branchPointCandidates = new HashMap<>();
         branchPointCandidates.put(gitFlowConfig.getDevelopmentBranch(),
                 gitBranchPoint(gitFlowConfig.getDevelopmentBranch(), featureBranch));
-        for (String maintenanceBranch : gitRemoteMaintenanceBranches()) {
-            branchPointCandidates.put(maintenanceBranch, gitBranchPoint(maintenanceBranch, featureBranch));
+        List<String> remoteMaintenanceBranches = gitRemoteMaintenanceBranches();
+        if (remoteMaintenanceBranches.size() > 0) {
+            gitFetchBranches(remoteMaintenanceBranches);
+            for (String maintenanceBranch : remoteMaintenanceBranches) {
+                branchPointCandidates.put(maintenanceBranch,
+                        gitBranchPoint(gitFlowConfig.getOrigin() + "/" + maintenanceBranch, featureBranch));
+            }
         }
-
         int minDistance = -1;
         String devBranch = null;
         for (Map.Entry<String, String> entry : branchPointCandidates.entrySet()) {
@@ -974,6 +1052,18 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         }
         getLog().debug("Feature branch is based on " + devBranch + ".");
         return devBranch;
+    }
+
+    protected void gitFetchBranches(List<String> remoteBranches) throws CommandLineException, MojoFailureException {
+        gitFetchBranches(remoteBranches.toArray(new String[remoteBranches.size()]));
+    }
+
+    protected void gitFetchBranches(String... remoteBranches) throws CommandLineException, MojoFailureException {
+        if (fetchRemote && remoteBranches != null && remoteBranches.length > 0) {
+            String[] args = ArrayUtils.addAll(new String[] { "fetch", "--quiet", gitFlowConfig.getOrigin() },
+                    remoteBranches);
+            executeGitCommand(args);
+        }
     }
 
     protected String gitFeatureBranchBaseCommit(String featureBranch, String baseBranch)
@@ -1056,26 +1146,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * List all maintenance branches
      */
     protected List<String> gitRemoteMaintenanceBranches() throws MojoFailureException, CommandLineException {
-        String tempCmdResult;
-        if (fetchRemote) {
-            tempCmdResult = executeGitCommandReturn("ls-remote", "--heads", gitFlowConfig.getOrigin());
-        } else {
-            tempCmdResult = executeGitCommandReturn("for-each-ref", "refs/remotes/" + gitFlowConfig.getOrigin() + "/");
-        }
-        if (tempCmdResult != null) {
-            String[] lines = tempCmdResult.split("\r?\n");
-            Pattern p = Pattern
-                    .compile("[a-zA-Z0-9]+\\s*refs/heads/(\\Q" + gitFlowConfig.getMaintenanceBranchPrefix() + "\\E.*)");
-            List<String> result = new ArrayList<>();
-            for (int i = 0; i < lines.length; ++i) {
-                Matcher m = p.matcher(lines[i]);
-                if (m.matches()) {
-                    result.add(m.group(1));
-                }
-            }
-            return result;
-        }
-        return Collections.emptyList();
+        return gitRemoteBranches(gitFlowConfig.getMaintenanceBranchPrefix());
     }
 
     /**
