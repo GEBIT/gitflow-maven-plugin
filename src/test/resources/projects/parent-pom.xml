@@ -101,7 +101,6 @@
 				<flow.releaseMergeProductionNoFF>true</flow.releaseMergeProductionNoFF>
 				<flow.releaseGoals>deploy site site:deploy</flow.releaseGoals>
 				<flow.pushReleaseBranch>false</flow.pushReleaseBranch>
-				<flow.featureSquash>false</flow.featureSquash>
 			</properties>
 			<build>
 				<pluginManagement>
@@ -135,7 +134,6 @@
 								<statusBeforeCheck>true</statusBeforeCheck>
 								<copyProperties>${flow.copyProperties}</copyProperties>
 								<tychoBuild>${flow.tychoBuild}</tychoBuild>
-								<featureSquash>${flow.featureSquash}</featureSquash>
 								<gitFlowConfig>
 									<noProduction>true</noProduction>
 									<developmentBranch>master</developmentBranch>

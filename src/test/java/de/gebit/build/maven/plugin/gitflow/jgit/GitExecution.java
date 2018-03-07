@@ -565,7 +565,7 @@ public class GitExecution {
      *             if an error occurs on git command execution
      */
     public void deleteLocalBranch(RepositorySet repositorySet, String aBranch) throws GitAPIException {
-        repositorySet.getLocalRepoGit().branchDelete().setBranchNames(aBranch).call();
+        repositorySet.getLocalRepoGit().branchDelete().setBranchNames(aBranch).setForce(true).call();
     }
 
     /**
@@ -849,7 +849,7 @@ public class GitExecution {
         List<String> commitMessages = new ArrayList<String>();
         List<RevCommit> commits = readCommits(git, branch);
         for (RevCommit commit : commits) {
-            commitMessages.add(commit.getFullMessage().trim());
+            commitMessages.add(commit.getShortMessage().trim());
         }
         return commitMessages;
     }
@@ -1110,6 +1110,14 @@ public class GitExecution {
                 new URIish(new File(repositorySet.getWorkingDirectory().getParentFile(), GIT_BASEDIR_REMOTE_SUFFIX)
                         .getAbsolutePath()));
         remoteSetUrlCommand.call();
+    }
+
+    public void useClonedRemoteRepository(RepositorySet repositorySet) {
+        repositorySet.setUseClonedRemoteRepositoryAsLocal(true);
+    }
+
+    public void useLocalRepository(RepositorySet repositorySet) {
+        repositorySet.setUseClonedRemoteRepositoryAsLocal(false);
     }
 
     public void assertRebaseBranchInProcess(RepositorySet repositorySet, String branch) throws IOException {

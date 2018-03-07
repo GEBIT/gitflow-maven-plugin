@@ -25,6 +25,8 @@ public class RepositorySet implements AutoCloseable {
 
     private Git clonedRemoteGit;
 
+    private boolean useClonedRemoteRepositoryAsLocal = false;
+
     /**
      * Initializes repository set with Git APIs for remote and local
      * repositories.
@@ -69,28 +71,36 @@ public class RepositorySet implements AutoCloseable {
      * @return the Git API for local repository.
      */
     public Git getLocalRepoGit() {
-        return localRepoGit;
+        return useClonedRemoteRepositoryAsLocal ? clonedRemoteGit : localRepoGit;
     }
 
     /**
      * @return the working directory of local repository
      */
     public File getWorkingDirectory() {
-        return localRepoGit.getRepository().getDirectory().getParentFile();
+        return getLocalRepoGit().getRepository().getDirectory().getParentFile();
     }
 
     /**
      * @return the Git API for remote clone repository.
      */
     public Git getClonedRemoteRepoGit() {
-        return clonedRemoteGit;
+        return useClonedRemoteRepositoryAsLocal ? localRepoGit : clonedRemoteGit;
     }
 
     /**
      * @return the working directory of remote clone repository
      */
     public File getClonedRemoteWorkingDirectory() {
-        return clonedRemoteGit.getRepository().getDirectory().getParentFile();
+        return getClonedRemoteRepoGit().getRepository().getDirectory().getParentFile();
     }
+
+    /**
+     * @param aUseClonedRemoteRepositoryAsLocal the useClonedRemoteRepositoryAsLocal to set
+     */
+    public void setUseClonedRemoteRepositoryAsLocal(boolean aUseClonedRemoteRepositoryAsLocal) {
+        useClonedRemoteRepositoryAsLocal = aUseClonedRemoteRepositoryAsLocal;
+    }
+
 
 }

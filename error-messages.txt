@@ -300,21 +300,6 @@ How to continue:
 
 
 =====================================
-- Conflict on final merge with commits squash:
--------------------------------------
-Automatic merge failed.
-Git error message:
-<output from git>
-
-Fix the merge conflicts and mark them as resolved. After that, run 'mvn flow:feature-finish' again. Do NOT run 'git merge --continue'.
-
-How to continue:
-'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved
-'mvn flow:feature-finish' to continue feature finish process
--------------------------------------
-
-
-=====================================
 - Manually resolved but not added conflict on final merge
 -------------------------------------
 There are unresolved conflicts after merge.
