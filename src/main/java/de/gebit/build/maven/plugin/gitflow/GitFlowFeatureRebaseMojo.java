@@ -15,7 +15,6 @@
  */
 package de.gebit.build.maven.plugin.gitflow;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.maven.plugin.MojoExecutionException;
@@ -23,7 +22,6 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.codehaus.plexus.components.interactivity.PrompterException;
-import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
@@ -73,54 +71,40 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
             // check uncommitted changes
             checkUncommittedChanges();
 
-            // git for-each-ref --format='%(refname:short)' refs/heads/feature/*
-            final String featureBranches = gitFindBranches(gitFlowConfig.getFeatureBranchPrefix(), false);
-
-            if (StringUtils.isBlank(featureBranches)) {
-                throw new MojoFailureException("There are no feature branches.");
+            List<String> branches = gitAllBranches(gitFlowConfig.getFeatureBranchPrefix());
+            if (branches.isEmpty()) {
+                throw new GitFlowFailureException("There are no feature branches in your repository.",
+                        "Please start a feature first.", "'mvn flow:feature-start'");
             }
-
-            final String[] branches = featureBranches.split("\\r?\\n");
-
-            // is the current branch a feature branch?
             String currentBranch = gitCurrentBranch();
-
-            List<String> numberedList = new ArrayList<String>();
-            StringBuilder str = new StringBuilder("Feature branches:").append(LS);
-            for (int i = 0; i < branches.length; i++) {
-                str.append((i + 1) + ". " + branches[i] + LS);
-                numberedList.add(String.valueOf(i + 1));
-                if (branches[i].equals(currentBranch)) {
+            boolean isOnFeatureBranch = false;
+            for (String branch : branches) {
+                if (branch.equals(currentBranch)) {
                     // we're on a feature branch, no need to ask
-                    featureBranchName = currentBranch;
-                    getLog().info("Current feature branch: " + featureBranchName);
+                    isOnFeatureBranch = true;
+                    getLog().info("Current feature branch: " + currentBranch);
                     break;
                 }
             }
-
-            if (featureBranchName == null || StringUtils.isBlank(featureBranchName)) {
-                str.append("Choose feature branch to update");
-
-                String featureNumber = null;
-                try {
-                    while (StringUtils.isBlank(featureNumber)) {
-                        featureNumber = prompter.prompt(str.toString(), numberedList);
-                    }
-                } catch (PrompterException e) {
-                    getLog().error(e);
-                }
-
-                if (featureNumber != null) {
-                    int num = Integer.parseInt(featureNumber);
-                    featureBranchName = branches[num - 1];
-                }
-
-                if (StringUtils.isBlank(featureBranchName)) {
-                    throw new MojoFailureException("Feature branch name to finish is blank.");
-                }
-
+            if (!isOnFeatureBranch) {
+                featureBranchName = getPrompter().promptToSelectFromOrderedList("Feature branches:",
+                        "Choose feature branch to rebase", branches,
+                        new GitFlowFailureInfo(
+                                "In non-interactive mode 'mvn flow:feature-rebase' can be executed only on a feature branch.",
+                                "Please switch to a feature branch first or run in interactive mode.",
+                                "'git checkout BRANCH' to switch to the feature branch",
+                                "'mvn flow:feature-rebase' to run in interactive mode"));
+                gitEnsureLocalBranchIsUpToDateIfExists(featureBranchName, new GitFlowFailureInfo(
+                        "Remote and local feature branches '" + featureBranchName + "' diverge.",
+                        "Rebase or merge the changes in local feature branch '" + featureBranchName + "' first.",
+                        "'git rebase'"));
                 // git checkout feature/...
                 gitCheckout(featureBranchName);
+            } else {
+                featureBranchName = currentBranch;
+                gitEnsureCurrentLocalBranchIsUpToDate(new GitFlowFailureInfo(
+                        "Remote and local feature branches '{0}' diverge.",
+                        "Rebase or merge the changes in local feature branch '{0}' first.", "'git rebase'"));
             }
 
             String baseBranch = gitFeatureBranchBaseBranch(featureBranchName);
