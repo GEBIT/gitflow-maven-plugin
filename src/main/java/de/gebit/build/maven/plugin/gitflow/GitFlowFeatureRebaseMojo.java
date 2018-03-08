@@ -22,6 +22,7 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.codehaus.plexus.components.interactivity.PrompterException;
+import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
@@ -102,19 +103,18 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
                 gitCheckout(featureBranchName);
             } else {
                 featureBranchName = currentBranch;
-                gitEnsureCurrentLocalBranchIsUpToDate(new GitFlowFailureInfo(
-                        "Remote and local feature branches '{0}' diverge.",
-                        "Rebase or merge the changes in local feature branch '{0}' first.", "'git rebase'"));
+                gitEnsureCurrentLocalBranchIsUpToDate(
+                        new GitFlowFailureInfo("Remote and local feature branches '{0}' diverge.",
+                                "Rebase or merge the changes in local feature branch '{0}' first.", "'git rebase'"));
             }
 
             String baseBranch = gitFeatureBranchBaseBranch(featureBranchName);
 
-            // fetch and check remote
-            if (fetchRemote) {
-                // fetch and compare both feature and development branch
-                gitFetchRemoteAndCompare(featureBranchName);
-                gitFetchRemoteAndResetIfNecessary(baseBranch);
-            }
+            gitEnsureLocalBranchIsUpToDateIfExists(baseBranch,
+                    new GitFlowFailureInfo("Remote and local base branches '" + baseBranch + "' diverge.",
+                            "Rebase the changes in local branch '" + baseBranch + "' in order to proceed.",
+                            "'git checkout " + baseBranch + "' and 'git rebase' to rebase the changes in base branch '"
+                                    + baseBranch + "'"));
 
             if (updateWithMerge && rebaseWithoutVersionChange) {
                 try {
@@ -138,14 +138,35 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
                 final String featureName = featureBranchName.replaceFirst(gitFlowConfig.getFeatureBranchPrefix(), "");
                 final String featureStartMessage = substituteInMessage(commitMessages.getFeatureStartMessage(),
                         featureBranchName);
+                String problem;
+                String solutionProposal;
+                if (updateWithMerge) {
+                    problem = "Automatic merge failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage());
+                    solutionProposal = "Fix the merge conflicts and mark them as resolved. After that, run "
+                            + "'mvn flow:feature-rebase' again. Do NOT run 'git merge --continue'.";
+                } else {
+                    problem = "Automatic rebase failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage());
+                    solutionProposal = "Fix the rebase conflicts and mark them as resolved. After that, run "
+                            + "'mvn flow:feature-rebase' again. Do NOT run 'git rebase --continue'.";
+                }
                 if (ex.getMessage().contains("Patch failed at 0001 " + featureStartMessage)) {
                     // try automatic rebase
                     gitRebaseFeatureCommit(featureName);
 
                     // continue rebase
-                    gitRebaseContinue();
+                    try {
+                        gitRebaseContinue();
+                    } catch (MojoFailureException exc) {
+                        throw new GitFlowFailureException(exc, problem, solutionProposal,
+                                "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
+                                        + "conflicts as resolved",
+                                "'mvn flow:feature-rebase' to continue feature rebase process");
+                    }
                 } else {
-                    throw ex;
+                    throw new GitFlowFailureException(ex, problem, solutionProposal,
+                            "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
+                                    + "conflicts as resolved",
+                            "'mvn flow:feature-rebase' to continue feature rebase process");
                 }
             }
         } else {
