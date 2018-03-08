@@ -18,8 +18,6 @@ package de.gebit.build.maven.plugin.gitflow;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -177,22 +175,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
 
             String version = null;
             try {
-                String featureIssue = featureName;
-                if (featureNamePattern != null) {
-                    // extract the issue number only
-                    Matcher m = Pattern.compile(featureNamePattern).matcher(featureName);
-                    if (m.matches()) {
-                        if (m.groupCount() == 0) {
-                            getLog().warn("Feature branch conforms to <featureNamePattern>, but ther is no matching"
-                                    + " group to extract the issue number.");
-                        } else {
-                            featureIssue = m.group(1);
-                        }
-                    } else {
-                        getLog().warn("Feature branch does not conform to <featureNamePattern> specified, cannot "
-                                + "extract issue number.");
-                    }
-                }
+                String featureIssue = extractIssueNumberFromFeatureName(featureName);
 
                 final DefaultVersionInfo versionInfo = new DefaultVersionInfo(currentVersion);
                 version = versionInfo.getReleaseVersionString() + "-" + featureIssue + "-" + Artifact.SNAPSHOT_VERSION;

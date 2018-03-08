@@ -2642,6 +2642,37 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         return new CommandResult(exitCode, StringUtils.trim(outStr), errorStr);
     }
 
+    /**
+     * Extracts the feature issue number from feature name using feature name
+     * pattern. E.g. extracts issue number "GBLD-42" from feature name
+     * "GBLD-42-someDescription" if default feature name pattern is used.
+     * Returns feature name if issue number can't be extracted.
+     *
+     * @param aFeatureName
+     *            the feature name
+     * @return the extracted feature issue number or feature name if issue
+     *         number can't be extracted
+     */
+    protected String extractIssueNumberFromFeatureName(String aFeatureName) {
+        String issueNumber = aFeatureName;
+        if (featureNamePattern != null) {
+            // extract the issue number only
+            Matcher m = Pattern.compile(featureNamePattern).matcher(aFeatureName);
+            if (m.matches()) {
+                if (m.groupCount() == 0) {
+                    getLog().warn("Feature branch conforms to <featureNamePattern>, but ther is no matching"
+                            + " group to extract the issue number.");
+                } else {
+                    issueNumber = m.group(1);
+                }
+            } else {
+                getLog().warn("Feature branch does not conform to <featureNamePattern> specified, cannot "
+                        + "extract issue number.");
+            }
+        }
+        return issueNumber;
+    }
+
     private static class CommandResult {
 
         private final int exitCode;

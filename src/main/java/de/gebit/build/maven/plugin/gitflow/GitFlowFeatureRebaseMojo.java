@@ -135,7 +135,6 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
                 gitMerge(baseBranch, !updateWithMerge, true);
             } catch (MojoFailureException ex) {
                 // rebase conflict on first commit?
-                final String featureName = featureBranchName.replaceFirst(gitFlowConfig.getFeatureBranchPrefix(), "");
                 final String featureStartMessage = substituteInMessage(commitMessages.getFeatureStartMessage(),
                         featureBranchName);
                 String problem;
@@ -150,8 +149,10 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
                             + "'mvn flow:feature-rebase' again. Do NOT run 'git rebase --continue'.";
                 }
                 if (ex.getMessage().contains("Patch failed at 0001 " + featureStartMessage)) {
+                    String featureName = featureBranchName.replaceFirst(gitFlowConfig.getFeatureBranchPrefix(), "");
+                    String featureIssue = extractIssueNumberFromFeatureName(featureName);
                     // try automatic rebase
-                    gitRebaseFeatureCommit(featureName);
+                    gitRebaseFeatureCommit(featureIssue);
 
                     // continue rebase
                     try {
