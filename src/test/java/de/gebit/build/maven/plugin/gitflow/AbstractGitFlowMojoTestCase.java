@@ -761,9 +761,12 @@ public abstract class AbstractGitFlowMojoTestCase {
 
     private void assertException(Throwable exception, Class<? extends Throwable> expectedExceptionClass,
             String expectedExceptionMessage, boolean regex) {
-        assertEquals("unexpected maven execution exception", expectedExceptionClass.getName(),
-                exception.getClass().getName());
-        assertExceptionMessage(exception, expectedExceptionMessage, regex);
+        if (!exception.getClass().equals(expectedExceptionClass)) {
+            assertEquals("unexpected maven execution exception",
+                    expectedExceptionClass.getName() + "(" + expectedExceptionMessage + ")",
+                    exception.getClass().getName() + "(" + exception.getMessage() + ")");
+            assertExceptionMessage(exception, expectedExceptionMessage, regex);
+        }
     }
 
     private void assertExceptionMessage(Throwable exception, String expectedExceptionMessage, boolean regex) {

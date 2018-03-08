@@ -1115,7 +1115,7 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     @Test
-    public void testExecuteSelectedRemoteFeatureBranchAheadOfLocalRemoteFalse() throws Exception {
+    public void testExecuteSelectedRemoteFeatureBranchAheadOfLocalFetchRemoteFalse() throws Exception {
         // set up
         ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NUMBER);
         git.createAndCommitTestfile(repositorySet);
@@ -1140,7 +1140,7 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     @Test
-    public void testExecuteSelectedFeatureBranchHasChangesLocallyAndRemoteRemoteFalse() throws Exception {
+    public void testExecuteSelectedFeatureBranchHasChangesLocallyAndRemoteFetchRemoteFalse() throws Exception {
         // set up
         ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NUMBER);
         git.push(repositorySet);
@@ -1176,7 +1176,7 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     @Test
-    public void testExecuteSelectedRemoteFeatureBranchAheadOfLocalRemoteFalseWithPrefetch() throws Exception {
+    public void testExecuteSelectedRemoteFeatureBranchAheadOfLocalFetchRemoteFalseWithPrefetch() throws Exception {
         // set up
         ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NUMBER);
         git.createAndCommitTestfile(repositorySet);
@@ -1210,7 +1210,8 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     @Test
-    public void testExecuteSelectedFeatureBranchHasChangesLocallyAndRemoteRemoteFalseWithPrefetch() throws Exception {
+    public void testExecuteSelectedFeatureBranchHasChangesLocallyAndRemoteFetchRemoteFalseWithPrefetch()
+            throws Exception {
         // set up
         ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NUMBER);
         git.push(repositorySet);
