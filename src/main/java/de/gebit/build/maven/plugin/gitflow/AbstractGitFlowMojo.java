@@ -1018,14 +1018,28 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
         // try all development branches
         Map<String, String> branchPointCandidates = new HashMap<>();
-        branchPointCandidates.put(gitFlowConfig.getDevelopmentBranch(),
-                gitBranchPoint(gitFlowConfig.getDevelopmentBranch(), featureBranch));
+        String developmentBranch = gitFlowConfig.getDevelopmentBranch();
+        gitFetchBranches(developmentBranch);
+        if (gitIsRemoteBranchFetched(gitFlowConfig.getOrigin(), developmentBranch)) {
+            branchPointCandidates.put(developmentBranch,
+                    gitBranchPoint(gitFlowConfig.getOrigin() + "/" + developmentBranch, featureBranch));
+        } else if (gitBranchExists(developmentBranch)) {
+            branchPointCandidates.put(developmentBranch, gitBranchPoint(developmentBranch, featureBranch));
+        }
         List<String> remoteMaintenanceBranches = gitRemoteMaintenanceBranches();
         if (remoteMaintenanceBranches.size() > 0) {
             gitFetchBranches(remoteMaintenanceBranches);
             for (String maintenanceBranch : remoteMaintenanceBranches) {
                 branchPointCandidates.put(maintenanceBranch,
                         gitBranchPoint(gitFlowConfig.getOrigin() + "/" + maintenanceBranch, featureBranch));
+            }
+        }
+        List<String> localMaintenanceBranches = gitLocalMaintenanceBranches();
+        if (localMaintenanceBranches.size() > 0) {
+            for (String maintenanceBranch : localMaintenanceBranches) {
+                if (!branchPointCandidates.containsKey(maintenanceBranch)) {
+                    branchPointCandidates.put(maintenanceBranch, gitBranchPoint(maintenanceBranch, featureBranch));
+                }
             }
         }
         int minDistance = -1;
@@ -1049,7 +1063,16 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         }
 
         if (devBranch == null) {
-            throw new MojoFailureException("Failed to find base branch for '" + featureBranch + "'.");
+            if (fetchRemote) {
+                throw new GitFlowFailureException(
+                        "Failed to find base branch for feature branch '" + featureBranch
+                                + "'. This indicates a severe error condition on your branches.",
+                        "Please consult a gitflow expert on how to fix this!");
+            } else {
+                throw new GitFlowFailureException(
+                        "Failed to find base branch for feature branch '" + featureBranch + "'.",
+                        "Set 'fetchRemote' parameter to true in order to search for base branch also in remote repository.");
+            }
         }
         getLog().debug("Feature branch is based on " + devBranch + ".");
         return devBranch;
@@ -1061,9 +1084,18 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
     protected void gitFetchBranches(String... remoteBranches) throws CommandLineException, MojoFailureException {
         if (fetchRemote && remoteBranches != null && remoteBranches.length > 0) {
-            String[] args = ArrayUtils.addAll(new String[] { "fetch", "--quiet", gitFlowConfig.getOrigin() },
-                    remoteBranches);
-            executeGitCommand(args);
+            List<String> remoteBranchesToBeFetched = new ArrayList<>();
+            List<String> foundRemoteBranches = gitRemoteBranches("");
+            for (String remoteBranch : remoteBranches) {
+                if (foundRemoteBranches.contains(remoteBranch)) {
+                    remoteBranchesToBeFetched.add(remoteBranch);
+                }
+            }
+            if (remoteBranchesToBeFetched.size() > 0) {
+                String[] args = ArrayUtils.addAll(new String[] { "fetch", "--quiet", gitFlowConfig.getOrigin() },
+                        remoteBranchesToBeFetched.toArray(new String[remoteBranchesToBeFetched.size()]));
+                executeGitCommand(args);
+            }
         }
     }
 
@@ -1144,7 +1176,14 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * List all maintenance branches
+     * List all local maintenance branches
+     */
+    protected List<String> gitLocalMaintenanceBranches() throws MojoFailureException, CommandLineException {
+        return gitLocalBranches(gitFlowConfig.getMaintenanceBranchPrefix());
+    }
+
+    /**
+     * List all remote maintenance branches
      */
     protected List<String> gitRemoteMaintenanceBranches() throws MojoFailureException, CommandLineException {
         return gitRemoteBranches(gitFlowConfig.getMaintenanceBranchPrefix());
