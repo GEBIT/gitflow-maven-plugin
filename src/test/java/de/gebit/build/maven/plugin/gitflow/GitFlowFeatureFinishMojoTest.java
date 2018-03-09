@@ -1540,4 +1540,125 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
     }
 
+    @Test
+    public void testExecuteStartedOnMasterBranchAndLocalMasterBranchMissing() throws Exception {
+        // set up
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NUMBER);
+        git.createAndCommitTestfile(repositorySet);
+        git.deleteLocalAndRemoteTrackingBranches(repositorySet, MASTER_BRANCH);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertFeatureFinishedCorrectly();
+    }
+
+    @Test
+    public void testExecuteStartedOnMasterBranchAndMasterBranchMissingLocallyAndRemotely() throws Exception {
+        // set up
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NUMBER);
+        git.createAndCommitTestfile(repositorySet);
+        git.deleteLocalAndRemoteTrackingBranches(repositorySet, MASTER_BRANCH);
+        git.deleteRemoteBranch(repositorySet, MASTER_BRANCH);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertGitFlowFailureException(result,
+                "Failed to find base branch for feature branch '" + FEATURE_BRANCH
+                        + "'. This indicates a severe error condition on your branches.",
+                "Please consult a gitflow expert on how to fix this!");
+    }
+
+    @Test
+    public void testExecuteStartedOnMasterBranchAndLocalMasterBranchMissingAndFetchRemoteFalse() throws Exception {
+        // set up
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NUMBER);
+        git.createAndCommitTestfile(repositorySet);
+        git.deleteLocalAndRemoteTrackingBranches(repositorySet, MASTER_BRANCH);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.fetchRemote", "false");
+        userProperties.setProperty("flow.push", "false");
+        git.setOffline(repositorySet);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        // verify
+        git.setOnline(repositorySet);
+        verifyZeroInteractions(promptControllerMock);
+        assertGitFlowFailureException(result, "Failed to find base branch for feature branch '" + FEATURE_BRANCH + "'.",
+                "Set 'fetchRemote' parameter to true in order to search for base branch also in remote repository.");
+    }
+
+    @Test
+    public void testExecuteStartedOnMaintenanceBranchAndLocalMasterBranchMissing() throws Exception {
+        // set up
+        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION);
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NUMBER);
+        git.createAndCommitTestfile(repositorySet);
+        git.deleteLocalAndRemoteTrackingBranches(repositorySet, MASTER_BRANCH);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
+        git.assertLocalBranches(repositorySet, MAINTENANCE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_MERGE_INTO_MAINTENANCE,
+                COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
+    }
+
+    @Test
+    public void testExecuteStartedOnMaintenanceBranchAndMasterBranchMissingLocallyAndRemotely() throws Exception {
+        // set up
+        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION);
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NUMBER);
+        git.createAndCommitTestfile(repositorySet);
+        git.deleteLocalAndRemoteTrackingBranches(repositorySet, MASTER_BRANCH);
+        git.deleteRemoteBranch(repositorySet, MASTER_BRANCH);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
+        git.assertLocalBranches(repositorySet, MAINTENANCE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MAINTENANCE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_MERGE_INTO_MAINTENANCE,
+                COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
+    }
+
+    @Test
+    public void testExecuteStartedOnMaintenanceBranchAndLocalMasterBranchMissingAndFetchRemoteFalse() throws Exception {
+        // set up
+        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION);
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NUMBER);
+        git.createAndCommitTestfile(repositorySet);
+        git.deleteLocalAndRemoteTrackingBranches(repositorySet, MASTER_BRANCH);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.fetchRemote", "false");
+        userProperties.setProperty("flow.push", "false");
+        git.setOffline(repositorySet);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        git.setOnline(repositorySet);
+        verifyZeroInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
+        git.assertLocalBranches(repositorySet, MAINTENANCE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_MERGE_INTO_MAINTENANCE,
+                COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
+        git.assertCommitsInRemoteBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
+    }
+
 }

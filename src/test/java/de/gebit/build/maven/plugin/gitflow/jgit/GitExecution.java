@@ -48,6 +48,7 @@ import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.revwalk.filter.RevFilter;
+import org.eclipse.jgit.transport.RefSpec;
 import org.eclipse.jgit.transport.URIish;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.eclipse.jgit.treewalk.filter.PathFilter;
@@ -557,6 +558,23 @@ public class GitExecution {
     }
 
     /**
+     * Deletes the passed local branch and its remote tracking branch
+     * (refs/remotes/origin/branch).
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param branch
+     *            the branch to be deleted
+     * @throws GitAPIException
+     *             if an error occurs on git command execution
+     */
+    public void deleteLocalAndRemoteTrackingBranches(RepositorySet repositorySet, String branch)
+            throws GitAPIException {
+        repositorySet.getLocalRepoGit().branchDelete().setBranchNames(branch, "refs/remotes/origin/" + branch)
+                .setForce(true).call();
+    }
+
+    /**
      * Deletes the passed local branch.
      *
      * @param repositorySet
@@ -568,6 +586,22 @@ public class GitExecution {
      */
     public void deleteLocalBranch(RepositorySet repositorySet, String aBranch) throws GitAPIException {
         repositorySet.getLocalRepoGit().branchDelete().setBranchNames(aBranch).setForce(true).call();
+    }
+
+    /**
+     * Deletes the passed remote branch.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param branch
+     *            the remote branch to be deleted
+     * @throws GitAPIException
+     *             if an error occurs on git command execution
+     */
+    public void deleteRemoteBranch(RepositorySet repositorySet, String branch) throws GitAPIException {
+        repositorySet.getLocalRepoGit().push()
+                .setRefSpecs(new RefSpec().setSource(null).setDestination("refs/heads/" + branch)).setRemote("origin")
+                .call();
     }
 
     /**
