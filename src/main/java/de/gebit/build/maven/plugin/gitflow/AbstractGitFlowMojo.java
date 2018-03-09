@@ -297,6 +297,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                 gitExecutable = "git";
             }
             cmdGit.setExecutable(gitExecutable);
+            cmdGit.addEnvironment("LANG", "en");
         }
     }
 
