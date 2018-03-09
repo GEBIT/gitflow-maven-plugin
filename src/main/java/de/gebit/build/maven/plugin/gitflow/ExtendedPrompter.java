@@ -571,4 +571,89 @@ public class ExtendedPrompter implements Prompter {
         }
     }
 
+    /**
+     *
+     *
+     * @param promptMessage
+     * @param possibleValues
+     * @param batchModeErrorMessage
+     * @return
+     * @throws GitFlowFailureException
+     */
+    public String promptSelection(String promptMessage, String[] possibleValues,
+            GitFlowFailureInfo batchModeErrorMessage) throws GitFlowFailureException {
+        return promptSelection(promptMessage, possibleValues, null, batchModeErrorMessage);
+    }
+
+    /**
+     *
+     *
+     * @param promptMessage
+     * @param possibleValues
+     * @param defaultValue
+     * @return
+     * @throws GitFlowFailureException
+     */
+    public String promptSelection(String promptMessage, String[] possibleValues, String defaultValue)
+            throws GitFlowFailureException {
+        return promptSelection(promptMessage, possibleValues, defaultValue, null);
+    }
+
+    /**
+     *
+     *
+     * @param promptMessage
+     * @param possibleValues
+     * @param defaultValue
+     * @param batchModeErrorMessage
+     * @return
+     * @throws GitFlowFailureException
+     */
+    public String promptSelection(String promptMessage, String[] possibleValues, String defaultValue,
+            GitFlowFailureInfo batchModeErrorMessage) throws GitFlowFailureException {
+        if (interactiveMode) {
+            if (possibleValues == null || possibleValues.length == 0) {
+                throw new GitFlowFailureException(getEmptyListOfPossibleValuesMessage());
+            }
+            try {
+                if (defaultValue != null) {
+                    return prompt(promptMessage.toString(), Arrays.asList(possibleValues), defaultValue);
+                } else {
+                    return prompt(promptMessage.toString(), Arrays.asList(possibleValues));
+                }
+            } catch (PrompterException e) {
+                throw new GitFlowFailureException(e,
+                        createPromptErrorMessage("Failed to get user selection from user prompt"));
+            }
+        } else {
+            if (batchModeErrorMessage != null) {
+                throw new GitFlowFailureException(batchModeErrorMessage);
+            } else if (isPossibleValue(defaultValue, possibleValues)) {
+                return defaultValue;
+            } else {
+                throw new GitFlowFailureException(getInteractiveModeRequiredMessage());
+            }
+
+        }
+    }
+
+    private boolean isPossibleValue(String value, String[] possibleValues) throws GitFlowFailureException {
+        if (possibleValues == null || possibleValues.length == 0) {
+            throw new GitFlowFailureException(getEmptyListOfPossibleValuesMessage());
+        }
+        if (StringUtils.isNotBlank(value)) {
+            for (String possibleValue : possibleValues) {
+                if (value.equalsIgnoreCase(possibleValue)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private GitFlowFailureInfo getEmptyListOfPossibleValuesMessage() {
+        return new GitFlowFailureInfo("Empty list of possible values provided for user selection",
+                "Please report the error in the GBLD JIRA.");
+    }
+
 }

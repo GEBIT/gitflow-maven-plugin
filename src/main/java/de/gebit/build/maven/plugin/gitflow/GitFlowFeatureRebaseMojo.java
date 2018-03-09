@@ -21,7 +21,6 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
-import org.codehaus.plexus.components.interactivity.PrompterException;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
@@ -67,7 +66,13 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
-        String featureBranchName = updateWithMerge ? gitMergeIntoFeatureBranchInProcess() : gitRebaseBranchInProcess();
+        boolean confirmedUpdateWithMerge = updateWithMerge;
+        String featureBranchName = gitRebaseBranchInProcess();
+        if (featureBranchName == null) {
+            featureBranchName = gitMergeIntoFeatureBranchInProcess();
+        } else {
+            confirmedUpdateWithMerge = false;
+        }
         if (featureBranchName == null) {
             // check uncommitted changes
             checkUncommittedChanges();
@@ -115,31 +120,35 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
                             "Rebase the changes in local branch '" + baseBranch + "' in order to proceed.",
                             "'git checkout " + baseBranch + "' and 'git rebase' to rebase the changes in base branch '"
                                     + baseBranch + "'"));
-
             if (updateWithMerge && rebaseWithoutVersionChange) {
-                try {
-                    final String reply = prompter.prompt(
-                            "Updating is configured for merges, a later rebase will not be possible. Continue? (yes/no)",
-                            "no");
-                    if (reply == null || !reply.toLowerCase().equals("yes")) {
-                        return;
-                    }
-                } catch (PrompterException e) {
-                    getLog().error(e);
-                    return;
+                String answer = getPrompter().promptSelection(
+                        "Updating is configured for merges, a later rebase will not be possible. "
+                                + "Select if you want to proceed with (m)erge or you want to use (r)ebase instead or (a)bort "
+                                + "the process.",
+                        new String[] { "m", "r", "a" }, "a",
+                        new GitFlowFailureInfo(
+                                "Updating is configured for merges, a later rebase will not be possible.",
+                                "Run feature-rebase in interactive mode",
+                                "'mvn flow:feature-rebase' to run in interactive mode"));
+                if ("m".equalsIgnoreCase(answer)) {
+                    confirmedUpdateWithMerge = true;
+                } else if ("r".equalsIgnoreCase(answer)) {
+                    confirmedUpdateWithMerge = false;
+                } else {
+                    throw new GitFlowFailureException("Feature rebase aborted by user.", null);
                 }
             }
 
             // merge in development
             try {
-                gitMerge(baseBranch, !updateWithMerge, true);
+                gitMerge(baseBranch, !confirmedUpdateWithMerge, true);
             } catch (MojoFailureException ex) {
                 // rebase conflict on first commit?
                 final String featureStartMessage = substituteInMessage(commitMessages.getFeatureStartMessage(),
                         featureBranchName);
                 String problem;
                 String solutionProposal;
-                if (updateWithMerge) {
+                if (confirmedUpdateWithMerge) {
                     problem = "Automatic merge failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage());
                     solutionProposal = "Fix the merge conflicts and mark them as resolved. After that, run "
                             + "'mvn flow:feature-rebase' again. Do NOT run 'git merge --continue'.";
@@ -171,7 +180,7 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
                 }
             }
         } else {
-            if (updateWithMerge) {
+            if (confirmedUpdateWithMerge) {
                 // continue with commit
                 gitCommitMerge();
             } else {
@@ -186,7 +195,7 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
         }
 
         if (pushRemote) {
-            if (!updateWithMerge && deleteRemoteBranchOnRebase) {
+            if (!confirmedUpdateWithMerge && deleteRemoteBranchOnRebase) {
                 // delete remote branch to not run into non-fast-forward error
                 gitBranchDeleteRemote(featureBranchName);
             }
