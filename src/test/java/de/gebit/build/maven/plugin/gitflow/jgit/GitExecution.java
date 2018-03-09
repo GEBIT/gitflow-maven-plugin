@@ -21,7 +21,9 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -856,13 +858,18 @@ public class GitExecution {
 
     private void assertCommitMessages(String[] expectedCommitMessages, List<String> commitMessages, String branch,
             String repoName) {
+        List<String> expectedCommitMessagesList = Arrays.asList(expectedCommitMessages);
         if (expectedCommitMessages.length != commitMessages.size()
-                || !commitMessages.containsAll(Arrays.asList(expectedCommitMessages))) {
+                || !commitMessages.containsAll(expectedCommitMessagesList)) {
+            List<String> expected = new LinkedList<>(expectedCommitMessagesList);
+            List<String> actual = new LinkedList<>(commitMessages);
+            Collections.sort(expected);
+            Collections.sort(actual);
             assertEquals(
                     "Commit messages in branch '" + branch + "' of " + repoName
                             + " repository are different from expected.",
-                    Arrays.toString(expectedCommitMessages),
-                    Arrays.toString(commitMessages.toArray(new String[commitMessages.size()])));
+                    Arrays.toString(expected.toArray(new String[expected.size()])),
+                    Arrays.toString(actual.toArray(new String[actual.size()])));
         }
     }
 

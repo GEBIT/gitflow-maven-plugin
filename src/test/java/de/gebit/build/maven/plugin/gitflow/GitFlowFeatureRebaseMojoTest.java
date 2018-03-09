@@ -49,6 +49,9 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
     private static final String PROMPT_MESSAGE_ONE_FEATURE_SELECT = "Feature branches:" + LS + "1. " + FEATURE_BRANCH
             + LS + "Choose feature branch to rebase";
 
+    private static final String PROMPT_MESSAGE_LATER_REBASE_NOT_POSSIBLE = "Updating is configured for merges, a later rebase will not be possible. "
+            + "Select if you want to proceed with (m)erge or you want to use (r)ebase instead or (a)bort the process.";
+
     private static final String FEATURE_VERSION = TestProjects.BASIC.releaseVersion + "-" + FEATURE_NAME + "-SNAPSHOT";
 
     private static final String FEATURE_NUMBER_2 = TestProjects.BASIC.jiraProject + "-4711";
@@ -75,6 +78,9 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
 
     private static final String COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE = "NO-ISSUE: updating versions for"
             + " maintenance branch";
+
+    private static final String COMMIT_MESSAGE_MARGE = TestProjects.BASIC.jiraProject + "-NONE: Merge branch "
+            + MASTER_BRANCH + " into " + FEATURE_BRANCH;
 
     private static final GitFlowFailureInfo EXPECTED_REBASE_CONFLICT_MESSAGE_PATTERN = new GitFlowFailureInfo(
             "\\QAutomatic rebase failed.\nGit error message:\n\\E.*",
@@ -159,6 +165,20 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
     }
 
+    private void assertFeatureMergedCorrectly() throws ComponentLookupException, GitAPIException, IOException {
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, FEATURE_BRANCH, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FEATURE_TESTFILE,
+                COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_MASTER_TESTFILE, COMMIT_MESSAGE_MARGE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
+    }
+
     private void assertFeatureRebasedCorrectlyOffline() throws ComponentLookupException, GitAPIException, IOException {
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
@@ -214,6 +234,24 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         git.assertClean(repositorySet);
         assertNoChangesInRepositories();
+    }
+
+    private void assertNoChangesInRepositoriesForDivergentFeatureAndMasterBranch()
+            throws ComponentLookupException, GitAPIException, IOException {
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FEATURE_TESTFILE,
+                COMMIT_MESSAGE_SET_VERSION);
+    }
+
+    private void assertNoChangesForDivergentFeatureAndMasterBranch()
+            throws ComponentLookupException, GitAPIException, IOException {
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
+        git.assertClean(repositorySet);
+        assertNoChangesInRepositoriesForDivergentFeatureAndMasterBranch();
     }
 
     @Test
@@ -1394,6 +1432,107 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         assertGitFlowFailureExceptionRegEx(result, EXPECTED_REBASE_CONFLICT_MESSAGE_PATTERN);
         git.assertRebaseBranchInProcess(repositorySet, FEATURE_BRANCH, TESTFILE_NAME);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), "2.0.0-" + FEATURE_NAME + "-SNAPSHOT");
+    }
+
+    @Test
+    public void testExecuteWithUpdateWithMergeTrueAndRebaseWithoutVersionChangeFalseBatchMode() throws Exception {
+        // set up
+        createFeatureBranchDivergentFromMaster();
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.updateWithMerge", "true");
+        userProperties.setProperty("flow.rebaseWithoutVersionChange", "false");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertFeatureMergedCorrectly();
+    }
+
+    @Test
+    public void testExecuteWithUpdateWithMergeTrueAndRebaseWithoutVersionChangeTrueBatchMode() throws Exception {
+        // set up
+        createFeatureBranchDivergentFromMaster();
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.updateWithMerge", "true");
+        userProperties.setProperty("flow.rebaseWithoutVersionChange", "true");
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertGitFlowFailureException(result, "Updating is configured for merges, a later rebase will not be possible.",
+                "Run feature-rebase in interactive mode", "'mvn flow:feature-rebase' to run in interactive mode");
+        assertNoChangesForDivergentFeatureAndMasterBranch();
+    }
+
+    @Test
+    public void testExecuteWithUpdateWithMergeTrueAndRebaseWithoutVersionChangeFalseInteractiveMode() throws Exception {
+        // set up
+        createFeatureBranchDivergentFromMaster();
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.updateWithMerge", "true");
+        userProperties.setProperty("flow.rebaseWithoutVersionChange", "false");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertFeatureMergedCorrectly();
+    }
+
+    @Test
+    public void testExecuteWithUpdateWithMergeTrueAndRebaseWithoutVersionChangeTrueInteractiveModeAnswerMerge()
+            throws Exception {
+        // set up
+        createFeatureBranchDivergentFromMaster();
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.updateWithMerge", "true");
+        userProperties.setProperty("flow.rebaseWithoutVersionChange", "true");
+        when(promptControllerMock.prompt(PROMPT_MESSAGE_LATER_REBASE_NOT_POSSIBLE, Arrays.asList("m", "r", "a"), "a"))
+                .thenReturn("m");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MESSAGE_LATER_REBASE_NOT_POSSIBLE, Arrays.asList("m", "r", "a"),
+                "a");
+        verifyNoMoreInteractions(promptControllerMock);
+        assertFeatureMergedCorrectly();
+    }
+
+    @Test
+    public void testExecuteWithUpdateWithMergeTrueAndRebaseWithoutVersionChangeTrueInteractiveModeAnswerRebase()
+            throws Exception {
+        // set up
+        createFeatureBranchDivergentFromMaster();
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.updateWithMerge", "true");
+        userProperties.setProperty("flow.rebaseWithoutVersionChange", "true");
+        when(promptControllerMock.prompt(PROMPT_MESSAGE_LATER_REBASE_NOT_POSSIBLE, Arrays.asList("m", "r", "a"), "a"))
+                .thenReturn("r");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MESSAGE_LATER_REBASE_NOT_POSSIBLE, Arrays.asList("m", "r", "a"),
+                "a");
+        verifyNoMoreInteractions(promptControllerMock);
+        assertFeatureRebasedCorrectly();
+    }
+
+    @Test
+    public void testExecuteWithUpdateWithMergeTrueAndRebaseWithoutVersionChangeTrueInteractiveModeAnswerAbort()
+            throws Exception {
+        // set up
+        createFeatureBranchDivergentFromMaster();
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.updateWithMerge", "true");
+        userProperties.setProperty("flow.rebaseWithoutVersionChange", "true");
+        when(promptControllerMock.prompt(PROMPT_MESSAGE_LATER_REBASE_NOT_POSSIBLE, Arrays.asList("m", "r", "a"), "a"))
+                .thenReturn("a");
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MESSAGE_LATER_REBASE_NOT_POSSIBLE, Arrays.asList("m", "r", "a"),
+                "a");
+        verifyNoMoreInteractions(promptControllerMock);
+        assertGitFlowFailureException(result, "Feature rebase aborted by user.", null);
+        assertNoChangesForDivergentFeatureAndMasterBranch();
     }
 
 }
