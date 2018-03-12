@@ -16,6 +16,7 @@ import static org.mockito.Mockito.when;
 import java.util.Arrays;
 import java.util.Properties;
 
+import org.apache.maven.execution.MavenExecutionResult;
 import org.codehaus.plexus.components.interactivity.Prompter;
 
 import de.gebit.build.maven.plugin.gitflow.jgit.RepositorySet;
@@ -63,6 +64,16 @@ public class ExecutorHelper {
         Properties userProperties = properties != null ? properties : new Properties();
         userProperties.setProperty("featureName", featureName);
         testCase.executeMojo(repositorySet.getWorkingDirectory(), "feature-start", userProperties);
+    }
+
+    public static MavenExecutionResult executeFeatureRebaseWithResult(AbstractGitFlowMojoTestCase testCase,
+            RepositorySet repositorySet) throws Exception {
+        return executeFeatureRebaseWithResult(testCase, repositorySet, new Properties());
+    }
+
+    public static MavenExecutionResult executeFeatureRebaseWithResult(AbstractGitFlowMojoTestCase testCase,
+            RepositorySet repositorySet, Properties userProperties) throws Exception {
+        return testCase.executeMojoWithResult(repositorySet.getWorkingDirectory(), "feature-rebase", userProperties);
     }
 
     public static void executeHotfixStart(AbstractGitFlowMojoTestCase testCase, RepositorySet repositorySet,

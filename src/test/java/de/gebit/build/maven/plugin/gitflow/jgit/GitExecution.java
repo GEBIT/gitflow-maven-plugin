@@ -1220,6 +1220,32 @@ public class GitExecution {
         }
     }
 
+    public void assertUntrackedFiles(RepositorySet repositorySet, String... expectedUntrackedFiles)
+            throws GitAPIException {
+        assertEqualsElements("Untracked files are different from expected.", expectedUntrackedFiles,
+                status(repositorySet).getUntracked());
+    }
+
+    public void assertAddedFiles(RepositorySet repositorySet, String... expectedAddedFiles) throws GitAPIException {
+        assertEqualsElements("Added files are different from expected.", expectedAddedFiles,
+                status(repositorySet).getAdded());
+    }
+
+    public void assertModifiedFiles(RepositorySet repositorySet, String... expectedModifiedFiles)
+            throws GitAPIException {
+        assertEqualsElements("Modified files are different from expected.", expectedModifiedFiles,
+                status(repositorySet).getModified());
+    }
+
+    private void assertEqualsElements(String message, String[] expectedElements, Set<String> actualElements) {
+        List<String> expected = new LinkedList<String>(Arrays.asList(expectedElements));
+        List<String> actual = new LinkedList<String>(actualElements);
+        Collections.sort(expected);
+        Collections.sort(actual);
+        assertEquals(message, Arrays.toString(expected.toArray(new String[expected.size()])),
+                Arrays.toString(actual.toArray(new String[actual.size()])));
+    }
+
     private class CommitRevFilter extends RevFilter {
 
         private List<String> excludedMessages;
