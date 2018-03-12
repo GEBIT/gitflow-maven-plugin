@@ -599,6 +599,8 @@ public class GitExecution {
      *             if an error occurs on git command execution
      */
     public void deleteRemoteBranch(RepositorySet repositorySet, String branch) throws GitAPIException {
+        repositorySet.getLocalRepoGit().branchDelete().setBranchNames("refs/remotes/origin/" + branch).setForce(true)
+                .call();
         repositorySet.getLocalRepoGit().push()
                 .setRefSpecs(new RefSpec().setSource(null).setDestination("refs/heads/" + branch)).setRemote("origin")
                 .call();
