@@ -1494,6 +1494,29 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         });
     }
 
+    protected void gitEnsureLocalBranchExists(String branchName) throws MojoFailureException, CommandLineException {
+        gitEnsureLocalBranchExists(branchName, null);
+    }
+
+    protected void gitEnsureLocalBranchExists(String branchName, GitFlowFailureInfo branchNotExistingErrorMessage)
+            throws MojoFailureException, CommandLineException {
+        if (!gitBranchExists(branchName)) {
+            if (!gitFetchRemoteBranch(branchName)) {
+                if (branchNotExistingErrorMessage != null) {
+                    throw new GitFlowFailureException(replacePlaceholders(branchNotExistingErrorMessage, branchName));
+                }
+                if (fetchRemote) {
+                    throw new GitFlowFailureException(
+                            "Local branch '" + branchName + "' doesn't exist and can't be fetched.", null);
+                } else {
+                    throw new GitFlowFailureException("Local branch '" + branchName + "' doesn't exist.",
+                            "Set 'fetchRemote' parameter to true in order to try to fetch branch from "
+                                    + "remote repository.");
+                }
+            }
+        }
+    }
+
     protected void gitEnsureLocalAndRemoteBranchesAreSynchronized(String branchName,
             GitFlowFailureInfo localAheadErrorMessage, GitFlowFailureInfo divergeErrorMessage,
             GitFlowFailureInfo remoteNotExistingErrorMessage) throws MojoFailureException, CommandLineException {
@@ -1604,17 +1627,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     protected boolean gitCompareLocalAndRemoteBranches(String branchName, Callable<Void> localAheadCallback,
             Callable<Void> remoteAheadCallback, Callable<Void> bothHaveChangesCallback)
             throws MojoFailureException, CommandLineException {
-        if (fetchRemote) {
-            getLog().info("Fetching remote branch '" + branchName + "' from '" + gitFlowConfig.getOrigin() + "'.");
-            CommandResult result = executeGitCommandExitCode("fetch", "--quiet", gitFlowConfig.getOrigin(), branchName);
-            if (result.getExitCode() != SUCCESS_EXIT_CODE) {
-                // remote branch doesn't exists
-                getLog().warn("There were some problems fetching remote branch '" + gitFlowConfig.getOrigin() + "/"
-                        + branchName
-                        + "'. You can turn off remote branch fetching by setting the 'fetchRemote' parameter to false.");
-                return false;
-            }
-        } else if (!gitIsRemoteBranchFetched(gitFlowConfig.getOrigin(), branchName)) {
+        if (!gitFetchRemoteBranch(branchName)) {
             return false;
         }
         // if there is no local branch create it now and return
@@ -1651,6 +1664,23 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                 throw new MojoFailureException(
                         "Failed to perform task on differences between local and remote branches.", ex);
             }
+        }
+        return true;
+    }
+
+    private boolean gitFetchRemoteBranch(String branchName) throws MojoFailureException, CommandLineException {
+        if (fetchRemote) {
+            getLog().info("Fetching remote branch '" + branchName + "' from '" + gitFlowConfig.getOrigin() + "'.");
+            CommandResult result = executeGitCommandExitCode("fetch", "--quiet", gitFlowConfig.getOrigin(), branchName);
+            if (result.getExitCode() != SUCCESS_EXIT_CODE) {
+                // remote branch doesn't exists
+                getLog().warn("There were some problems fetching remote branch '" + gitFlowConfig.getOrigin() + "/"
+                        + branchName
+                        + "'. You can turn off remote branch fetching by setting the 'fetchRemote' parameter to false.");
+                return false;
+            }
+        } else if (!gitIsRemoteBranchFetched(gitFlowConfig.getOrigin(), branchName)) {
+            return false;
         }
         return true;
     }
@@ -1846,6 +1876,16 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         } catch (CommandLineException exc) {
             throw new MojoFailureException("Failed to get the current commit ID.", exc);
         }
+    }
+
+    protected boolean gitMergeInProcess() throws MojoFailureException, CommandLineException {
+        final String gitDir = executeGitCommandReturn("rev-parse", "--git-dir").trim();
+        File mergeHeadNameFile = FileUtils.getFile(gitDir, "MERGE_HEAD");
+        if (!mergeHeadNameFile.isAbsolute()) {
+            String basedir = this.session.getRequest().getBaseDirectory();
+            mergeHeadNameFile = new File(basedir, mergeHeadNameFile.getPath());
+        }
+        return mergeHeadNameFile.exists();
     }
 
     /**
@@ -2749,6 +2789,11 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             }
         }
         return issueNumber;
+    }
+
+    protected void gitResetAndClean() throws MojoFailureException, CommandLineException {
+        executeGitCommand("reset", "--hard", "HEAD");
+        executeGitCommand("clean", "-f");
     }
 
     private static class CommandResult {

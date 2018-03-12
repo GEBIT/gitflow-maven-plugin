@@ -15,14 +15,11 @@
  */
 package de.gebit.build.maven.plugin.gitflow;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
-import org.codehaus.plexus.components.interactivity.PrompterException;
-import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
@@ -40,67 +37,55 @@ public class GitFlowFeatureAbortMojo extends AbstractGitFlowMojo {
         // check if rebase in process
         String featureBranchName = gitRebaseBranchInProcess();
         if (featureBranchName != null) {
-            throw new MojoFailureException("A rebase of the feature branch is in process. Cannot abort now.");
+            throw new GitFlowFailureException(
+                    "A rebase of the feature branch '" + featureBranchName
+                            + "' is in process. Cannot abort feature now.",
+                    "Finish rebase process first in order to proceed.");
+        } else if (gitMergeInProcess()) {
+            throw new GitFlowFailureException(
+                    "A merge into the current branch is in process. Cannot abort feature now.",
+                    "Finish merge process first in order to proceed.");
         }
 
-        // check uncommitted changes
-        checkUncommittedChanges();
-
-        // git for-each-ref --format='%(refname:short)' refs/heads/feature/*
-        final String featureBranches = gitFindBranches(gitFlowConfig.getFeatureBranchPrefix(), false);
-
-        if (StringUtils.isBlank(featureBranches)) {
-            throw new MojoFailureException("There are no feature branches.");
+        List<String> branches = gitAllFeatureBranches();
+        if (branches.isEmpty()) {
+            throw new GitFlowFailureException("There are no feature branches in your repository.", null);
         }
-
-        final String[] branches = featureBranches.split("\\r?\\n");
-
         // is the current branch a feature branch?
         String currentBranch = gitCurrentBranch();
-
-        List<String> numberedList = new ArrayList<String>();
-        StringBuilder str = new StringBuilder("Feature branches:").append(LS);
-        for (int i = 0; i < branches.length; i++) {
-            str.append((i + 1) + ". " + branches[i] + LS);
-            numberedList.add(String.valueOf(i + 1));
-            if (branches[i].equals(currentBranch)) {
+        boolean isOnFeatureBranch = false;
+        for (String branch : branches) {
+            if (branch.equals(currentBranch)) {
                 // we're on a feature branch, no need to ask
-                featureBranchName = currentBranch;
-                getLog().info("Current feature branch: " + featureBranchName);
+                isOnFeatureBranch = true;
+                getLog().info("Current feature branch: " + currentBranch);
                 break;
             }
         }
 
-        if (featureBranchName == null || StringUtils.isBlank(featureBranchName)) {
-            str.append("Choose feature branch to abort");
-
-            String featureNumber = null;
-            try {
-                while (StringUtils.isBlank(featureNumber)) {
-                    featureNumber = prompter.prompt(str.toString(), numberedList);
-                }
-            } catch (PrompterException e) {
-                getLog().error(e);
-            }
-
-            if (featureNumber != null) {
-                int num = Integer.parseInt(featureNumber);
-                featureBranchName = branches[num - 1];
-            }
-
-            if (StringUtils.isBlank(featureBranchName)) {
-                throw new MojoFailureException("Feature branch name to finish is blank.");
-            }
+        if (!isOnFeatureBranch) {
+            featureBranchName = getPrompter().promptToSelectFromOrderedList("Feature branches:",
+                    "Choose feature branch to abort", branches,
+                    new GitFlowFailureInfo(
+                            "In non-interactive mode 'mvn flow:feature-abort' can be executed only on a feature branch.",
+                            "Please switch to a feature branch first or run in interactive mode.",
+                            "'git checkout BRANCH' to switch to the feature branch",
+                            "'mvn flow:feature-abort' to run in interactive mode"));
+        } else {
+            featureBranchName = currentBranch;
+            String baseBranch = gitFeatureBranchBaseBranch(featureBranchName);
+            gitEnsureLocalBranchExists(baseBranch);
+            gitResetAndClean();
+            gitCheckout(baseBranch);
         }
-        String baseBranch = gitFeatureBranchBaseBranch(featureBranchName);
 
-        // git checkout development branch
-        if (fetchRemote) {
-            gitFetchRemoteAndResetIfNecessary(baseBranch);
+        if (gitBranchExists(featureBranchName)) {
+            // git branch -D feature/...
+            gitBranchDeleteForce(featureBranchName);
         }
-        gitCheckout(baseBranch);
-
-        // git branch -D feature/...
-        gitBranchDeleteForce(featureBranchName);
+        if (pushRemote) {
+            // delete the remote branch
+            gitBranchDeleteRemote(featureBranchName);
+        }
     }
 }

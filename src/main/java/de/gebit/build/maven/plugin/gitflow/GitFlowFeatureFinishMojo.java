@@ -66,7 +66,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
                 // check uncommitted changes
                 checkUncommittedChanges();
 
-                List<String> branches = gitAllBranches(gitFlowConfig.getFeatureBranchPrefix());
+                List<String> branches = gitAllFeatureBranches();
                 if (branches.isEmpty()) {
                     throw new GitFlowFailureException("There are no feature branches in your repository.",
                             "Please start a feature first.", "'mvn flow:feature-start'");
