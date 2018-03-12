@@ -70,6 +70,9 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
         String featureBranchName = gitRebaseBranchInProcess();
         if (featureBranchName == null) {
             featureBranchName = gitMergeIntoFeatureBranchInProcess();
+            if (featureBranchName != null) {
+                confirmedUpdateWithMerge = true;
+            }
         } else {
             confirmedUpdateWithMerge = false;
         }
@@ -199,10 +202,32 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
         } else {
             if (confirmedUpdateWithMerge) {
                 // continue with commit
-                gitCommitMerge();
+                try {
+                    gitCommitMerge();
+                } catch (MojoFailureException exc) {
+                    throw new GitFlowFailureException(exc,
+                            "There are unresolved conflicts after merge.\nGit error message:\n"
+                                    + StringUtils.trim(exc.getMessage()),
+                            "Fix the merge conflicts and mark them as resolved. After that, run "
+                                    + "'mvn flow:feature-rebase' again. Do NOT run 'git merge --continue'.",
+                            "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
+                                    + "conflicts as resolved",
+                            "'mvn flow:feature-rebase' to continue feature rebase process");
+                }
             } else {
                 // continue with the rebase
-                gitRebaseContinue();
+                try {
+                    gitRebaseContinue();
+                } catch (MojoFailureException exc) {
+                    throw new GitFlowFailureException(exc,
+                            "There are unresolved conflicts after rebase.\nGit error message:\n"
+                                    + StringUtils.trim(exc.getMessage()),
+                            "Fix the rebase conflicts and mark them as resolved. After that, run "
+                                    + "'mvn flow:feature-rebase' again. Do NOT run 'git rebase --continue'.",
+                            "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
+                                    + "conflicts as resolved",
+                            "'mvn flow:feature-rebase' to continue feature rebase process");
+                }
             }
         }
 
