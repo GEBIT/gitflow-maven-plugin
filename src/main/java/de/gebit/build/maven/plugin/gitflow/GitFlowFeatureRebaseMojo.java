@@ -115,11 +115,28 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
 
             String baseBranch = gitFeatureBranchBaseBranch(featureBranchName);
 
-            gitEnsureLocalBranchIsUpToDateIfExists(baseBranch,
-                    new GitFlowFailureInfo("Remote and local base branches '" + baseBranch + "' diverge.",
-                            "Rebase the changes in local branch '" + baseBranch + "' in order to proceed.",
-                            "'git checkout " + baseBranch + "' and 'git rebase' to rebase the changes in base branch '"
-                                    + baseBranch + "'"));
+            if (pushRemote) {
+                gitEnsureLocalAndRemoteBranchesAreSynchronized(baseBranch, new GitFlowFailureInfo(
+                        "Local base branch '" + baseBranch + "' is ahead of remote branch. Pushing of the rebased "
+                                + "feature branch will create an inconsistent state in remote repository.",
+                        "Push the base branch '" + baseBranch + "' first or set 'pushRemote' parameter to false in "
+                                + "order to avoid inconsistent state in remote repository."),
+                        new GitFlowFailureInfo("Remote and local base branches '" + baseBranch + "' diverge.",
+                                "Rebase the changes in local branch '" + baseBranch + "' in order to proceed.",
+                                "'git checkout " + baseBranch + "' and 'git rebase' to rebase the changes in base "
+                                        + "branch '" + baseBranch + "'"),
+                        new GitFlowFailureInfo(
+                                "Base branch '" + baseBranch + "' doesn't exist remotely. Pushing of the rebased "
+                                        + "feature branch will create an inconsistent state in remote repository.",
+                                "Push the base branch '" + baseBranch + "' first or set 'pushRemote' parameter to "
+                                        + "false in order to avoid inconsistent state in remote repository."));
+            } else {
+                gitEnsureLocalBranchIsUpToDateIfExists(baseBranch,
+                        new GitFlowFailureInfo("Remote and local base branches '" + baseBranch + "' diverge.",
+                                "Rebase the changes in local branch '" + baseBranch + "' in order to proceed.",
+                                "'git checkout " + baseBranch + "' and 'git rebase' to rebase the changes in base "
+                                        + "branch '" + baseBranch + "'"));
+            }
             if (updateWithMerge && rebaseWithoutVersionChange) {
                 String answer = getPrompter().promptSelection(
                         "Updating is configured for merges, a later rebase will not be possible. "
