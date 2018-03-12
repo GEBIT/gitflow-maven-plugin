@@ -88,7 +88,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
             "\\QFix the rebase conflicts and mark them as resolved. After that, run 'mvn flow:feature-rebase' again. "
                     + "Do NOT run 'git rebase --continue'.\\E",
             "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved\\E",
-            "\\Q'mvn flow:feature-rabase' to continue feature rebase process\\E");
+            "\\Q'mvn flow:feature-rebase' to continue feature rebase process\\E");
 
     private static final GitFlowFailureInfo EXPECTED_MERGE_CONFLICT_MESSAGE_PATTERN = new GitFlowFailureInfo(
             "\\QAutomatic merge failed.\nGit error message:\n\\E.*",
