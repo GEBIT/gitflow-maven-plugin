@@ -511,6 +511,29 @@ public class ExtendedPrompter implements Prompter {
     /**
      * Propmpts to select a value from the passed list of possible values by
      * entering a value number. If batch mode is active a
+     * {@link GitFlowFailureException} will be thrown.
+     *
+     * @param promptMessagePrefix
+     *            the message prefix that will be shown in prompt before the
+     *            list of possible values (can be <code>null</code>)
+     * @param promptMessageSuffix
+     *            the message suffix that will be shown in prompt after the list
+     *            of possible values (can be <code>null</code>)
+     * @param possibleValues
+     *            the list of possible values (should be not not empty)
+     * @return the selected value
+     * @throws GitFlowFailureException
+     *             in case of active batch mode, empty list of possible values
+     *             or error while prompting
+     */
+    public String promptToSelectFromOrderedList(String promptMessagePrefix, String promptMessageSuffix,
+            List<String> possibleValues) throws GitFlowFailureException {
+        return promptToSelectFromOrderedList(promptMessagePrefix, promptMessageSuffix, possibleValues, null);
+    }
+
+    /**
+     * Propmpts to select a value from the passed list of possible values by
+     * entering a value number. If batch mode is active a
      * {@link GitFlowFailureException} with batchModeErrorMessage will be
      * thrown.
      *
