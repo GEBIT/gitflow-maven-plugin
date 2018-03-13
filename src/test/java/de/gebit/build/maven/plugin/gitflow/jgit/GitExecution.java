@@ -17,6 +17,7 @@ import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -1112,6 +1113,22 @@ public class GitExecution {
      */
     public GitRebaseTodo loadGitRebaseTodoUsedInGitDummyEditor() throws FileNotFoundException, IOException {
         return GitRebaseTodo.load(new File(gitBaseDir, GitDummyEditor.EDIT_FILE_RELATIVE_PATH));
+    }
+
+    public void defineRebaseTodoCommands(String... commands) throws IOException {
+        if (commands != null && commands.length > 0) {
+            File gitRebaseTodoCommandsFile = new File(gitBaseDir,
+                    GitDummyEditor.REBASE_TODO_COMMANDS_FILE_RELATIVE_PATH);
+            File parentDir = gitRebaseTodoCommandsFile.getParentFile();
+            if (!parentDir.exists()) {
+                parentDir.mkdirs();
+            }
+            try (FileWriter fileWriter = new FileWriter(gitRebaseTodoCommandsFile, false)) {
+                for (String command : commands) {
+                    fileWriter.write(command + "\n");
+                }
+            }
+        }
     }
 
     private void setGitDummyEditorToConfig(Git git) throws IOException {

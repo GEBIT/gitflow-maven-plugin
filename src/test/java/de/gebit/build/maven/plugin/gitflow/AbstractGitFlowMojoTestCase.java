@@ -193,6 +193,25 @@ public abstract class AbstractGitFlowMojoTestCase {
     }
 
     /**
+     * Executes mojo in inetractive mode for passed goal for a project in passed
+     * basedir. If a command line for external execution of git or maven
+     * commands will be used than
+     * {@link org.codehaus.plexus.util.cli.CommandLineException} will be thrown.
+     *
+     * @param basedir
+     *            the basedir of the project which goal should be executed for
+     * @param goal
+     *            the flow goal to be executed (without 'flow' prefix)
+     * @return the maven execution result
+     * @throws Exception
+     *             if an error occurs while preparing maven for mojo execution
+     */
+    protected MavenExecutionResult executeMojoWithCommandLineExceptionInInteractiveMode(File basedir, String goal)
+            throws Exception {
+        return executeMojoWithResult(basedir, goal, WITH_DEFAULTS, null, promptControllerMock, true);
+    }
+
+    /**
      * Executes mojo (with default configurations) for passed goal for a project
      * in passed basedir.
      *

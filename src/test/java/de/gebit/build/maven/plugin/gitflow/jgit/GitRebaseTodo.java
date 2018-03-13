@@ -12,14 +12,14 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.lang3.StringUtils;
-
 /**
- * Container for information from a git-rebase-todo file created by git for an interactive rebase.
+ * Container for information from a git-rebase-todo file created by git for an
+ * interactive rebase.
  *
  * @author VMedvid
  */
@@ -33,10 +33,14 @@ public class GitRebaseTodo {
     /**
      * Creates the container and fills it with passed information.
      *
-     * @param aEntries the list of commits listed in the git-rebase-todo file
-     * @param aSourceStartCommitId the commitId of the rebase source start
-     * @param aSourceEndCommitId the commitId of the rebase source end
-     * @param aTargetCommitId the commitId of the rebase target
+     * @param aEntries
+     *            the list of commits listed in the git-rebase-todo file
+     * @param aSourceStartCommitId
+     *            the commitId of the rebase source start
+     * @param aSourceEndCommitId
+     *            the commitId of the rebase source end
+     * @param aTargetCommitId
+     *            the commitId of the rebase target
      */
     private GitRebaseTodo(List<GitRebaseTodoEntry> aEntries, String aSourceStartCommitId, String aSourceEndCommitId,
             String aTargetCommitId) {
@@ -46,14 +50,16 @@ public class GitRebaseTodo {
         targetCommitId = aTargetCommitId;
     }
 
-
     /**
      * Loads and parses passed git-rebase-todo file.
      *
-     * @param gitRebaseTodoFile the path to the git-rebase-todo file
+     * @param gitRebaseTodoFile
+     *            the path to the git-rebase-todo file
      * @return the container with information from the git-rebase-todo file
-     * @throws FileNotFoundException if git-rebase-todo file can't be found
-     * @throws IOException if error occurs on reading the file
+     * @throws FileNotFoundException
+     *             if git-rebase-todo file can't be found
+     * @throws IOException
+     *             if error occurs on reading the file
      */
     public static GitRebaseTodo load(File gitRebaseTodoFile) throws FileNotFoundException, IOException {
         try (BufferedReader br = new BufferedReader(new FileReader(gitRebaseTodoFile))) {
@@ -63,32 +69,56 @@ public class GitRebaseTodo {
             String targetCommit = null;
             String line;
             while ((line = br.readLine()) != null) {
-               if (line.startsWith("# Rebase ")) {
-                   line = StringUtils.substringAfter(line, "# Rebase ");
-                   sourceStartCommitId = StringUtils.substringBefore(line, "..");
-                   line = StringUtils.substringAfter(line, "..");
-                   sourceEndCommitId = StringUtils.substringBefore(line, " onto ");
-                   line = StringUtils.substringAfter(line, " onto ");
-                   targetCommit = StringUtils.substringBefore(line, " ");
-                   break;
-               } else if (!line.trim().isEmpty()) {
-                   String command = null;
-                   String commitId = null;
-                   String message = null;
-                   String[] parts = StringUtils.split(line, " ", 3);
-                   command = parts[0];
-                   if (parts.length > 1) {
-                       commitId = parts[1];
-                   }
-                   if (parts.length > 2) {
-                       message = parts[2];
-                   }
-                   entries.add(new GitRebaseTodoEntry(command, commitId, message));
-               }
+                if (line.startsWith("# Rebase ")) {
+                    line = line.substring("# Rebase ".length());
+                    int pos = line.indexOf("..");
+                    if (pos > 0) {
+                        sourceStartCommitId = line.substring(0, pos);
+                        line = line.substring(pos + 2);
+                        pos = line.indexOf(" onto ");
+                        if (pos > 0) {
+                            sourceEndCommitId = line.substring(0, pos);
+                            line = line.substring(pos + 6);
+                            pos = line.indexOf(" ");
+                            if (pos > 0) {
+                                targetCommit = line.substring(0, pos);
+                            }
+                        }
+                    }
+                    break;
+                } else if (!line.trim().isEmpty() && !line.trim().startsWith("#")) {
+                    String command = null;
+                    String commitId = null;
+                    String message = null;
+                    String[] parts = line.split(" ", 3);
+                    command = parts[0];
+                    if (parts.length > 1) {
+                        commitId = parts[1];
+                    }
+                    if (parts.length > 2) {
+                        message = parts[2];
+                    }
+                    entries.add(new GitRebaseTodoEntry(command, commitId, message));
+                }
             }
             return new GitRebaseTodo(entries, sourceStartCommitId, sourceEndCommitId, targetCommit);
         }
 
+    }
+
+    /**
+     * @param aGitRebaseTodoFile
+     */
+    public void saveToFile(File gitRebaseTodoFile) throws IOException {
+        File parentDir = gitRebaseTodoFile.getParentFile();
+        if (!parentDir.exists()) {
+            parentDir.mkdirs();
+        }
+        try (FileWriter fileWriter = new FileWriter(gitRebaseTodoFile, false)) {
+            for (GitRebaseTodoEntry entry : entries) {
+                fileWriter.write(entry.getCommand() + " " + entry.getCommitId() + " " + entry.getMessage() + "\n");
+            }
+        }
     }
 
     /**
@@ -133,9 +163,12 @@ public class GitRebaseTodo {
         /**
          * Creates the container and fills it with passed information.
          *
-         * @param aCommand the command for the commit (pick, reword, squash etc.)
-         * @param aCommitId the short commitId
-         * @param aMessage the commit message
+         * @param aCommand
+         *            the command for the commit (pick, reword, squash etc.)
+         * @param aCommitId
+         *            the short commitId
+         * @param aMessage
+         *            the commit message
          */
         private GitRebaseTodoEntry(String aCommand, String aCommitId, String aMessage) {
             command = aCommand;
@@ -162,6 +195,13 @@ public class GitRebaseTodo {
          */
         public String getMessage() {
             return message;
+        }
+
+        /**
+         * @param aCommand
+         */
+        public void setCommand(String aCommand) {
+            command = aCommand;
         }
 
     }
