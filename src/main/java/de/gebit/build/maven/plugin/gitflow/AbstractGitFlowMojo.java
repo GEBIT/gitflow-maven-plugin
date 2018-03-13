@@ -1099,14 +1099,23 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         }
     }
 
-    protected String gitFeatureBranchBaseCommit(String featureBranch, String baseBranch)
+    /**
+     * Get the base commit (branch point) for passed feature branch.
+     *
+     * @param featureBranch
+     *            the name of the feature branch
+     * @return the base commit for feature branch
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected String gitFeatureBranchBaseCommit(String featureBranch)
             throws MojoFailureException, CommandLineException {
-        String commit = gitBranchPoint(baseBranch, featureBranch);
-        String revlistout = executeGitCommandReturn("rev-list", "--left-right", "--count",
-                commit + "..." + featureBranch);
-        String[] counts = org.apache.commons.lang3.StringUtils.split(revlistout, '\t');
-        int branchDistance = Integer.parseInt(org.apache.commons.lang3.StringUtils.deleteWhitespace(counts[1]));
-        return executeGitCommandReturn("rev-parse", featureBranch + "~" + (branchDistance - 1));
+        String baseBranch = gitFeatureBranchBaseBranch(featureBranch);
+        gitFetchBranches(baseBranch);
+        if (gitIsRemoteBranchFetched(gitFlowConfig.getOrigin(), baseBranch)) {
+            baseBranch = gitFlowConfig.getOrigin() + "/" + baseBranch;
+        }
+        return gitBranchPoint(baseBranch, featureBranch);
     }
 
     /**

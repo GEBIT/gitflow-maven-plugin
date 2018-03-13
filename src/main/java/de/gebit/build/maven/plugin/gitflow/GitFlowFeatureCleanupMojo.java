@@ -96,23 +96,9 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowMojo {
                                 "Rebase or merge the changes in local feature branch '{0}' first.", "'git rebase'"));
             }
 
-            // fetch and check remote
-            String baseBranch = gitFeatureBranchBaseBranch(featureBranchName);
-            String baseCommit = gitFeatureBranchBaseCommit(featureBranchName, baseBranch);
-
-            getLog().info("Rebasing upon " + baseBranch + " at " + baseCommit);
-
-            if (fetchRemote) {
-                // fetch and compare both feature and development branch
-                gitFetchRemoteAndCompare(featureBranchName);
-                gitFetchRemoteAndResetIfNecessary(baseBranch);
-            }
-
-            String rebaseCommit = baseCommit;
-            String firstCommitOnBranch = gitVersionChangeCommitOnBranch(featureBranchName, baseCommit);
-            if (firstCommitOnBranch != null) {
-                rebaseCommit = firstCommitOnBranch;
-            }
+            String baseCommit = gitFeatureBranchBaseCommit(featureBranchName);
+            String versionChangeCommitOnBranch = gitVersionChangeCommitOnBranch(featureBranchName, baseCommit);
+            String rebaseCommit = (versionChangeCommitOnBranch != null) ? versionChangeCommitOnBranch : baseCommit;
 
             if (!gitRebaseInteractive(rebaseCommit)) {
                 getLog().info(
