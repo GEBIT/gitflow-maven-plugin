@@ -464,7 +464,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws CommandLineException
      * @throws MojoFailureException
      */
-    private boolean executeGitHasUncommitted() throws MojoFailureException, CommandLineException {
+    protected boolean executeGitHasUncommitted() throws MojoFailureException, CommandLineException {
         boolean uncommited = false;
 
         if (statusBeforeCheck) {
@@ -2791,9 +2791,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         return issueNumber;
     }
 
-    protected void gitResetAndClean() throws MojoFailureException, CommandLineException {
+    protected void gitResetHard() throws MojoFailureException, CommandLineException {
         executeGitCommand("reset", "--hard", "HEAD");
-        executeGitCommand("clean", "-f");
     }
 
     private static class CommandResult {

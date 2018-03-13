@@ -72,10 +72,26 @@ public class GitFlowFeatureAbortMojo extends AbstractGitFlowMojo {
                             "'git checkout BRANCH' to switch to the feature branch",
                             "'mvn flow:feature-abort' to run in interactive mode"));
         } else {
+            if (executeGitHasUncommitted()) {
+                boolean confirmed = getPrompter().promptConfirmation(
+                        "You have some uncommitted files. If you continue any changes will be discarded. Continue?",
+                        false,
+                        new GitFlowFailureInfo("You have some uncommitted files.",
+                                "Commit or discard local changes in order to proceed or run in interactive mode.",
+                                "'git add' and 'git commit' to commit your changes",
+                                "'git reset --hard' to throw away your changes",
+                                "'mvn flow:feature-abort' to run in interactive mode"));
+                if (!confirmed) {
+                    throw new GitFlowFailureException("You have aborted feature-abort because of uncommitted files.",
+                            "Commit or discard local changes in order to proceed.",
+                            "'git add' and 'git commit' to commit your changes",
+                            "'git reset --hard' to throw away your changes");
+                }
+            }
             featureBranchName = currentBranch;
             String baseBranch = gitFeatureBranchBaseBranch(featureBranchName);
             gitEnsureLocalBranchExists(baseBranch);
-            gitResetAndClean();
+            gitResetHard();
             gitCheckout(baseBranch);
         }
 

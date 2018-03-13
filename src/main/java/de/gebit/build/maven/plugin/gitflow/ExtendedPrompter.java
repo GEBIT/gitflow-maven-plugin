@@ -435,6 +435,28 @@ public class ExtendedPrompter implements Prompter {
     }
 
     /**
+     * Prompts for a confirmation with yes/no options. A
+     * {@link GitFlowFailureException} with batchModeErrorMessage will be thrown
+     * in batch mode.
+     *
+     * @param promptMessage
+     *            the message to be shown in prompt
+     * @param defaultValue
+     *            the deafult answer for confirmation (no default answer if
+     *            <code>null</code>)
+     * @param batchModeErrorMessage
+     *            the error message to be used in exception in batch mode
+     * @return <code>true</code> in case of positive answer, otherwise
+     *         <code>false</code>
+     * @throws GitFlowFailureException
+     *             in case of batch mode or error while prompting
+     */
+    public boolean promptConfirmation(String promptMessage, Boolean defaultValue,
+            GitFlowFailureInfo batchModeErrorMessage) throws GitFlowFailureException {
+        return promptConfirmation(promptMessage, defaultValue, null, batchModeErrorMessage);
+    }
+
+    /**
      * Prompts for a confirmation with yes/no options. If a non-null
      * batchModeValue provided than this value will be returned in batch mode.
      * Otherwise a {@link GitFlowFailureException} with batchModeErrorMessage
