@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -53,6 +54,8 @@ import org.eclipse.jgit.transport.RefSpec;
 import org.eclipse.jgit.transport.URIish;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.eclipse.jgit.treewalk.filter.PathFilter;
+
+import com.google.common.base.Objects;
 
 import de.gebit.build.maven.plugin.gitflow.WorkspaceUtils;
 import de.gebit.build.maven.plugin.gitflow.jgit.GitRebaseTodo.GitRebaseTodoEntry;
@@ -346,6 +349,9 @@ public class GitExecution {
             repositorySet.getClonedRemoteRepoGit().checkout().setName(branch).setCreateBranch(true)
                     .setUpstreamMode(SetupUpstreamMode.TRACK).setStartPoint("origin/" + branch).call();
         } else {
+            if (!Objects.equal(currentBranch, branch)) {
+                repositorySet.getClonedRemoteRepoGit().checkout().setName(branch).call();
+            }
             repositorySet.getClonedRemoteRepoGit().reset().setMode(ResetType.HARD).setRef("origin/" + branch).call();
         }
         createTestfile(repositorySet.getClonedRemoteWorkingDirectory(), filename);
@@ -769,8 +775,7 @@ public class GitExecution {
      */
     public void assertLocalTags(RepositorySet repositorySet, String... expectedTags) throws GitAPIException {
         List<String> tags = tags(repositorySet.getLocalRepoGit());
-        this.assertArrayEquals("Tags in local repository are different from expected", expectedTags,
-                tags.toArray(new String[tags.size()]));
+        assertEqualsElements("Tags in local repository are different from expected", expectedTags, tags);
     }
 
     /**
@@ -785,8 +790,7 @@ public class GitExecution {
      */
     public void assertRemoteTags(RepositorySet repositorySet, String... expectedTags) throws GitAPIException {
         List<String> tags = tags(repositorySet.getRemoteRepoGit());
-        this.assertArrayEquals("Tags in remote repository are different from expected", expectedTags,
-                tags.toArray(new String[tags.size()]));
+        assertEqualsElements("Tags in remote repository are different from expected", expectedTags, tags);
     }
 
     public List<String> tags(Git git) throws GitAPIException {
@@ -908,10 +912,6 @@ public class GitExecution {
                     Arrays.toString(expected.toArray(new String[expected.size()])),
                     Arrays.toString(actual.toArray(new String[actual.size()])));
         }
-    }
-
-    private void assertArrayEquals(String message, String[] expected, String[] actual) {
-        assertEquals(message, Arrays.toString(expected), Arrays.toString(actual));
     }
 
     /**
@@ -1088,8 +1088,8 @@ public class GitExecution {
     public void assertCommitMesaagesInGitEditorForInteractiveRebase(String... expectedCommitMessages)
             throws FileNotFoundException, IOException {
         List<String> commitMessages = readCommitMesaagesForInteractiveRebaseInGitEditor();
-        assertArrayEquals("Commit messages in git editor for interactive rebase are different from expected",
-                expectedCommitMessages, commitMessages.toArray(new String[commitMessages.size()]));
+        assertEqualsElements("Commit messages in git editor for interactive rebase are different from expected",
+                expectedCommitMessages, commitMessages);
     }
 
     private List<String> readCommitMesaagesForInteractiveRebaseInGitEditor() throws FileNotFoundException, IOException {
@@ -1254,7 +1254,7 @@ public class GitExecution {
                 status(repositorySet).getModified());
     }
 
-    private void assertEqualsElements(String message, String[] expectedElements, Set<String> actualElements) {
+    private void assertEqualsElements(String message, String[] expectedElements, Collection<String> actualElements) {
         List<String> expected = new LinkedList<String>(Arrays.asList(expectedElements));
         List<String> actual = new LinkedList<String>(actualElements);
         Collections.sort(expected);
