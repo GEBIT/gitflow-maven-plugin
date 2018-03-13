@@ -41,6 +41,8 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
 
     private static final String FEATURE_BRANCH = "feature/" + FEATURE_NAME;
 
+    private static final String FEATURE_VERSION = TestProjects.BASIC.releaseVersion + "-" + FEATURE_NAME + "-SNAPSHOT";
+
     private static final String FEATURE_NAME_2 = TestProjects.BASIC.jiraProject + "-4711";
 
     private static final String FEATURE_BRANCH_2 = "feature/" + FEATURE_NAME_2;
@@ -53,6 +55,11 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
 
     private static final String PROMPT_MESSAGE_ONE_FEATURE_SELECT = "Feature branches:" + LS + "1. " + FEATURE_BRANCH
             + LS + "Choose feature branch to abort";
+
+    private static final String PROMPT_MESSAGE_UNCOMMITED_CHANGES_CONFIRMATION = "You have some uncommitted files. "
+            + "If you continue any changes will be discarded. Continue?";
+
+    private static final String COMMIT_MESSAGE_SET_VERSION = FEATURE_NAME + ": updating versions for feature branch";
 
     private static final String COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE = "NO-ISSUE: updating versions for"
             + " maintenance branch";
@@ -101,83 +108,74 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
     }
 
-    private void assertNoChanges() throws ComponentLookupException, GitAPIException, IOException {
-        assertFeatureAbortedCorrectly();
-    }
-
-    @Test
-    public void testExecuteWithUntrackedChangesOnFeatureBranch() throws Exception {
-        // set up
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
-        git.createTestfile(repositorySet);
-        // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
-        // verify
-        assertFeatureAbortedCorrectly();
-        git.assertTestfileMissing(repositorySet);
-    }
-
-    @Test
-    public void testExecuteWithUntrackedChangesOnBaseBranch() throws Exception {
-        // set up
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
-        git.switchToBranch(repositorySet, MASTER_BRANCH);
-        git.createTestfile(repositorySet);
-        when(promptControllerMock.prompt(PROMPT_MESSAGE_ONE_FEATURE_SELECT, Arrays.asList("1"))).thenReturn("1");
-        // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
-        // verify
-        verify(promptControllerMock).prompt(PROMPT_MESSAGE_ONE_FEATURE_SELECT, Arrays.asList("1"));
-        verifyNoMoreInteractions(promptControllerMock);
-        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
-
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
-        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
-
-        git.assertUntrackedFiles(repositorySet, GitExecution.TESTFILE_NAME);
-        git.assertTestfileContent(repositorySet);
-    }
-
-    @Test
-    public void testExecuteWithUntrackedChangesOnOtherBranch() throws Exception {
-        // set up
-        final String OTHER_BRANCH = "otherBranch";
-        git.createBranchWithoutSwitch(repositorySet, OTHER_BRANCH);
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
-        git.switchToBranch(repositorySet, OTHER_BRANCH);
-        git.createTestfile(repositorySet);
-        when(promptControllerMock.prompt(PROMPT_MESSAGE_ONE_FEATURE_SELECT, Arrays.asList("1"))).thenReturn("1");
-        // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
-        // verify
-        verify(promptControllerMock).prompt(PROMPT_MESSAGE_ONE_FEATURE_SELECT, Arrays.asList("1"));
-        verifyNoMoreInteractions(promptControllerMock);
-        git.assertCurrentBranch(repositorySet, OTHER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, OTHER_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
-
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, OTHER_BRANCH);
-        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
-
-        git.assertUntrackedFiles(repositorySet, GitExecution.TESTFILE_NAME);
-        git.assertTestfileContent(repositorySet);
-    }
-
     @Test
     public void testExecuteWithStagedButUncommitedChangesOnFeatureBranch() throws Exception {
         // set up
         ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
         git.createAndAddToIndexTestfile(repositorySet);
+        when(promptControllerMock.prompt(PROMPT_MESSAGE_UNCOMMITED_CHANGES_CONFIRMATION, Arrays.asList("y", "n"), "n"))
+                .thenReturn("y");
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
         // verify
+        verify(promptControllerMock).prompt(PROMPT_MESSAGE_UNCOMMITED_CHANGES_CONFIRMATION, Arrays.asList("y", "n"),
+                "n");
+        verifyNoMoreInteractions(promptControllerMock);
         assertFeatureAbortedCorrectly();
         git.assertTestfileMissing(repositorySet);
+    }
+
+    @Test
+    public void testExecuteWithStagedButUncommitedChangesOnFeatureBranchConfirmationNo() throws Exception {
+        // set up
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
+        git.createAndAddToIndexTestfile(repositorySet);
+        when(promptControllerMock.prompt(PROMPT_MESSAGE_UNCOMMITED_CHANGES_CONFIRMATION, Arrays.asList("y", "n"), "n"))
+                .thenReturn("n");
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MESSAGE_UNCOMMITED_CHANGES_CONFIRMATION, Arrays.asList("y", "n"),
+                "n");
+        verifyNoMoreInteractions(promptControllerMock);
+        assertGitFlowFailureException(result, "You have aborted feature-abort because of uncommitted files.",
+                "Commit or discard local changes in order to proceed.",
+                "'git add' and 'git commit' to commit your changes", "'git reset --hard' to throw away your changes");
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
+
+        git.assertAddedFiles(repositorySet, GitExecution.TESTFILE_NAME);
+        git.assertTestfileContent(repositorySet);
+    }
+
+    @Test
+    public void testExecuteWithStagedButUncommitedChangesOnFeatureBranchInBatchMode() throws Exception {
+        // set up
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
+        git.createAndAddToIndexTestfile(repositorySet);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
+        // verify
+        assertGitFlowFailureException(result, "You have some uncommitted files.",
+                "Commit or discard local changes in order to proceed or run in interactive mode.",
+                "'git add' and 'git commit' to commit your changes", "'git reset --hard' to throw away your changes",
+                "'mvn flow:feature-abort' to run in interactive mode");
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
+
+        git.assertAddedFiles(repositorySet, GitExecution.TESTFILE_NAME);
+        git.assertTestfileContent(repositorySet);
     }
 
     @Test
@@ -237,11 +235,42 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
         ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
         git.createAndCommitTestfile(repositorySet);
         git.modifyTestfile(repositorySet);
+        when(promptControllerMock.prompt(PROMPT_MESSAGE_UNCOMMITED_CHANGES_CONFIRMATION, Arrays.asList("y", "n"), "n"))
+                .thenReturn("y");
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
         // verify
+        verify(promptControllerMock).prompt(PROMPT_MESSAGE_UNCOMMITED_CHANGES_CONFIRMATION, Arrays.asList("y", "n"),
+                "n");
+        verifyNoMoreInteractions(promptControllerMock);
         assertFeatureAbortedCorrectly();
         git.assertTestfileMissing(repositorySet);
+    }
+
+    @Test
+    public void testExecuteWithUnstagedChangesOnFeatureBranchInBatchMode() throws Exception {
+        // set up
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
+        git.createAndCommitTestfile(repositorySet);
+        git.modifyTestfile(repositorySet);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
+        // verify
+        assertGitFlowFailureException(result, "You have some uncommitted files.",
+                "Commit or discard local changes in order to proceed or run in interactive mode.",
+                "'git add' and 'git commit' to commit your changes", "'git reset --hard' to throw away your changes",
+                "'mvn flow:feature-abort' to run in interactive mode");
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE,
+                COMMIT_MESSAGE_SET_VERSION);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
+
+        git.assertModifiedFiles(repositorySet, GitExecution.TESTFILE_NAME);
+        git.assertTestfileContentModified(repositorySet);
     }
 
     @Test
@@ -303,7 +332,13 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
         // verify
         assertGitFlowFailureException(result, "There are no feature branches in your repository.", null);
-        assertNoChanges();
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
     }
 
     @Test
