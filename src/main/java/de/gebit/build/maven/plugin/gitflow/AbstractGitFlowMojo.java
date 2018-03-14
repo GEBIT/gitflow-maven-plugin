@@ -1822,6 +1822,51 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         return (StringUtils.isNotBlank(tagResult));
     }
 
+    protected boolean gitRebaseInProcess() throws MojoFailureException, CommandLineException {
+        return gitGetRebaseHeadNameFileIfExists() != null;
+    }
+
+    private File gitGetRebaseHeadNameFileIfExists() throws MojoFailureException, CommandLineException {
+        return gitGetRebasFileIfExists("head-name");
+    }
+
+    private File gitGetRebasFileIfExists(String fileName) throws MojoFailureException, CommandLineException {
+        final String gitDir = executeGitCommandReturn("rev-parse", "--git-dir").trim();
+        String relativePath = "rebase-apply/" + fileName;
+        File headNameFile = FileUtils.getFile(gitDir, relativePath);
+        String basedir = this.session.getRequest().getBaseDirectory();
+        if (!headNameFile.isAbsolute()) {
+            headNameFile = new File(basedir, headNameFile.getPath());
+        }
+        if (headNameFile.exists()) {
+            return headNameFile;
+        }
+        // try with rebase-merge instead
+        relativePath = "rebase-merge/" + fileName;
+        headNameFile = FileUtils.getFile(gitDir, relativePath);
+        if (!headNameFile.isAbsolute()) {
+            headNameFile = new File(basedir, headNameFile.getPath());
+        }
+        if (headNameFile.exists()) {
+            return headNameFile;
+        }
+        if (getLog().isDebugEnabled()) {
+            getLog().debug(relativePath + " not found in " + gitDir);
+        }
+        return null;
+    }
+
+    protected boolean gitInteractiveRebaseInProcess() throws MojoFailureException, CommandLineException {
+        return gitGetRebasFileIfExists("interactive") != null;
+    }
+
+    protected String gitInteractiveRebaseFeatureBranchInProcess() throws MojoFailureException, CommandLineException {
+        if (gitInteractiveRebaseInProcess()) {
+            return gitRebaseFeatureBranchInProcess();
+        }
+        return null;
+    }
+
     /**
      * Checks whether a rebase is in progress by looking at .git/rebase-apply.
      *
@@ -1829,22 +1874,10 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws MojoFailureException
      * @throws CommandLineException
      */
-    protected String gitRebaseBranchInProcess() throws MojoFailureException, CommandLineException {
-        final String gitDir = executeGitCommandReturn("rev-parse", "--git-dir").trim();
-        File headNameFile = FileUtils.getFile(gitDir, "rebase-apply/head-name");
-        if (!headNameFile.isAbsolute()) {
-            String basedir = this.session.getRequest().getBaseDirectory();
-            headNameFile = new File(basedir, headNameFile.getPath());
-        }
-        if (!headNameFile.exists()) {
-            // try with rebase-merge instead
-            headNameFile = FileUtils.getFile(gitDir, "rebase-merge/head-name");
-            if (!headNameFile.exists()) {
-                if (getLog().isDebugEnabled()) {
-                    getLog().debug(headNameFile + " not found in " + gitDir);
-                }
-                return null;
-            }
+    protected String gitRebaseFeatureBranchInProcess() throws MojoFailureException, CommandLineException {
+        File headNameFile = gitGetRebaseHeadNameFileIfExists();
+        if (headNameFile == null) {
+            return null;
         }
         String headName;
         try {
@@ -1961,15 +1994,15 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         if (!headName.startsWith("refs/heads/")) {
             String barnchesStr = executeGitCommandReturn("branch", "--contains", headName).trim();
             String[] barnches = barnchesStr.split("\r?\n");
-            for (String barnch : barnches) {
-                if (barnch.startsWith(gitFlowConfig.getFeatureBranchPrefix())) {
-                    featureBranch = barnch;
+            for (String branch : barnches) {
+                if (branch.startsWith(gitFlowConfig.getFeatureBranchPrefix())) {
+                    featureBranch = branch;
                 }
             }
         } else {
-            String barnch = headName.substring("refs/heads/".length());
-            if (barnch.startsWith(gitFlowConfig.getFeatureBranchPrefix())) {
-                featureBranch = barnch;
+            String branch = headName.substring("refs/heads/".length());
+            if (branch.startsWith(gitFlowConfig.getFeatureBranchPrefix())) {
+                featureBranch = branch;
             }
         }
         if (featureBranch == null) {
@@ -1987,6 +2020,48 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected void gitRebaseContinue() throws MojoFailureException, CommandLineException {
         executeGitCommand("rebase", "--continue");
+    }
+
+    protected InteractiveRebaseStatus gitInteractiveRebaseContinue() throws MojoFailureException, CommandLineException {
+        Integer commitNumber = gitGetInteractiveRebaseCommitNumber();
+        CommandResult commandResult = executeGitCommandExitCode("rebase", "--continue");
+        if (commandResult.getExitCode() != SUCCESS_EXIT_CODE) {
+            Integer newCommitNumber = gitGetInteractiveRebaseCommitNumber();
+            if (gitRebaseInProcess() && commitNumber != null && newCommitNumber != null
+                    && commitNumber != newCommitNumber) {
+                return InteractiveRebaseStatus.CONFLICT;
+            } else {
+                String error = commandResult.getError();
+                if (StringUtils.isBlank(error) && StringUtils.isNotBlank(commandResult.getOut())) {
+                    error = commandResult.getOut();
+                }
+                throw new GitFlowFailureException(
+                        "Continuation of interactive rebase failed.\nGit error message:\n" + error,
+                        "Fix the problem described in git error message or consult a gitflow expert on how to fix this!");
+            }
+        }
+        if (gitRebaseInProcess()) {
+            return InteractiveRebaseStatus.PAUSED;
+        }
+        return InteractiveRebaseStatus.SUCCESS;
+    }
+
+    private Integer gitGetInteractiveRebaseCommitNumber() throws MojoFailureException, CommandLineException {
+        Integer commitNumber = null;
+        File msgnumFile = gitGetRebasFileIfExists("msgnum");
+        if (msgnumFile != null) {
+            try {
+                String commitNumberStr = FileUtils.readFileToString(msgnumFile, "UTF-8").trim();
+                commitNumber = Integer.parseInt(commitNumberStr);
+            } catch (IOException e) {
+                getLog().warn("Failed to check for current commit number in interactive rebase. Error on reading file '"
+                        + msgnumFile.getPath() + "'.");
+            } catch (NumberFormatException exc) {
+                getLog().warn("Failed to check for current commit number in interactive rebase. "
+                        + "Error on parsing file content. " + exc.getMessage());
+            }
+        }
+        return commitNumber;
     }
 
     /**
@@ -2011,7 +2086,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws MojoFailureException
      * @throws CommandLineException
      */
-    protected boolean gitRebaseInteractive(String commitId) throws MojoFailureException, CommandLineException {
+    protected InteractiveRebaseStatus gitRebaseInteractive(String commitId)
+            throws MojoFailureException, CommandLineException {
         getLog().info("Rebasing interactively on " + commitId);
         initExecutables();
         cmdGit.clearArgs();
@@ -2038,19 +2114,19 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         try {
             Process process = processBuilder.start();
             if (process.waitFor() != SUCCESS_EXIT_CODE) {
-                // try to abort the rebase
-                try {
-                    gitRebaseAbort();
-                } catch (CommandLineException | MojoFailureException ex) {
-                    getLog().debug("Aborting rebase failed.", ex);
+                if (gitRebaseInProcess()) {
+                    return InteractiveRebaseStatus.CONFLICT;
+                } else {
+                    throw new GitFlowFailureException("Interactive rebase failed.",
+                            "Check the output above for the reason. "
+                                    + "Fix the problem or consult a gitflow expert on how to fix this!");
                 }
-                throw new MojoFailureException("Interactive rebase failed.");
             }
-            if (gitRebaseBranchInProcess() != null) {
-                return false;
+            if (gitRebaseInProcess()) {
+                return InteractiveRebaseStatus.PAUSED;
             }
 
-            return true;
+            return InteractiveRebaseStatus.SUCCESS;
         } catch (IOException | InterruptedException ex) {
             throw new MojoFailureException("Starting rebase interactive failed", ex);
         }

@@ -34,6 +34,23 @@ import org.codehaus.plexus.util.cli.CommandLineException;
 @Mojo(name = "feature-rebase-cleanup", aggregator = true)
 public class GitFlowFeatureCleanupMojo extends AbstractGitFlowMojo {
 
+    private static final GitFlowFailureInfo ERROR_REBASE_CONFLICTS = new GitFlowFailureInfo(
+            "Automatic rebase after interaction failed beacause of conflicts.",
+            "Fix the rebase conflicts and mark them as resolved. After that, run "
+                    + "'mvn flow:feature-rebase-cleanup' again. Do NOT run 'git rebase --continue'.",
+            "'git status' to check the conflicts, resolve the conflicts and "
+                    + "'git add' to mark conflicts as resolved",
+            "'mvn flow:feature-rebase-cleanup' to continue feature clean up process",
+            "'git rebase --abort' to abort feature clean up process");
+
+    private static final GitFlowFailureInfo ERROR_REBASE_PAUSED = new GitFlowFailureInfo(
+            "Interactive rebase is paused.",
+            "Perform your changes and run 'mvn flow:feature-rebase-cleanup' again in order to proceed. "
+                    + "Do NOT run 'git rebase --continue'.",
+            "'git status' to check the conflicts",
+            "'mvn flow:feature-rebase-cleanup' to continue feature clean up process",
+            "'git rebase --abort' to abort feature clean up process");
+
     /**
      * Controls whether a merge of the development branch instead of a rebase on
      * the development branch is performed.
@@ -60,7 +77,7 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowMojo {
                     "'mvn flow:feature-rebase-cleanup' can be executed only in interactive mode.",
                     "Please run in interactive mode.", "'mvn flow:feature-rebase-cleanup' to run in interactive mode");
         }
-        String featureBranchName = gitRebaseBranchInProcess();
+        String featureBranchName = gitInteractiveRebaseFeatureBranchInProcess();
         if (featureBranchName == null) {
             // check uncommitted changes
             checkUncommittedChanges();
@@ -100,21 +117,19 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowMojo {
             String versionChangeCommitOnBranch = gitVersionChangeCommitOnBranch(featureBranchName, baseCommit);
             String rebaseCommit = (versionChangeCommitOnBranch != null) ? versionChangeCommitOnBranch : baseCommit;
 
-            if (!gitRebaseInteractive(rebaseCommit)) {
-                getLog().info(
-                        "The rebase is paused, perform your changes and call flow:feature-rebase-cleanup again to continue.");
-                System.exit(1);
+            InteractiveRebaseStatus rebaseStatus = gitRebaseInteractive(rebaseCommit);
+            if (rebaseStatus == InteractiveRebaseStatus.PAUSED) {
+                throw new GitFlowFailureException(ERROR_REBASE_PAUSED);
+            } else if (rebaseStatus == InteractiveRebaseStatus.CONFLICT) {
+                throw new GitFlowFailureException(ERROR_REBASE_CONFLICTS);
             }
 
         } else {
-            if (updateWithMerge) {
-                // continue with commit
-                getLog().error("A merge is already in process, cannot cleanup now.");
-                return;
-            } else {
-                // continue with the rebase
-                getLog().info("A rebase is in process. Assume the interactive rebase is resumed and continue...");
-                gitRebaseContinue();
+            InteractiveRebaseStatus rebaseStatus = gitInteractiveRebaseContinue();
+            if (rebaseStatus == InteractiveRebaseStatus.PAUSED) {
+                throw new GitFlowFailureException(ERROR_REBASE_PAUSED);
+            } else if (rebaseStatus == InteractiveRebaseStatus.CONFLICT) {
+                throw new GitFlowFailureException(ERROR_REBASE_CONFLICTS);
             }
         }
 
@@ -131,4 +146,5 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowMojo {
             gitPush(featureBranchName, false, true);
         }
     }
+
 }

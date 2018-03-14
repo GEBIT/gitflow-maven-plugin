@@ -61,7 +61,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
         String baseBranch;
         String featureBranchName = gitMergeFromFeatureBranchInProcess();
         if (featureBranchName == null) {
-            featureBranchName = gitRebaseBranchInProcess();
+            featureBranchName = gitRebaseFeatureBranchInProcess();
             if (featureBranchName == null) {
                 // check uncommitted changes
                 checkUncommittedChanges();

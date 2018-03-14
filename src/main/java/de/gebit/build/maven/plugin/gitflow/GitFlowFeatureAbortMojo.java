@@ -35,7 +35,7 @@ public class GitFlowFeatureAbortMojo extends AbstractGitFlowMojo {
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         // check if rebase in process
-        String featureBranchName = gitRebaseBranchInProcess();
+        String featureBranchName = gitRebaseFeatureBranchInProcess();
         if (featureBranchName != null) {
             throw new GitFlowFailureException(
                     "A rebase of the feature branch '" + featureBranchName
