@@ -14,8 +14,12 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.file.CopyOption;
 import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 
 import de.gebit.build.maven.plugin.gitflow.jgit.GitRebaseTodo.GitRebaseTodoEntry;
@@ -37,45 +41,78 @@ public class GitDummyEditor {
     public static final String PROPERTY_KEY_TARGET_BASEDIR = "DummyEditor.target.basedir";
 
     /**
-     * The relative path to the file passed to the dummy editor. Relative to the
+     * The relative path to the dummy editor working directory. Relative to the
      * base directory.
      */
-    public static final String EDIT_FILE_RELATIVE_PATH = "__editor/file.txt";
+    private static final String RELATIVE_PATH_TO_EDITOR_WORKING_DIR = "__editor";
 
     /**
-     * The relative path to the file passed to the dummy editor. Relative to the
-     * base directory.
+     * The name of the git-rebase-todo file.
      */
-    public static final String REBASE_TODO_COMMANDS_FILE_RELATIVE_PATH = "__editor/git-rebase-todo-commands.txt";
+    private static final String FILE_NAME_GIT_REBASE_TODO = "git-rebase-todo";
+
+    /**
+     * The name of the COMMIT_EDITMSG file.
+     */
+    private static final String FILE_NAME_COMMIT_EDITMSG = "COMMIT_EDITMSG";
+
+    /**
+     * The name of the input file git-rebase-todo-commands.
+     */
+    private static final String INPUT_FILE_NAME_GIT_REBASE_TODO_COMMANDS = "INPUT_git-rebase-todo-commands.txt";
+
+    /**
+     * The name of the input file COMMIT_EDITMSG.
+     */
+    private static final String INPUT_FILE_NAME_COMMIT_EDITMSG = "INPUT_COMMIT_EDITMSG.txt";
+
+    /**
+     * The relative path to the git-rebase-todo file passed to the dummy editor.
+     * Relative to the base directory.
+     */
+    public static final String RELATIVE_PATH_TO_GIT_REBASE_TODO = new File(RELATIVE_PATH_TO_EDITOR_WORKING_DIR,
+            FILE_NAME_GIT_REBASE_TODO).getPath();
+
+    /**
+     * The relative path to the input file git-rebase-todo-commands used by
+     * dummy editor. Relative to the base directory.
+     */
+    public static final String REBASE_TODO_COMMANDS_FILE_RELATIVE_PATH = new File(RELATIVE_PATH_TO_EDITOR_WORKING_DIR,
+            INPUT_FILE_NAME_GIT_REBASE_TODO_COMMANDS).getPath();
+
+    private static boolean allowToOverwriteFiles = true;
 
     public static void main(String[] args) {
         // test
         redirecteSystemOut();
-
-        System.out.println("Dummy Editor: executed with args: " + Arrays.toString(args));
+        log("----------------------------------------------------------");
+        log("Dummy Editor: executed with args: " + Arrays.toString(args));
         try {
             if (args != null && args.length == 1 && args[0] != null) {
-                File txtFile = new File(args[0]);
-                if (txtFile.exists() && txtFile.isFile()) {
+                File editorFile = new File(args[0]);
+                if (editorFile.exists() && editorFile.isFile()) {
                     String targetBasedir = System.getProperty(PROPERTY_KEY_TARGET_BASEDIR);
                     if (targetBasedir != null) {
-                        File target = new File(targetBasedir, EDIT_FILE_RELATIVE_PATH);
-                        if (!target.exists()) {
-                            File targetParentDir = target.getParentFile();
-                            if (!targetParentDir.exists()) {
-                                targetParentDir.mkdirs();
+                        File targetDir = new File(targetBasedir, RELATIVE_PATH_TO_EDITOR_WORKING_DIR);
+                        if (!targetDir.exists()) {
+                            targetDir.mkdirs();
+                        }
+                        File target = new File(targetDir, editorFile.getName());
+                        if (allowToOverwriteFiles || !target.exists()) {
+                            log("Dummy Editor: copying file from [" + editorFile.getAbsolutePath() + "] to ["
+                                    + target.getAbsolutePath() + "]");
+                            if (allowToOverwriteFiles) {
+                                Files.copy(editorFile.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                            } else {
+                                Files.copy(editorFile.toPath(), target.toPath());
                             }
-                            System.out.println("Dummy Editor: copying file from [" + txtFile.getAbsolutePath()
-                                    + "] to [" + target.getAbsolutePath() + "]");
-                            Files.copy(txtFile.toPath(), target.toPath());
-                            processFile(txtFile, targetBasedir);
+                            processFile(editorFile, targetDir);
                         } else {
-                            System.err.println("Dummy Editor: file already created");
+                            logError("Dummy Editor: file [" + editorFile.getName() + "] already created");
                             System.exit(1);
                         }
                     } else {
-                        System.err.println(
-                                "Dummy Editor: system property '" + PROPERTY_KEY_TARGET_BASEDIR + "' not found");
+                        logError("Dummy Editor: system property '" + PROPERTY_KEY_TARGET_BASEDIR + "' not found");
                         System.exit(2);
                     }
                 }
@@ -87,22 +124,26 @@ public class GitDummyEditor {
         System.exit(0);
     }
 
-    private static void processFile(File txtFile, String targetBasedir) {
+    private static void processFile(File txtFile, File targetDir) {
         try {
-            if ("git-rebase-todo".equals(txtFile.getName())) {
-                processRebase(txtFile, targetBasedir);
+            if (FILE_NAME_GIT_REBASE_TODO.equals(txtFile.getName())) {
+                processRebase(txtFile, targetDir);
+            } else if (FILE_NAME_COMMIT_EDITMSG.equals(txtFile.getName())) {
+                processCommitEditMsg(txtFile, targetDir);
+            } else {
+                log("Processing of file [" + txtFile.getName() + "] is not supported");
             }
         } catch (IOException exc) {
             exc.printStackTrace();
         }
     }
 
-    private static void processRebase(File gitRebaseTodoFile, String targetBasedir) throws IOException {
-        System.out.println("Process rebase todo...");
-        final File rebaseTodoCommandsFile = new File(targetBasedir, REBASE_TODO_COMMANDS_FILE_RELATIVE_PATH);
+    private static void processRebase(File editorFile, File targetDir) throws IOException {
+        log("Processing git-rebase-todo...");
+        File rebaseTodoCommandsFile = new File(targetDir, INPUT_FILE_NAME_GIT_REBASE_TODO_COMMANDS);
         if (rebaseTodoCommandsFile.exists()) {
             GitRebaseTodo commands = GitRebaseTodo.load(rebaseTodoCommandsFile);
-            GitRebaseTodo todo = GitRebaseTodo.load(gitRebaseTodoFile);
+            GitRebaseTodo todo = GitRebaseTodo.load(editorFile);
             List<GitRebaseTodoEntry> todoEntries = todo.getEntries();
             List<GitRebaseTodoEntry> commandsEntries = commands.getEntries();
             int maxChanges = Math.min(todoEntries.size(), commandsEntries.size());
@@ -110,27 +151,50 @@ public class GitDummyEditor {
                 for (int i = 0; i < maxChanges; i++) {
                     todoEntries.get(i).setCommand(commandsEntries.get(i).getCommand());
                 }
-                System.out.println("...saving changes...");
-                todo.saveToFile(gitRebaseTodoFile);
-                System.out.println("...rebase todo file saved");
+                log("- saving changes...");
+                todo.saveToFile(editorFile);
+                log("- rebase todo file saved");
             } else {
-                System.out.println("...nothing to change");
+                log("- nothing to change");
             }
         } else {
-            System.out.println("...commands not provided");
+            log("- nothing to change: commands not provided");
         }
+    }
+
+    private static void processCommitEditMsg(File editorFile, File targetDir) throws IOException {
+        log("Processing COMMIT_EDITMSG...");
+        File inputFile = new File(targetDir, INPUT_FILE_NAME_COMMIT_EDITMSG);
+        if (inputFile.exists()) {
+            Files.copy(inputFile.toPath(), editorFile.toPath());
+            log("- commit message replaced");
+        } else {
+            log("- default commit message used");
+        }
+    }
+
+    private static void log(String msg) {
+        System.out.println(prepareLogMessage(msg, "INFO"));
+    }
+
+    private static String prepareLogMessage(String msg, String level) {
+        return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date()) + " [" + level + "] " + msg;
+    }
+
+    private static void logError(String msg) {
+        System.err.println(prepareLogMessage(msg, "ERROR"));
     }
 
     private static void redirecteSystemOut() {
         String targetBasedir = System.getProperty(PROPERTY_KEY_TARGET_BASEDIR);
         if (targetBasedir != null) {
-            File target = new File(targetBasedir, "__editor/editor.log");
+            File target = new File(new File(targetBasedir, RELATIVE_PATH_TO_EDITOR_WORKING_DIR), "editor.log");
             File targetParentDir = target.getParentFile();
             if (!targetParentDir.exists()) {
                 targetParentDir.mkdirs();
             }
             try {
-                System.setOut(new PrintStream(new BufferedOutputStream(new FileOutputStream(target)), true));
+                System.setOut(new PrintStream(new BufferedOutputStream(new FileOutputStream(target, true)), true));
                 System.setErr(System.out);
             } catch (FileNotFoundException exc) {
                 exc.printStackTrace();

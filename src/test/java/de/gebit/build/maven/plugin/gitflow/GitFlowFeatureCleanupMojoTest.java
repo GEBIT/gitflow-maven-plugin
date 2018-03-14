@@ -22,6 +22,7 @@ import java.util.Properties;
 import java.util.Set;
 
 import org.apache.maven.execution.MavenExecutionResult;
+import org.eclipse.jgit.api.CheckoutCommand.Stage;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.junit.After;
 import org.junit.Before;
@@ -913,6 +914,400 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FOR_TESTFILE);
 
         git.assertTestfileContentModified(repositorySet);
+    }
+
+    @Test
+    public void testExecuteWithRebasePaused() throws Exception {
+        // set up
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
+        git.createAndCommitTestfile(repositorySet);
+        git.modifyTestfile(repositorySet);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_TESTFILE_MODIFIED);
+        git.defineRebaseTodoCommands("pick", "edit");
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
+                COMMIT_MESSAGE_TESTFILE_MODIFIED);
+        assertGitFlowFailureException(result, "Interactive rebase is paused.",
+                "Perform your changes and run 'mvn flow:feature-rebase-cleanup' again in order to proceed. "
+                        + "Do NOT run 'git rebase --continue'.",
+                "'git status' to check the conflicts",
+                "'mvn flow:feature-rebase-cleanup' to continue feature clean up process",
+                "'git rebase --abort' to abort feature clean up process");
+        git.assertRebaseBranchInProcess(repositorySet, FEATURE_BRANCH);
+    }
+
+    @Test
+    public void testExecuteWithConflictOnRebase() throws Exception {
+        // set up
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
+        git.createAndCommitTestfile(repositorySet);
+        git.modifyTestfile(repositorySet);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_TESTFILE_MODIFIED);
+        git.defineRebaseTodoCommands("drop", "pick");
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
+                COMMIT_MESSAGE_TESTFILE_MODIFIED);
+        assertGitFlowFailureException(result, "Automatic rebase after interaction failed beacause of conflicts.",
+                "Fix the rebase conflicts and mark them as resolved. After that, run "
+                        + "'mvn flow:feature-rebase-cleanup' again. Do NOT run 'git rebase --continue'.",
+                "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved",
+                "'mvn flow:feature-rebase-cleanup' to continue feature clean up process",
+                "'git rebase --abort' to abort feature clean up process");
+        git.assertRebaseBranchInProcess(repositorySet, FEATURE_BRANCH);
+    }
+
+    @Test
+    public void testExecuteWithErrorOnInteractiveRebase() throws Exception {
+        // set up
+        startFeatureAndAddTwoCommits();
+        git.prepareErrorWhileUsingGitEditor(repositorySet);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertGitFlowFailureException(result, "Interactive rebase failed.", "Check the output above for the reason. "
+                + "Fix the problem or consult a gitflow expert on how to fix this!");
+        git.assertNoRebaseInProcess(repositorySet);
+    }
+
+    @Test
+    public void testExecuteContinueAfterRebasePaused() throws Exception {
+        // set up
+        final String FEATURE_TESTFILE_NAME = "feature-testfile.txt";
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
+        git.createAndCommitTestfile(repositorySet);
+        git.modifyTestfile(repositorySet);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_TESTFILE_MODIFIED);
+        git.createAndCommitTestfile(repositorySet, FEATURE_TESTFILE_NAME, COMMIT_MESSAGE_FEATURE_TESTFILE);
+        git.defineRebaseTodoCommands("pick", "fixup", "edit");
+
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        verifyZeroInteractions(promptControllerMock);
+        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FEATURE_TESTFILE,
+                COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_TESTFILE_MODIFIED);
+        assertGitFlowFailureException(result, "Interactive rebase is paused.",
+                "Perform your changes and run 'mvn flow:feature-rebase-cleanup' again in order to proceed. "
+                        + "Do NOT run 'git rebase --continue'.",
+                "'git status' to check the conflicts",
+                "'mvn flow:feature-rebase-cleanup' to continue feature clean up process",
+                "'git rebase --abort' to abort feature clean up process");
+        git.assertRebaseBranchInProcess(repositorySet, FEATURE_BRANCH);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        git.assertNoRebaseInProcess(repositorySet);
+
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, FEATURE_BRANCH, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FEATURE_TESTFILE,
+                COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_SET_VERSION);
+
+        git.assertTestfileContentModified(repositorySet);
+        git.assertTestfileContent(repositorySet, FEATURE_TESTFILE_NAME);
+    }
+
+    @Test
+    public void testExecuteContinueAfterRebasePausedTwice() throws Exception {
+        // set up
+        final String FEATURE_TESTFILE_NAME = "feature-testfile.txt";
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
+        git.createAndCommitTestfile(repositorySet);
+        git.modifyTestfile(repositorySet);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_TESTFILE_MODIFIED);
+        git.createAndCommitTestfile(repositorySet, FEATURE_TESTFILE_NAME, COMMIT_MESSAGE_FEATURE_TESTFILE);
+        git.defineRebaseTodoCommands("pick", "edit", "edit");
+
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        verifyZeroInteractions(promptControllerMock);
+        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FEATURE_TESTFILE,
+                COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_TESTFILE_MODIFIED);
+        assertGitFlowFailureException(result, "Interactive rebase is paused.",
+                "Perform your changes and run 'mvn flow:feature-rebase-cleanup' again in order to proceed. "
+                        + "Do NOT run 'git rebase --continue'.",
+                "'git status' to check the conflicts",
+                "'mvn flow:feature-rebase-cleanup' to continue feature clean up process",
+                "'git rebase --abort' to abort feature clean up process");
+        git.assertRebaseBranchInProcess(repositorySet, FEATURE_BRANCH);
+        // test
+        result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        assertGitFlowFailureException(result, "Interactive rebase is paused.",
+                "Perform your changes and run 'mvn flow:feature-rebase-cleanup' again in order to proceed. "
+                        + "Do NOT run 'git rebase --continue'.",
+                "'git status' to check the conflicts",
+                "'mvn flow:feature-rebase-cleanup' to continue feature clean up process",
+                "'git rebase --abort' to abort feature clean up process");
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        git.assertNoRebaseInProcess(repositorySet);
+
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, FEATURE_BRANCH, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FEATURE_TESTFILE,
+                COMMIT_MESSAGE_TESTFILE_MODIFIED, COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_SET_VERSION);
+
+        git.assertTestfileContentModified(repositorySet);
+        git.assertTestfileContent(repositorySet, FEATURE_TESTFILE_NAME);
+    }
+
+    @Test
+    public void testExecuteContinueAfterConflictOnRebase() throws Exception {
+        // set up
+        final String TESTFILE_NAME = "testfile.txt";
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
+        git.createAndCommitTestfile(repositorySet, TESTFILE_NAME, COMMIT_MESSAGE_FOR_TESTFILE);
+        git.modifyTestfile(repositorySet, TESTFILE_NAME);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_TESTFILE_MODIFIED);
+        git.defineRebaseTodoCommands("drop", "pick");
+
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        verifyZeroInteractions(promptControllerMock);
+        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
+                COMMIT_MESSAGE_TESTFILE_MODIFIED);
+        assertGitFlowFailureException(result, "Automatic rebase after interaction failed beacause of conflicts.",
+                "Fix the rebase conflicts and mark them as resolved. After that, run "
+                        + "'mvn flow:feature-rebase-cleanup' again. Do NOT run 'git rebase --continue'.",
+                "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved",
+                "'mvn flow:feature-rebase-cleanup' to continue feature clean up process",
+                "'git rebase --abort' to abort feature clean up process");
+        git.assertRebaseBranchInProcess(repositorySet, FEATURE_BRANCH);
+        repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath(TESTFILE_NAME).call();
+        repositorySet.getLocalRepoGit().add().addFilepattern(TESTFILE_NAME).call();
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        git.assertNoRebaseInProcess(repositorySet);
+
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, FEATURE_BRANCH, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_TESTFILE_MODIFIED,
+                COMMIT_MESSAGE_SET_VERSION);
+
+        git.assertTestfileContentModified(repositorySet, TESTFILE_NAME);
+    }
+
+    @Test
+    public void testExecuteContinueAfterConflictOnRebaseTwice() throws Exception {
+        // set up
+        final String TESTFILE_NAME = "testfile.txt";
+        final String FEATURE_TESTFILE_NAME = "feature-testfile.txt";
+        final String COMMIT_MESSAGE_FEATURE_TESTFILE_MODIFIED = "FEATURE: Unit test dummy file modified";
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
+        git.createAndCommitTestfile(repositorySet, TESTFILE_NAME, COMMIT_MESSAGE_FOR_TESTFILE);
+        git.modifyTestfile(repositorySet, TESTFILE_NAME);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_TESTFILE_MODIFIED);
+        git.createAndCommitTestfile(repositorySet, FEATURE_TESTFILE_NAME, COMMIT_MESSAGE_FEATURE_TESTFILE);
+        git.modifyTestfile(repositorySet, FEATURE_TESTFILE_NAME);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_FEATURE_TESTFILE_MODIFIED);
+        git.defineRebaseTodoCommands("drop", "pick", "drop", "pick");
+
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        verifyZeroInteractions(promptControllerMock);
+        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FEATURE_TESTFILE,
+                COMMIT_MESSAGE_FEATURE_TESTFILE_MODIFIED, COMMIT_MESSAGE_FOR_TESTFILE,
+                COMMIT_MESSAGE_TESTFILE_MODIFIED);
+        assertGitFlowFailureException(result, "Automatic rebase after interaction failed beacause of conflicts.",
+                "Fix the rebase conflicts and mark them as resolved. After that, run "
+                        + "'mvn flow:feature-rebase-cleanup' again. Do NOT run 'git rebase --continue'.",
+                "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved",
+                "'mvn flow:feature-rebase-cleanup' to continue feature clean up process",
+                "'git rebase --abort' to abort feature clean up process");
+        git.assertRebaseBranchInProcess(repositorySet, FEATURE_BRANCH);
+        repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath(TESTFILE_NAME).call();
+        repositorySet.getLocalRepoGit().add().addFilepattern(TESTFILE_NAME).call();
+        // test
+        result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        assertGitFlowFailureException(result, "Automatic rebase after interaction failed beacause of conflicts.",
+                "Fix the rebase conflicts and mark them as resolved. After that, run "
+                        + "'mvn flow:feature-rebase-cleanup' again. Do NOT run 'git rebase --continue'.",
+                "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved",
+                "'mvn flow:feature-rebase-cleanup' to continue feature clean up process",
+                "'git rebase --abort' to abort feature clean up process");
+        repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath(FEATURE_TESTFILE_NAME).call();
+        repositorySet.getLocalRepoGit().add().addFilepattern(FEATURE_TESTFILE_NAME).call();
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        git.assertNoRebaseInProcess(repositorySet);
+
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, FEATURE_BRANCH, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FEATURE_TESTFILE_MODIFIED,
+                COMMIT_MESSAGE_TESTFILE_MODIFIED, COMMIT_MESSAGE_SET_VERSION);
+
+        git.assertTestfileContentModified(repositorySet);
+        git.assertTestfileContentModified(repositorySet, FEATURE_TESTFILE_NAME);
+    }
+
+    @Test
+    public void testExecuteContinueAfterRebasePausedAndConflictOnRebase() throws Exception {
+        // set up
+        final String TESTFILE_NAME = "testfile.txt";
+        final String FEATURE_TESTFILE_NAME = "feature-testfile.txt";
+        final String COMMIT_MESSAGE_FEATURE_TESTFILE_MODIFIED = "FEATURE: Unit test dummy file modified";
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
+        git.createAndCommitTestfile(repositorySet, TESTFILE_NAME, COMMIT_MESSAGE_FOR_TESTFILE);
+        git.createAndCommitTestfile(repositorySet, FEATURE_TESTFILE_NAME, COMMIT_MESSAGE_FEATURE_TESTFILE);
+        git.modifyTestfile(repositorySet, FEATURE_TESTFILE_NAME);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_FEATURE_TESTFILE_MODIFIED);
+        git.defineRebaseTodoCommands("edit", "drop", "pick");
+
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        verifyZeroInteractions(promptControllerMock);
+        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FEATURE_TESTFILE_MODIFIED,
+                COMMIT_MESSAGE_FEATURE_TESTFILE, COMMIT_MESSAGE_FOR_TESTFILE);
+        assertGitFlowFailureException(result, "Interactive rebase is paused.",
+                "Perform your changes and run 'mvn flow:feature-rebase-cleanup' again in order to proceed. "
+                        + "Do NOT run 'git rebase --continue'.",
+                "'git status' to check the conflicts",
+                "'mvn flow:feature-rebase-cleanup' to continue feature clean up process",
+                "'git rebase --abort' to abort feature clean up process");
+        git.assertRebaseBranchInProcess(repositorySet, FEATURE_BRANCH);
+        // test
+        result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        assertGitFlowFailureException(result, "Automatic rebase after interaction failed beacause of conflicts.",
+                "Fix the rebase conflicts and mark them as resolved. After that, run "
+                        + "'mvn flow:feature-rebase-cleanup' again. Do NOT run 'git rebase --continue'.",
+                "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved",
+                "'mvn flow:feature-rebase-cleanup' to continue feature clean up process",
+                "'git rebase --abort' to abort feature clean up process");
+        repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath(FEATURE_TESTFILE_NAME).call();
+        repositorySet.getLocalRepoGit().add().addFilepattern(FEATURE_TESTFILE_NAME).call();
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        git.assertNoRebaseInProcess(repositorySet);
+
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, FEATURE_BRANCH, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FEATURE_TESTFILE_MODIFIED,
+                COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_SET_VERSION);
+
+        git.assertTestfileContent(repositorySet);
+        git.assertTestfileContentModified(repositorySet, FEATURE_TESTFILE_NAME);
+    }
+
+    @Test
+    public void testExecuteContinueAfterConflictOnRebaseAndRebasePause() throws Exception {
+        // set up
+        final String TESTFILE_NAME = "testfile.txt";
+        final String FEATURE_TESTFILE_NAME = "feature-testfile.txt";
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
+        git.createAndCommitTestfile(repositorySet, TESTFILE_NAME, COMMIT_MESSAGE_FOR_TESTFILE);
+        git.modifyTestfile(repositorySet, TESTFILE_NAME);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_TESTFILE_MODIFIED);
+        git.createAndCommitTestfile(repositorySet, FEATURE_TESTFILE_NAME, COMMIT_MESSAGE_FEATURE_TESTFILE);
+        git.defineRebaseTodoCommands("drop", "pick", "edit");
+
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        verifyZeroInteractions(promptControllerMock);
+        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FEATURE_TESTFILE,
+                COMMIT_MESSAGE_TESTFILE_MODIFIED, COMMIT_MESSAGE_FOR_TESTFILE);
+        assertGitFlowFailureException(result, "Automatic rebase after interaction failed beacause of conflicts.",
+                "Fix the rebase conflicts and mark them as resolved. After that, run "
+                        + "'mvn flow:feature-rebase-cleanup' again. Do NOT run 'git rebase --continue'.",
+                "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved",
+                "'mvn flow:feature-rebase-cleanup' to continue feature clean up process",
+                "'git rebase --abort' to abort feature clean up process");
+        git.assertRebaseBranchInProcess(repositorySet, FEATURE_BRANCH);
+        repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath(TESTFILE_NAME).call();
+        repositorySet.getLocalRepoGit().add().addFilepattern(TESTFILE_NAME).call();
+        // test
+        result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        assertGitFlowFailureException(result, "Interactive rebase is paused.",
+                "Perform your changes and run 'mvn flow:feature-rebase-cleanup' again in order to proceed. "
+                        + "Do NOT run 'git rebase --continue'.",
+                "'git status' to check the conflicts",
+                "'mvn flow:feature-rebase-cleanup' to continue feature clean up process",
+                "'git rebase --abort' to abort feature clean up process");
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        git.assertNoRebaseInProcess(repositorySet);
+
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
+
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, FEATURE_BRANCH, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FEATURE_TESTFILE,
+                COMMIT_MESSAGE_TESTFILE_MODIFIED, COMMIT_MESSAGE_SET_VERSION);
+
+        git.assertTestfileContentModified(repositorySet);
+        git.assertTestfileContent(repositorySet, FEATURE_TESTFILE_NAME);
+    }
+
+    @Test
+    public void testExecuteContinueAfterConflictOnRebaseWithErrorOnInteractiveRebase() throws Exception {
+        // set up
+        final String TESTFILE_NAME = "testfile.txt";
+        final String FEATURE_TESTFILE_NAME = "feature-testfile.txt";
+        final String COMMIT_MESSAGE_FEATURE_TESTFILE_MODIFIED = "FEATURE: Unit test dummy file modified";
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
+        git.createAndCommitTestfile(repositorySet, TESTFILE_NAME, COMMIT_MESSAGE_FOR_TESTFILE);
+        git.modifyTestfile(repositorySet, TESTFILE_NAME);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_TESTFILE_MODIFIED);
+        git.createAndCommitTestfile(repositorySet, FEATURE_TESTFILE_NAME, COMMIT_MESSAGE_FEATURE_TESTFILE);
+        git.modifyTestfile(repositorySet, FEATURE_TESTFILE_NAME);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_FEATURE_TESTFILE_MODIFIED);
+        git.defineRebaseTodoCommands("drop", "pick", "drop", "pick");
+
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        verifyZeroInteractions(promptControllerMock);
+        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FEATURE_TESTFILE,
+                COMMIT_MESSAGE_FEATURE_TESTFILE_MODIFIED, COMMIT_MESSAGE_FOR_TESTFILE,
+                COMMIT_MESSAGE_TESTFILE_MODIFIED);
+        assertGitFlowFailureException(result, "Automatic rebase after interaction failed beacause of conflicts.",
+                "Fix the rebase conflicts and mark them as resolved. After that, run "
+                        + "'mvn flow:feature-rebase-cleanup' again. Do NOT run 'git rebase --continue'.",
+                "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved",
+                "'mvn flow:feature-rebase-cleanup' to continue feature clean up process",
+                "'git rebase --abort' to abort feature clean up process");
+        git.assertRebaseBranchInProcess(repositorySet, FEATURE_BRANCH);
+        repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath(TESTFILE_NAME).call();
+        repositorySet.getLocalRepoGit().add().addFilepattern(TESTFILE_NAME).call();
+        git.prepareErrorWhileUsingGitEditor(repositorySet);
+        // test
+        result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertGitFlowFailureExceptionRegEx(result, new GitFlowFailureInfo(
+                "\\QContinuation of interactive rebase failed.\nGit error message:\n\\E.*",
+                "\\QFix the problem described in git error message or consult a gitflow expert on how to fix this!\\E"));
+        git.assertRebaseBranchInProcess(repositorySet, FEATURE_BRANCH);
     }
 
 }

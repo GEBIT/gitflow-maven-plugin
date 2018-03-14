@@ -1112,7 +1112,7 @@ public class GitExecution {
      *             in case of an I/O error
      */
     public GitRebaseTodo loadGitRebaseTodoUsedInGitDummyEditor() throws FileNotFoundException, IOException {
-        return GitRebaseTodo.load(new File(gitBaseDir, GitDummyEditor.EDIT_FILE_RELATIVE_PATH));
+        return GitRebaseTodo.load(new File(gitBaseDir, GitDummyEditor.RELATIVE_PATH_TO_GIT_REBASE_TODO));
     }
 
     public void defineRebaseTodoCommands(String... commands) throws IOException {
@@ -1131,10 +1131,18 @@ public class GitExecution {
         }
     }
 
-    private void setGitDummyEditorToConfig(Git git) throws IOException {
+    private void setGitEditorToConfig(Git git, String runEditorCommand) throws IOException {
         StoredConfig tempConfig = git.getRepository().getConfig();
-        tempConfig.setString("core", null, "editor", getGitDummyEditorCMD());
+        tempConfig.setString("core", null, "editor", runEditorCommand);
         tempConfig.save();
+    }
+
+    public void prepareErrorWhileUsingGitEditor(RepositorySet repositorySet) throws IOException {
+        setGitEditorToConfig(repositorySet.getLocalRepoGit(), "notExistingGitEditor");
+    }
+
+    private void setGitDummyEditorToConfig(Git git) throws IOException {
+        setGitEditorToConfig(git, getGitDummyEditorCMD());
     }
 
     private String getGitDummyEditorCMD() {
@@ -1181,9 +1189,19 @@ public class GitExecution {
         repositorySet.setUseClonedRemoteRepositoryAsLocal(false);
     }
 
+    public void assertNoRebaseInProcess(RepositorySet repositorySet) throws IOException {
+        File headNameFile = FileUtils.getFile(repositorySet.getWorkingDirectory(), ".git/rebase-apply/head-name");
+        assertFalse("rebase in process found", headNameFile.exists());
+        headNameFile = FileUtils.getFile(repositorySet.getWorkingDirectory(), ".git/rebase-merge/head-name");
+        assertFalse("rebase in process found", headNameFile.exists());
+    }
+
     public void assertRebaseBranchInProcess(RepositorySet repositorySet, String branch) throws IOException {
         File headNameFile = FileUtils.getFile(repositorySet.getWorkingDirectory(), ".git/rebase-apply/head-name");
-        assertTrue("no rebase in process found", headNameFile.exists());
+        if (!headNameFile.exists()) {
+            headNameFile = FileUtils.getFile(repositorySet.getWorkingDirectory(), ".git/rebase-merge/head-name");
+            assertTrue("no rebase in process found", headNameFile.exists());
+        }
         String branchRef = StringUtils.trim(FileUtils.readFileToString(headNameFile, "UTF-8"));
         String rebaseBranch = StringUtils.substringAfter(branchRef, REFS_HEADS_PATH);
         assertEquals("reabes in process for wrong branch", branch, rebaseBranch);
@@ -1191,11 +1209,7 @@ public class GitExecution {
 
     public void assertRebaseBranchInProcess(RepositorySet repositorySet, String branch,
             String... expectedConflictingFiles) throws GitAPIException, IOException {
-        File headNameFile = FileUtils.getFile(repositorySet.getWorkingDirectory(), ".git/rebase-apply/head-name");
-        assertTrue("no rebase in process found", headNameFile.exists());
-        String branchRef = StringUtils.trim(FileUtils.readFileToString(headNameFile, "UTF-8"));
-        String rebaseBranch = StringUtils.substringAfter(branchRef, REFS_HEADS_PATH);
-        assertEquals("reabes in process for wrong branch", branch, rebaseBranch);
+        assertRebaseBranchInProcess(repositorySet, branch);
         if (expectedConflictingFiles != null && expectedConflictingFiles.length > 0) {
             Set<String> conflictingFiles = status(repositorySet).getConflicting();
             assertEquals("number of conflicting files is wrong", expectedConflictingFiles.length,
