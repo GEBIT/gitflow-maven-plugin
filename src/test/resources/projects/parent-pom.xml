@@ -86,6 +86,7 @@
 				<flow.featureNamePattern>^(${project.jira}-\d+)(?:-[^\s]*)?$</flow.featureNamePattern>
 				<flow.featureNamePatternDescription>A feature name must start with the project's JIRA issue key, e.g. ${project.jira}-[number][-optional-short-description]</flow.featureNamePatternDescription>
 				<flow.featureStartMessage>@{key}: updating versions for feature branch</flow.featureStartMessage>
+				<flow.featureBranchPrefix>feature/</flow.featureBranchPrefix>
 
 				<flow.push>true</flow.push>
 				<flow.fetchRemote>true</flow.fetchRemote>
@@ -142,6 +143,7 @@
 									<maintenanceBranchPrefix>maintenance/${project.build-name}-</maintenanceBranchPrefix>
 									<versionTagPrefix>${project.build-name}-</versionTagPrefix>
 									<releaseBranchPrefix>release/${project.build-name}-</releaseBranchPrefix>
+									<featureBranchPrefix>${flow.featureBranchPrefix}</featureBranchPrefix>
 								</gitFlowConfig>
 								<commitMessages>
 									<featureStartMessage>${flow.featureStartMessage}</featureStartMessage>

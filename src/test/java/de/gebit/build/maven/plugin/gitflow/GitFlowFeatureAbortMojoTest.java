@@ -835,4 +835,36 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
     }
 
+    @Test
+    public void testExecuteWithSpecialFeatureBranchPrefix() throws Exception {
+        // set up
+        final String OTHER_BRANCH = "feature/" + FEATURE_NAME;
+        final String FEATURE_BRANCH_PREFIX = "features/PREFIX-";
+        final String FEATURE_BRANCH1 = FEATURE_BRANCH_PREFIX + FEATURE_NAME;
+        final String FEATURE_BRANCH2 = FEATURE_BRANCH_PREFIX + FEATURE_NAME_2;
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.featureBranchPrefix", FEATURE_BRANCH_PREFIX);
+        git.createBranchWithoutSwitch(repositorySet, OTHER_BRANCH);
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME, userProperties);
+        git.createAndCommitTestfile(repositorySet);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME_2, userProperties);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        String PROMPT_MESSAGE = "Feature branches:" + LS + "1. " + FEATURE_BRANCH1 + LS + "2. " + FEATURE_BRANCH2 + LS
+                + "Choose feature branch to abort";
+        when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1", "2"))).thenReturn("1");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1", "2"));
+        verifyNoMoreInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH2, OTHER_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+    }
+
 }
