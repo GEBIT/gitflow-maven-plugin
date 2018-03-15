@@ -169,8 +169,9 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
                     // revert the version
                     gitCheckout(featureBranchName);
                     String featureName = featureBranchName.replaceFirst(gitFlowConfig.getFeatureBranchPrefix(), "");
-                    if (currentVersion.contains("-" + featureName)) {
-                        final String version = currentVersion.replaceFirst("-" + featureName, "");
+                    String issueNumber = extractIssueNumberFromFeatureName(featureName);
+                    if (currentVersion.contains("-" + issueNumber)) {
+                        final String version = currentVersion.replaceFirst("-" + issueNumber, "");
                         // mvn versions:set -DnewVersion=...
                         // -DgenerateBackupPoms=false
                         mvnSetVersions(version);
