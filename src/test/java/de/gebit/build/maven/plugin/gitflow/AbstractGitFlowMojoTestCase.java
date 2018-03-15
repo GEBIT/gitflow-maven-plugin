@@ -12,6 +12,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import java.io.Closeable;
 import java.io.File;
@@ -915,5 +917,10 @@ public abstract class AbstractGitFlowMojoTestCase {
         String expectedSolutionProposal = "Please report the error in the GBLD JIRA.";
         String expectedMessage = createGitFlowMessage(expectedProblem, expectedSolutionProposal);
         assertMavenExecutionException(mavenExecutionResult, expectedMessage);
+    }
+
+    protected void verifyNoMoreInteractionsAndReset(Object... mocks) {
+        verifyNoMoreInteractions(mocks);
+        reset(mocks);
     }
 }

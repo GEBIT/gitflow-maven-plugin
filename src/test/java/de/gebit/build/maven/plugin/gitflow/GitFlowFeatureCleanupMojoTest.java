@@ -70,6 +70,10 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
     private static final String PROMPT_MESSAGE_ONE_FEATURE_SELECT = "Feature branches:" + LS + "1. " + FEATURE_BRANCH
             + LS + "Choose feature branch to clean up";
 
+    private static final String PROMPT_REBASE_CONTINUE = "You have an interactive rebase in process on your current "
+            + "branch. If you run 'mvn flow:feature-rebase-cleanup' before and rebase was paused or had conflicts you "
+            + "can continue. In other case it is better to clarify the reason of rebase in process. Continue?";
+
     private RepositorySet repositorySet;
 
     @Before
@@ -1002,9 +1006,12 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
                 "'mvn flow:feature-rebase-cleanup' to continue feature clean up process",
                 "'git rebase --abort' to abort feature clean up process");
         git.assertRebaseBranchInProcess(repositorySet, FEATURE_BRANCH);
+        when(promptControllerMock.prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("y");
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
         // verify
+        verify(promptControllerMock).prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
         git.assertNoRebaseInProcess(repositorySet);
 
         git.assertClean(repositorySet);
@@ -1018,6 +1025,38 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
 
         git.assertTestfileContentModified(repositorySet);
         git.assertTestfileContent(repositorySet, FEATURE_TESTFILE_NAME);
+    }
+
+    @Test
+    public void testExecuteContinueAfterRebasePausedAndPromptAnswerNo() throws Exception {
+        // set up
+        final String FEATURE_TESTFILE_NAME = "feature-testfile.txt";
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
+        git.createAndCommitTestfile(repositorySet);
+        git.modifyTestfile(repositorySet);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_TESTFILE_MODIFIED);
+        git.createAndCommitTestfile(repositorySet, FEATURE_TESTFILE_NAME, COMMIT_MESSAGE_FEATURE_TESTFILE);
+        git.defineRebaseTodoCommands("pick", "fixup", "edit");
+
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        verifyZeroInteractions(promptControllerMock);
+        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FEATURE_TESTFILE,
+                COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_TESTFILE_MODIFIED);
+        assertGitFlowFailureException(result, "Interactive rebase is paused.",
+                "Perform your changes and run 'mvn flow:feature-rebase-cleanup' again in order to proceed. "
+                        + "Do NOT run 'git rebase --continue'.",
+                "'git status' to check the conflicts",
+                "'mvn flow:feature-rebase-cleanup' to continue feature clean up process",
+                "'git rebase --abort' to abort feature clean up process");
+        git.assertRebaseBranchInProcess(repositorySet, FEATURE_BRANCH);
+        when(promptControllerMock.prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("n");
+        // test
+        result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
+        assertGitFlowFailureException(result, "Continuation of feature clean up aborted by user.", null);
     }
 
     @Test
@@ -1043,16 +1082,22 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
                 "'mvn flow:feature-rebase-cleanup' to continue feature clean up process",
                 "'git rebase --abort' to abort feature clean up process");
         git.assertRebaseBranchInProcess(repositorySet, FEATURE_BRANCH);
+        when(promptControllerMock.prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("y");
         // test
         result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        verify(promptControllerMock).prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractionsAndReset(promptControllerMock);
         assertGitFlowFailureException(result, "Interactive rebase is paused.",
                 "Perform your changes and run 'mvn flow:feature-rebase-cleanup' again in order to proceed. "
                         + "Do NOT run 'git rebase --continue'.",
                 "'git status' to check the conflicts",
                 "'mvn flow:feature-rebase-cleanup' to continue feature clean up process",
                 "'git rebase --abort' to abort feature clean up process");
+        when(promptControllerMock.prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("y");
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
         // verify
+        verify(promptControllerMock).prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
         git.assertNoRebaseInProcess(repositorySet);
 
         git.assertClean(repositorySet);
@@ -1092,9 +1137,12 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertRebaseBranchInProcess(repositorySet, FEATURE_BRANCH);
         repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath(TESTFILE_NAME).call();
         repositorySet.getLocalRepoGit().add().addFilepattern(TESTFILE_NAME).call();
+        when(promptControllerMock.prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("y");
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
         // verify
+        verify(promptControllerMock).prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
         git.assertNoRebaseInProcess(repositorySet);
 
         git.assertClean(repositorySet);
@@ -1139,8 +1187,11 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertRebaseBranchInProcess(repositorySet, FEATURE_BRANCH);
         repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath(TESTFILE_NAME).call();
         repositorySet.getLocalRepoGit().add().addFilepattern(TESTFILE_NAME).call();
+        when(promptControllerMock.prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("y");
         // test
         result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        verify(promptControllerMock).prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractionsAndReset(promptControllerMock);
         assertGitFlowFailureException(result, "Automatic rebase after interaction failed beacause of conflicts.",
                 "Fix the rebase conflicts and mark them as resolved. After that, run "
                         + "'mvn flow:feature-rebase-cleanup' again. Do NOT run 'git rebase --continue'.",
@@ -1149,8 +1200,11 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
                 "'git rebase --abort' to abort feature clean up process");
         repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath(FEATURE_TESTFILE_NAME).call();
         repositorySet.getLocalRepoGit().add().addFilepattern(FEATURE_TESTFILE_NAME).call();
+        when(promptControllerMock.prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("y");
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
         // verify
+        verify(promptControllerMock).prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
         git.assertNoRebaseInProcess(repositorySet);
 
         git.assertClean(repositorySet);
@@ -1191,8 +1245,11 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
                 "'mvn flow:feature-rebase-cleanup' to continue feature clean up process",
                 "'git rebase --abort' to abort feature clean up process");
         git.assertRebaseBranchInProcess(repositorySet, FEATURE_BRANCH);
+        when(promptControllerMock.prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("y");
         // test
         result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        verify(promptControllerMock).prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractionsAndReset(promptControllerMock);
         assertGitFlowFailureException(result, "Automatic rebase after interaction failed beacause of conflicts.",
                 "Fix the rebase conflicts and mark them as resolved. After that, run "
                         + "'mvn flow:feature-rebase-cleanup' again. Do NOT run 'git rebase --continue'.",
@@ -1201,8 +1258,11 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
                 "'git rebase --abort' to abort feature clean up process");
         repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath(FEATURE_TESTFILE_NAME).call();
         repositorySet.getLocalRepoGit().add().addFilepattern(FEATURE_TESTFILE_NAME).call();
+        when(promptControllerMock.prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("y");
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
         // verify
+        verify(promptControllerMock).prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
         git.assertNoRebaseInProcess(repositorySet);
 
         git.assertClean(repositorySet);
@@ -1244,16 +1304,22 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertRebaseBranchInProcess(repositorySet, FEATURE_BRANCH);
         repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath(TESTFILE_NAME).call();
         repositorySet.getLocalRepoGit().add().addFilepattern(TESTFILE_NAME).call();
+        when(promptControllerMock.prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("y");
         // test
         result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        verify(promptControllerMock).prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractionsAndReset(promptControllerMock);
         assertGitFlowFailureException(result, "Interactive rebase is paused.",
                 "Perform your changes and run 'mvn flow:feature-rebase-cleanup' again in order to proceed. "
                         + "Do NOT run 'git rebase --continue'.",
                 "'git status' to check the conflicts",
                 "'mvn flow:feature-rebase-cleanup' to continue feature clean up process",
                 "'git rebase --abort' to abort feature clean up process");
+        when(promptControllerMock.prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("y");
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
         // verify
+        verify(promptControllerMock).prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
         git.assertNoRebaseInProcess(repositorySet);
 
         git.assertClean(repositorySet);
@@ -1300,14 +1366,56 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath(TESTFILE_NAME).call();
         repositorySet.getLocalRepoGit().add().addFilepattern(TESTFILE_NAME).call();
         git.prepareErrorWhileUsingGitEditor(repositorySet);
+        when(promptControllerMock.prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("y");
         // test
         result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
         // verify
+        verify(promptControllerMock).prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
         verifyZeroInteractions(promptControllerMock);
         assertGitFlowFailureExceptionRegEx(result, new GitFlowFailureInfo(
                 "\\QContinuation of interactive rebase failed.\nGit error message:\n\\E.*",
                 "\\QFix the problem described in git error message or consult a gitflow expert on how to fix this!\\E"));
         git.assertRebaseBranchInProcess(repositorySet, FEATURE_BRANCH);
+    }
+
+    @Test
+    public void testExecuteContinueAfterNotResolvedConflictOnRebase() throws Exception {
+        // set up
+        final String TESTFILE_NAME = "testfile.txt";
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
+        git.createAndCommitTestfile(repositorySet, TESTFILE_NAME, COMMIT_MESSAGE_FOR_TESTFILE);
+        git.modifyTestfile(repositorySet, TESTFILE_NAME);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_TESTFILE_MODIFIED);
+        git.defineRebaseTodoCommands("drop", "pick");
+
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        verifyZeroInteractions(promptControllerMock);
+        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
+                COMMIT_MESSAGE_TESTFILE_MODIFIED);
+        assertGitFlowFailureException(result, "Automatic rebase after interaction failed beacause of conflicts.",
+                "Fix the rebase conflicts and mark them as resolved. After that, run "
+                        + "'mvn flow:feature-rebase-cleanup' again. Do NOT run 'git rebase --continue'.",
+                "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved",
+                "'mvn flow:feature-rebase-cleanup' to continue feature clean up process",
+                "'git rebase --abort' to abort feature clean up process");
+        git.assertRebaseBranchInProcess(repositorySet, FEATURE_BRANCH);
+        when(promptControllerMock.prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("y");
+        // test
+        result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
+        assertGitFlowFailureExceptionRegEx(result,
+                new GitFlowFailureInfo("\\QThere are unresolved conflicts after rebase.\nGit error message:\n\\E.*",
+                        "\\QFix the rebase conflicts and mark them as resolved. "
+                                + "After that, run 'mvn flow:feature-rebase-cleanup' again. "
+                                + "Do NOT run 'git rebase --continue'.\\E",
+                        "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts "
+                                + "as resolved\\E",
+                        "\\Q'mvn flow:feature-rebase-cleanup' to continue feature clean up process\\E"));
+        git.assertRebaseBranchInProcess(repositorySet, FEATURE_BRANCH, TESTFILE_NAME);
     }
 
 }
