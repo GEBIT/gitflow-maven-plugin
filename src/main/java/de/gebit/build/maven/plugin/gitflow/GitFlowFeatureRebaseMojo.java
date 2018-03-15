@@ -202,6 +202,13 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
         } else {
             if (confirmedUpdateWithMerge) {
                 // continue with commit
+                if (!getPrompter().promptConfirmation(
+                        "You have a merge in process on your current branch. If you run 'mvn flow:feature-rebase' before "
+                                + "and merge had conflicts you can continue. In other case it is better to clarify the "
+                                + "reason of merge in process. Continue?",
+                        true, true)) {
+                    throw new GitFlowFailureException("Continuation of feature rebase aborted by user.", null);
+                }
                 try {
                     gitCommitMerge();
                 } catch (MojoFailureException exc) {
@@ -216,6 +223,12 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
                 }
             } else {
                 // continue with the rebase
+                if (!getPrompter().promptConfirmation("You have a rebase in process on your current branch. "
+                        + "If you run 'mvn flow:feature-rebase' before and rebase had conflicts you can "
+                        + "continue. In other case it is better to clarify the reason of rebase in process. "
+                        + "Continue?", true, true)) {
+                    throw new GitFlowFailureException("Continuation of feature rebase aborted by user.", null);
+                }
                 try {
                     gitRebaseContinue();
                 } catch (MojoFailureException exc) {
