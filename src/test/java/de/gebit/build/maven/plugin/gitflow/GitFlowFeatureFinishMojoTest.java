@@ -86,6 +86,14 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
             + " But it is strongly recomended to run 'mvn flow:feature-rebase' first and then run"
             + " 'mvn flow:feature-finish' again. Are you sure want to continue?";
 
+    private static final String PROMPT_REBASE_CONTINUE = "You have a rebase in process on your current branch. If you "
+            + "run 'mvn flow:feature-finish' before and rebase had conflicts you can continue. In other case it is "
+            + "better to clarify the reason of rebase in process. Continue?";
+
+    private static final String PROMPT_MERGE_CONTINUE = "You have a merge in process on your current branch. If you "
+            + "run 'mvn flow:feature-finish' before and merge had conflicts you can continue. In other case it is "
+            + "better to clarify the reason of merge in process. Continue?";
+
     private static final GitFlowFailureInfo EXPECTED_REBASE_CONFLICT_MESSAGE_PATTERN = new GitFlowFailureInfo(
             "\\QAutomatic rebase failed.\nGit error message:\n\\E.*",
             "\\QFix the rebase conflicts and mark them as resolved. After that, run 'mvn flow:feature-finish' again. "
@@ -1276,10 +1284,12 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertRebaseBranchInProcess(repositorySet, FEATURE_BRANCH, "pom.xml");
         repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath("pom.xml").call();
         repositorySet.getLocalRepoGit().add().addFilepattern("pom.xml").call();
+        when(promptControllerMock.prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("y");
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
         // verify
-        verifyZeroInteractions(promptControllerMock);
+        verify(promptControllerMock).prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -1287,6 +1297,30 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE, COMMIT_MESSAGE_NEW_VERSION);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_VERSION);
+    }
+
+    @Test
+    public void testExecuteContinueRebaseAfterRemovingVersionCommitRebaseConflictAndPromptAnswerNo() throws Exception {
+        // set up
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NUMBER);
+        final String NEW_VERSION = "2.0.0-SNAPSHOT";
+        ExecutorHelper.executeSetVersion(this, repositorySet, NEW_VERSION);
+        final String COMMIT_MESSAGE_NEW_VERSION = "new version";
+        git.commitAll(repositorySet, COMMIT_MESSAGE_NEW_VERSION);
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        verifyZeroInteractions(promptControllerMock);
+        assertGitFlowFailureExceptionRegEx(result, EXPECTED_REBASE_CONFLICT_MESSAGE_PATTERN);
+        git.assertRebaseBranchInProcess(repositorySet, FEATURE_BRANCH, "pom.xml");
+        repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath("pom.xml").call();
+        repositorySet.getLocalRepoGit().add().addFilepattern("pom.xml").call();
+        when(promptControllerMock.prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("n");
+        // test
+        result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
+        assertGitFlowFailureException(result, "Continuation of feature finish aborted by user.", null);
     }
 
     @Test
@@ -1303,10 +1337,12 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertGitFlowFailureExceptionRegEx(result, EXPECTED_REBASE_CONFLICT_MESSAGE_PATTERN);
         git.assertRebaseBranchInProcess(repositorySet, FEATURE_BRANCH, "pom.xml");
         repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath("pom.xml").call();
+        when(promptControllerMock.prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("y");
         // test
         result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
         // verify
-        verifyZeroInteractions(promptControllerMock);
+        verify(promptControllerMock).prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
         assertGitFlowFailureExceptionRegEx(result,
                 new GitFlowFailureInfo("\\QThere are unresolved conflicts after rebase.\nGit error message:\n\\E.*",
                         "\\QFix the rebase conflicts and mark them as resolved. After that, run 'mvn flow:feature-finish' again. "
@@ -1437,16 +1473,18 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
                 promptControllerMock);
         verify(promptControllerMock).prompt(PROMPT_MERGE_WITHOUT_REBASE, Arrays.asList("y", "n"), "n");
-        verifyNoMoreInteractions(promptControllerMock);
+        verifyNoMoreInteractionsAndReset(promptControllerMock);
         assertGitFlowFailureExceptionRegEx(result, EXPECTED_MERGE_CONFLICT_MESSAGE_PATTERN);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertMergeInProcess(repositorySet, GitExecution.TESTFILE_NAME);
         repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath(GitExecution.TESTFILE_NAME).call();
         repositorySet.getLocalRepoGit().add().addFilepattern(GitExecution.TESTFILE_NAME).call();
+        when(promptControllerMock.prompt(PROMPT_MERGE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("y");
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
         // verify
-        verifyZeroInteractions(promptControllerMock);
+        verify(promptControllerMock).prompt(PROMPT_MERGE_CONTINUE, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -1455,6 +1493,36 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE,
                 GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_MASTER_TESTFILE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+    }
+
+    @Test
+    public void testExecuteContinueAfterMergeConflictAndPromptAnswerNo() throws Exception {
+        // set up
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NUMBER);
+        git.createAndCommitTestfile(repositorySet);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        git.createTestfile(repositorySet);
+        git.modifyTestfile(repositorySet);
+        final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
+        git.commitAll(repositorySet, COMMIT_MESSAGE_MASTER_TESTFILE);
+        git.switchToBranch(repositorySet, FEATURE_BRANCH);
+        when(promptControllerMock.prompt(PROMPT_MERGE_WITHOUT_REBASE, Arrays.asList("y", "n"), "n")).thenReturn("y");
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        verify(promptControllerMock).prompt(PROMPT_MERGE_WITHOUT_REBASE, Arrays.asList("y", "n"), "n");
+        verifyNoMoreInteractionsAndReset(promptControllerMock);
+        assertGitFlowFailureExceptionRegEx(result, EXPECTED_MERGE_CONFLICT_MESSAGE_PATTERN);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMergeInProcess(repositorySet, GitExecution.TESTFILE_NAME);
+        repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath(GitExecution.TESTFILE_NAME).call();
+        repositorySet.getLocalRepoGit().add().addFilepattern(GitExecution.TESTFILE_NAME).call();
+        when(promptControllerMock.prompt(PROMPT_MERGE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("n");
+        // test
+        result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MERGE_CONTINUE, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
+        assertGitFlowFailureException(result, "Continuation of feature finish aborted by user.", null);
     }
 
     @Test
@@ -1472,14 +1540,16 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
                 promptControllerMock);
         verify(promptControllerMock).prompt(PROMPT_MERGE_WITHOUT_REBASE, Arrays.asList("y", "n"), "n");
-        verifyNoMoreInteractions(promptControllerMock);
+        verifyNoMoreInteractionsAndReset(promptControllerMock);
         assertGitFlowFailureExceptionRegEx(result, EXPECTED_MERGE_CONFLICT_MESSAGE_PATTERN);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertMergeInProcess(repositorySet, GitExecution.TESTFILE_NAME);
+        when(promptControllerMock.prompt(PROMPT_MERGE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("y");
         // test
         result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
         // verify
-        verifyZeroInteractions(promptControllerMock);
+        verify(promptControllerMock).prompt(PROMPT_MERGE_CONTINUE, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
         assertGitFlowFailureExceptionRegEx(result,
                 new GitFlowFailureInfo("\\QThere are unresolved conflicts after merge.\nGit error message:\n\\E.*",
                         "\\QFix the merge conflicts and mark them as resolved. After that, run 'mvn flow:feature-finish' again. "
