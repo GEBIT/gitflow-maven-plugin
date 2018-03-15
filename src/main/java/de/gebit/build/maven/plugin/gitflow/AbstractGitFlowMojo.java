@@ -2022,28 +2022,36 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         executeGitCommand("rebase", "--continue");
     }
 
-    protected InteractiveRebaseStatus gitInteractiveRebaseContinue() throws MojoFailureException, CommandLineException {
+    protected InteractiveRebaseResult gitInteractiveRebaseContinue() throws MojoFailureException, CommandLineException {
         Integer commitNumber = gitGetInteractiveRebaseCommitNumber();
         CommandResult commandResult = executeGitCommandExitCode("rebase", "--continue");
+        String gitMessage = commandResult.getError();
+        if (StringUtils.isBlank(gitMessage) && StringUtils.isNotBlank(commandResult.getOut())) {
+            gitMessage = commandResult.getOut();
+        }
         if (commandResult.getExitCode() != SUCCESS_EXIT_CODE) {
             Integer newCommitNumber = gitGetInteractiveRebaseCommitNumber();
             if (gitRebaseInProcess() && commitNumber != null && newCommitNumber != null
                     && commitNumber != newCommitNumber) {
-                return InteractiveRebaseStatus.CONFLICT;
+                return new InteractiveRebaseResult(InteractiveRebaseStatus.CONFLICT, gitMessage);
             } else {
-                String error = commandResult.getError();
-                if (StringUtils.isBlank(error) && StringUtils.isNotBlank(commandResult.getOut())) {
-                    error = commandResult.getOut();
+                if (gitHasUnmargedFiles()) {
+                    return new InteractiveRebaseResult(InteractiveRebaseStatus.UNRESOLVED_CONFLICT, gitMessage);
                 }
                 throw new GitFlowFailureException(
-                        "Continuation of interactive rebase failed.\nGit error message:\n" + error,
+                        "Continuation of interactive rebase failed.\nGit error message:\n" + gitMessage,
                         "Fix the problem described in git error message or consult a gitflow expert on how to fix this!");
             }
         }
         if (gitRebaseInProcess()) {
-            return InteractiveRebaseStatus.PAUSED;
+            return new InteractiveRebaseResult(InteractiveRebaseStatus.PAUSED, gitMessage);
         }
-        return InteractiveRebaseStatus.SUCCESS;
+        return InteractiveRebaseResult.SUCCESS;
+    }
+
+    protected boolean gitHasUnmargedFiles() throws MojoFailureException, CommandLineException {
+        String result = executeGitCommandReturn("diff", "--name-only", "--diff-filter=U");
+        return StringUtils.isNotBlank(result);
     }
 
     private Integer gitGetInteractiveRebaseCommitNumber() throws MojoFailureException, CommandLineException {
@@ -2076,13 +2084,12 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Start a rebase --interactive in the current branch on the given commit
+     * Start a rebase --interactive in the current branch on the given commit.
      *
      * @param commitId
      *            the commit to start the interactive rebase. Must be a
-     *            predecessor of the current branch tip.
-     * @return <code>true</code> if the rebase is finished, <code>false</code>
-     *         if further steps are needed
+     *            predecessor of the current branch tip
+     * @return rebase result status
      * @throws MojoFailureException
      * @throws CommandLineException
      */

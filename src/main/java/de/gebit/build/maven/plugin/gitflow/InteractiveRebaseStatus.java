@@ -28,6 +28,11 @@ public enum InteractiveRebaseStatus {
     /**
      * The interactive rebase caused a conflict.
      */
-    CONFLICT;
+    CONFLICT,
+
+    /**
+     * The interactive rebase detected unmerged files.
+     */
+    UNRESOLVED_CONFLICT;
 
 }

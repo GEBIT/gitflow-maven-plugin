@@ -125,14 +125,32 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowMojo {
             }
 
         } else {
-            InteractiveRebaseStatus rebaseStatus = gitInteractiveRebaseContinue();
-            if (rebaseStatus == InteractiveRebaseStatus.PAUSED) {
+            if (!getPrompter().promptConfirmation("You have an interactive rebase in process on your current branch. "
+                    + "If you run 'mvn flow:feature-rebase-cleanup' before and rebase was paused or had conflicts you "
+                    + "can continue. In other case it is better to clarify the reason of rebase in process. "
+                    + "Continue?", true, true)) {
+                throw new GitFlowFailureException("Continuation of feature clean up aborted by user.", null);
+            }
+            InteractiveRebaseResult rebaseResult = gitInteractiveRebaseContinue();
+            switch (rebaseResult.getStatus()) {
+            case PAUSED:
                 throw new GitFlowFailureException(ERROR_REBASE_PAUSED);
-            } else if (rebaseStatus == InteractiveRebaseStatus.CONFLICT) {
+            case CONFLICT:
                 throw new GitFlowFailureException(ERROR_REBASE_CONFLICTS);
+            case UNRESOLVED_CONFLICT:
+                throw new GitFlowFailureException(
+                        "There are unresolved conflicts after rebase.\nGit error message:\n"
+                                + rebaseResult.getGitMessage(),
+                        "Fix the rebase conflicts and mark them as resolved. After that, run "
+                                + "'mvn flow:feature-rebase-cleanup' again. Do NOT run 'git rebase --continue'.",
+                        "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as "
+                                + "resolved",
+                        "'mvn flow:feature-rebase-cleanup' to continue feature clean up process");
+            case SUCCESS:
+            default:
+                break;
             }
         }
-
         if (installProject) {
             // mvn clean install
             mvnCleanInstall();
