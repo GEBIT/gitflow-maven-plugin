@@ -514,8 +514,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
             // verify
             assertGitFlowFailureException(result,
                     "The feature name 'Invalid-feature-name' is invalid. "
-                            + "It does not match the required pattern: ^(" + TestProjects.BASIC.jiraProject
-                            + "-\\d+)(?:-[^\\s]*)?$",
+                            + "It does not match the required pattern: ^((?:" + TestProjects.BASIC.jiraProject
+                            + ")-\\d+)(?:-[^\\s]*)?$",
                     "Specify correct value for parameter 'featureName' and run again.");
             assertNoChanges(repositorySet);
         }
@@ -595,8 +595,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
             // verify
             verify(promptControllerMock, times(3)).prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME);
             verify(promptControllerMock, times(2)).showMessage(
-                    "The feature name 'Invalid-feature-name' is invalid. It does not match the required pattern: ^("
-                            + TestProjects.BASIC.jiraProject + "-\\d+)(?:-[^\\s]*)?$");
+                    "The feature name 'Invalid-feature-name' is invalid. It does not match the required pattern: ^((?:"
+                            + TestProjects.BASIC.jiraProject + ")-\\d+)(?:-[^\\s]*)?$");
             verifyNoMoreInteractions(promptControllerMock);
 
             assertFeatureStartedCorrectly(repositorySet);

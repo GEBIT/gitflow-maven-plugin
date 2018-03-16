@@ -81,12 +81,17 @@
 				<project.upstream>upstream</project.upstream>
 
 				<flow.skipFeatureVersion>false</flow.skipFeatureVersion>
+				<flow.skipEpicVersion>false</flow.skipEpicVersion>
 				<flow.commandsAfterVersion>version-stamper:stamp -N</flow.commandsAfterVersion>
 				<flow.commandsAfterFeatureVersion>version-stamper:stamp -N</flow.commandsAfterFeatureVersion>
-				<flow.featureNamePattern>^(${project.jira}-\d+)(?:-[^\s]*)?$</flow.featureNamePattern>
+				<flow.featureNamePattern>^((?:${project.jira})-\d+)(?:-[^\s]*)?$</flow.featureNamePattern>
 				<flow.featureNamePatternDescription>A feature name must start with the project's JIRA issue key, e.g. ${project.jira}-[number][-optional-short-description]</flow.featureNamePatternDescription>
 				<flow.featureStartMessage>@{key}: updating versions for feature branch</flow.featureStartMessage>
 				<flow.featureBranchPrefix>feature/</flow.featureBranchPrefix>
+				<flow.epicBranchPrefix>epic/</flow.epicBranchPrefix>
+				<flow.epicStartMessage>@{key}: updating versions for epic branch</flow.epicStartMessage>
+				<flow.epicNamePattern>^((?:${project.jira})-\d+)(?:-[^\s]*)?$</flow.epicNamePattern>
+				<flow.epicNamePatternDescription>A epic name must start with the project's JIRA issue key, e.g. ${project.jira}-[number][-optional-short-description]</flow.epicNamePatternDescription>
 
 				<flow.push>true</flow.push>
 				<flow.fetchRemote>true</flow.fetchRemote>
@@ -112,6 +117,7 @@
 							<artifactId>gitflow-maven-plugin</artifactId>
 							<configuration>
 								<skipFeatureVersion>${flow.skipFeatureVersion}</skipFeatureVersion>
+								<skipEpicVersion>${flow.skipEpicVersion}</skipEpicVersion>
 
 								<commandsAfterVersion>${flow.commandsAfterVersion}</commandsAfterVersion>
 								<commandsAfterFeatureVersion>${flow.commandsAfterFeatureVersion}</commandsAfterFeatureVersion>
@@ -129,6 +135,8 @@
 								<updateWithMerge>${flow.updateWithMerge}</updateWithMerge>
 								<featureNamePattern>${flow.featureNamePattern}</featureNamePattern>
 								<featureNamePatternDescription>${flow.featureNamePatternDescription}</featureNamePatternDescription>
+								<epicNamePattern>${flow.epicNamePattern}</epicNamePattern>
+								<epicNamePatternDescription>${flow.epicNamePatternDescription}</epicNamePatternDescription>
 								<releaseBranchFilter>[0-9].[0-9].0</releaseBranchFilter>
 								<allowSnapshots>${flow.allowSnapshots}</allowSnapshots>
 								<printTestOutput>true</printTestOutput>
@@ -144,10 +152,13 @@
 									<versionTagPrefix>${project.build-name}-</versionTagPrefix>
 									<releaseBranchPrefix>release/${project.build-name}-</releaseBranchPrefix>
 									<featureBranchPrefix>${flow.featureBranchPrefix}</featureBranchPrefix>
+									<epicBranchPrefix>${flow.epicBranchPrefix}</epicBranchPrefix>
 								</gitFlowConfig>
 								<commitMessages>
 									<featureStartMessage>${flow.featureStartMessage}</featureStartMessage>
 									<featureFinishMessage>@{key}: reverting versions for development branch</featureFinishMessage>
+									<epicStartMessage>${flow.epicStartMessage}</epicStartMessage>
+									<epicFinishMessage>@{key}: reverting versions for development branch</epicFinishMessage>
 									<hotfixStartMessage>NO-ISSUE: updating versions for hotfix</hotfixStartMessage>
 									<hotfixFinishMessage>NO-ISSUE: updating for next development version</hotfixFinishMessage>
 									<releaseStartMessage>NO-ISSUE: updating versions for release</releaseStartMessage>

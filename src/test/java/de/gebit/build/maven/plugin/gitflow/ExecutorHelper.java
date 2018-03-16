@@ -30,6 +30,8 @@ public class ExecutorHelper {
 
     private static final String LS = System.getProperty("line.separator");
 
+    public static final String EPIC_START_PROMPT_EPIC_BRANCH_NAME = "What is a name of epic branch? epic/";
+
     public static final String FEATURE_START_PROMPT_FEATURE_BRANCH_NAME = "What is a name of feature branch? feature/";
 
     public static final String HOTFIX_START_POM_NEXT_RELEASE_VERSION = TestProjects.BASIC.nextReleaseVersion;
