@@ -17,13 +17,16 @@ package de.gebit.build.maven.plugin.gitflow;
 
 /**
  * Git commit messages.
- * 
+ *
  * @author Aleksandr Mashchenko
- * 
+ *
  */
 public class CommitMessages {
     private String featureStartMessage;
     private String featureFinishMessage;
+
+    private String epicStartMessage;
+    private String epicFinishMessage;
 
     private String hotfixStartMessage;
     private String hotfixFinishMessage;
@@ -48,6 +51,9 @@ public class CommitMessages {
     public CommitMessages() {
         featureStartMessage = "updating versions for feature branch";
         featureFinishMessage = "updating versions for development branch";
+
+        epicStartMessage = "updating versions for epic branch";
+        epicFinishMessage = "updating versions for development branch";
 
         hotfixStartMessage = "updating versions for hotfix";
         hotfixFinishMessage = "updating for next development version";
@@ -92,6 +98,36 @@ public class CommitMessages {
      */
     public void setFeatureFinishMessage(String featureFinishMessage) {
         this.featureFinishMessage = featureFinishMessage;
+    }
+
+    /**
+     * @return the epicStartMessage
+     */
+    public String getEpicStartMessage() {
+        return epicStartMessage;
+    }
+
+    /**
+     * @param epicStartMessage
+     *            the epicStartMessage to set
+     */
+    public void setEpicStartMessage(String epicStartMessage) {
+        this.epicStartMessage = epicStartMessage;
+    }
+
+    /**
+     * @return the epicFinishMessage
+     */
+    public String getEpicFinishMessage() {
+        return epicFinishMessage;
+    }
+
+    /**
+     * @param epicFinishMessage
+     *            the epicFinishMessage to set
+     */
+    public void setEpicFinishMessage(String epicFinishMessage) {
+        this.epicFinishMessage = epicFinishMessage;
     }
 
     /**
@@ -214,7 +250,7 @@ public class CommitMessages {
     public String getBranchConfigMessage() {
         return branchConfigMessage;
     }
-    
+
     /**
      * @param branchConfigMessage
      *            the branchConfigMessage to set
