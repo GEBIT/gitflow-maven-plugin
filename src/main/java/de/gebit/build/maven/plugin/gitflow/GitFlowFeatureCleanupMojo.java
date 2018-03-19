@@ -32,7 +32,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * @since 1.5.11
  */
 @Mojo(name = "feature-rebase-cleanup", aggregator = true)
-public class GitFlowFeatureCleanupMojo extends AbstractGitFlowMojo {
+public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
 
     private static final GitFlowFailureInfo ERROR_REBASE_CONFLICTS = new GitFlowFailureInfo(
             "Automatic rebase after interaction failed beacause of conflicts.",

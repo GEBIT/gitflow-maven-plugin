@@ -34,7 +34,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  *
  */
 @Mojo(name = "feature-start", aggregator = true)
-public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
+public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
 
     /**
      * Whether to skip changing project version. Default is <code>false</code>
@@ -163,8 +163,8 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowMojo {
                     "'mvn flow:feature-start' to run again and specify another feature name");
         }
 
-        final String featureStartMessage = substituteInMessage(commitMessages.getFeatureStartMessage(),
-                featureBranchName);
+        final String featureStartMessage = substituteInFeatureMessage(commitMessages.getFeatureStartMessage(),
+                extractIssueNumberFromFeatureBranchName(featureBranchName));
 
         // git checkout -b ... develop
         gitCreateAndCheckout(featureBranchName, baseBranch);

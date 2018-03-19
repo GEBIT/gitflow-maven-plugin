@@ -29,7 +29,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * @since 1.3.1
  */
 @Mojo(name = "feature-abort", aggregator = true)
-public class GitFlowFeatureAbortMojo extends AbstractGitFlowMojo {
+public class GitFlowFeatureAbortMojo extends AbstractGitFlowFeatureMojo {
 
     /** {@inheritDoc} */
     @Override

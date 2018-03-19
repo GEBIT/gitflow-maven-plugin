@@ -33,7 +33,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * @since 1.3.1
  */
 @Mojo(name = "feature-rebase", aggregator = true)
-public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
+public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
 
     /**
      * Controls whether a merge of the development branch instead of a rebase on
@@ -164,8 +164,8 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
                 gitMerge(baseBranch, !confirmedUpdateWithMerge, true);
             } catch (MojoFailureException ex) {
                 // rebase conflict on first commit?
-                final String featureStartMessage = substituteInMessage(commitMessages.getFeatureStartMessage(),
-                        featureBranchName);
+                final String featureStartMessage = substituteInFeatureMessage(commitMessages.getFeatureStartMessage(),
+                        extractIssueNumberFromFeatureBranchName(featureBranchName));
                 String problem;
                 String solutionProposal;
                 if (confirmedUpdateWithMerge) {
@@ -178,8 +178,7 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowMojo {
                             + "'mvn flow:feature-rebase' again. Do NOT run 'git rebase --continue'.";
                 }
                 if (ex.getMessage().contains("Patch failed at 0001 " + featureStartMessage)) {
-                    String featureName = featureBranchName.replaceFirst(gitFlowConfig.getFeatureBranchPrefix(), "");
-                    String featureIssue = extractIssueNumberFromFeatureName(featureName);
+                    String featureIssue = extractIssueNumberFromFeatureBranchName(featureBranchName);
                     // try automatic rebase
                     gitRebaseFeatureCommit(featureIssue);
 

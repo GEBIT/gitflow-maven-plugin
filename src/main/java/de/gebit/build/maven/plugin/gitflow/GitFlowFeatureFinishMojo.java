@@ -23,7 +23,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * @author Aleksandr Mashchenko
  */
 @Mojo(name = "feature-finish", aggregator = true)
-public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
+public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
 
     /** Whether to keep feature branch after finish. */
     @Parameter(property = "keepFeatureBranch", defaultValue = "false")
@@ -168,16 +168,15 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
                     // rebase not configured or not possible, then manually
                     // revert the version
                     gitCheckout(featureBranchName);
-                    String featureName = featureBranchName.replaceFirst(gitFlowConfig.getFeatureBranchPrefix(), "");
-                    String issueNumber = extractIssueNumberFromFeatureName(featureName);
+                    String issueNumber = extractIssueNumberFromFeatureBranchName(featureBranchName);
                     if (currentVersion.contains("-" + issueNumber)) {
                         final String version = currentVersion.replaceFirst("-" + issueNumber, "");
                         // mvn versions:set -DnewVersion=...
                         // -DgenerateBackupPoms=false
                         mvnSetVersions(version);
 
-                        String featureFinishMessage = substituteInMessage(commitMessages.getFeatureFinishMessage(),
-                                featureBranchName);
+                        String featureFinishMessage = substituteInFeatureMessage(
+                                commitMessages.getFeatureFinishMessage(), issueNumber);
                         // git commit -a -m updating versions for development
                         // branch
                         gitCommit(featureFinishMessage);
