@@ -99,6 +99,7 @@
 				<flow.skipDeployProject>false</flow.skipDeployProject>
 				<flow.installProject>false</flow.installProject>
 				<flow.keepFeatureBranch>false</flow.keepFeatureBranch>
+				<flow.keepEpicBranch>false</flow.keepEpicBranch>
 				<flow.rebaseWithoutVersionChange>true</flow.rebaseWithoutVersionChange>
 				<flow.updateWithMerge>false</flow.updateWithMerge>
 				<flow.allowSnapshots>false</flow.allowSnapshots>
@@ -125,6 +126,7 @@
 								<pushRemote>${flow.push}</pushRemote>
 								<pushReleaseBranch>${flow.pushReleaseBranch}</pushReleaseBranch>
 								<keepFeatureBranch>${flow.keepFeatureBranch}</keepFeatureBranch>
+								<keepEpicBranch>${flow.keepEpicBranch}</keepEpicBranch>
 								<skipTestProject>${flow.skipTestProject}</skipTestProject>
 								<skipDeployProject>${flow.skipDeployProject}</skipDeployProject>
 								<installProject>${flow.installProject}</installProject>

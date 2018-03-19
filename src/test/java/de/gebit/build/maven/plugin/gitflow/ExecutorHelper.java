@@ -56,6 +56,18 @@ public class ExecutorHelper {
 
     public static final String MAINTENANCE_START_MAINTENANCE_FIRST_VERSION = "1.42.0-SNAPSHOT";
 
+    public static void executeEpicStart(AbstractGitFlowMojoTestCase testCase, RepositorySet repositorySet,
+            String epicName) throws Exception {
+        executeEpicStart(testCase, repositorySet, epicName, null);
+    }
+
+    public static void executeEpicStart(AbstractGitFlowMojoTestCase testCase, RepositorySet repositorySet,
+            String epicName, Properties properties) throws Exception {
+        Properties userProperties = properties != null ? properties : new Properties();
+        userProperties.setProperty("epicName", epicName);
+        testCase.executeMojo(repositorySet.getWorkingDirectory(), "epic-start", userProperties);
+    }
+
     public static void executeFeatureStart(AbstractGitFlowMojoTestCase testCase, RepositorySet repositorySet,
             String featureName) throws Exception {
         executeFeatureStart(testCase, repositorySet, featureName, null);
