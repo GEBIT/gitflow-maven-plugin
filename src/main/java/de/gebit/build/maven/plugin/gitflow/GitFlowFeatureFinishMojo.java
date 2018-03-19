@@ -115,7 +115,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
                                 "'git checkout " + featureBranchName
                                         + "' and 'mvn flow:feature-rebase' to include these changes in the feature branch '"
                                         + featureBranchName + "'"));
-                if (!hasCommitsExceptVersionChangeCommitOnBranch(featureBranchName, baseBranch)) {
+                if (!hasCommitsExceptVersionChangeCommitOnFeatureBranch(featureBranchName, baseBranch)) {
                     throw new GitFlowFailureException(
                             "There are no real changes in feature branch '" + featureBranchName + "'.",
                             "Delete the feature branch or commit some changes first.",
@@ -129,7 +129,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
                                     + "'" + featureBranchName
                                     + "'. If you continue it will be tryed to merge the changes. "
                                     + "But it is strongly recomended to run 'mvn flow:feature-rebase' first and then "
-                                    + "run 'mvn flow:feature-finish' again. Are you sure want to continue?",
+                                    + "run 'mvn flow:feature-finish' again. Are you sure you want to continue?",
                             false, false);
                     if (!confirmed) {
                         throw new GitFlowFailureException(
@@ -157,7 +157,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowMojo {
                 boolean rebased = false;
                 if (rebaseWithoutVersionChange) {
                     String branchPoint = gitBranchPoint(featureBranchName, baseBranch);
-                    String firstCommitOnBranch = gitVersionChangeCommitOnBranch(featureBranchName, branchPoint);
+                    String firstCommitOnBranch = gitVersionChangeCommitOnFeatureBranch(featureBranchName, branchPoint);
                     getLog().debug(
                             "branch point is " + branchPoint + ", version change commit is " + firstCommitOnBranch);
                     if (firstCommitOnBranch != null) {

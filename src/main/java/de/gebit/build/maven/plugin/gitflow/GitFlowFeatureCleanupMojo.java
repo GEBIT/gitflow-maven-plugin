@@ -114,7 +114,7 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowMojo {
             }
 
             String baseCommit = gitFeatureBranchBaseCommit(featureBranchName);
-            String versionChangeCommitOnBranch = gitVersionChangeCommitOnBranch(featureBranchName, baseCommit);
+            String versionChangeCommitOnBranch = gitVersionChangeCommitOnFeatureBranch(featureBranchName, baseCommit);
             String rebaseCommit = (versionChangeCommitOnBranch != null) ? versionChangeCommitOnBranch : baseCommit;
 
             InteractiveRebaseStatus rebaseStatus = gitRebaseInteractive(rebaseCommit);

@@ -16,6 +16,7 @@ import java.lang.reflect.Method;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -1126,20 +1127,10 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @param branchPoint
      *            commit ID of the common ancestor with the development branch
      */
-    protected String gitVersionChangeCommitOnBranch(String featureBranch, String branchPoint)
+    protected String gitVersionChangeCommitOnFeatureBranch(String featureBranch, String branchPoint)
             throws MojoFailureException, CommandLineException {
-        final String gitOutput = executeGitCommandReturn("rev-list", branchPoint + ".." + featureBranch, "--reverse");
-        // get the first line only
-        final int firstLineEnd = gitOutput.indexOf('\n');
-        final String firstCommitOnBranch = (firstLineEnd == -1 ? gitOutput
-                : gitOutput.substring(0, firstLineEnd).trim());
-        if (firstCommitOnBranch.isEmpty()) {
-            if (getLog().isDebugEnabled()) {
-                getLog().debug("There seems to be no commit at all on the feature branch:" + gitOutput);
-            }
-            return null;
-        }
-        final String firstCommitMessage = executeGitCommandReturn("log", "-1", "--pretty=%s", firstCommitOnBranch);
+        final String firstCommitOnBranch = gitFirstCommitOnBranch(featureBranch, branchPoint);
+        final String firstCommitMessage = gitCommitMessage(firstCommitOnBranch);
         final String featureStartMessage = substituteInMessage(commitMessages.getFeatureStartMessage(), featureBranch);
         if (!firstCommitMessage.contains(featureStartMessage)) {
             if (getLog().isDebugEnabled()) {
@@ -1150,7 +1141,26 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         return firstCommitOnBranch;
     }
 
-    protected boolean hasCommitsExceptVersionChangeCommitOnBranch(String featureBranch, String baseBranch)
+    protected String gitFirstCommitOnBranch(String branch, String branchPoint)
+            throws MojoFailureException, CommandLineException {
+        String gitOutput = executeGitCommandReturn("rev-list", branchPoint + ".." + branch, "--reverse");
+        // get the first line only
+        int firstLineEnd = gitOutput.indexOf('\n');
+        String firstCommitOnBranch = (firstLineEnd == -1 ? gitOutput : gitOutput.substring(0, firstLineEnd).trim());
+        if (firstCommitOnBranch.isEmpty()) {
+            if (getLog().isDebugEnabled()) {
+                getLog().debug("There seems to be no commit at all on the branch '" + branch + "': " + gitOutput);
+            }
+            return null;
+        }
+        return firstCommitOnBranch;
+    }
+
+    protected String gitCommitMessage(String commit) throws MojoFailureException, CommandLineException {
+        return executeGitCommandReturn("log", "-1", "--pretty=%s", commit);
+    }
+
+    protected boolean hasCommitsExceptVersionChangeCommitOnFeatureBranch(String featureBranch, String baseBranch)
             throws MojoFailureException, CommandLineException {
         String branchPoint = gitBranchPoint(featureBranch, baseBranch);
         String gitOutput = executeGitCommandReturn("rev-list", branchPoint + ".." + featureBranch, "--count");
@@ -1159,7 +1169,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             if (commits == 0) {
                 return false;
             } else if (commits == 1) {
-                return StringUtils.isBlank(gitVersionChangeCommitOnBranch(featureBranch, branchPoint));
+                return StringUtils.isBlank(gitVersionChangeCommitOnFeatureBranch(featureBranch, branchPoint));
             } else {
                 return true;
             }
@@ -1787,6 +1797,27 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         return branchPoint;
     }
 
+    protected String gitNearestAncestorCommit(String branch, Collection<String> ancestors)
+            throws MojoFailureException, CommandLineException {
+        int minDistance = -1;
+        String nearestAncestor = null;
+        for (String ancestor : ancestors) {
+            int branchDistance = gitGetDistanceToAncestor(branch, ancestor);
+            if (minDistance == -1 || branchDistance < minDistance) {
+                minDistance = branchDistance;
+                nearestAncestor = ancestor;
+            }
+        }
+        return nearestAncestor;
+    }
+
+    protected int gitGetDistanceToAncestor(String branch, String ancestor)
+            throws CommandLineException, MojoFailureException {
+        String revlistout = executeGitCommandReturn("rev-list", "--first-parent", "--count", ancestor + ".." + branch);
+        String count = revlistout.trim();
+        return Integer.parseInt(count);
+    }
+
     /**
      * Check if the first branch is an ancestor of the second branch.
      *
@@ -1827,10 +1858,10 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     private File gitGetRebaseHeadNameFileIfExists() throws MojoFailureException, CommandLineException {
-        return gitGetRebasFileIfExists("head-name");
+        return gitGetRebaseFileIfExists("head-name");
     }
 
-    private File gitGetRebasFileIfExists(String fileName) throws MojoFailureException, CommandLineException {
+    private File gitGetRebaseFileIfExists(String fileName) throws MojoFailureException, CommandLineException {
         final String gitDir = executeGitCommandReturn("rev-parse", "--git-dir").trim();
         String relativePath = "rebase-apply/" + fileName;
         File headNameFile = FileUtils.getFile(gitDir, relativePath);
@@ -1857,7 +1888,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     protected boolean gitInteractiveRebaseInProcess() throws MojoFailureException, CommandLineException {
-        return gitGetRebasFileIfExists("interactive") != null;
+        return gitGetRebaseFileIfExists("interactive") != null;
     }
 
     protected String gitInteractiveRebaseFeatureBranchInProcess() throws MojoFailureException, CommandLineException {
@@ -1921,13 +1952,53 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     protected boolean gitMergeInProcess() throws MojoFailureException, CommandLineException {
+        return gitGetMergeHeadFileIfExists() != null;
+    }
+
+    protected File gitGetMergeHeadFileIfExists() throws MojoFailureException, CommandLineException {
+        return gitGetMergeFileIfExists("MERGE_HEAD");
+    }
+
+    protected File gitGetMergeFileIfExists(String fileName) throws MojoFailureException, CommandLineException {
         final String gitDir = executeGitCommandReturn("rev-parse", "--git-dir").trim();
-        File mergeHeadNameFile = FileUtils.getFile(gitDir, "MERGE_HEAD");
+        File mergeHeadNameFile = FileUtils.getFile(gitDir, fileName);
         if (!mergeHeadNameFile.isAbsolute()) {
             String basedir = this.session.getRequest().getBaseDirectory();
             mergeHeadNameFile = new File(basedir, mergeHeadNameFile.getPath());
         }
-        return mergeHeadNameFile.exists();
+        return mergeHeadNameFile.exists() ? mergeHeadNameFile : null;
+    }
+
+    protected String gitGetMergeHeadIfExists() throws MojoFailureException, CommandLineException {
+        File mergeHeadNameFile = gitGetMergeHeadFileIfExists();
+        if (mergeHeadNameFile == null) {
+            return null;
+        }
+        try {
+            return FileUtils.readFileToString(mergeHeadNameFile, "UTF-8").trim();
+        } catch (IOException e) {
+            throw new MojoFailureException("Failed to check for currently merging branch.", e);
+        }
+    }
+
+    protected String gitGetBranchNameFromMergeHeadIfStartsWith(String mergeHeadName, String branchPrefix)
+            throws CommandLineException, MojoFailureException {
+        String featureBranch = null;
+        if (!mergeHeadName.startsWith("refs/heads/")) {
+            String barnchesStr = executeGitCommandReturn("branch", "--contains", mergeHeadName).trim();
+            String[] barnches = barnchesStr.split("\r?\n");
+            for (String branch : barnches) {
+                if (branch.startsWith(branchPrefix)) {
+                    featureBranch = branch;
+                }
+            }
+        } else {
+            String branch = mergeHeadName.substring("refs/heads/".length());
+            if (branch.startsWith(branchPrefix)) {
+                featureBranch = branch;
+            }
+        }
+        return featureBranch;
     }
 
     /**
@@ -1940,16 +2011,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws CommandLineException
      */
     protected String gitMergeIntoFeatureBranchInProcess() throws MojoFailureException, CommandLineException {
-        final String gitDir = executeGitCommandReturn("rev-parse", "--git-dir").trim();
-        File mergeHeadNameFile = FileUtils.getFile(gitDir, "MERGE_HEAD");
-        if (!mergeHeadNameFile.isAbsolute()) {
-            String basedir = this.session.getRequest().getBaseDirectory();
-            mergeHeadNameFile = new File(basedir, mergeHeadNameFile.getPath());
-        }
-        if (!mergeHeadNameFile.exists()) {
-            if (getLog().isDebugEnabled()) {
-                getLog().debug(mergeHeadNameFile + " not found in " + gitDir);
-            }
+        if (!gitMergeInProcess()) {
             return null;
         }
         final String currentBranchName = executeGitCommandReturn("rev-parse", "--abbrev-ref", "HEAD").trim();
@@ -1972,16 +2034,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws CommandLineException
      */
     protected String gitMergeFromFeatureBranchInProcess() throws MojoFailureException, CommandLineException {
-        final String gitDir = executeGitCommandReturn("rev-parse", "--git-dir").trim();
-        File mergeHeadNameFile = FileUtils.getFile(gitDir, "MERGE_HEAD");
-        if (!mergeHeadNameFile.isAbsolute()) {
-            String basedir = this.session.getRequest().getBaseDirectory();
-            mergeHeadNameFile = new File(basedir, mergeHeadNameFile.getPath());
-        }
-        if (!mergeHeadNameFile.exists()) {
-            if (getLog().isDebugEnabled()) {
-                getLog().debug(mergeHeadNameFile + " not found in " + gitDir);
-            }
+        File mergeHeadNameFile = gitGetMergeHeadFileIfExists();
+        if (mergeHeadNameFile == null) {
             return null;
         }
         String headName;
@@ -2056,7 +2110,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
     private Integer gitGetInteractiveRebaseCommitNumber() throws MojoFailureException, CommandLineException {
         Integer commitNumber = null;
-        File msgnumFile = gitGetRebasFileIfExists("msgnum");
+        File msgnumFile = gitGetRebaseFileIfExists("msgnum");
         if (msgnumFile != null) {
             try {
                 String commitNumberStr = FileUtils.readFileToString(msgnumFile, "UTF-8").trim();

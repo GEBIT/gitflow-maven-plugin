@@ -8,8 +8,6 @@
 //
 package de.gebit.build.maven.plugin.gitflow;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 
 import org.apache.maven.artifact.Artifact;
@@ -164,9 +162,7 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
                 // -DgenerateBackupPoms=false
                 mvnSetVersions(version, "On epic branch: ");
 
-                Map<String, String> replacements = new HashMap<String, String>();
-                replacements.put("key", epicIssue);
-                String epicStartMessage = substituteStrings(commitMessages.getEpicStartMessage(), replacements);
+                String epicStartMessage = substituteInEpicMessage(commitMessages.getEpicStartMessage(), epicIssue);
                 // git commit -a -m updating versions for epic branch
                 gitCommit(epicStartMessage);
             }
