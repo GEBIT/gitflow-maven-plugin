@@ -432,26 +432,6 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     @Test
-    public void testExecuteVersionWithoutEpicName() throws Exception {
-        // set up
-        Properties properties = new Properties();
-        properties.setProperty("flow.skipEpicVersion", "true");
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME, properties);
-        git.createAndCommitTestfile(repositorySet);
-        // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
-        // verify
-        verifyZeroInteractions(promptControllerMock);
-        git.assertClean(repositorySet);
-        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE, COMMIT_MESSAGE_FOR_TESTFILE);
-        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
-    }
-
-    @Test
     public void testExecuteOnMaintenanceBranchEpicStartedOnMaintenanceBranch() throws Exception {
         // set up
         ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION);
