@@ -81,7 +81,6 @@
 				<project.upstream>upstream</project.upstream>
 
 				<flow.skipFeatureVersion>false</flow.skipFeatureVersion>
-				<flow.skipEpicVersion>false</flow.skipEpicVersion>
 				<flow.commandsAfterVersion>version-stamper:stamp -N</flow.commandsAfterVersion>
 				<flow.commandsAfterFeatureVersion>version-stamper:stamp -N</flow.commandsAfterFeatureVersion>
 				<flow.featureNamePattern>^((?:${project.jira})-\d+)(?:-[^\s]*)?$</flow.featureNamePattern>
@@ -118,7 +117,6 @@
 							<artifactId>gitflow-maven-plugin</artifactId>
 							<configuration>
 								<skipFeatureVersion>${flow.skipFeatureVersion}</skipFeatureVersion>
-								<skipEpicVersion>${flow.skipEpicVersion}</skipEpicVersion>
 
 								<commandsAfterVersion>${flow.commandsAfterVersion}</commandsAfterVersion>
 								<commandsAfterFeatureVersion>${flow.commandsAfterFeatureVersion}</commandsAfterFeatureVersion>

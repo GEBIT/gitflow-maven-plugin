@@ -103,26 +103,6 @@ public class GitFlowEpicStartMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     @Test
-    public void testExecuteSkipEpicVersion() throws Exception {
-        // set up
-        when(promptControllerMock.prompt(PROMPT_EPIC_BRANCH_NAME)).thenReturn(EPIC_NAME);
-        Properties userProperties = new Properties();
-        userProperties.setProperty("flow.skipEpicVersion", "true");
-        // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
-        // verify
-        verify(promptControllerMock).prompt(PROMPT_EPIC_BRANCH_NAME);
-        verifyNoMoreInteractions(promptControllerMock);
-
-        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
-        git.assertClean(repositorySet);
-        git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, EPIC_BRANCH);
-    }
-
-    @Test
     public void testExecuteTychoBuild() throws Exception {
         // set up
         when(promptControllerMock.prompt(PROMPT_EPIC_BRANCH_NAME)).thenReturn(EPIC_NAME);

@@ -31,13 +31,6 @@ import org.codehaus.plexus.util.cli.CommandLineException;
 public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
 
     /**
-     * Whether to skip changing project version. Default is <code>false</code>
-     * (the epic name will be appended to project version).
-     */
-    @Parameter(property = "skipEpicVersion", defaultValue = "false")
-    private boolean skipEpicVersion = false;
-
-    /**
      * A natual language description of the <code>epicNamePattern</code> which
      * is used to print an error message. If not specified the pattern is
      * printed in the error message as is, which can be hard to understand.
@@ -142,7 +135,7 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
         // git checkout -b ... develop
         gitCreateAndCheckout(epicBranchName, baseBranch);
 
-        if (!skipEpicVersion && !tychoBuild) {
+        if (!tychoBuild) {
             // get current project version from pom
             final String currentVersion = getCurrentProjectVersion();
 
