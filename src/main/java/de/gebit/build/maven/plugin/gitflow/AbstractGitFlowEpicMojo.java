@@ -233,8 +233,8 @@ public abstract class AbstractGitFlowEpicMojo extends AbstractGitFlowMojo {
         String firstCommitOnBranch = gitFirstCommitOnBranch(epicBranch, branchPoint);
         String firstCommitMessage = gitCommitMessage(firstCommitOnBranch);
         String issueNumber = extractIssueNumberFromEpicBranchName(epicBranch);
-        String featureStartMessage = substituteInEpicMessage(commitMessages.getEpicStartMessage(), issueNumber);
-        if (!firstCommitMessage.contains(featureStartMessage)) {
+        String epicStartMessage = substituteInEpicMessage(commitMessages.getEpicStartMessage(), issueNumber);
+        if (!firstCommitMessage.contains(epicStartMessage)) {
             if (getLog().isDebugEnabled()) {
                 getLog().debug("First commit is not a version change commit.");
             }

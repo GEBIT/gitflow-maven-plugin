@@ -516,7 +516,6 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
     }
 
-    @Ignore("Should be activated again before storing of base branch into branch config will be implemented")
     @Test
     public void testExecuteOnMaintenanceBranchEpicStartedOnMasterBranchOnSameCommitAsMaitenanceBranch()
             throws Exception {
@@ -545,7 +544,6 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
     }
 
-    @Ignore("Should be activated again before storing of base branch into branch config will be implemented")
     @Test
     public void testExecuteOnMasterBranchEpicStartedOnMasterBranchOnSameCommitAsMaitenanceBranch() throws Exception {
         // set up
@@ -570,6 +568,44 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE,
                 COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+    }
+
+    @Ignore("Should be activated again before storing of base branch into branch config will be implemented")
+    @Test
+    public void testExecuteOnMasterBranchEpicStartedOnMaintenanceBranchOnSameCommitAsMasterBranch() throws Exception {
+        // set up
+        String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + EPIC_BRANCH + LS
+                + "Choose epic branch to finish";
+        final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
+        final String COMMIT_MESSAGE_MAINTENANCE_TESTFILE = "MAINTENANCE: Unit test dummy file commit";
+        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION, TestProjects.BASIC.version);
+        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
+        git.createAndCommitTestfile(repositorySet);
+        git.switchToBranch(repositorySet, MAINTENANCE_BRANCH);
+        git.createAndCommitTestfile(repositorySet, "maintenance_testfile.txt", COMMIT_MESSAGE_MAINTENANCE_TESTFILE);
+        git.push(repositorySet);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        git.createAndCommitTestfile(repositorySet, "master_testfile.txt", COMMIT_MESSAGE_MASTER_TESTFILE);
+        git.push(repositorySet);
+        when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1"))).thenReturn("1");
+        when(promptControllerMock.prompt(PROMPT_MERGE_WITHOUT_UPDATE, Arrays.asList("y", "n"), "n")).thenReturn("y");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1"));
+        verify(promptControllerMock).prompt(PROMPT_MERGE_WITHOUT_UPDATE, Arrays.asList("y", "n"), "n");
+        verifyNoMoreInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_MERGE_INTO_MAINTENANCE,
+                COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_MAINTENANCE_TESTFILE,
+                COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
     }
 

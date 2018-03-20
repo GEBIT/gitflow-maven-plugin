@@ -283,9 +283,9 @@ public abstract class AbstractGitFlowFeatureMojo extends AbstractGitFlowMojo {
         return Collections.EMPTY_LIST;
     }
 
-    private void addBranchPointCandidate(Map<String, List<String>> branchPointCandidates, String epicBranch,
+    private void addBranchPointCandidate(Map<String, List<String>> branchPointCandidates, String featureBranch,
             String baseBranch, boolean remote) throws MojoFailureException, CommandLineException {
-        String branchPoint = gitBranchPoint((remote ? gitFlowConfig.getOrigin() + "/" : "") + baseBranch, epicBranch);
+        String branchPoint = gitBranchPoint((remote ? gitFlowConfig.getOrigin() + "/" : "") + baseBranch, featureBranch);
         if (branchPoint != null) {
             List<String> baseBranches = branchPointCandidates.get(branchPoint);
             if (baseBranches == null) {
