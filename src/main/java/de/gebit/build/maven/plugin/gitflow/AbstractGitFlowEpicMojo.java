@@ -243,4 +243,27 @@ public abstract class AbstractGitFlowEpicMojo extends AbstractGitFlowMojo {
         return firstCommitOnBranch;
     }
 
+    /**
+     * Checks whether a merge is in progress by checking MERGE_HEAD file and the
+     * current branch is an epic branch.
+     *
+     * @return the name of the current (epic) branch or <code>null</code> if no
+     *         merge is in process
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected String gitMergeIntoEpicBranchInProcess() throws MojoFailureException, CommandLineException {
+        if (!gitMergeInProcess()) {
+            return null;
+        }
+        String currentBranchName = gitCurrentBranch();
+        if (StringUtils.isBlank(currentBranchName)) {
+            throw new MojoFailureException("Failed to obtain current branch name.");
+        }
+        if (!currentBranchName.startsWith(gitFlowConfig.getEpicBranchPrefix())) {
+            throw new MojoFailureException("Merge target branch is not an epic branch: " + currentBranchName);
+        }
+        return currentBranchName;
+    }
+
 }
