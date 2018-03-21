@@ -497,8 +497,8 @@ public class GitFlowEpicStartMojoTest extends AbstractGitFlowMojoTestCase {
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
         verify(promptControllerMock, times(3)).prompt(PROMPT_EPIC_BRANCH_NAME);
-        verify(promptControllerMock, times(2))
-                .showMessage("The epic name 'Invalid-epic-name' is invalid. It does not match the required pattern: ^((?:"
+        verify(promptControllerMock, times(2)).showMessage(
+                "The epic name 'Invalid-epic-name' is invalid. It does not match the required pattern: ^((?:"
                         + TestProjects.BASIC.jiraProject + ")-\\d+)(?:-[^\\s]*)?$");
         verifyNoMoreInteractions(promptControllerMock);
 
@@ -882,13 +882,63 @@ public class GitFlowEpicStartMojoTest extends AbstractGitFlowMojoTestCase {
         // set up
         final String OTHER_BRANCH = "otherBranch";
         git.switchToBranch(repositorySet, OTHER_BRANCH, true);
+        when(promptControllerMock.prompt("Epic branch will be started not from current branch but will be based "
+                + "off branch '" + MASTER_BRANCH + "'. Continue?", Arrays.asList("y", "n"), "y")).thenReturn("y");
         when(promptControllerMock.prompt(PROMPT_EPIC_BRANCH_NAME)).thenReturn(EPIC_NAME);
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
         // verify
+        verify(promptControllerMock).prompt("Epic branch will be started not from current branch but will be "
+                + "based off branch '" + MASTER_BRANCH + "'. Continue?", Arrays.asList("y", "n"), "y");
         verify(promptControllerMock).prompt(PROMPT_EPIC_BRANCH_NAME);
         verifyNoMoreInteractions(promptControllerMock);
 
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), EPIC_BRANCH_VERSION);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, OTHER_BRANCH, EPIC_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_SET_VERSION);
+    }
+
+    @Test
+    public void testExecuteOnOtherBranchAndPromptAnswerNo() throws Exception {
+        // set up
+        final String OTHER_BRANCH = "otherBranch";
+        git.createBranchWithoutSwitch(repositorySet, OTHER_BRANCH);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        git.switchToBranch(repositorySet, OTHER_BRANCH);
+        when(promptControllerMock.prompt("Epic branch will be started not from current branch but will be based "
+                + "off branch '" + MASTER_BRANCH + "'. Continue?", Arrays.asList("y", "n"), "y")).thenReturn("n");
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt("Epic branch will be started not from current branch but will be "
+                + "based off branch '" + MASTER_BRANCH + "'. Continue?", Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
+
+        assertGitFlowFailureException(result, "Epic start process aborted by user.", null);
+
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, OTHER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, OTHER_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+    }
+
+    @Test
+    public void testExecuteOnOtherBranchInBatchMode() throws Exception {
+        // set up
+        final String OTHER_BRANCH = "otherBranch";
+        git.switchToBranch(repositorySet, OTHER_BRANCH, true);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("epicName", EPIC_NAME);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), EPIC_BRANCH_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
@@ -903,10 +953,14 @@ public class GitFlowEpicStartMojoTest extends AbstractGitFlowMojoTestCase {
         final String OTHER_BRANCH = "otherBranch";
         git.switchToBranch(repositorySet, OTHER_BRANCH, true);
         git.createAndCommitTestfile(repositorySet);
+        when(promptControllerMock.prompt("Epic branch will be started not from current branch but will be based "
+                + "off branch '" + MASTER_BRANCH + "'. Continue?", Arrays.asList("y", "n"), "y")).thenReturn("y");
         when(promptControllerMock.prompt(PROMPT_EPIC_BRANCH_NAME)).thenReturn(EPIC_NAME);
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
         // verify
+        verify(promptControllerMock).prompt("Epic branch will be started not from current branch but will be "
+                + "based off branch '" + MASTER_BRANCH + "'. Continue?", Arrays.asList("y", "n"), "y");
         verify(promptControllerMock).prompt(PROMPT_EPIC_BRANCH_NAME);
         verifyNoMoreInteractions(promptControllerMock);
 

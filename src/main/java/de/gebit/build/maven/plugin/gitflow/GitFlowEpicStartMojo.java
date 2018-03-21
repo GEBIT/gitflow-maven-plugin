@@ -56,6 +56,13 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
         String currentBranch = gitCurrentBranch();
         String baseBranch = currentBranch.startsWith(gitFlowConfig.getMaintenanceBranchPrefix()) ? currentBranch
                 : gitFlowConfig.getDevelopmentBranch();
+        if (!currentBranch.equals(baseBranch)) {
+            boolean confirmed = getPrompter().promptConfirmation("Epic branch will be started not from current "
+                    + "branch but will be based off branch '" + baseBranch + "'. Continue?", true, true);
+            if (!confirmed) {
+                throw new GitFlowFailureException("Epic start process aborted by user.", null);
+            }
+        }
 
         // use integration branch?
         final String integrationBranch = gitFlowConfig.getIntegrationBranchPrefix() + baseBranch;
