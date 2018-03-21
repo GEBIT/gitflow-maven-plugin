@@ -274,7 +274,7 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH_2, OTHER_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH_2);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE,
                 COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE);
@@ -302,7 +302,7 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH_2, OTHER_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH_2);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE,
                 COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE);
@@ -336,7 +336,7 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
     }
 
@@ -772,7 +772,7 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), EPIC_VERSION);
         git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_SET_VERSION);
     }
@@ -781,7 +781,6 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteSelectedLocalEpicBranchAheadOfRemote() throws Exception {
         // set up
         ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
-        git.push(repositorySet);
         git.createAndCommitTestfile(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + EPIC_BRANCH + LS + "Choose epic branch to finish";
@@ -798,7 +797,6 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteSelectedRemoteEpicBranchAheadOfLocal() throws Exception {
         // set up
         ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
-        git.push(repositorySet);
         git.remoteCreateTestfileInBranch(repositorySet, EPIC_BRANCH);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + EPIC_BRANCH + LS + "Choose epic branch to finish";
@@ -815,7 +813,6 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteSelectedEpicBranchHasChangesLocallyAndRemote() throws Exception {
         // set up
         ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
-        git.push(repositorySet);
         final String COMMIT_MESSAGE_LOCAL_TESTFILE = "LOCAL: Unit test dummy file commit";
         git.createAndCommitTestfile(repositorySet, "local_testfile.txt", COMMIT_MESSAGE_LOCAL_TESTFILE);
         final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
@@ -846,7 +843,6 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteCurrentLocalEpicBranchAheadOfRemote() throws Exception {
         // set up
         ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
-        git.push(repositorySet);
         git.createAndCommitTestfile(repositorySet);
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
@@ -859,7 +855,6 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteCurrentRemoteEpicBranchAheadOfLocal() throws Exception {
         // set up
         ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
-        git.push(repositorySet);
         git.remoteCreateTestfileInBranch(repositorySet, EPIC_BRANCH);
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
@@ -872,7 +867,6 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteCurrentRemoteEpicBranchAheadOfLocalWithMergeConflict() throws Exception {
         // set up
         ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
-        git.push(repositorySet);
         git.remoteCreateTestfileInBranch(repositorySet, EPIC_BRANCH);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createTestfile(repositorySet);
@@ -896,7 +890,6 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteCurrentEpicBranchHasChangesLocallyAndRemote() throws Exception {
         // set up
         ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
-        git.push(repositorySet);
         final String COMMIT_MESSAGE_LOCAL_TESTFILE = "LOCAL: Unit test dummy file commit";
         git.createAndCommitTestfile(repositorySet, "local_testfile.txt", COMMIT_MESSAGE_LOCAL_TESTFILE);
         final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
@@ -1000,7 +993,7 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), EPIC_VERSION);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_LOCAL_TESTFILE);
         git.assertCommitsInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_SET_VERSION);
@@ -1010,7 +1003,6 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteSelectedLocalEpicBranchAheadOfRemoteAndFetchRemoteFalse() throws Exception {
         // set up
         ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
-        git.push(repositorySet);
         git.createAndCommitTestfile(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + EPIC_BRANCH + LS + "Choose epic branch to finish";
@@ -1057,7 +1049,6 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteSelectedEpicBranchHasChangesLocallyAndRemoteFetchRemoteFalse() throws Exception {
         // set up
         ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
-        git.push(repositorySet);
         git.createAndCommitTestfile(repositorySet);
         final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
         git.remoteCreateTestfileInBranch(repositorySet, EPIC_BRANCH, "remote_testfile.txt",
@@ -1129,7 +1120,6 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteSelectedEpicBranchHasChangesLocallyAndRemoteFetchRemoteFalseWithPrefetch() throws Exception {
         // set up
         ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
-        git.push(repositorySet);
         git.createAndCommitTestfile(repositorySet);
         final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
         git.remoteCreateTestfileInBranch(repositorySet, EPIC_BRANCH, "remote_testfile.txt",
@@ -1182,7 +1172,7 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE);
         git.assertCommitsInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_SET_VERSION);
@@ -1213,7 +1203,7 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE);
         git.assertCommitsInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_SET_VERSION);
@@ -1395,7 +1385,6 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // set up
         git.useClonedRemoteRepository(repositorySet);
         ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION);
-        git.push(repositorySet);
         ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
@@ -1570,7 +1559,7 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
         git.assertLocalBranches(repositorySet, MAINTENANCE_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, EPIC_BRANCH);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_MERGE_INTO_MAINTENANCE,
                 COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE,

@@ -364,7 +364,7 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE);
     }
 
@@ -1089,7 +1089,7 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH);
 
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE);
@@ -1116,7 +1116,7 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH);
 
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE);
@@ -1405,7 +1405,7 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH);
-        git.assertRemoteBranches(repositorySet);
+        git.assertRemoteBranches(repositorySet, EPIC_BRANCH);
 
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE);
         git.assertCommitsInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_MARGE, COMMIT_MESSAGE_EPIC_TESTFILE,
@@ -1515,7 +1515,7 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
         git.assertLocalBranches(repositorySet, MAINTENANCE_BRANCH, EPIC_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, EPIC_BRANCH);
 
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_MAINTENANCE_TESTFILE,
