@@ -46,21 +46,20 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
 
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
-        // set git flow configuration
         initGitFlowConfig();
 
-        // check uncommitted changes
         checkUncommittedChanges();
 
-        // fetch and check remote
         String currentBranch = gitCurrentBranch();
-        String baseBranch = currentBranch.startsWith(gitFlowConfig.getMaintenanceBranchPrefix()) ? currentBranch
-                : gitFlowConfig.getDevelopmentBranch();
-        if (!currentBranch.equals(baseBranch)) {
-            boolean confirmed = getPrompter().promptConfirmation("Epic branch will be started not from current "
-                    + "branch but will be based off branch '" + baseBranch + "'. Continue?", true, true);
-            if (!confirmed) {
-                throw new GitFlowFailureException("Epic start process aborted by user.", null);
+        String baseBranch = currentBranch;
+        if (!isMaintenanceBranch(baseBranch)) {
+            baseBranch = gitFlowConfig.getDevelopmentBranch();
+            if (!currentBranch.equals(baseBranch)) {
+                boolean confirmed = getPrompter().promptConfirmation("Epic branch will be started not from current "
+                        + "branch but will be based off branch '" + baseBranch + "'. Continue?", true, true);
+                if (!confirmed) {
+                    throw new GitFlowFailureException("Epic start process aborted by user.", null);
+                }
             }
         }
 
@@ -138,7 +137,6 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
                     "'mvn flow:epic-start' to run again and specify another epic name");
         }
 
-
         // git checkout -b ... develop
         gitCreateAndCheckout(epicBranchName, baseBranch);
 
@@ -171,6 +169,10 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
         if (installProject) {
             // mvn clean install
             mvnCleanInstall();
+        }
+
+        if (pushRemote) {
+            gitPush(epicBranchName, false, false);
         }
     }
 

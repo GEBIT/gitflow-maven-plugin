@@ -14,11 +14,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.plugins.annotations.Parameter;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
@@ -29,63 +26,6 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * @since 1.5.15
  */
 public abstract class AbstractGitFlowEpicMojo extends AbstractGitFlowMojo {
-
-    /**
-     * A regex pattern that a new epic name must match. It is also used to
-     * extract a "key" from a branch name which can be referred to as
-     * <code>@key</code> in commit messages. The extraction will be performed
-     * using the first matching group (if present). You will need this if your
-     * commit messages need to refer to e.g. an issue tracker key.
-     */
-    @Parameter(property = "epicNamePattern", required = false)
-    protected String epicNamePattern;
-
-    /**
-     * Extracts the epic issue number from epic name using epic name pattern.
-     * E.g. extracts issue number "GBLD-42" from epic name
-     * "GBLD-42-someDescription" if default epic name pattern is used. Returns
-     * epic name if issue number can't be extracted.
-     *
-     * @param epicName
-     *            the epic name
-     * @return the extracted epic issue number or epic name if issue number
-     *         can't be extracted
-     */
-    protected String extractIssueNumberFromEpicName(String epicName) {
-        String issueNumber = epicName;
-        if (epicNamePattern != null) {
-            // extract the issue number only
-            Matcher m = Pattern.compile(epicNamePattern).matcher(epicName);
-            if (m.matches()) {
-                if (m.groupCount() == 0) {
-                    getLog().warn("Epic branch conforms to <epicNamePattern>, but ther is no matching"
-                            + " group to extract the issue number.");
-                } else {
-                    issueNumber = m.group(1);
-                }
-            } else {
-                getLog().warn("Epic branch does not conform to <epicNamePattern> specified, cannot "
-                        + "extract issue number.");
-            }
-        }
-        return issueNumber;
-    }
-
-    /**
-     * Extracts the epic issue number from epic branch name using epic name
-     * pattern and epic branch prefix. E.g. extracts issue number "GBLD-42" from
-     * epic branch name "epic/GBLD-42-someDescription" if default epic name
-     * pattern is used. Returns epic name if issue number can't be extracted.
-     *
-     * @param epicBranchName
-     *            the epic branch name
-     * @return the extracted epic issue number or epic name if issue number
-     *         can't be extracted
-     */
-    protected String extractIssueNumberFromEpicBranchName(String epicBranchName) {
-        String epicName = epicBranchName.replaceFirst(gitFlowConfig.getEpicBranchPrefix(), "");
-        return extractIssueNumberFromEpicName(epicName);
-    }
 
     /**
      * Substitute keys of the form <code>@{name}</code> in the messages. By

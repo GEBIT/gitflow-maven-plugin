@@ -264,6 +264,18 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     @Parameter(defaultValue = "${settings}", readonly = true)
     protected Settings settings;
 
+    /**
+     * A regex pattern that a new epic name must match. It is also used to
+     * extract a "key" from a branch name which can be referred to as
+     * <code>@key</code> in commit messages. The extraction will be performed
+     * using the first matching group (if present). You will need this if your
+     * commit messages need to refer to e.g. an issue tracker key.
+     *
+     * @since 1.5.15
+     */
+    @Parameter(property = "epicNamePattern", required = false)
+    protected String epicNamePattern;
+
     private ExtendedPrompter extendedPrompter;
 
     /**
@@ -2556,6 +2568,77 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     protected void removeCommits(String lastCommitToBeKept, String lastCommitToBeRemoved, String branch)
             throws CommandLineException, MojoFailureException {
         executeGitCommand("rebase", "--no-ff", "--onto", lastCommitToBeKept, lastCommitToBeRemoved, branch);
+    }
+
+    /**
+     * Check if passed branch name is name for a maintenance branch.
+     *
+     * @param branchName
+     *            the branch name to be checked
+     * @return <code>true</code> if the branch name starts with maintenance
+     *         branch prefix
+     */
+    protected boolean isMaintenanceBranch(String branchName) {
+        return branchName.startsWith(gitFlowConfig.getMaintenanceBranchPrefix());
+    }
+
+    /**
+     * Check if passed branch name is name for an epic branch.
+     *
+     * @param branchName
+     *            the branch name to be checked
+     * @return <code>true</code> if the branch name starts with epic branch
+     *         prefix
+     */
+    protected boolean isEpicBranch(String branchName) {
+        return branchName.startsWith(gitFlowConfig.getEpicBranchPrefix());
+    }
+
+    /**
+     * Extract the epic issue number from epic name using epic name pattern.
+     * E.g. extract issue number "GBLD-42" from epic name
+     * "GBLD-42-someDescription" if default epic name pattern is used. Return
+     * epic name if issue number can't be extracted.
+     *
+     * @param epicName
+     *            the epic name
+     * @return the extracted epic issue number or epic name if issue number
+     *         can't be extracted
+     */
+    protected String extractIssueNumberFromEpicName(String epicName) {
+        String issueNumber = epicName;
+        if (epicNamePattern != null) {
+            // extract the issue number only
+            Matcher m = Pattern.compile(epicNamePattern).matcher(epicName);
+            if (m.matches()) {
+                if (m.groupCount() == 0) {
+                    getLog().warn("Epic branch conforms to <epicNamePattern>, but ther is no matching"
+                            + " group to extract the issue number.");
+                } else {
+                    issueNumber = m.group(1);
+                }
+            } else {
+                getLog().warn("Epic branch does not conform to <epicNamePattern> specified, cannot "
+                        + "extract issue number.");
+            }
+        }
+        return issueNumber;
+    }
+
+    /**
+     * Extract the epic issue number from epic branch name using epic name
+     * pattern and epic branch prefix. E.g. extract issue number "GBLD-42" from
+     * epic branch name "epic/GBLD-42-someDescription" if default epic name
+     * pattern is used. Return epic name if issue number can't be extracted.
+     *
+     * @param epicBranchName
+     *            the epic branch name
+     * @return the extracted epic issue number or epic name if issue number
+     *         can't be extracted
+     */
+    protected String extractIssueNumberFromEpicBranchName(String epicBranchName) {
+        String epicName = epicBranchName.replaceFirst(gitFlowConfig.getEpicBranchPrefix(), "");
+        return extractIssueNumberFromEpicName(epicName);
     }
 
     private static class CommandResult {
