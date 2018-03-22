@@ -17,7 +17,6 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.codehaus.plexus.util.StringUtils;
@@ -150,34 +149,6 @@ public abstract class AbstractGitFlowFeatureMojo extends AbstractGitFlowMojo {
     }
 
     /**
-     * Update initial version commit to new version on development branch
-     *
-     * @param featureIssue
-     *            the feature issue number
-     */
-    protected void gitRebaseFeatureCommit(final String featureIssue) throws MojoFailureException, CommandLineException {
-        // use OURS = theirs in rebase
-        gitCheckoutOurs();
-
-        // read the version
-        String tempDevelopmentVersion = getCurrentProjectVersion();
-
-        try {
-            final DefaultVersionInfo versionInfo = new DefaultVersionInfo(tempDevelopmentVersion);
-            String tempFeatureVersion = versionInfo.getReleaseVersionString() + "-" + featureIssue + "-"
-                    + Artifact.SNAPSHOT_VERSION;
-
-            // set desired version
-            mvnSetVersions(tempFeatureVersion);
-
-            // add changes to initial commit
-            gitAddWithUpdateIndex();
-        } catch (VersionParseException ex) {
-            throw new MojoFailureException("Failed to create update version for feature branch.", ex);
-        }
-    }
-
-    /**
      * Merges the first commit on the given branch ignoring any changes. This
      * first commit is the commit that changed the versions.
      *
@@ -272,6 +243,21 @@ public abstract class AbstractGitFlowFeatureMojo extends AbstractGitFlowMojo {
             for (String maintenanceBranch : localMaintenanceBranches) {
                 if (!branchPointCandidates.containsKey(maintenanceBranch)) {
                     addBranchPointCandidate(branchPointCandidates, featureBranch, maintenanceBranch, false);
+                }
+            }
+        }
+        List<String> remoteEpicBranches = gitRemoteEpicBranches();
+        if (remoteEpicBranches.size() > 0) {
+            gitFetchBranches(remoteEpicBranches);
+            for (String epicBranch : remoteEpicBranches) {
+                addBranchPointCandidate(branchPointCandidates, featureBranch, epicBranch, true);
+            }
+        }
+        List<String> localEpicBranches = gitLocalEpicBranches();
+        if (localEpicBranches.size() > 0) {
+            for (String epicBranch : localEpicBranches) {
+                if (!branchPointCandidates.containsKey(epicBranch)) {
+                    addBranchPointCandidate(branchPointCandidates, featureBranch, epicBranch, false);
                 }
             }
         }

@@ -47,6 +47,14 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
 
     private static final String FEATURE_BRANCH_WITH_DESCRIPTION = "feature/" + FEATURE_NAME_WITH_DESCRIPTION;
 
+    private static final String EPIC_ISSUE = TestProjects.BASIC.jiraProject + "-4711";
+
+    private static final String EPIC_NAME = EPIC_ISSUE + "-someDescription";
+
+    private static final String EPIC_BRANCH = "epic/" + EPIC_NAME;
+
+    private static final String EPIC_VERSION = TestProjects.BASIC.releaseVersion + "-" + EPIC_ISSUE + "-SNAPSHOT";
+
     private static final String PROMPT_MESSAGE_ONE_FEATURE_SELECT = "Feature branches:" + LS + "1. " + FEATURE_BRANCH
             + LS + "Choose feature branch to rebase";
 
@@ -85,8 +93,13 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
 
     private static final String COMMIT_MESSAGE_FEATURE_TESTFILE = "FEATURE: Unit test dummy file commit";
 
+    private static final String COMMIT_MESSAGE_EPIC_TESTFILE = "EPIC: Unit test dummy file commit";
+
     private static final String COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE = "NO-ISSUE: updating versions for"
             + " maintenance branch";
+
+    private static final String COMMIT_MESSAGE_SET_VERSION_FOR_EPIC = EPIC_ISSUE
+            + ": updating versions for epic branch";
 
     private static final String COMMIT_MESSAGE_MARGE = TestProjects.BASIC.jiraProject + "-NONE: Merge branch "
             + MASTER_BRANCH + " into " + FEATURE_BRANCH;
@@ -2172,6 +2185,68 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
                         "\\Q'mvn flow:feature-rebase' to continue feature rebase process\\E"));
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
         git.assertMergeInProcess(repositorySet, TESTFILE_NAME);
+    }
+
+    @Test
+    public void testExecuteOnFeatureBranchFeatureStartedOnEpicBranch() throws Exception {
+        // set up
+        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), EPIC_VERSION);
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
+        git.switchToBranch(repositorySet, EPIC_BRANCH);
+        git.createAndCommitTestfile(repositorySet, "epic_testfile.txt", COMMIT_MESSAGE_EPIC_TESTFILE);
+        git.push(repositorySet);
+        git.switchToBranch(repositorySet, FEATURE_BRANCH);
+        git.createAndCommitTestfile(repositorySet, "feature_testfile.txt", COMMIT_MESSAGE_FEATURE_TESTFILE);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, FEATURE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, FEATURE_BRANCH);
+
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, EPIC_BRANCH, EPIC_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_EPIC_TESTFILE,
+                COMMIT_MESSAGE_SET_VERSION_FOR_EPIC);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, FEATURE_BRANCH, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FEATURE_TESTFILE,
+                COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_EPIC_TESTFILE, COMMIT_MESSAGE_SET_VERSION_FOR_EPIC);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
+    }
+
+    @Test
+    public void testExecuteWithRebaseConflictOnSetVersionCommitAndFeatureStartedOnEpicBranch() throws Exception {
+        // set up
+        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), EPIC_VERSION);
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
+        git.switchToBranch(repositorySet, EPIC_BRANCH);
+        ExecutorHelper.executeSetVersion(this, repositorySet, "2.0.0-" + EPIC_ISSUE + "-SNAPSHOT");
+        final String COMMIT_MESSAGE_EPIC_UPDATE_VERSION = "EPIC: version update";
+        git.commitAll(repositorySet, COMMIT_MESSAGE_EPIC_UPDATE_VERSION);
+        git.push(repositorySet);
+        git.switchToBranch(repositorySet, FEATURE_BRANCH);
+        git.createAndCommitTestfile(repositorySet, "feature-testfile.txt", COMMIT_MESSAGE_FEATURE_TESTFILE);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, FEATURE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, FEATURE_BRANCH);
+
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, EPIC_BRANCH, EPIC_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_EPIC_UPDATE_VERSION,
+                COMMIT_MESSAGE_SET_VERSION_FOR_EPIC);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, FEATURE_BRANCH, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FEATURE_TESTFILE,
+                COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_EPIC_UPDATE_VERSION, COMMIT_MESSAGE_SET_VERSION_FOR_EPIC);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), "2.0.0-" + FEATURE_NAME + "-SNAPSHOT");
     }
 
 }

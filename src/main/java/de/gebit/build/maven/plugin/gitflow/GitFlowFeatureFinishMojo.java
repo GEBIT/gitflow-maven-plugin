@@ -164,21 +164,21 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
                         rebased = gitTryRebaseWithoutVersionChange(featureBranchName, branchPoint, firstCommitOnBranch);
                     }
                 }
-                if (!rebased) {
+                if (!rebased && !tychoBuild) {
                     // rebase not configured or not possible, then manually
                     // revert the version
                     gitCheckout(featureBranchName);
+                    String version = currentVersion;
                     String issueNumber = extractIssueNumberFromFeatureBranchName(featureBranchName);
-                    if (currentVersion.contains("-" + issueNumber)) {
-                        final String version = currentVersion.replaceFirst("-" + issueNumber, "");
-                        // mvn versions:set -DnewVersion=...
-                        // -DgenerateBackupPoms=false
+                    if (version.contains("-" + issueNumber)) {
+                        version = version.replaceFirst("-" + issueNumber, "");
+                        if (!tychoBuild && isEpicBranch(baseBranch)) {
+                            String epicIssue = extractIssueNumberFromEpicBranchName(baseBranch);
+                            version = insertSuffixInVersion(version, epicIssue);
+                        }
                         mvnSetVersions(version);
-
                         String featureFinishMessage = substituteInFeatureMessage(
                                 commitMessages.getFeatureFinishMessage(), issueNumber);
-                        // git commit -a -m updating versions for development
-                        // branch
                         gitCommit(featureFinishMessage);
                     }
                 }

@@ -359,7 +359,9 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteTychoBuildAndSkipTestProjectFalse() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
+        Properties userPropertiesForEpicStart = new Properties();
+        userPropertiesForEpicStart.setProperty("flow.tychoBuild", "true");
+        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME, userPropertiesForEpicStart);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.skipTestProject", "false");
@@ -368,7 +370,13 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
         verifyZeroInteractions(promptControllerMock);
-        assertEpicFinishedCorrectly();
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE, COMMIT_MESSAGE_FOR_TESTFILE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         assertMavenCommandExecuted("clean verify");
         assertMavenCommandNotExecuted("clean test");
     }
@@ -575,8 +583,7 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteOnMasterBranchEpicStartedOnMaintenanceBranchOnSameCommitAsMasterBranch() throws Exception {
         // set up
-        String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + EPIC_BRANCH + LS
-                + "Choose epic branch to finish";
+        String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + EPIC_BRANCH + LS + "Choose epic branch to finish";
         final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
         final String COMMIT_MESSAGE_MAINTENANCE_TESTFILE = "MAINTENANCE: Unit test dummy file commit";
         ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION, TestProjects.BASIC.version);

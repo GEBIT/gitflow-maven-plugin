@@ -19,7 +19,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
@@ -175,20 +174,12 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
 
         if (!skipFeatureVersion && !tychoBuild) {
             String currentVersion = getCurrentProjectVersion();
+            String version = currentVersion;
             if (isEpicBranch(baseBranch)) {
-                currentVersion = removeEpicIssueFromVersion(currentVersion, baseBranch);
+                version = removeEpicIssueFromVersion(version, baseBranch);
             }
-            String version = null;
-            try {
-                DefaultVersionInfo versionInfo = new DefaultVersionInfo(currentVersion);
-                version = versionInfo.getReleaseVersionString() + "-" + featureIssue + "-" + Artifact.SNAPSHOT_VERSION;
-            } catch (VersionParseException e) {
-                if (getLog().isDebugEnabled()) {
-                    getLog().debug(e);
-                }
-            }
-
-            if (StringUtils.isNotBlank(version)) {
+            version = insertSuffixInVersion(version, featureIssue);
+            if (!currentVersion.equals(version)) {
                 mvnSetVersions(version, "On feature branch: ");
                 gitCommit(featureStartMessage);
             }

@@ -36,6 +36,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.text.StrLookup;
 import org.apache.commons.lang3.text.StrSubstitutor;
+import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.execution.MavenExecutionRequest;
 import org.apache.maven.execution.MavenSession;
@@ -977,6 +978,20 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected List<String> gitRemoteMaintenanceBranches() throws MojoFailureException, CommandLineException {
         return gitRemoteBranches(gitFlowConfig.getMaintenanceBranchPrefix());
+    }
+
+    /**
+     * List all local epic branches
+     */
+    protected List<String> gitLocalEpicBranches() throws MojoFailureException, CommandLineException {
+        return gitLocalBranches(gitFlowConfig.getEpicBranchPrefix());
+    }
+
+    /**
+     * List all remote epic branches
+     */
+    protected List<String> gitRemoteEpicBranches() throws MojoFailureException, CommandLineException {
+        return gitRemoteBranches(gitFlowConfig.getEpicBranchPrefix());
     }
 
     /**
@@ -2639,6 +2654,33 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     protected String extractIssueNumberFromEpicBranchName(String epicBranchName) {
         String epicName = epicBranchName.replaceFirst(gitFlowConfig.getEpicBranchPrefix(), "");
         return extractIssueNumberFromEpicName(epicName);
+    }
+
+    /**
+     * Insert passed suffix into passed version. E.g. result for version
+     * <code>1.2.3-SNAPSHOT</code> and suffix <code>GBLD-42</code> will be
+     * version <code>1.2.3-GBLD-42-SNAPSHOT</code>.
+     *
+     * @param version
+     *            the version to be modified
+     * @param suffix
+     *            the suffix to be inserted
+     * @return the version with inserted suffix
+     */
+    protected String insertSuffixInVersion(String version, String suffix) {
+        String newVersion = version;
+        try {
+            DefaultVersionInfo versionInfo = new DefaultVersionInfo(newVersion);
+            newVersion = versionInfo.getReleaseVersionString() + "-" + suffix;
+            if (versionInfo.isSnapshot()) {
+                newVersion += "-" + Artifact.SNAPSHOT_VERSION;
+            }
+        } catch (VersionParseException e) {
+            if (getLog().isDebugEnabled()) {
+                getLog().debug(e);
+            }
+        }
+        return newVersion;
     }
 
     private static class CommandResult {

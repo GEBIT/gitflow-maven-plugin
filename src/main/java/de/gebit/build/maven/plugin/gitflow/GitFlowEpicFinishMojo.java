@@ -122,21 +122,16 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
                 mvnCleanTest();
             }
 
-            // get current project version from pom
-            final String currentVersion = getCurrentProjectVersion();
-
-            // revert the version
-            String issueNumber = extractIssueNumberFromEpicBranchName(epicBranchName);
-            if (currentVersion.contains("-" + issueNumber)) {
-                final String version = currentVersion.replaceFirst("-" + issueNumber, "");
-                // mvn versions:set -DnewVersion=...
-                // -DgenerateBackupPoms=false
-                mvnSetVersions(version);
-
-                String epicFinishMessage = substituteInEpicMessage(commitMessages.getEpicFinishMessage(), issueNumber);
-                // git commit -a -m updating versions for development
-                // branch
-                gitCommit(epicFinishMessage);
+            if (!tychoBuild) {
+                String currentVersion = getCurrentProjectVersion();
+                String issueNumber = extractIssueNumberFromEpicBranchName(epicBranchName);
+                if (currentVersion.contains("-" + issueNumber)) {
+                    String version = currentVersion.replaceFirst("-" + issueNumber, "");
+                    mvnSetVersions(version);
+                    String epicFinishMessage = substituteInEpicMessage(commitMessages.getEpicFinishMessage(),
+                            issueNumber);
+                    gitCommit(epicFinishMessage);
+                }
             }
 
             // git checkout develop

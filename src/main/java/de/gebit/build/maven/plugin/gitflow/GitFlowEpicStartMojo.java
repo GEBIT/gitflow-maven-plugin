@@ -10,7 +10,6 @@ package de.gebit.build.maven.plugin.gitflow;
 
 import java.util.Objects;
 
-import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
@@ -137,37 +136,20 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
                     "'mvn flow:epic-start' to run again and specify another epic name");
         }
 
-        // git checkout -b ... develop
         gitCreateAndCheckout(epicBranchName, baseBranch);
 
         if (!tychoBuild) {
-            // get current project version from pom
-            final String currentVersion = getCurrentProjectVersion();
-
-            String version = null;
+            String currentVersion = getCurrentProjectVersion();
             String epicIssue = extractIssueNumberFromEpicName(epicName);
-            try {
-                final DefaultVersionInfo versionInfo = new DefaultVersionInfo(currentVersion);
-                version = versionInfo.getReleaseVersionString() + "-" + epicIssue + "-" + Artifact.SNAPSHOT_VERSION;
-            } catch (VersionParseException e) {
-                if (getLog().isDebugEnabled()) {
-                    getLog().debug(e);
-                }
-            }
-
-            if (StringUtils.isNotBlank(version)) {
-                // mvn versions:set -DnewVersion=...
-                // -DgenerateBackupPoms=false
+            String version = insertSuffixInVersion(currentVersion, epicIssue);
+            if (!currentVersion.equals(version)) {
                 mvnSetVersions(version, "On epic branch: ");
-
                 String epicStartMessage = substituteInEpicMessage(commitMessages.getEpicStartMessage(), epicIssue);
-                // git commit -a -m updating versions for epic branch
                 gitCommit(epicStartMessage);
             }
         }
 
         if (installProject) {
-            // mvn clean install
             mvnCleanInstall();
         }
 

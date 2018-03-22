@@ -178,9 +178,8 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
                             + "'mvn flow:feature-rebase' again. Do NOT run 'git rebase --continue'.";
                 }
                 if (ex.getMessage().contains("Patch failed at 0001 " + featureStartMessage)) {
-                    String featureIssue = extractIssueNumberFromFeatureBranchName(featureBranchName);
                     // try automatic rebase
-                    gitRebaseFeatureCommit(featureIssue);
+                    gitResolveConflictOnSetFeatureVersionCommit(featureBranchName, baseBranch);
 
                     // continue rebase
                     try {
@@ -255,5 +254,37 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
             }
             gitPush(featureBranchName, false, true);
         }
+    }
+
+    /**
+     * Update initial version commit to new version on development branch.
+     *
+     * @param featureBranchName
+     *            the feature branch name
+     * @param baseBranchName
+     *            the base branch name
+     */
+    private void gitResolveConflictOnSetFeatureVersionCommit(String featureBranchName, String baseBranchName)
+            throws MojoFailureException, CommandLineException {
+        gitCheckoutOurs();
+        String currentVersion = getCurrentProjectVersion();
+        String version = currentVersion;
+        if (isEpicBranch(baseBranchName)) {
+            version = removeEpicIssueFromVersion(version, baseBranchName);
+        }
+        String featureIssue = extractIssueNumberFromFeatureBranchName(featureBranchName);
+        version = insertSuffixInVersion(version, featureIssue);
+        if (!currentVersion.equals(version)) {
+            mvnSetVersions(version);
+            gitAddWithUpdateIndex();
+        }
+    }
+
+    private String removeEpicIssueFromVersion(String version, String epicBranch) {
+        String epicIssueNumber = extractIssueNumberFromEpicBranchName(epicBranch);
+        if (version.contains("-" + epicIssueNumber)) {
+            return version.replaceFirst("-" + epicIssueNumber, "");
+        }
+        return version;
     }
 }
