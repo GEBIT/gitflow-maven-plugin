@@ -1278,6 +1278,62 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         });
     }
 
+    /**
+     * Asserts that the current local branch is not ahead of remote branch,
+     * branches doesn't diverge and remote branch exists. If local branch is
+     * ahead of remote or branches diverge or remote branch doesn't exist a
+     * {@link MojoFailureException} will be thrown.
+     *
+     * @param localAheadErrorMessage
+     *            the message to be used in exception if local branch is ahead
+     *            of remote (if <code>null</code> a default message will be
+     *            used)
+     * @param divergeErrorMessage
+     *            the message to be used in exception if local and remote
+     *            branches diverge (if <code>null</code> a default message will
+     *            be used)
+     * @param remoteNotExistingErrorMessage
+     *            the message to be used in exception if remote branch doesn't
+     *            exist (if <code>null</code> a default message will be used)
+     * @throws MojoFailureException
+     *             if local branch is ahead of remote or branches diverge or
+     *             remote branch doesn't exist
+     * @throws CommandLineException
+     *             if a git command can't be executed
+     */
+    protected void gitAssertCurrentLocalBranchNotAheadOfRemoteBranche(GitFlowFailureInfo localAheadErrorMessage,
+            GitFlowFailureInfo divergeErrorMessage, GitFlowFailureInfo remoteNotExistingErrorMessage)
+            throws MojoFailureException, CommandLineException {
+        String branchName = gitCurrentBranch();
+        boolean remoteBranchExists = gitCompareLocalAndRemoteBranches(branchName, new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+                if (localAheadErrorMessage != null) {
+                    throw new GitFlowFailureException(replacePlaceholders(localAheadErrorMessage, branchName));
+                }
+                throw new GitFlowFailureException("Local branch is ahead of the remote branch '" + branchName + "'.",
+                        "Push commits made on local branch to the remote branch in order to proceed.",
+                        "'git push " + branchName + "'");
+            }
+        }, null, new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+                if (divergeErrorMessage != null) {
+                    throw new GitFlowFailureException(replacePlaceholders(divergeErrorMessage, branchName));
+                }
+                throw new GitFlowFailureException("Local and remote branches '" + branchName + "' diverge.",
+                        "Rebase or merge the changes in local branch in order to proceed.", "'git pull'");
+            }
+        });
+        if (!remoteBranchExists) {
+            if (remoteNotExistingErrorMessage != null) {
+                throw new GitFlowFailureException(replacePlaceholders(remoteNotExistingErrorMessage, branchName));
+            }
+            throw new GitFlowFailureException("Branch '" + branchName + "' doesn't exist remotely.",
+                    "Push the local branch '" + branchName + "' to remote in order to proceed.", "'git push'");
+        }
+    }
+
     protected void gitEnsureLocalBranchIsUpToDateIfExists(String branchName, GitFlowFailureInfo divergeErrorInfo)
             throws MojoFailureException, CommandLineException {
         gitCompareLocalAndRemoteBranches(branchName, null, new Callable<Void>() {
