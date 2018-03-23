@@ -15,6 +15,7 @@ import static org.mockito.Mockito.when;
 import org.apache.maven.execution.MavenExecutionResult;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import de.gebit.build.maven.plugin.gitflow.jgit.RepositorySet;
@@ -115,6 +116,7 @@ public class GitFlowReleaseStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), RELEASE_VERSION);
     }
 
+    @Ignore
     @Test
     public void testExecuteOnOtherBranch() throws Exception {
         // set up
