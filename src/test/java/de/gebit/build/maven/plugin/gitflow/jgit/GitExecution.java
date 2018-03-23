@@ -803,6 +803,42 @@ public class GitExecution {
     }
 
     /**
+     * Create tags in local repository.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param tags
+     *            the tags to be created
+     * @throws GitAPIException
+     *             if an error occurs on git command execution
+     */
+    public void createTags(RepositorySet repositorySet, String... tags) throws GitAPIException {
+        createTags(repositorySet, false, tags);
+    }
+
+    /**
+     * Create tags in local repository and optionally push it to the remote repository.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param push
+     *            <code>true</code> if tags shhould be pushed to remote
+     *            repository
+     * @param tags
+     *            the tags to be created
+     * @throws GitAPIException
+     *             if an error occurs on git command execution
+     */
+    public void createTags(RepositorySet repositorySet, boolean push, String... tags) throws GitAPIException {
+        for (String tag : tags) {
+            repositorySet.getLocalRepoGit().tag().setName(tag).call();
+            if (push) {
+                repositorySet.getLocalRepoGit().push().add(tag).call();
+            }
+        }
+    }
+
+    /**
      * Asserts that local repository consists of passed expected branches.
      *
      * @param repositorySet
