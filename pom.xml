@@ -1,4 +1,4 @@
-<!-- 
+<!--
 /*
  * Copyright 2014-2016 Aleksandr Mashchenko.
  * Copyright 2016 GEBIT Solutions GmbH
@@ -28,7 +28,7 @@
 	<parent>
 		<groupId>de.gebit.build</groupId>
 		<artifactId>gebit-build</artifactId>
-		<version>1.2.19</version>
+		<version>1.2.23</version>
 		<relativePath/>
 	</parent>
 
@@ -77,11 +77,11 @@
 		<project.jira>GBLD</project.jira>
 
 		<!-- Project build configuration -->
-		<java.version>1.7</java.version>
+		<java.version>1.8</java.version>
 		<java.optimize>true</java.optimize>
 		<java.debug>true</java.debug>
 		<java.encoding>UTF-8</java.encoding>
-		
+
 		<maven-plugin-plugin.version>3.4</maven-plugin-plugin.version>
 	</properties>
 
@@ -112,6 +112,38 @@
 	</reporting>
 
 	<build>
+		<pluginManagement>
+			<plugins>
+            <!-- Special configuration when running within Eclipse (m2e) -->
+				<plugin>
+					<groupId>org.eclipse.m2e</groupId>
+					<artifactId>lifecycle-mapping</artifactId>
+					<version>1.0.0</version>
+					<configuration>
+						<lifecycleMappingMetadata>
+							<pluginExecutions combine.children="append">
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>org.apache.maven.plugins</groupId>
+										<artifactId>maven-plugin-plugin</artifactId>
+										<versionRange>[1.0.0,)</versionRange>
+										<goals>
+											<goal>descriptor</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<execute>
+											<runOnConfiguration>true</runOnConfiguration>
+											<runOnIncremental>true</runOnIncremental>
+										</execute>
+									</action>
+								</pluginExecution>
+							</pluginExecutions>
+						</lifecycleMappingMetadata>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -144,7 +176,7 @@
 					</execution>
 				</executions>
 			</plugin>
-			
+
 			<!-- site configuration -->
 			<plugin>
 				<groupId>io.repaint.maven</groupId>
@@ -152,8 +184,9 @@
 				<extensions>true</extensions>
 				<configuration>
 					<tiles>
+						<tile>de.gebit.build.tile:coverage:${version.build}</tile>
 						<tile>de.gebit.build.tile:enforce-maven:${version.build}</tile>
-						<!-- 
+						<!--
 						<tile>de.gebit.build.tile:enforce-java:${version.build}</tile>
 						 -->
 						<tile>de.gebit.build.tile:encoding:${version.build}</tile>
@@ -177,7 +210,7 @@
 		<dependency>
 			<groupId>org.apache.maven</groupId>
 			<artifactId>maven-core</artifactId>
-			<version>3.0</version>
+			<version>3.3.9</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
@@ -199,10 +232,74 @@
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
-			<groupId>org.apache.maven.release</groupId>
-			<artifactId>maven-release-manager</artifactId>
-			<version>2.5.3</version>
-			<scope>compile</scope>
+			<groupId>org.codehaus.plexus</groupId>
+			<artifactId>plexus-interactivity-api</artifactId>
+			<version>1.0-alpha-6</version>
+		</dependency>
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+			<version>2.6</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.maven</groupId>
+			<artifactId>maven-compat</artifactId>
+			<version>3.3.9</version>
+		</dependency>
+
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.12</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-core</artifactId>
+			<version>2.13.0</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.eclipse.jgit</groupId>
+			<artifactId>org.eclipse.jgit</artifactId>
+			<version>4.10.0.201712302008-r</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.eclipse.aether</groupId>
+			<artifactId>aether-connector-basic</artifactId>
+			<version>1.0.2.v20150114</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.eclipse.aether</groupId>
+			<artifactId>aether-transport-http</artifactId>
+			<version>1.0.2.v20150114</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.eclipse.aether</groupId>
+			<artifactId>aether-transport-file</artifactId>
+			<version>1.0.2.v20150114</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.maven.wagon</groupId>
+			<artifactId>wagon-file</artifactId>
+			<version>3.0.0</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.maven</groupId>
+			<artifactId>maven-embedder</artifactId>
+			<version>3.5.2</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-simple</artifactId>
+			<version>1.7.5</version>
+			<scope>test</scope>
 		</dependency>
 	</dependencies>
 </project>

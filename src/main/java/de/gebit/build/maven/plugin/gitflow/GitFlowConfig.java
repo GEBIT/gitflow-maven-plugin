@@ -17,9 +17,9 @@ package de.gebit.build.maven.plugin.gitflow;
 
 /**
  * Git flow configuration.
- * 
+ *
  * @author Aleksandr Mashchenko
- * 
+ *
  */
 public class GitFlowConfig {
     /** Name of the production branch. */
@@ -28,15 +28,22 @@ public class GitFlowConfig {
     private String developmentBranch;
     /** Prefix of the feature branch. */
     private String featureBranchPrefix;
+    /**
+     * Prefix of epic branches.
+     *
+     * @since 1.5.15
+     */
+    private String epicBranchPrefix;
     /** Prefix of the release branch. */
     private String releaseBranchPrefix;
     /** Prefix of the hotfix branch. */
     private String hotfixBranchPrefix;
     /** Prefix of the maintenance branches. */
     private String maintenanceBranchPrefix;
-    /** 
+    /**
      * Prefix of integration branches.
-     * @since 1.5.10 
+     *
+     * @since 1.5.10
      */
     private String integrationBranchPrefix;
     /** Prefix of the version tag. */
@@ -53,6 +60,7 @@ public class GitFlowConfig {
         this.productionBranch = "master";
         this.developmentBranch = "develop";
         this.featureBranchPrefix = "feature/";
+        this.epicBranchPrefix = "epic/";
         this.releaseBranchPrefix = "release/";
         this.hotfixBranchPrefix = "hotfix/";
         this.maintenanceBranchPrefix = "maintenance/";
@@ -108,6 +116,21 @@ public class GitFlowConfig {
     }
 
     /**
+     * @return the epicBranchPrefix
+     */
+    public String getEpicBranchPrefix() {
+        return epicBranchPrefix;
+    }
+
+    /**
+     * @param epicBranchPrefix
+     *            the epicBranchPrefix to set
+     */
+    public void setEpicBranchPrefix(String epicBranchPrefix) {
+        this.epicBranchPrefix = epicBranchPrefix;
+    }
+
+    /**
      * @return the releaseBranchPrefix
      */
     public String getReleaseBranchPrefix() {
@@ -145,14 +168,14 @@ public class GitFlowConfig {
     public void setSupportBranchPrefix(String supportBranchPrefix) {
         this.maintenanceBranchPrefix = supportBranchPrefix;
     }
-    
+
     /**
      * @return the maintenanceBranchPrefix
      */
     public String getMaintenanceBranchPrefix() {
         return maintenanceBranchPrefix;
     }
-    
+
     /**
      * @param maintenanceBranchPrefix
      *            the maintenanceBranchPrefix to set
@@ -161,14 +184,13 @@ public class GitFlowConfig {
         this.maintenanceBranchPrefix = maintenanceBranchPrefix;
     }
 
-    
     /**
      * @return the integrationBranchPrefix
      */
     public String getIntegrationBranchPrefix() {
         return integrationBranchPrefix;
     }
-    
+
     /**
      * @param integrationBranchPrefix
      *            the integrationBranchPrefix to set
@@ -176,7 +198,7 @@ public class GitFlowConfig {
     public void setIntegrationBranchPrefix(String integrationBranchPrefix) {
         this.integrationBranchPrefix = integrationBranchPrefix;
     }
-    
+
     /**
      * @return the versionTagPrefix
      */
@@ -206,19 +228,19 @@ public class GitFlowConfig {
     public void setOrigin(String origin) {
         this.origin = origin;
     }
-    
+
     /**
      * @return the noProduction flag
      */
     public boolean isNoProduction() {
-	return noProduction;
+        return noProduction;
     }
-    
+
     /**
      * @param noProduction
-     *            flag whether there is no production branch. 
+     *            flag whether there is no production branch.
      */
     public void setNoProduction(boolean noProduction) {
-	this.noProduction = noProduction;
+        this.noProduction = noProduction;
     }
 }

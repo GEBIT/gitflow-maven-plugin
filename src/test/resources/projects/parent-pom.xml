@@ -1,0 +1,188 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>de.gebit.build.maven.test</groupId>
+	<artifactId>test-parent-pom</artifactId>
+	<version>1.0.0</version>
+	<packaging>pom</packaging>
+	<properties>
+		<version.gitflow-maven-plugin></version.gitflow-maven-plugin>
+		<project.build-name>gitflow-tests</project.build-name>
+		<project.jira>GFTST</project.jira>
+		<gitflow.message-prefix>${project.jira}-NONE: </gitflow.message-prefix>
+
+		<version.property>version.build</version.property>
+		<version.version-stamper-maven-plugin>1.4</version.version-stamper-maven-plugin>
+		<version.maven-project-info-reports-plugin>2.9</version.maven-project-info-reports-plugin>
+		<version.maven-site-plugin>3.5</version.maven-site-plugin>
+
+		<test.deistribution.repository.basedir>file:${project.basedir}/../mvnrepo</test.deistribution.repository.basedir>
+		<test.deistribution.releases>${test.deistribution.repository.basedir}/gebit-releases</test.deistribution.releases>
+		<test.deistribution.snapshots>${test.deistribution.repository.basedir}/gebit-snapshots</test.deistribution.snapshots>
+		<test.deistribution.site.basedir>${test.deistribution.repository.basedir}/gebit-site</test.deistribution.site.basedir>
+		<test.deistribution.site>${test.deistribution.site.basedir}/${project.artifactId}</test.deistribution.site>
+	</properties>
+	<distributionManagement>
+		<repository>
+			<id>TestReleaseRepo</id>
+			<name>Test Release Repository</name>
+			<url>${test.deistribution.releases}</url>
+		</repository>
+		<snapshotRepository>
+			<id>TestSnapshotRepo</id>
+			<name>Test Snapshot Repository</name>
+			<url>${test.deistribution.snapshots}</url>
+		</snapshotRepository>
+		<!-- Copy following distribution management configuration for site to the child pom.xml -->
+		<!--
+		<site>
+			<id>TestSiteTarget</id>
+			<url>${test.deistribution.site}</url>
+		</site>
+		-->
+	</distributionManagement>
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>de.gebit.build.maven</groupId>
+				<artifactId>gitflow-maven-plugin</artifactId>
+				<version>${version.gitflow-maven-plugin}</version>
+			</plugin>
+		</plugins>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>de.gebit.build.maven</groupId>
+					<artifactId>version-stamper-maven-plugin</artifactId>
+					<version>${version.version-stamper-maven-plugin}</version>
+					<configuration>
+						<versionProperty>${version.property}</versionProperty>
+					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-project-info-reports-plugin</artifactId>
+					<version>${version.maven-project-info-reports-plugin}</version>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+	</build>
+	<profiles>
+		<profile>
+			<id>flowWithDefaults</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<properties>
+				<version.upstream.property></version.upstream.property>
+				<version.upstream.onlySnapshots>true</version.upstream.onlySnapshots>
+				<version.upstream>@{${version.upstream.property}}</version.upstream>
+				<version.upstream.property.update>${version.upstream.property}</version.upstream.property.update>
+				<project.upstream>upstream</project.upstream>
+
+				<flow.skipFeatureVersion>false</flow.skipFeatureVersion>
+				<flow.commandsAfterVersion>version-stamper:stamp -N</flow.commandsAfterVersion>
+				<flow.commandsAfterFeatureVersion>version-stamper:stamp -N</flow.commandsAfterFeatureVersion>
+				<flow.featureNamePattern>^((?:${project.jira})-\d+)(?:-[^\s]*)?$</flow.featureNamePattern>
+				<flow.featureNamePatternDescription>A feature name must start with the project's JIRA issue key, e.g. ${project.jira}-[number][-optional-short-description]</flow.featureNamePatternDescription>
+				<flow.featureStartMessage>@{key}: updating versions for feature branch</flow.featureStartMessage>
+				<flow.featureBranchPrefix>feature/</flow.featureBranchPrefix>
+				<flow.epicBranchPrefix>epic/</flow.epicBranchPrefix>
+				<flow.epicStartMessage>@{key}: updating versions for epic branch</flow.epicStartMessage>
+				<flow.epicNamePattern>^((?:${project.jira})-\d+)(?:-[^\s]*)?$</flow.epicNamePattern>
+				<flow.epicNamePatternDescription>A epic name must start with the project's JIRA issue key, e.g. ${project.jira}-[number][-optional-short-description]</flow.epicNamePatternDescription>
+				<flow.releaseBranchFilter>[0-9].[0-9].0</flow.releaseBranchFilter>
+
+				<flow.push>true</flow.push>
+				<flow.fetchRemote>true</flow.fetchRemote>
+				<flow.skipTestProject>true</flow.skipTestProject>
+				<flow.skipDeployProject>false</flow.skipDeployProject>
+				<flow.installProject>false</flow.installProject>
+				<flow.keepFeatureBranch>false</flow.keepFeatureBranch>
+				<flow.keepEpicBranch>false</flow.keepEpicBranch>
+				<flow.rebaseWithoutVersionChange>true</flow.rebaseWithoutVersionChange>
+				<flow.updateWithMerge>false</flow.updateWithMerge>
+				<flow.allowSnapshots>false</flow.allowSnapshots>
+				<flow.copyProperties>altDeploymentRepository,maven.repo.local</flow.copyProperties>
+				<flow.releaseMergeNoFF>false</flow.releaseMergeNoFF>
+				<flow.releaseMergeProductionNoFF>true</flow.releaseMergeProductionNoFF>
+				<flow.releaseGoals>deploy site site:deploy</flow.releaseGoals>
+				<flow.pushReleaseBranch>false</flow.pushReleaseBranch>
+				<flow.deleteRemoteBranchOnRebase>false</flow.deleteRemoteBranchOnRebase>
+			</properties>
+			<build>
+				<pluginManagement>
+					<plugins>
+						<plugin>
+							<groupId>de.gebit.build.maven</groupId>
+							<artifactId>gitflow-maven-plugin</artifactId>
+							<configuration>
+								<skipFeatureVersion>${flow.skipFeatureVersion}</skipFeatureVersion>
+
+								<commandsAfterVersion>${flow.commandsAfterVersion}</commandsAfterVersion>
+								<commandsAfterFeatureVersion>${flow.commandsAfterFeatureVersion}</commandsAfterFeatureVersion>
+								<fetchRemote>${flow.fetchRemote}</fetchRemote>
+								<pushRemote>${flow.push}</pushRemote>
+								<pushReleaseBranch>${flow.pushReleaseBranch}</pushReleaseBranch>
+								<keepFeatureBranch>${flow.keepFeatureBranch}</keepFeatureBranch>
+								<keepEpicBranch>${flow.keepEpicBranch}</keepEpicBranch>
+								<skipTestProject>${flow.skipTestProject}</skipTestProject>
+								<skipDeployProject>${flow.skipDeployProject}</skipDeployProject>
+								<installProject>${flow.installProject}</installProject>
+								<releaseGoals>${flow.releaseGoals}</releaseGoals>
+								<rebaseWithoutVersionChange>${flow.rebaseWithoutVersionChange}</rebaseWithoutVersionChange>
+								<releaseMergeNoFF>${flow.releaseMergeNoFF}</releaseMergeNoFF>
+								<releaseMergeProductionNoFF>${flow.releaseMergeProductionNoFF}</releaseMergeProductionNoFF>
+								<updateWithMerge>${flow.updateWithMerge}</updateWithMerge>
+								<featureNamePattern>${flow.featureNamePattern}</featureNamePattern>
+								<featureNamePatternDescription>${flow.featureNamePatternDescription}</featureNamePatternDescription>
+								<epicNamePattern>${flow.epicNamePattern}</epicNamePattern>
+								<epicNamePatternDescription>${flow.epicNamePatternDescription}</epicNamePatternDescription>
+								<releaseBranchFilter>${flow.releaseBranchFilter}</releaseBranchFilter>
+								<allowSnapshots>${flow.allowSnapshots}</allowSnapshots>
+								<printTestOutput>true</printTestOutput>
+								<printInstallOutput>true</printInstallOutput>
+								<statusBeforeCheck>true</statusBeforeCheck>
+								<copyProperties>${flow.copyProperties}</copyProperties>
+								<tychoBuild>${flow.tychoBuild}</tychoBuild>
+								<deleteRemoteBranchOnRebase>${flow.deleteRemoteBranchOnRebase}</deleteRemoteBranchOnRebase>
+								<gitFlowConfig>
+									<noProduction>true</noProduction>
+									<developmentBranch>master</developmentBranch>
+									<maintenanceBranchPrefix>maintenance/${project.build-name}-</maintenanceBranchPrefix>
+									<versionTagPrefix>${project.build-name}-</versionTagPrefix>
+									<releaseBranchPrefix>release/${project.build-name}-</releaseBranchPrefix>
+									<featureBranchPrefix>${flow.featureBranchPrefix}</featureBranchPrefix>
+									<epicBranchPrefix>${flow.epicBranchPrefix}</epicBranchPrefix>
+								</gitFlowConfig>
+								<commitMessages>
+									<featureStartMessage>${flow.featureStartMessage}</featureStartMessage>
+									<featureFinishMessage>@{key}: reverting versions for development branch</featureFinishMessage>
+									<epicStartMessage>${flow.epicStartMessage}</epicStartMessage>
+									<epicFinishMessage>@{key}: reverting versions for development branch</epicFinishMessage>
+									<hotfixStartMessage>NO-ISSUE: updating versions for hotfix</hotfixStartMessage>
+									<hotfixFinishMessage>NO-ISSUE: updating for next development version</hotfixFinishMessage>
+									<releaseStartMessage>NO-ISSUE: updating versions for release</releaseStartMessage>
+									<releaseFinishMessage>NO-ISSUE: updating for next development version</releaseFinishMessage>
+									<maintenanceStartMessage>NO-ISSUE: updating versions for maintenance branch</maintenanceStartMessage>
+									<branchConfigMessage>NO-ISSUE: branch configuration update</branchConfigMessage>
+									<mergeMessagePattern>@{gitflow.message-prefix} @{message}</mergeMessagePattern>
+								</commitMessages>
+								<additionalVersionCommands>
+									<additionalVersionCommand>
+										<prompt>Enter the version of the ${project.upstream} project to reference</prompt>
+										<defaultValue>${version.upstream}</defaultValue>
+										<enabled>${version.upstream.property}</enabled>
+										<property>version.upstream</property>
+										<command>version-stamper:stamp -N -DonlySnapshots=${version.upstream.onlySnapshots}
+											-Dversion.property=${version.upstream.property.update} -DversionValue=@{value}</command>
+									</additionalVersionCommand>
+								</additionalVersionCommands>
+							</configuration>
+						</plugin>
+					</plugins>
+				</pluginManagement>
+			</build>
+		</profile>
+	</profiles>
+</project>

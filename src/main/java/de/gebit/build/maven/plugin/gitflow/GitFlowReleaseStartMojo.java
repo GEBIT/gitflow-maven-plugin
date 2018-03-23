@@ -23,9 +23,9 @@ import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
  * The git flow release start mojo.
- * 
+ *
  * @author Aleksandr Mashchenko
- * 
+ *
  */
 @Mojo(name = "release-start", aggregator = true)
 public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
@@ -35,11 +35,11 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
      * Default is <code>false</code>, i.e. project version will be added to
      * release branch prefix. <br/>
      * <br/>
-     * 
+     *
      * Note: By itself the default releaseBranchPrefix is not a valid branch
      * name. You must change it when setting sameBranchName to <code>true</code>
      * .
-     * 
+     *
      * @since 1.2.0
      */
     @Parameter(property = "sameBranchName", defaultValue = "false")
@@ -49,15 +49,16 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
      * Version to set for the release. If not specified you will be asked for
      * the version (in interactive mode), in batch mode the default will be used
      * (current version with stripped SNAPSHOT).
-     * 
+     *
      * @since 1.3.10
      */
     @Parameter(property = "releaseVersion", required = false)
     private String releaseVersion;
 
     /**
-     * A release branch can be pushed to the remote to prevent concurrent releases. The default is <code>false</code>.
-     * 
+     * A release branch can be pushed to the remote to prevent concurrent
+     * releases. The default is <code>false</code>.
+     *
      * @since 1.5.0
      */
     @Parameter(property = "pushReleaseBranch", required = false)
@@ -92,7 +93,7 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
     protected boolean isReleaseMergeNoFF() {
         throw new IllegalStateException("release-start does not commit the release project.");
     }
-    
+
     @Override
     protected boolean isReleaseMergeProductionNoFF() {
         throw new IllegalStateException("release-start does not commit the release project.");
@@ -135,17 +136,13 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
 
     /** {@inheritDoc} */
     @Override
-    public void execute() throws MojoExecutionException, MojoFailureException {
-        try {
-            // set git flow configuration
-            initGitFlowConfig();
+    protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
+        // set git flow configuration
+        initGitFlowConfig();
 
-            // check uncommitted changes
-            checkUncommittedChanges();
+        // check uncommitted changes
+        checkUncommittedChanges();
 
-            releaseStart();
-        } catch (CommandLineException e) {
-            getLog().error(e);
-        }
+        releaseStart();
     }
 }

@@ -19,15 +19,14 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
-import org.apache.maven.shared.release.versions.DefaultVersionInfo;
-import org.apache.maven.shared.release.versions.VersionParseException;
 import org.codehaus.plexus.components.interactivity.PrompterException;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
- * The git flow build version mojo. Used to explicitly set the version in all projects.
- * 
+ * The git flow build version mojo. Used to explicitly set the version in all
+ * projects.
+ *
  * @author Erwin Tratar
  */
 @Mojo(name = "set-version", aggregator = true)
@@ -35,7 +34,7 @@ public class GitFlowSetVersionMojo extends AbstractGitFlowMojo {
 
     /**
      * Specifies a specific (complete) version to update the project to.
-     * 
+     *
      * @since 1.3.0
      */
     @Parameter(property = "newVersion", defaultValue = "${newVersion}", required = false)
@@ -43,46 +42,38 @@ public class GitFlowSetVersionMojo extends AbstractGitFlowMojo {
 
     /** {@inheritDoc} */
     @Override
-    public void execute() throws MojoExecutionException, MojoFailureException {
-        try {
-            // set git flow configuration
-            initGitFlowConfig();
+    protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
+        // set git flow configuration
+        initGitFlowConfig();
 
-            if (settings.isInteractiveMode() && newVersion == null) {
-                // get current project version from pom
-                final String currentVersion = getCurrentProjectVersion();
-                try {
-                    final DefaultVersionInfo versionInfo = new DefaultVersionInfo(currentVersion);
-                    newVersion = versionInfo.getNextVersion().getReleaseVersionString();
-                } catch (VersionParseException e) {
-                    if (getLog().isDebugEnabled()) {
-                        getLog().debug(e);
-                    }
-                }
-                
-                if (newVersion == null) {
-                    throw new MojoFailureException(
-                            "Cannot get default project version.");
-                }
-                
-                try {
-                    newVersion = prompter.prompt("What is the new version?", newVersion);
-                } catch (PrompterException e) {
-                    getLog().error(e);
+        if (settings.isInteractiveMode() && newVersion == null) {
+            // get current project version from pom
+            final String currentVersion = getCurrentProjectVersion();
+            try {
+                final DefaultVersionInfo versionInfo = new DefaultVersionInfo(currentVersion);
+                newVersion = versionInfo.getNextVersion().getReleaseVersionString();
+            } catch (VersionParseException e) {
+                if (getLog().isDebugEnabled()) {
+                    getLog().debug(e);
                 }
             }
 
-            if (StringUtils.isBlank(newVersion)) {
-                throw new MojoFailureException("No new version set, aborting....");
+            if (newVersion == null) {
+                throw new MojoFailureException("Cannot get default project version.");
             }
 
-            
-
-            // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
-            mvnSetVersions(newVersion, "");
-
-        } catch (CommandLineException e) {
-            getLog().error(e);
+            try {
+                newVersion = prompter.prompt("What is the new version?", newVersion);
+            } catch (PrompterException e) {
+                getLog().error(e);
+            }
         }
+
+        if (StringUtils.isBlank(newVersion)) {
+            throw new MojoFailureException("No new version set, aborting....");
+        }
+
+        // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
+        mvnSetVersions(newVersion, "");
     }
 }

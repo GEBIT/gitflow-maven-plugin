@@ -16,8 +16,6 @@
 package de.gebit.build.maven.plugin.gitflow;
 
 import java.io.File;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
 
 import org.apache.maven.artifact.manager.WagonManager;
 import org.apache.maven.artifact.repository.ArtifactRepository;
@@ -44,91 +42,93 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * <li>Access to site repository without password prompt</li>
  * <li>Commandline ssh available</li>
  * <li>Access to site repository without password prompt</li>
- * 
+ *
  * </ul>
- * 
+ *
  * @author Erwin Tratar
  * @since 1.5.6
  */
-@Mojo(name = "check", aggregator = true, defaultPhase =LifecyclePhase.VALIDATE)
+@Mojo(name = "check", aggregator = true, defaultPhase = LifecyclePhase.VALIDATE)
 public class GitFlowCheckMojo extends AbstractGitFlowMojo {
     @Component(role = WagonManager.class)
     private WagonManager wagonManager;
-    
+
     @Component(role = ArtifactRepositoryLayout.class)
     private ArtifactRepositoryLayout artifactRepositoryLayout;
-    
+
     @Parameter(required = false, defaultValue = "${project.distributionManagement.repository.id}|${project.distributionManagement.repository.url},${project.distributionManagement.snapshotRepository.id}|${project.distributionManagement.snapshotRepository.url}")
     private Repository[] deploymentRepositories;
 
     /** {@inheritDoc} */
     @Override
-    public void execute() throws MojoExecutionException, MojoFailureException {
+    protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
+        // set git flow configuration
+        initGitFlowConfig();
+
+        // check for git executable
+        boolean tempFailures = false;
+        getLog().info("Check if 'git' command is available...");
+        if (!isGitAvailable()) {
+            getLog().error("");
+            getLog().error("git commandline was not found. Please install it, e.g. from https://git-scm.com/downloads");
+            getLog().error("");
+            tempFailures = true;
+        }
+        getLog().info("   [OK]");
+
+        // check if we have read access to the configured repository using
+        // passwordless SSH
+        getLog().info("Check if remote repository is accessible...");
         try {
-            // set git flow configuration
-            initGitFlowConfig();
-
-            // check for git executable
-            boolean tempFailures = false;
-            getLog().info("Check if 'git' command is available...");
-            if (!isGitAvailable()) {
-                getLog().error("");
-                getLog().error("git commandline was not found. Please install it, e.g. from https://git-scm.com/downloads");
-                getLog().error("");
-                tempFailures = true;
-            }
+            hasRemoteBranch(gitFlowConfig.getDevelopmentBranch());
             getLog().info("   [OK]");
+        } catch (MojoFailureException ex) {
+            getLog().error("");
+            getLog().error("Failed to access the remote git repository: " + ex.getMessage());
+            if (ex.getMessage().contains("password)")) {
+                getLog().error(
+                        "The repository must be accessible with a SSH key (no username/password!). If not yet set up, please send your public key to the Administration to link it to your account.");
+            }
+            getLog().error("");
+            tempFailures = true;
+        }
 
-            // check if we have read access to the configured repository using passwordless SSH
-            getLog().info("Check if remote repository is accessible...");
-            try {
-                hasRemoteBranch(gitFlowConfig.getDevelopmentBranch());
-                getLog().info("   [OK]");
-            } catch (MojoFailureException ex) {
-                getLog().error("");
-                getLog().error("Failed to access the remote git repository: " + ex.getMessage());
-                if (ex.getMessage().contains("password)")) {
-                    getLog().error(
-                            "The repository must be accessible with a SSH key (no username/password!). If not yet set up, please send your public key to the Administration to link it to your account.");
-                }
-                getLog().error("");
-                tempFailures = true;
-            }
+        // now check repository write permissions by pushing the current commit
+        // to a new remote branch
+        getLog().info("Check if remote repository is writable...");
+        try {
+            checkGitWriteable();
+            getLog().info("   [OK]");
+        } catch (MojoFailureException ex) {
+            getLog().error("");
+            getLog().error("Failed to write to the remote git repository: " + ex.getMessage());
+            getLog().error("");
+            tempFailures = true;
+        }
 
-            // now check repository write permissions by pushing the current commit to a new remote branch
-            getLog().info("Check if remote repository is writable...");
-            try {
-                checkGitWriteable();
-                getLog().info("   [OK]");
-            } catch (MojoFailureException ex) {
-                getLog().error("");
-                getLog().error("Failed to write to the remote git repository: " + ex.getMessage());
-                getLog().error("");
-                tempFailures = true;
+        if (deploymentRepositories != null) {
+            for (Repository repository : deploymentRepositories) {
+                tempFailures &= checkRepository("deployment repository", repository.getId(), repository.getUrl(),
+                        repository.isMandatory());
             }
-            
-            if (deploymentRepositories != null) {
-                for (Repository repository : deploymentRepositories) {
-                    tempFailures &= checkRepository("deployment repository", repository.getId(), repository.getUrl(), repository.isMandatory());
-                }
-            }
+        }
 
-            // new we need to check whether we can publish the site
-            if (getProject().getDistributionManagement().getSite() != null) {
-                tempFailures &= checkRepository("site publishing", getProject().getDistributionManagement().getSite().getId(),
-                        getProject().getDistributionManagement().getSite().getUrl(), true);
-            }
-            if (tempFailures) {
-                throw new MojoExecutionException(
-                        "Your environment is not configured correctly (see above for details). After correcting the errors please re-run to check again.");
-            }
-        } catch (CommandLineException e) {
-            getLog().error(e);
+        // new we need to check whether we can publish the site
+        if (getProject().getDistributionManagement().getSite() != null) {
+            tempFailures &= checkRepository("site publishing",
+                    getProject().getDistributionManagement().getSite().getId(),
+                    getProject().getDistributionManagement().getSite().getUrl(), true);
+        }
+        if (tempFailures) {
+            throw new MojoExecutionException(
+                    "Your environment is not configured correctly (see above for details). After correcting the errors please re-run to check again.");
         }
     }
 
     /**
-     * Check whether deployment on the configured repository works. Assumes standard gebit-build repository properties
+     * Check whether deployment on the configured repository works. Assumes
+     * standard gebit-build repository properties
+     *
      * @param type
      * @param mandatory
      * @return
@@ -137,12 +137,15 @@ public class GitFlowCheckMojo extends AbstractGitFlowMojo {
         getLog().info("Checking " + type + " access for " + id + " at " + url);
 
         try {
-            ArtifactRepository tempArtifactRepository = new MavenArtifactRepository(id, url, artifactRepositoryLayout, null, null);
+            ArtifactRepository tempArtifactRepository = new MavenArtifactRepository(id, url, artifactRepositoryLayout,
+                    null, null);
             Wagon tempWagon = wagonManager.getWagon(tempArtifactRepository.getProtocol());
-            DefaultArtifactRepository tempRepository = new DefaultArtifactRepository(id, url, artifactRepositoryLayout, false);
+            DefaultArtifactRepository tempRepository = new DefaultArtifactRepository(id, url, artifactRepositoryLayout,
+                    false);
             tempWagon.connect(tempRepository, wagonManager.getAuthenticationInfo(id));
             try {
-                File tempFile = File.createTempFile(System.getProperty("user.name").toLowerCase().replace(' ', '-') + "-access-test-", "");
+                File tempFile = File.createTempFile(
+                        System.getProperty("user.name").toLowerCase().replace(' ', '-') + "-access-test-", "");
                 tempFile.deleteOnExit();
                 String tempRemoteFile = tempArtifactRepository.getBasedir() + ".temp/" + tempFile.getName();
                 getLog().debug("   uploading to " + tempRemoteFile);
@@ -158,7 +161,7 @@ public class GitFlowCheckMojo extends AbstractGitFlowMojo {
                     if (!command.getErr().trim().isEmpty()) {
                         getLog().warn("   " + command.getErr());
                     }
-                    
+
                     // try to cleanup directory
                     getLog().debug("   trying cleanup directory");
                     command = ((CommandExecutor) tempWagon).executeCommand("rmdir "

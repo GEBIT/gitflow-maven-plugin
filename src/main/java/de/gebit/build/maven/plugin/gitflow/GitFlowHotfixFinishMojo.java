@@ -24,17 +24,15 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
-import org.apache.maven.shared.release.versions.DefaultVersionInfo;
-import org.apache.maven.shared.release.versions.VersionParseException;
 import org.codehaus.plexus.components.interactivity.PrompterException;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
  * The git flow hotfix finish mojo.
- * 
+ *
  * @author Aleksandr Mashchenko
- * 
+ *
  */
 @Mojo(name = "hotfix-finish", aggregator = true)
 public class GitFlowHotfixFinishMojo extends AbstractGitFlowMojo {
@@ -49,7 +47,7 @@ public class GitFlowHotfixFinishMojo extends AbstractGitFlowMojo {
 
     /**
      * Whether to skip calling Maven test goal before merging the branch.
-     * 
+     *
      * @since 1.0.5
      */
     @Parameter(property = "skipTestProject", defaultValue = "false")
@@ -57,154 +55,140 @@ public class GitFlowHotfixFinishMojo extends AbstractGitFlowMojo {
 
     /** {@inheritDoc} */
     @Override
-    public void execute() throws MojoExecutionException, MojoFailureException {
+    protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
+        // check uncommitted changes
+        checkUncommittedChanges();
+
+        // git for-each-ref --format='%(refname:short)' refs/heads/hotfix/*
+        final String hotfixBranches = gitFindBranches(gitFlowConfig.getHotfixBranchPrefix(), false);
+
+        if (StringUtils.isBlank(hotfixBranches)) {
+            throw new MojoFailureException("There is no hotfix branches.");
+        }
+
+        // fetch and check remote
+        if (fetchRemote) {
+            gitFetchRemoteAndCompare(gitFlowConfig.getDevelopmentBranch());
+            if (!gitFlowConfig.isNoProduction()) {
+                gitFetchRemoteAndCompare(gitFlowConfig.getProductionBranch());
+            }
+        }
+
+        String[] branches = hotfixBranches.split("\\r?\\n");
+
+        List<String> numberedList = new ArrayList<String>();
+        StringBuilder str = new StringBuilder("Hotfix branches:").append(LS);
+        for (int i = 0; i < branches.length; i++) {
+            str.append((i + 1) + ". " + branches[i] + LS);
+            numberedList.add(String.valueOf(i + 1));
+        }
+        str.append("Choose hotfix branch to finish");
+
+        String hotfixNumber = null;
         try {
-            // check uncommitted changes
-            checkUncommittedChanges();
+            while (StringUtils.isBlank(hotfixNumber)) {
+                hotfixNumber = prompter.prompt(str.toString(), numberedList);
+            }
+        } catch (PrompterException e) {
+            getLog().error(e);
+        }
 
-            // git for-each-ref --format='%(refname:short)' refs/heads/hotfix/*
-            final String hotfixBranches = gitFindBranches(
-                    gitFlowConfig.getHotfixBranchPrefix(), false);
+        String hotfixBranchName = null;
+        if (hotfixNumber != null) {
+            int num = Integer.parseInt(hotfixNumber);
+            hotfixBranchName = branches[num - 1];
+        }
 
-            if (StringUtils.isBlank(hotfixBranches)) {
-                throw new MojoFailureException("There is no hotfix branches.");
+        if (StringUtils.isBlank(hotfixBranchName)) {
+            throw new MojoFailureException("Hotfix branch name to finish is blank.");
+        }
+
+        if (!skipTestProject) {
+            // git checkout hotfix/...
+            gitCheckout(hotfixBranchName);
+
+            // mvn clean test
+            mvnCleanTest();
+        }
+
+        // git checkout master
+        gitCheckout(gitFlowConfig.isNoProduction() ? gitFlowConfig.getDevelopmentBranch()
+                : gitFlowConfig.getProductionBranch());
+
+        // git merge --no-ff hotfix/...
+        gitMergeNoff(hotfixBranchName);
+
+        if (!skipTag) {
+            String tagVersion = getCurrentProjectVersion();
+            if (tychoBuild && ArtifactUtils.isSnapshot(tagVersion)) {
+                tagVersion = tagVersion.replace("-" + Artifact.SNAPSHOT_VERSION, "");
             }
 
-            // fetch and check remote
-            if (fetchRemote) {
-                gitFetchRemoteAndCompare(gitFlowConfig.getDevelopmentBranch());
-                if (!gitFlowConfig.isNoProduction()) {
-                    gitFetchRemoteAndCompare(gitFlowConfig.getProductionBranch());
-                }
-            }
+            // git tag -a ...
+            gitTag(gitFlowConfig.getVersionTagPrefix() + tagVersion, commitMessages.getTagHotfixMessage());
+        }
 
-            String[] branches = hotfixBranches.split("\\r?\\n");
+        // check whether release branch exists
+        // git for-each-ref --count=1 --format="%(refname:short)"
+        // refs/heads/release/*
+        final String releaseBranch = gitFindBranches(gitFlowConfig.getReleaseBranchPrefix(), true);
 
-            List<String> numberedList = new ArrayList<String>();
-            StringBuilder str = new StringBuilder("Hotfix branches:")
-                    .append(LS);
-            for (int i = 0; i < branches.length; i++) {
-                str.append((i + 1) + ". " + branches[i] + LS);
-                numberedList.add(String.valueOf(i + 1));
-            }
-            str.append("Choose hotfix branch to finish");
-
-            String hotfixNumber = null;
-            try {
-                while (StringUtils.isBlank(hotfixNumber)) {
-                    hotfixNumber = prompter
-                            .prompt(str.toString(), numberedList);
-                }
-            } catch (PrompterException e) {
-                getLog().error(e);
-            }
-
-            String hotfixBranchName = null;
-            if (hotfixNumber != null) {
-                int num = Integer.parseInt(hotfixNumber);
-                hotfixBranchName = branches[num - 1];
-            }
-
-            if (StringUtils.isBlank(hotfixBranchName)) {
-                throw new MojoFailureException(
-                        "Hotfix branch name to finish is blank.");
-            }
-
-            if (!skipTestProject) {
-                // git checkout hotfix/...
-                gitCheckout(hotfixBranchName);
-
-                // mvn clean test
-                mvnCleanTest();
-            }
-
-            // git checkout master
-            gitCheckout(gitFlowConfig.isNoProduction() ?
-                    gitFlowConfig.getDevelopmentBranch() : gitFlowConfig.getProductionBranch());
-
+        // if release branch exists merge hotfix changes into it
+        if (StringUtils.isNotBlank(releaseBranch)) {
+            // git checkout release
+            gitCheckout(releaseBranch);
             // git merge --no-ff hotfix/...
             gitMergeNoff(hotfixBranchName);
+        } else {
+            if (!gitFlowConfig.isNoProduction()) {
+                // git checkout develop
+                gitCheckout(gitFlowConfig.getDevelopmentBranch());
 
-            if (!skipTag) {
-                String tagVersion = getCurrentProjectVersion();
-                if (tychoBuild && ArtifactUtils.isSnapshot(tagVersion)) {
-                    tagVersion = tagVersion.replace("-"
-                            + Artifact.SNAPSHOT_VERSION, "");
-                }
-
-                // git tag -a ...
-                gitTag(gitFlowConfig.getVersionTagPrefix() + tagVersion,
-                        commitMessages.getTagHotfixMessage());
-            }
-
-            // check whether release branch exists
-            // git for-each-ref --count=1 --format="%(refname:short)"
-            // refs/heads/release/*
-            final String releaseBranch = gitFindBranches(
-                    gitFlowConfig.getReleaseBranchPrefix(), true);
-
-            // if release branch exists merge hotfix changes into it
-            if (StringUtils.isNotBlank(releaseBranch)) {
-                // git checkout release
-                gitCheckout(releaseBranch);
                 // git merge --no-ff hotfix/...
                 gitMergeNoff(hotfixBranchName);
-            } else {
-                if (!gitFlowConfig.isNoProduction()) {
-                    // git checkout develop
-                    gitCheckout(gitFlowConfig.getDevelopmentBranch());
-
-                    // git merge --no-ff hotfix/...
-                    gitMergeNoff(hotfixBranchName);
-                }
-
-                // get current project version from pom
-                final String currentVersion = getCurrentProjectVersion();
-
-                String nextSnapshotVersion = null;
-                // get next snapshot version
-                try {
-                    final DefaultVersionInfo versionInfo = new DefaultVersionInfo(
-                            currentVersion);
-                    nextSnapshotVersion = versionInfo.getNextVersion()
-                            .getSnapshotVersionString();
-                } catch (VersionParseException e) {
-                    if (getLog().isDebugEnabled()) {
-                        getLog().debug(e);
-                    }
-                }
-
-                if (StringUtils.isBlank(nextSnapshotVersion)) {
-                    throw new MojoFailureException(
-                            "Next snapshot version is blank.");
-                }
-
-                // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
-                mvnSetVersions(nextSnapshotVersion, null);
-
-                // git commit -a -m updating for next development version
-                gitCommit(commitMessages.getHotfixFinishMessage());
             }
 
-            if (installProject) {
-                // mvn clean install
-                mvnCleanInstall();
-            }
+            // get current project version from pom
+            final String currentVersion = getCurrentProjectVersion();
 
-            if (!keepBranch) {
-                // git branch -d hotfix/...
-                gitBranchDelete(hotfixBranchName);
-            }
-
-            if (pushRemote) {
-                // if no release branch
-                if (StringUtils.isBlank(releaseBranch)) {
-                    gitPush(gitFlowConfig.getProductionBranch(), !skipTag, false);
+            String nextSnapshotVersion = null;
+            // get next snapshot version
+            try {
+                final DefaultVersionInfo versionInfo = new DefaultVersionInfo(currentVersion);
+                nextSnapshotVersion = versionInfo.getNextVersion().getSnapshotVersionString();
+            } catch (VersionParseException e) {
+                if (getLog().isDebugEnabled()) {
+                    getLog().debug(e);
                 }
-                gitPush(gitFlowConfig.getDevelopmentBranch(), !skipTag, false);
             }
-        } catch (CommandLineException e) {
-            getLog().error(e);
+
+            if (StringUtils.isBlank(nextSnapshotVersion)) {
+                throw new MojoFailureException("Next snapshot version is blank.");
+            }
+
+            // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
+            mvnSetVersions(nextSnapshotVersion, null);
+
+            // git commit -a -m updating for next development version
+            gitCommit(commitMessages.getHotfixFinishMessage());
+        }
+
+        if (installProject) {
+            // mvn clean install
+            mvnCleanInstall();
+        }
+
+        if (!keepBranch) {
+            // git branch -d hotfix/...
+            gitBranchDelete(hotfixBranchName);
+        }
+
+        if (pushRemote) {
+            // if no release branch
+            if (StringUtils.isBlank(releaseBranch)) {
+                gitPush(gitFlowConfig.getProductionBranch(), !skipTag, false);
+            }
+            gitPush(gitFlowConfig.getDevelopmentBranch(), !skipTag, false);
         }
     }
 }

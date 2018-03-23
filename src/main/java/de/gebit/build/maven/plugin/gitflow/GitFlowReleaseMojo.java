@@ -15,21 +15,15 @@
  */
 package de.gebit.build.maven.plugin.gitflow;
 
-import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
-import org.apache.maven.shared.release.versions.DefaultVersionInfo;
-import org.apache.maven.shared.release.versions.VersionParseException;
-import org.codehaus.plexus.components.interactivity.PrompterException;
-import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
  * The git flow release mojo.
- * 
+ *
  * @author Aleksandr Mashchenko
  * @since 1.2.0
  */
@@ -42,7 +36,7 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
 
     /**
      * Whether to skip calling Maven test goal before releasing.
-     * 
+     *
      * @since 1.0.5
      */
     @Parameter(property = "skipTestProject", defaultValue = "false")
@@ -50,7 +44,7 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
 
     /**
      * Whether to skip calling Maven deploy if it is part of the release goals.
-     * 
+     *
      * @since 1.3.0
      * @since 1.4.1
      */
@@ -60,7 +54,7 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
     /**
      * Whether to rebase branch or merge. If <code>true</code> then rebase will
      * be performed.
-     * 
+     *
      * @since 1.2.3
      */
     @Parameter(property = "releaseRebase", defaultValue = "false")
@@ -68,24 +62,26 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
 
     /**
      * Whether to use <code>--no-ff</code> option when merging.
-     * 
+     *
      * @since 1.2.3
      */
     @Parameter(property = "releaseMergeNoFF", defaultValue = "true")
     private boolean releaseMergeNoFF = true;
 
     /**
-     * Whether to use <code>--no-ff</code> option when merging the release branch to production.
-     * 
+     * Whether to use <code>--no-ff</code> option when merging the release
+     * branch to production.
+     *
      * @since 1.5.0
      */
     @Parameter(property = "releaseMergeProductionNoFF", defaultValue = "true")
     private boolean releaseMergeProductionNoFF = true;
 
     /**
-     * Goals to perform on release, before tagging and pushing. A useful combination is <code>deploy site</code>. You
-     * may specifify multiple entries, they are perfored 
-     * 
+     * Goals to perform on release, before tagging and pushing. A useful
+     * combination is <code>deploy site</code>. You may specifify multiple
+     * entries, they are perfored
+     *
      * @since 1.3.0
      * @since 1.3.9 you can specify multiple entries
      */
@@ -93,9 +89,10 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
     private String[] releaseGoals;
 
     /**
-     * When {@link #skipDeployProject} is activated the invocation of 'deploy' in {@link #releaseGoals} is suppressed.
-     * You can specify a replacement goal that is substituted here (the default is empty). 
-     * 
+     * When {@link #skipDeployProject} is activated the invocation of 'deploy'
+     * in {@link #releaseGoals} is suppressed. You can specify a replacement
+     * goal that is substituted here (the default is empty).
+     *
      * @since 1.5.10
      */
     @Parameter(property = "deployReplacement", defaultValue = "${deployReplacement}")
@@ -106,7 +103,7 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
      * will be asked for the version (in interactive mode), in batch mode the
      * default will be used (current version with stripped SNAPSHOT incremented
      * and SNAPSHOT added).
-     * 
+     *
      * @since 1.3.10
      */
     @Parameter(property = "developmentVersion", required = false)
@@ -116,28 +113,32 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
      * Version to set for the release. If not specified you will be asked for
      * the version (in interactive mode), in batch mode the default will be used
      * (current version with stripped SNAPSHOT).
-     * 
+     *
      * @since 1.3.10
      */
     @Parameter(property = "releaseVersion", required = false)
     private String releaseVersion;
 
     /**
-     * When you are releasing using a CI infrastructure the actual deployment might be suppressed until the task
-     * is finished (to make sure every module is deployable). But at this point your checkout is already in the state
-     * for the next development version. Enable this option to checkout the release commit after finishing, which will
-     * result in a detached HEAD (you are on no branch then).
-     * 
-     * Note that this option implies installProject=false, as otherwise the build artifacts could not be preserved.
-     * 
+     * When you are releasing using a CI infrastructure the actual deployment
+     * might be suppressed until the task is finished (to make sure every module
+     * is deployable). But at this point your checkout is already in the state
+     * for the next development version. Enable this option to checkout the
+     * release commit after finishing, which will result in a detached HEAD (you
+     * are on no branch then).
+     *
+     * Note that this option implies installProject=false, as otherwise the
+     * build artifacts could not be preserved.
+     *
      * @since 1.3.11
      */
     @Parameter(property = "detachReleaseCommit", required = false, defaultValue = "false")
-    private boolean detachReleaseCommit; 
+    private boolean detachReleaseCommit;
 
-    /** 
+    /**
      * Whether to keep hotfix branch after finish.
-     * @since 1.5.0 
+     *
+     * @since 1.5.0
      */
     @Parameter(property = "keepBranch", defaultValue = "false")
     private boolean keepBranch = false;
@@ -147,11 +148,11 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
      * Default is <code>false</code>, i.e. project version will be added to
      * release branch prefix. <br/>
      * <br/>
-     * 
+     *
      * Note: By itself the default releaseBranchPrefix is not a valid branch
      * name. You must change it when setting sameBranchName to <code>true</code>
      * .
-     * 
+     *
      * @since 1.5.0
      */
     @Parameter(property = "sameBranchName", defaultValue = "false")
@@ -240,21 +241,16 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
 
     /** {@inheritDoc} */
     @Override
-    public void execute() throws MojoExecutionException, MojoFailureException {
-        try {
-            // set git flow configuration
-            initGitFlowConfig();
+    protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
+        // set git flow configuration
+        initGitFlowConfig();
 
-            // check uncommitted changes
-            checkUncommittedChanges();
+        // check uncommitted changes
+        checkUncommittedChanges();
 
-            String developmentBranch = gitCurrentBranch();
-            // perform start and finish in one step
-            boolean releaseOnSupportBranch = releaseStart();
-            releaseFinish(developmentBranch, releaseOnSupportBranch);
-
-        } catch (CommandLineException e) {
-            getLog().error(e);
-        }
+        String developmentBranch = gitCurrentBranch();
+        // perform start and finish in one step
+        boolean releaseOnSupportBranch = releaseStart();
+        releaseFinish(developmentBranch, releaseOnSupportBranch);
     }
 }
