@@ -107,16 +107,13 @@ public class ControllablePrompter implements Prompter {
 
     @Override
     public void showMessage(String aMessage) throws PrompterException {
-        checkControllerAndMessage(aMessage);
+        checkController();
         controller.showMessage(aMessage);
         logMessage(aMessage);
     }
 
     private void checkControllerAndMessage(String aMessage) throws PrompterException {
-        if (controller == null) {
-            throw new IllegalStateException("TEST ERROR: Prompter is used but no prompt controller is configured. "
-                    + "Pass your promt controller or mock to the method for mojo execution.");
-        }
+        checkController();
         if (Objects.equal(lastMessage, aMessage)) {
             repeatsWithSameMessage++;
             if (repeatsWithSameMessage > MAX_REPEATS_WITH_SAME_MESSAGE) {
@@ -130,6 +127,13 @@ public class ControllablePrompter implements Prompter {
             repeatsWithSameMessage = 0;
         }
         lastMessage = aMessage;
+    }
+
+    private void checkController() {
+        if (controller == null) {
+            throw new IllegalStateException("TEST ERROR: Prompter is used but no prompt controller is configured. "
+                    + "Pass your promt controller or mock to the method for mojo execution.");
+        }
     }
 
     private void logMessage(String aMessage) {

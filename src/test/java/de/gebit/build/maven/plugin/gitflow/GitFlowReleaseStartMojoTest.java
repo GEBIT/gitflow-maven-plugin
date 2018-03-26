@@ -122,22 +122,19 @@ public class GitFlowReleaseStartMojoTest extends AbstractGitFlowMojoTestCase {
         // set up
         final String OTHER_BRANCH = "otherBranch";
         git.switchToBranch(repositorySet, OTHER_BRANCH, true);
-        when(promptControllerMock.prompt(PROMPT_RELEASE_VERSION)).thenReturn(RELEASE_VERSION);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
         // verify
-        verify(promptControllerMock).prompt(PROMPT_RELEASE_VERSION);
         verifyNoMoreInteractions(promptControllerMock);
-
+        assertGitFlowFailureException(result,
+                "Release can be started only on development branch '" + MASTER_BRANCH + "' or on a maintenance branch",
+                "Please switch to the development branch '" + MASTER_BRANCH
+                        + "' or to a maintenance branch first in order to proceed.");
         git.assertClean(repositorySet);
-        git.assertCurrentBranch(repositorySet, RELEASE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, RELEASE_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, RELEASE_BRANCH, COMMIT_MESSAGE_SET_VERSION,
-                COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
-        git.assertConfigValue(repositorySet, "branch", RELEASE_BRANCH, "development", MAINTENANCE_BRANCH);
-        assertVersionsInPom(repositorySet.getWorkingDirectory(), RELEASE_VERSION);
+        git.assertCurrentBranch(repositorySet, OTHER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, OTHER_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
     }
 
 }

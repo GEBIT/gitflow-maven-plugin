@@ -8,8 +8,10 @@
 //
 package de.gebit.build.maven.plugin.gitflow;
 
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -17,10 +19,10 @@ import java.util.Arrays;
 import java.util.Properties;
 
 import org.apache.maven.execution.MavenExecutionResult;
+import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import de.gebit.build.maven.plugin.gitflow.jgit.GitExecution;
@@ -45,7 +47,11 @@ public class GitFlowMaintenanceStartMojoTest extends AbstractGitFlowMojoTestCase
 
     private static final String PROMPT_MAINTENANCE_VERSION = ExecutorHelper.MAINTENANCE_START_PROMPT_MAINTENANCE_VERSION;
 
+    private static final String CALCULATED_MAINTENANCE_VERSION = TestProjects.BASIC.maintenanceVersion;
+
     private static final String PROMPT_MAINTENANCE_FIRST_VERSION = ExecutorHelper.MAINTENANCE_START_PROMPT_MAINTENANCE_FIRST_VERSION;
+
+    private static final String CALCULATED_MAINTENANCE_FIRST_VERSION = TestProjects.BASIC.nextSnepshotVersion;
 
     private static final String COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE = "NO-ISSUE: updating versions for"
             + " maintenance branch";
@@ -78,19 +84,23 @@ public class GitFlowMaintenanceStartMojoTest extends AbstractGitFlowMojoTestCase
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
         when(promptControllerMock.prompt(PROMPT_SELECTING_RELEASE_NO_TAGS, Arrays.asList("0", "T"))).thenReturn("0");
-        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION)).thenReturn(MAINTENANCE_VERSION);
-        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION)).thenReturn(MAINTENANCE_FIRST_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION))
+                .thenReturn(MAINTENANCE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION))
+                .thenReturn(MAINTENANCE_FIRST_VERSION);
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_SELECTING_RELEASE_NO_TAGS, Arrays.asList("0", "T"));
-        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION);
-        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION);
         verifyNoMoreInteractions(promptControllerMock);
         assertMaintenanceBranchCratedCorrectlyFromMaster();
+        assertArtifactNotInstalled();
     }
 
-    protected void assertMaintenanceBranchCratedCorrectlyFromMaster() throws GitAPIException, IOException {
+    protected void assertMaintenanceBranchCratedCorrectlyFromMaster()
+            throws GitAPIException, IOException, ComponentLookupException {
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH);
@@ -100,6 +110,7 @@ public class GitFlowMaintenanceStartMojoTest extends AbstractGitFlowMojoTestCase
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE,
                 GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
     }
 
     @Test
@@ -115,14 +126,16 @@ public class GitFlowMaintenanceStartMojoTest extends AbstractGitFlowMojoTestCase
         git.push(repositorySet);
         when(promptControllerMock.prompt(PROMPT_SELECTING_RELEASE_TWO_TAGS, Arrays.asList("0", "1", "2", "T")))
                 .thenReturn("0");
-        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION)).thenReturn(MAINTENANCE_VERSION);
-        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION)).thenReturn(MAINTENANCE_FIRST_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION))
+                .thenReturn(MAINTENANCE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION))
+                .thenReturn(MAINTENANCE_FIRST_VERSION);
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_SELECTING_RELEASE_TWO_TAGS, Arrays.asList("0", "1", "2", "T"));
-        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION);
-        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION);
         verifyNoMoreInteractions(promptControllerMock);
         assertMaintenanceBranchCratedCorrectlyFromMaster();
     }
@@ -142,14 +155,16 @@ public class GitFlowMaintenanceStartMojoTest extends AbstractGitFlowMojoTestCase
         userProperties.setProperty("flow.releaseBranchFilter", "2.*");
         when(promptControllerMock.prompt(PROMPT_SELECTING_RELEASE_ONE_TAG, Arrays.asList("0", "1", "T")))
                 .thenReturn("0");
-        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION)).thenReturn(MAINTENANCE_VERSION);
-        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION)).thenReturn(MAINTENANCE_FIRST_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION))
+                .thenReturn(MAINTENANCE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION))
+                .thenReturn(MAINTENANCE_FIRST_VERSION);
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_SELECTING_RELEASE_ONE_TAG, Arrays.asList("0", "1", "T"));
-        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION);
-        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION);
         verifyNoMoreInteractions(promptControllerMock);
         assertMaintenanceBranchCratedCorrectlyFromMaster();
     }
@@ -169,14 +184,16 @@ public class GitFlowMaintenanceStartMojoTest extends AbstractGitFlowMojoTestCase
         userProperties.setProperty("flow.releaseBranchFilter", "");
         when(promptControllerMock.prompt(PROMPT_SELECTING_RELEASE_TWO_TAGS, Arrays.asList("0", "1", "2", "T")))
                 .thenReturn("0");
-        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION)).thenReturn(MAINTENANCE_VERSION);
-        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION)).thenReturn(MAINTENANCE_FIRST_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION))
+                .thenReturn(MAINTENANCE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION))
+                .thenReturn(MAINTENANCE_FIRST_VERSION);
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_SELECTING_RELEASE_TWO_TAGS, Arrays.asList("0", "1", "2", "T"));
-        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION);
-        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION);
         verifyNoMoreInteractions(promptControllerMock);
         assertMaintenanceBranchCratedCorrectlyFromMaster();
     }
@@ -196,14 +213,16 @@ public class GitFlowMaintenanceStartMojoTest extends AbstractGitFlowMojoTestCase
         userProperties.setProperty("flow.releaseBranchFilter", "^2\\.[0-9]+\\.0$");
         when(promptControllerMock.prompt(PROMPT_SELECTING_RELEASE_ONE_TAG, Arrays.asList("0", "1", "T")))
                 .thenReturn("0");
-        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION)).thenReturn(MAINTENANCE_VERSION);
-        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION)).thenReturn(MAINTENANCE_FIRST_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION))
+                .thenReturn(MAINTENANCE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION))
+                .thenReturn(MAINTENANCE_FIRST_VERSION);
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_SELECTING_RELEASE_ONE_TAG, Arrays.asList("0", "1", "T"));
-        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION);
-        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION);
         verifyNoMoreInteractions(promptControllerMock);
         assertMaintenanceBranchCratedCorrectlyFromMaster();
     }
@@ -224,14 +243,16 @@ public class GitFlowMaintenanceStartMojoTest extends AbstractGitFlowMojoTestCase
         userProperties.setProperty("releaseVersionLimit", "2");
         when(promptControllerMock.prompt(PROMPT_SELECTING_RELEASE_TWO_TAGS, Arrays.asList("0", "1", "2", "T")))
                 .thenReturn("0");
-        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION)).thenReturn(MAINTENANCE_VERSION);
-        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION)).thenReturn(MAINTENANCE_FIRST_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION))
+                .thenReturn(MAINTENANCE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION))
+                .thenReturn(MAINTENANCE_FIRST_VERSION);
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_SELECTING_RELEASE_TWO_TAGS, Arrays.asList("0", "1", "2", "T"));
-        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION);
-        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION);
         verifyNoMoreInteractions(promptControllerMock);
         assertMaintenanceBranchCratedCorrectlyFromMaster();
     }
@@ -251,14 +272,16 @@ public class GitFlowMaintenanceStartMojoTest extends AbstractGitFlowMojoTestCase
         userProperties.setProperty("releaseVersionLimit", "2");
         when(promptControllerMock.prompt(PROMPT_SELECTING_RELEASE_TWO_TAGS, Arrays.asList("0", "1", "2", "T")))
                 .thenReturn("0");
-        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION)).thenReturn(MAINTENANCE_VERSION);
-        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION)).thenReturn(MAINTENANCE_FIRST_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION))
+                .thenReturn(MAINTENANCE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION))
+                .thenReturn(MAINTENANCE_FIRST_VERSION);
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_SELECTING_RELEASE_TWO_TAGS, Arrays.asList("0", "1", "2", "T"));
-        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION);
-        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION);
         verifyNoMoreInteractions(promptControllerMock);
         assertMaintenanceBranchCratedCorrectlyFromMaster();
     }
@@ -276,15 +299,17 @@ public class GitFlowMaintenanceStartMojoTest extends AbstractGitFlowMojoTestCase
         git.push(repositorySet);
         when(promptControllerMock.prompt(PROMPT_SELECTING_RELEASE_NO_TAGS, Arrays.asList("0", "T"))).thenReturn("T");
         when(promptControllerMock.prompt(PROMPT_EXPLICIT_TAG)).thenReturn(TAG);
-        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION)).thenReturn(MAINTENANCE_VERSION);
-        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION)).thenReturn(MAINTENANCE_FIRST_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION))
+                .thenReturn(MAINTENANCE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION))
+                .thenReturn(MAINTENANCE_FIRST_VERSION);
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_SELECTING_RELEASE_NO_TAGS, Arrays.asList("0", "T"));
         verify(promptControllerMock).prompt(PROMPT_EXPLICIT_TAG);
-        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION);
-        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION);
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
@@ -296,9 +321,9 @@ public class GitFlowMaintenanceStartMojoTest extends AbstractGitFlowMojoTestCase
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE,
                 COMMIT_MESSAGE_TAG_TESTFILE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
     }
 
-    @Ignore
     @Test
     public void testExecuteExplicitNotExistingTag() throws Exception {
         // set up
@@ -309,38 +334,58 @@ public class GitFlowMaintenanceStartMojoTest extends AbstractGitFlowMojoTestCase
         when(promptControllerMock.prompt(PROMPT_SELECTING_RELEASE_NO_TAGS, Arrays.asList("0", "T"))).thenReturn("T");
         when(promptControllerMock.prompt(PROMPT_EXPLICIT_TAG)).thenReturn(NOT_EXISTING_TAG);
         // test
-        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_SELECTING_RELEASE_NO_TAGS, Arrays.asList("0", "T"));
         verify(promptControllerMock).prompt(PROMPT_EXPLICIT_TAG);
         verifyNoMoreInteractions(promptControllerMock);
-        assertGitFlowFailureException(result, "", "");
+        assertGitFlowFailureException(result, "Tag '" + NOT_EXISTING_TAG + "' doesn't exist.",
+                "Run 'mvn flow:maintenance-start' again and enter name of an existing tag or select another option "
+                        + "from the list.");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
         git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
     }
 
-    @Ignore
     @Test
     public void testExecuteExplicitEmptyTag() throws Exception {
         // set up
+        final String TAG = "v1.2.3";
+        final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
+        final String COMMIT_MESSAGE_TAG_TESTFILE = "TAG: Unit test dummy file commit";
         final String PROMPT_EXPLICIT_TAG = "Enter explicit tag name";
-        git.createAndCommitTestfile(repositorySet);
+        git.createAndCommitTestfile(repositorySet, "tag-testfile.txt", COMMIT_MESSAGE_TAG_TESTFILE);
+        git.createTags(repositorySet, TAG);
+        git.createAndCommitTestfile(repositorySet, "master-testfile.txt", COMMIT_MESSAGE_MASTER_TESTFILE);
         git.push(repositorySet);
         when(promptControllerMock.prompt(PROMPT_SELECTING_RELEASE_NO_TAGS, Arrays.asList("0", "T"))).thenReturn("T");
-        when(promptControllerMock.prompt(PROMPT_EXPLICIT_TAG)).thenReturn("");
+        when(promptControllerMock.prompt(PROMPT_EXPLICIT_TAG)).thenReturn("", "", TAG);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION))
+                .thenReturn(MAINTENANCE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION))
+                .thenReturn(MAINTENANCE_FIRST_VERSION);
         // test
-        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_SELECTING_RELEASE_NO_TAGS, Arrays.asList("0", "T"));
-        verify(promptControllerMock).prompt(PROMPT_EXPLICIT_TAG);
+        verify(promptControllerMock, times(3)).prompt(PROMPT_EXPLICIT_TAG);
+        verify(promptControllerMock, times(2)).showMessage("Invalid value. A not blank value is required.");
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION);
         verifyNoMoreInteractions(promptControllerMock);
-        assertGitFlowFailureException(result, "", "");
         git.assertClean(repositorySet);
-        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE,
+                COMMIT_MESSAGE_TAG_TESTFILE);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE,
+                COMMIT_MESSAGE_TAG_TESTFILE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
     }
 
     @Test
@@ -362,14 +407,16 @@ public class GitFlowMaintenanceStartMojoTest extends AbstractGitFlowMojoTestCase
         git.push(repositorySet);
         when(promptControllerMock.prompt(PROMPT_SELECTING_RELEASE_TWO_TAGS, Arrays.asList("0", "1", "2", "T")))
                 .thenReturn("2");
-        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION)).thenReturn(MAINTENANCE_VERSION);
-        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION)).thenReturn(MAINTENANCE_FIRST_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION))
+                .thenReturn(MAINTENANCE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION))
+                .thenReturn(MAINTENANCE_FIRST_VERSION);
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_SELECTING_RELEASE_TWO_TAGS, Arrays.asList("0", "1", "2", "T"));
-        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION);
-        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION);
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
@@ -381,6 +428,649 @@ public class GitFlowMaintenanceStartMojoTest extends AbstractGitFlowMojoTestCase
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE,
                 COMMIT_MESSAGE_TAG1_TESTFILE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
+    }
+
+    @Test
+    public void testExecuteReleaseVersion() throws Exception {
+        // set up
+        final String TAG = "v1.2.3";
+        final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
+        final String COMMIT_MESSAGE_TAG_TESTFILE = "TAG: Unit test dummy file commit";
+        git.createAndCommitTestfile(repositorySet, "tag-testfile.txt", COMMIT_MESSAGE_TAG_TESTFILE);
+        git.createTags(repositorySet, TAG);
+        git.createAndCommitTestfile(repositorySet, "master-testfile.txt", COMMIT_MESSAGE_MASTER_TESTFILE);
+        git.push(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("releaseVersion", TAG);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION))
+                .thenReturn(MAINTENANCE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION))
+                .thenReturn(MAINTENANCE_FIRST_VERSION);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION);
+        verifyNoMoreInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE,
+                COMMIT_MESSAGE_TAG_TESTFILE);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE,
+                COMMIT_MESSAGE_TAG_TESTFILE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
+    }
+
+    @Test
+    public void testExecuteReleaseVersionWithVersionTagPrefix() throws Exception {
+        // set up
+        final String TAG = VERSION_TAG_PREFIX + "v1.2.3";
+        final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
+        final String COMMIT_MESSAGE_TAG_TESTFILE = "TAG: Unit test dummy file commit";
+        git.createAndCommitTestfile(repositorySet, "tag-testfile.txt", COMMIT_MESSAGE_TAG_TESTFILE);
+        git.createTags(repositorySet, TAG);
+        git.createAndCommitTestfile(repositorySet, "master-testfile.txt", COMMIT_MESSAGE_MASTER_TESTFILE);
+        git.push(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("releaseVersion", TAG);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION))
+                .thenReturn(MAINTENANCE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION))
+                .thenReturn(MAINTENANCE_FIRST_VERSION);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION);
+        verifyNoMoreInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE,
+                COMMIT_MESSAGE_TAG_TESTFILE);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE,
+                COMMIT_MESSAGE_TAG_TESTFILE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
+    }
+
+    @Test
+    public void testExecuteReleaseVersionWithoutVersionTagPrefix() throws Exception {
+        // set up
+        final String TAG = "v1.2.3";
+        final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
+        final String COMMIT_MESSAGE_TAG_TESTFILE = "TAG: Unit test dummy file commit";
+        git.createAndCommitTestfile(repositorySet, "tag-testfile.txt", COMMIT_MESSAGE_TAG_TESTFILE);
+        git.createTags(repositorySet, VERSION_TAG_PREFIX + TAG);
+        git.createAndCommitTestfile(repositorySet, "master-testfile.txt", COMMIT_MESSAGE_MASTER_TESTFILE);
+        git.push(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("releaseVersion", TAG);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION))
+                .thenReturn(MAINTENANCE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION))
+                .thenReturn(MAINTENANCE_FIRST_VERSION);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION);
+        verifyNoMoreInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE,
+                COMMIT_MESSAGE_TAG_TESTFILE);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE,
+                COMMIT_MESSAGE_TAG_TESTFILE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
+    }
+
+    @Test
+    public void testExecuteReleaseVersionNotExistingTag() throws Exception {
+        // set up
+        final String NOT_EXISTING_TAG = "NotExistingTag";
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("releaseVersion", NOT_EXISTING_TAG);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertGitFlowFailureException(result, "Tag '" + NOT_EXISTING_TAG + "' doesn't exist.",
+                "Run 'mvn flow:maintenance-start' again with existing tag name in 'releaseVersion' parameter or run in "
+                        + "interactive mode to select another option from the list.",
+                "'mvn flow:maintenance-start -DreleaseVersion=XXX -B' to run with another tag name",
+                "'mvn flow:maintenance-start' to run in interactive mode and to select another option from the list");
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+    }
+
+    @Test
+    public void testExecuteWithMaintenanceVersionAndWithoutFirstMaintenanceVersion() throws Exception {
+        // set up
+        final String TAG = VERSION_TAG_PREFIX + "1.0.0";
+        git.createTags(repositorySet, TAG);
+        git.push(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("releaseVersion", TAG);
+        userProperties.setProperty("maintenanceVersion", MAINTENANCE_VERSION);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertGitFlowFailureException(result,
+                "Either both parameters 'maintenanceVersion' and 'firstMaintenanceVersion' must be specified or none.",
+                "Run 'mvn flow:maintenance-start' either with both parameters 'maintenanceVersion' and "
+                        + "'firstMaintenanceVersion' or none of them.",
+                "'mvn flow:maintenance-start -DmaintenanceVersion=X.Y -DfirstMaintenanceVersion=X.Y.Z-SNAPSHOT' to "
+                        + "predefine default version used for the branch name and default first project version in "
+                        + "maintenance branch",
+                "'mvn flow:maintenance-start' to calculate default version used for the branch name and default first "
+                        + "project version in maintenance branch automatically based on actual project version");
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+    }
+
+    @Test
+    public void testExecuteWithFirstMaintenanceVersionAndWithoutMaintenanceVersion() throws Exception {
+        // set up
+        final String TAG = VERSION_TAG_PREFIX + "1.0.0";
+        git.createTags(repositorySet, TAG);
+        git.push(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("releaseVersion", TAG);
+        userProperties.setProperty("firstMaintenanceVersion", MAINTENANCE_FIRST_VERSION);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertGitFlowFailureException(result,
+                "Either both parameters 'maintenanceVersion' and 'firstMaintenanceVersion' must be specified or none.",
+                "Run 'mvn flow:maintenance-start' either with both parameters 'maintenanceVersion' and "
+                        + "'firstMaintenanceVersion' or none of them.",
+                "'mvn flow:maintenance-start -DmaintenanceVersion=X.Y -DfirstMaintenanceVersion=X.Y.Z-SNAPSHOT' to "
+                        + "predefine default version used for the branch name and default first project version in "
+                        + "maintenance branch",
+                "'mvn flow:maintenance-start' to calculate default version used for the branch name and default first "
+                        + "project version in maintenance branch automatically based on actual project version");
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+    }
+
+    @Test
+    public void testExecuteWithMaintenanceVersionAndFirstMaintenanceVersion() throws Exception {
+        // set up
+        final String PROMPT_PREDEFINED_MAINTENANCE_VERSION = "What is the maintenance version?";
+        final String PROMPT_PREDEFINED_MAINTENANCE_FIRST_VERSION = "What is the first version on the maintenance "
+                + "branch?";
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("maintenanceVersion", MAINTENANCE_VERSION);
+        userProperties.setProperty("firstMaintenanceVersion", MAINTENANCE_FIRST_VERSION);
+        when(promptControllerMock.prompt(PROMPT_SELECTING_RELEASE_NO_TAGS, Arrays.asList("0", "T"))).thenReturn("0");
+        when(promptControllerMock.prompt(PROMPT_PREDEFINED_MAINTENANCE_VERSION, MAINTENANCE_VERSION)).thenReturn("");
+        when(promptControllerMock.prompt(PROMPT_PREDEFINED_MAINTENANCE_FIRST_VERSION, MAINTENANCE_FIRST_VERSION))
+                .thenReturn("");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_SELECTING_RELEASE_NO_TAGS, Arrays.asList("0", "T"));
+        verify(promptControllerMock).prompt(PROMPT_PREDEFINED_MAINTENANCE_VERSION, MAINTENANCE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_PREDEFINED_MAINTENANCE_FIRST_VERSION, MAINTENANCE_FIRST_VERSION);
+        verifyNoMoreInteractions(promptControllerMock);
+        assertMaintenanceBranchCratedCorrectlyFromMaster();
+    }
+
+    @Test
+    public void testExecuteInvalidProjectVersion() throws Exception {
+        // set up
+        try (RepositorySet otherRepositorySet = git.createGitRepositorySet(TestProjects.INVALID_VERSION.basedir)) {
+            git.createAndCommitTestfile(otherRepositorySet);
+            git.push(otherRepositorySet);
+            when(promptControllerMock.prompt(PROMPT_SELECTING_RELEASE_NO_TAGS, Arrays.asList("0", "T")))
+                    .thenReturn("0");
+            // test
+            MavenExecutionResult result = executeMojoWithResult(otherRepositorySet.getWorkingDirectory(), GOAL,
+                    promptControllerMock);
+            // verify
+            verify(promptControllerMock).prompt(PROMPT_SELECTING_RELEASE_NO_TAGS, Arrays.asList("0", "T"));
+            verifyNoMoreInteractions(promptControllerMock);
+            assertGitFlowFailureException(result,
+                    "Failed to calculate maintenance versions. The project version '"
+                            + TestProjects.INVALID_VERSION.version + "' can't be parsed.",
+                    "Check the version of the project or run 'mvn flow:maintenance-start' with specified parameters "
+                            + "'maintenanceVersion' and 'firstMaintenanceVersion'.",
+                    "'mvn flow:maintenance-start -DmaintenanceVersion=X.Y -DfirstMaintenanceVersion=X.Y.Z-SNAPSHOT' to "
+                            + "predefine default version used for the branch name and default first project version in "
+                            + "maintenance branch");
+            git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+            git.assertLocalBranches(repositorySet, MASTER_BRANCH);
+            git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        }
+    }
+
+    @Test
+    public void testExecuteOnTagWithInvalidProjectVersion() throws Exception {
+        // set up
+        try (RepositorySet otherRepositorySet = git.createGitRepositorySet(TestProjects.INVALID_VERSION.basedir)) {
+            final String TAG = VERSION_TAG_PREFIX + "1.0.0";
+            git.createTags(otherRepositorySet, TAG);
+            git.createAndCommitTestfile(otherRepositorySet);
+            git.push(otherRepositorySet);
+            Properties userProperties = new Properties();
+            userProperties.setProperty("releaseVersion", TAG);
+            // test
+            MavenExecutionResult result = executeMojoWithResult(otherRepositorySet.getWorkingDirectory(), GOAL,
+                    userProperties, promptControllerMock);
+            // verify
+            verifyNoMoreInteractions(promptControllerMock);
+            assertGitFlowFailureException(result,
+                    "Failed to calculate maintenance versions. The project version '"
+                            + TestProjects.INVALID_VERSION.version + "' can't be parsed.",
+                    "Check the version of the project or run 'mvn flow:maintenance-start' with specified parameters "
+                            + "'maintenanceVersion' and 'firstMaintenanceVersion'.",
+                    "'mvn flow:maintenance-start -DmaintenanceVersion=X.Y -DfirstMaintenanceVersion=X.Y.Z-SNAPSHOT' to "
+                            + "predefine default version used for the branch name and default first project version in "
+                            + "maintenance branch");
+            git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+            git.assertLocalBranches(repositorySet, MASTER_BRANCH);
+            git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        }
+    }
+
+    @Test
+    public void testExecuteMaintenanceBranchAlreadyExists() throws Exception {
+        // set up
+        git.createBranchWithoutSwitch(repositorySet, MAINTENANCE_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        when(promptControllerMock.prompt(PROMPT_SELECTING_RELEASE_NO_TAGS, Arrays.asList("0", "T"))).thenReturn("0");
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION))
+                .thenReturn(MAINTENANCE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION))
+                .thenReturn(MAINTENANCE_FIRST_VERSION);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_SELECTING_RELEASE_NO_TAGS, Arrays.asList("0", "T"));
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION);
+        verifyNoMoreInteractions(promptControllerMock);
+        assertGitFlowFailureException(result,
+                "Maintenance branch '" + MAINTENANCE_BRANCH + "' already exists. Cannot start maintenance.",
+                "Either checkout the existing maintenance branch or start a new maintenance with another maintenance "
+                        + "version.",
+                "'git checkout " + MAINTENANCE_BRANCH + "' to checkout the maintenance branch",
+                "'mvn flow:maintenance-start' to run again and specify another maintenance version");
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+    }
+
+    @Test
+    public void testExecuteOnTagAndMaintenanceBranchAlreadyExists() throws Exception {
+        // set up
+        final String TAG = VERSION_TAG_PREFIX + "1.0.0";
+        git.createTags(repositorySet, TAG);
+        git.createBranchWithoutSwitch(repositorySet, MAINTENANCE_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("releaseVersion", TAG);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION))
+                .thenReturn(MAINTENANCE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION))
+                .thenReturn(MAINTENANCE_FIRST_VERSION);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION);
+        verifyNoMoreInteractions(promptControllerMock);
+        assertGitFlowFailureException(result,
+                "Maintenance branch '" + MAINTENANCE_BRANCH + "' already exists. Cannot start maintenance.",
+                "Either checkout the existing maintenance branch or start a new maintenance with another maintenance "
+                        + "version.",
+                "'git checkout " + MAINTENANCE_BRANCH + "' to checkout the maintenance branch",
+                "'mvn flow:maintenance-start' to run again and specify another maintenance version");
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+    }
+
+    @Test
+    public void testExecuteMaintenanceBranchAlreadyExistsRemotely() throws Exception {
+        // set up
+        git.createRemoteBranch(repositorySet, MAINTENANCE_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        when(promptControllerMock.prompt(PROMPT_SELECTING_RELEASE_NO_TAGS, Arrays.asList("0", "T"))).thenReturn("0");
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION))
+                .thenReturn(MAINTENANCE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION))
+                .thenReturn(MAINTENANCE_FIRST_VERSION);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_SELECTING_RELEASE_NO_TAGS, Arrays.asList("0", "T"));
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION);
+        verifyNoMoreInteractions(promptControllerMock);
+        assertGitFlowFailureException(result,
+                "Remote maintenance branch '" + MAINTENANCE_BRANCH + "' already exists on the remote 'origin'. "
+                        + "Cannot start maintenance.",
+                "Either checkout the existing maintenance branch or start a new maintenance with another maintenance "
+                        + "version.",
+                "'git checkout " + MAINTENANCE_BRANCH + "' to checkout the maintenance branch",
+                "'mvn flow:maintenance-start' to run again and specify another maintenance version");
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH);
+    }
+
+    @Test
+    public void testExecuteOnTagAndMaintenanceBranchAlreadyExistsRemotely() throws Exception {
+        // set up
+        final String TAG = VERSION_TAG_PREFIX + "1.0.0";
+        git.createTags(repositorySet, TAG);
+        git.createRemoteBranch(repositorySet, MAINTENANCE_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("releaseVersion", TAG);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION))
+                .thenReturn(MAINTENANCE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION))
+                .thenReturn(MAINTENANCE_FIRST_VERSION);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION);
+        verifyNoMoreInteractions(promptControllerMock);
+        assertGitFlowFailureException(result,
+                "Remote maintenance branch '" + MAINTENANCE_BRANCH + "' already exists on the remote 'origin'. "
+                        + "Cannot start maintenance.",
+                "Either checkout the existing maintenance branch or start a new maintenance with another maintenance "
+                        + "version.",
+                "'git checkout " + MAINTENANCE_BRANCH + "' to checkout the maintenance branch",
+                "'mvn flow:maintenance-start' to run again and specify another maintenance version");
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH);
+    }
+
+    @Test
+    public void testExecuteWithFirstMaintenanceVersionSameAsProjectVersion() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        when(promptControllerMock.prompt(PROMPT_SELECTING_RELEASE_NO_TAGS, Arrays.asList("0", "T"))).thenReturn("0");
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION))
+                .thenReturn(MAINTENANCE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION))
+                .thenReturn(TestProjects.BASIC.version);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_SELECTING_RELEASE_NO_TAGS, Arrays.asList("0", "T"));
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION);
+        verifyNoMoreInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+    }
+
+    @Test
+    public void testExecutePushRemoteFalse() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.push", "false");
+        when(promptControllerMock.prompt(PROMPT_SELECTING_RELEASE_NO_TAGS, Arrays.asList("0", "T"))).thenReturn("0");
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION))
+                .thenReturn(MAINTENANCE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION))
+                .thenReturn(MAINTENANCE_FIRST_VERSION);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_SELECTING_RELEASE_NO_TAGS, Arrays.asList("0", "T"));
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION);
+        verifyNoMoreInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
+        git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE,
+                GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
+    }
+
+    @Test
+    public void testExecuteInstallProjectTrue() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.installProject", "true");
+        when(promptControllerMock.prompt(PROMPT_SELECTING_RELEASE_NO_TAGS, Arrays.asList("0", "T"))).thenReturn("0");
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION))
+                .thenReturn(MAINTENANCE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION))
+                .thenReturn(MAINTENANCE_FIRST_VERSION);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_SELECTING_RELEASE_NO_TAGS, Arrays.asList("0", "T"));
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION);
+        verifyNoMoreInteractions(promptControllerMock);
+        assertMaintenanceBranchCratedCorrectlyFromMaster();
+        assertArtifactInstalled();
+    }
+
+    @Test
+    public void testExecuteInBatchMode() throws Exception {
+        // set up
+        final String TAG = VERSION_TAG_PREFIX + "1.0.0";
+        final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
+        final String COMMIT_MESSAGE_TAG_TESTFILE = "TAG: Unit test dummy file commit";
+        git.createAndCommitTestfile(repositorySet, "tag-testfile.txt", COMMIT_MESSAGE_TAG_TESTFILE);
+        git.createTags(repositorySet, VERSION_TAG_PREFIX + TAG);
+        git.createAndCommitTestfile(repositorySet, "master-testfile.txt", COMMIT_MESSAGE_MASTER_TESTFILE);
+        git.push(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("releaseVersion", TAG);
+        userProperties.setProperty("maintenanceVersion", MAINTENANCE_VERSION);
+        userProperties.setProperty("firstMaintenanceVersion", MAINTENANCE_FIRST_VERSION);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE,
+                COMMIT_MESSAGE_TAG_TESTFILE);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE,
+                COMMIT_MESSAGE_TAG_TESTFILE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
+    }
+
+    @Test
+    public void testExecuteInBatchModeWithoutParameters() throws Exception {
+        // set up
+        final String TAG = VERSION_TAG_PREFIX + "1.0.0";
+        final String EXPECTED_MAINTENANCE_BRANCH = "maintenance/gitflow-tests-" + TestProjects.BASIC.maintenanceVersion;
+        final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
+        final String COMMIT_MESSAGE_TAG_TESTFILE = "TAG: Unit test dummy file commit";
+        git.createAndCommitTestfile(repositorySet, "tag-testfile.txt", COMMIT_MESSAGE_TAG_TESTFILE);
+        git.createTags(repositorySet, VERSION_TAG_PREFIX + TAG);
+        git.createAndCommitTestfile(repositorySet, "master-testfile.txt", COMMIT_MESSAGE_MASTER_TESTFILE);
+        git.push(repositorySet);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL);
+        // verify
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, EXPECTED_MAINTENANCE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, EXPECTED_MAINTENANCE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EXPECTED_MAINTENANCE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE,
+                COMMIT_MESSAGE_TAG_TESTFILE);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, EXPECTED_MAINTENANCE_BRANCH,
+                EXPECTED_MAINTENANCE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, EXPECTED_MAINTENANCE_BRANCH,
+                COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE, COMMIT_MESSAGE_MASTER_TESTFILE,
+                COMMIT_MESSAGE_TAG_TESTFILE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.nextSnepshotVersion);
+    }
+
+    @Test
+    public void testExecuteInBatchModeWithoutParametersMaintenanceVersionAndFirstMaintenanceVersion() throws Exception {
+        // set up
+        final String TAG = VERSION_TAG_PREFIX + "1.0.0";
+        final String EXPECTED_MAINTENANCE_BRANCH = "maintenance/gitflow-tests-" + TestProjects.BASIC.maintenanceVersion;
+        final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
+        final String COMMIT_MESSAGE_TAG_TESTFILE = "TAG: Unit test dummy file commit";
+        git.createAndCommitTestfile(repositorySet, "tag-testfile.txt", COMMIT_MESSAGE_TAG_TESTFILE);
+        git.createTags(repositorySet, VERSION_TAG_PREFIX + TAG);
+        git.createAndCommitTestfile(repositorySet, "master-testfile.txt", COMMIT_MESSAGE_MASTER_TESTFILE);
+        git.push(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("releaseVersion", TAG);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, EXPECTED_MAINTENANCE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, EXPECTED_MAINTENANCE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EXPECTED_MAINTENANCE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE,
+                COMMIT_MESSAGE_TAG_TESTFILE);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, EXPECTED_MAINTENANCE_BRANCH,
+                EXPECTED_MAINTENANCE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, EXPECTED_MAINTENANCE_BRANCH,
+                COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE, COMMIT_MESSAGE_TAG_TESTFILE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.nextSnepshotVersion);
+    }
+
+    @Test
+    public void testExecuteInBatchModeWithoutParameterFirstMaintenanceVersion() throws Exception {
+        // set up
+        final String TAG = VERSION_TAG_PREFIX + "1.0.0";
+        git.createTags(repositorySet, TAG);
+        git.push(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("releaseVersion", TAG);
+        userProperties.setProperty("maintenanceVersion", MAINTENANCE_VERSION);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertGitFlowFailureException(result,
+                "Either both parameters 'maintenanceVersion' and 'firstMaintenanceVersion' must be specified or none.",
+                "Run 'mvn flow:maintenance-start' either with both parameters 'maintenanceVersion' and "
+                        + "'firstMaintenanceVersion' or none of them.",
+                "'mvn flow:maintenance-start -DmaintenanceVersion=X.Y -DfirstMaintenanceVersion=X.Y.Z-SNAPSHOT' to "
+                        + "predefine default version used for the branch name and default first project version in "
+                        + "maintenance branch",
+                "'mvn flow:maintenance-start' to calculate default version used for the branch name and default first "
+                        + "project version in maintenance branch automatically based on actual project version");
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+    }
+
+    @Test
+    public void testExecuteInBatchModeWithoutParameterMaintenanceVersion() throws Exception {
+        // set up
+        final String TAG = VERSION_TAG_PREFIX + "1.0.0";
+        git.createTags(repositorySet, TAG);
+        git.push(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("releaseVersion", TAG);
+        userProperties.setProperty("firstMaintenanceVersion", MAINTENANCE_FIRST_VERSION);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertGitFlowFailureException(result,
+                "Either both parameters 'maintenanceVersion' and 'firstMaintenanceVersion' must be specified or none.",
+                "Run 'mvn flow:maintenance-start' either with both parameters 'maintenanceVersion' and "
+                        + "'firstMaintenanceVersion' or none of them.",
+                "'mvn flow:maintenance-start -DmaintenanceVersion=X.Y -DfirstMaintenanceVersion=X.Y.Z-SNAPSHOT' to "
+                        + "predefine default version used for the branch name and default first project version in "
+                        + "maintenance branch",
+                "'mvn flow:maintenance-start' to calculate default version used for the branch name and default first "
+                        + "project version in maintenance branch automatically based on actual project version");
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+    }
+
+    @Test
+    public void testExecuteInBatchModeWithoutParametersReleaseVersionAndMaintenanceVersion() throws Exception {
+        // set up
+        Properties userProperties = new Properties();
+        userProperties.setProperty("firstMaintenanceVersion", MAINTENANCE_FIRST_VERSION);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertGitFlowFailureException(result,
+                "Either both parameters 'maintenanceVersion' and 'firstMaintenanceVersion' must be specified or none.",
+                "Run 'mvn flow:maintenance-start' either with both parameters 'maintenanceVersion' and "
+                        + "'firstMaintenanceVersion' or none of them.",
+                "'mvn flow:maintenance-start -DmaintenanceVersion=X.Y -DfirstMaintenanceVersion=X.Y.Z-SNAPSHOT' to "
+                        + "predefine default version used for the branch name and default first project version in "
+                        + "maintenance branch",
+                "'mvn flow:maintenance-start' to calculate default version used for the branch name and default first "
+                        + "project version in maintenance branch automatically based on actual project version");
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
     }
 
 }

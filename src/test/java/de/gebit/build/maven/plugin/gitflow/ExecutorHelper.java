@@ -48,11 +48,9 @@ public class ExecutorHelper {
             + "T. <prompt for explicit tag name>" + LS
             + "Choose release to create the maintenance branch from or enter a custom tag or release name";
 
-    public static final String MAINTENANCE_START_PROMPT_MAINTENANCE_VERSION = "What is the maintenance version? ["
-            + TestProjects.BASIC.maintenanceVersion + "]";
+    public static final String MAINTENANCE_START_PROMPT_MAINTENANCE_VERSION = "What is the maintenance version?";
 
-    public static final String MAINTENANCE_START_PROMPT_MAINTENANCE_FIRST_VERSION = "What is the first version on the maintenance branch? ["
-            + TestProjects.BASIC.nextSnepshotVersion + "]";
+    public static final String MAINTENANCE_START_PROMPT_MAINTENANCE_FIRST_VERSION = "What is the first version on the maintenance branch?";
 
     public static final String MAINTENANCE_START_MAINTENANCE_FIRST_VERSION = "1.42.0-SNAPSHOT";
 
