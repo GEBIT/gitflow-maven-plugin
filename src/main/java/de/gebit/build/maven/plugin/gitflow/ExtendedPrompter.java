@@ -10,7 +10,9 @@ package de.gebit.build.maven.plugin.gitflow;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.codehaus.plexus.components.interactivity.Prompter;
@@ -71,6 +73,46 @@ public class ExtendedPrompter implements Prompter {
     @Override
     public void showMessage(String message) throws PrompterException {
         prompter.showMessage(message);
+    }
+
+    public String promptValue(String promptMessage) throws GitFlowFailureException {
+        return promptValue(promptMessage, null, null);
+    }
+
+    public String promptValue(String promptMessage, String defaultValue) throws GitFlowFailureException {
+        return promptValue(promptMessage, defaultValue, null);
+    }
+
+    public String promptValue(String promptMessage, StringValidator validator) throws GitFlowFailureException {
+        return promptValue(promptMessage, null, validator);
+    }
+
+    public String promptValue(String promptMessage, String defaultValue, StringValidator validator)
+            throws GitFlowFailureException {
+        try {
+            String answer = null;
+            do {
+                if (StringUtils.isBlank(defaultValue)) {
+                    answer = prompt(promptMessage);
+                } else {
+                    answer = prompt(promptMessage, defaultValue);
+                }
+                if (StringUtils.isBlank(answer)) {
+                    showMessage("Invalid value. A not blank value is required.");
+                } else if (validator != null) {
+                    ValidationResult validationResult = validator.validate(answer);
+                    if (!validationResult.isValid()) {
+                        String invalidMessage = validationResult.getInvalidMessage();
+                        if (!StringUtils.isBlank(invalidMessage)) {
+                            showMessage(invalidMessage);
+                        }
+                    }
+                }
+            } while (StringUtils.isBlank(answer));
+            return answer;
+        } catch (PrompterException e) {
+            throw new GitFlowFailureException(e, createPromptErrorMessage("Failed to get value from user prompt"));
+        }
     }
 
     /**
@@ -582,38 +624,17 @@ public class ExtendedPrompter implements Prompter {
      */
     public String promptToSelectFromOrderedList(String promptMessagePrefix, String promptMessageSuffix,
             String[] possibleValues, GitFlowFailureInfo batchModeErrorMessage) throws GitFlowFailureException {
-        if (interactiveMode) {
-            if (possibleValues == null || possibleValues.length == 0) {
-                throw new GitFlowFailureException("Empty list of possible values provided for user selection",
-                        "Please report the error in the GBLD JIRA.");
-            }
-            StringBuilder promptMessage = new StringBuilder();
-            if (!StringUtils.isBlank(promptMessagePrefix)) {
-                promptMessage.append(promptMessagePrefix);
-                promptMessage.append(LS);
-            }
-            List<String> numberedList = new ArrayList<String>();
-            int index = 0;
-            for (String possibleValue : possibleValues) {
-                String pos = String.valueOf(++index);
-                promptMessage.append(pos + ". " + possibleValue + LS);
-                numberedList.add(pos);
-            }
-            if (!StringUtils.isBlank(promptMessageSuffix)) {
-                promptMessage.append(promptMessageSuffix);
-            }
-            try {
-                String answer = prompt(promptMessage.toString(), numberedList);
-                int pos = Integer.parseInt(answer);
-                return possibleValues[pos - 1];
-            } catch (PrompterException e) {
-                throw new GitFlowFailureException(e,
-                        createPromptErrorMessage("Failed to get user selection from user prompt"));
-            }
-        } else {
-            throw new GitFlowFailureException(
-                    batchModeErrorMessage != null ? batchModeErrorMessage : getInteractiveModeRequiredMessage());
+        if (possibleValues == null || possibleValues.length == 0) {
+            throw new GitFlowFailureException("Empty list of possible values provided for user selection",
+                    "Please report the error in the GBLD JIRA.");
         }
+        List<SelectOption> options = new ArrayList<>(possibleValues.length);
+        for (int i = 0; i < possibleValues.length; i++) {
+            options.add(new SelectOption(String.valueOf(i + 1), possibleValues[i]));
+        }
+        SelectOption option = promptToSelectOption(promptMessagePrefix, promptMessageSuffix, options,
+                batchModeErrorMessage);
+        return option.getValue();
     }
 
     /**
@@ -699,6 +720,105 @@ public class ExtendedPrompter implements Prompter {
     private GitFlowFailureInfo getEmptyListOfPossibleValuesMessage() {
         return new GitFlowFailureInfo("Empty list of possible values provided for user selection",
                 "Please report the error in the GBLD JIRA.");
+    }
+
+    public SelectOption promptToSelectOption(String promptMessagePrefix, String promptMessageSuffix,
+            List<SelectOption> options, GitFlowFailureInfo batchModeErrorMessage) throws GitFlowFailureException {
+        if (interactiveMode) {
+            if (options == null || options.size() == 0) {
+                throw new GitFlowFailureException("Empty list of possible options provided for user selection",
+                        "Please report the error in the GBLD JIRA.");
+            }
+            StringBuilder promptMessage = new StringBuilder();
+            if (!StringUtils.isBlank(promptMessagePrefix)) {
+                promptMessage.append(promptMessagePrefix);
+                promptMessage.append(LS);
+            }
+            List<String> optionKeys = new ArrayList<String>();
+            Map<String, SelectOption> optionsByKey = new HashMap<>();
+            for (SelectOption option : options) {
+                promptMessage.append(option.getKey() + ". " + option.getText() + LS);
+                optionKeys.add(option.getKey());
+                optionsByKey.put(option.getKey(), option);
+            }
+            if (!StringUtils.isBlank(promptMessageSuffix)) {
+                promptMessage.append(promptMessageSuffix);
+            }
+            try {
+                String answer = prompt(promptMessage.toString(), optionKeys);
+                return optionsByKey.get(answer);
+            } catch (PrompterException e) {
+                throw new GitFlowFailureException(e,
+                        createPromptErrorMessage("Failed to get user selection from user prompt"));
+            }
+        } else {
+            throw new GitFlowFailureException(
+                    batchModeErrorMessage != null ? batchModeErrorMessage : getInteractiveModeRequiredMessage());
+        }
+    }
+
+    public SelectOption promptToSelectFromOrderedListAndOptions(String promptMessagePrefix, String promptMessageSuffix,
+            List<String> possibleValues, List<SelectOption> preOptions, List<SelectOption> postOptions,
+            GitFlowFailureInfo batchModeErrorMessage) throws GitFlowFailureException {
+        if ((possibleValues == null || possibleValues.size() == 0) && (preOptions == null || preOptions.size() == 0)
+                && (postOptions == null || postOptions.size() == 0)) {
+            throw new GitFlowFailureException("Empty list of possible values provided for user selection",
+                    "Please report the error in the GBLD JIRA.");
+        }
+        List<SelectOption> options = new ArrayList<>();
+        if (preOptions != null && preOptions.size() > 0) {
+            for (SelectOption option : preOptions) {
+                options.add(option);
+            }
+        }
+        if (possibleValues != null && possibleValues.size() > 0) {
+            for (int i = 0, size = possibleValues.size(); i < size; i++) {
+                options.add(new SelectOption(String.valueOf(i + 1), possibleValues.get(i)));
+            }
+        }
+        if (postOptions != null && postOptions.size() > 0) {
+            for (SelectOption option : postOptions) {
+                options.add(option);
+            }
+        }
+        return promptToSelectOption(promptMessagePrefix, promptMessageSuffix, options, batchModeErrorMessage);
+    }
+
+    public static class SelectOption {
+        private String key;
+        private String value;
+        private String text;
+
+        public SelectOption(String aKey, String aValue, String aText) {
+            key = aKey;
+            value = aValue;
+            text = aText;
+        }
+
+        public SelectOption(String aKey, String aValue) {
+            this(aKey, aValue, aValue);
+        }
+
+        /**
+         * @return the key
+         */
+        public String getKey() {
+            return key;
+        }
+
+        /**
+         * @return the value
+         */
+        public String getValue() {
+            return value;
+        }
+
+        /**
+         * @return the text
+         */
+        public String getText() {
+            return text;
+        }
     }
 
 }

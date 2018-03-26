@@ -8,7 +8,7 @@
  */
 package de.gebit.build.maven.plugin.gitflow;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -17,9 +17,9 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
-import org.codehaus.plexus.components.interactivity.PrompterException;
-import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
+
+import de.gebit.build.maven.plugin.gitflow.ExtendedPrompter.SelectOption;
 
 /**
  * The git flow maintenance branch start mojo.
@@ -41,28 +41,10 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
     /**
      * The version used for the branch itself.
      *
-     * @since 1.3.0
-     * @deprecated use {@link #maintenanceVersion}
-     */
-    @Parameter(defaultValue = "${supportVersion}", required = false)
-    protected String supportVersion;
-
-    /**
-     * The version used for the branch itself.
-     *
      * @since 1.5.3
      */
     @Parameter(defaultValue = "${maintenanceVersion}", required = false)
     protected String maintenanceVersion;
-
-    /**
-     * The first version to set on the branch.
-     *
-     * @since 1.3.0
-     * @deprecated use {@link #firstMaintenanceVersion}
-     */
-    @Parameter(defaultValue = "${firstSupportVersion}", required = false)
-    protected String firstSupportVersion;
 
     /**
      * The first version to set on the branch.
@@ -101,92 +83,62 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
         // check uncommitted changes
         checkUncommittedChanges();
 
+        String currentBranchOrCommit = gitCurrentBranchOrCommit();
         String baseName = null;
         if (releaseVersion == null) {
-            boolean regexMode = releaseBranchFilter != null && releaseBranchFilter.startsWith("^");
-            List<String> releaseTags = gitListReleaseTags(gitFlowConfig.getVersionTagPrefix(),
-                    regexMode ? null : releaseBranchFilter);
+            if (settings.isInteractiveMode()) {
+                List<String> releaseTags = getFilteredReleaseTags();
+                SelectOption selectedOption = getPrompter().promptToSelectFromOrderedListAndOptions("Release:",
+                        "Choose release to create the maintenance branch from or enter a custom tag or release name",
+                        releaseTags, Arrays.asList(new SelectOption("0", currentBranchOrCommit, "<current commit>")),
+                        Arrays.asList(new SelectOption("T", null, "<prompt for explicit tag name>")), null);
 
-            // post process selection
-            if (regexMode) {
-                Pattern versionFilter = Pattern.compile(
-                        "^\\Q" + gitFlowConfig.getVersionTagPrefix() + "\\E" + releaseBranchFilter.substring(1));
-                for (Iterator<String> it = releaseTags.iterator(); it.hasNext();) {
-                    if (!versionFilter.matcher(it.next()).matches()) {
-                        it.remove();
-                    }
-                }
-            }
-            if (releaseVersionLimit != null && releaseTags.size() > releaseVersionLimit) {
-                releaseTags = releaseTags.subList(0, releaseVersionLimit);
-            }
-            List<String> numberedList = new ArrayList<String>();
-            StringBuilder str = new StringBuilder("Release:").append(LS);
-            str.append("0. <current commit>" + LS);
-            numberedList.add(String.valueOf(0));
-            for (int i = 0; i < releaseTags.size(); i++) {
-                str.append((i + 1) + ". " + releaseTags.get(i) + LS);
-                numberedList.add(String.valueOf(i + 1));
-            }
-
-            // add explicit choice
-            str.append("T. <prompt for explicit tag name>" + LS);
-            numberedList.add("T");
-
-            str.append("Choose release to create the maintenance branch from or enter a custom tag or release name");
-
-            String releaseNumber = null;
-            try {
-                while (StringUtils.isBlank(releaseNumber)) {
-                    releaseNumber = prompter.prompt(str.toString(), numberedList);
-                }
-            } catch (PrompterException e) {
-                getLog().error(e);
-            }
-
-            if (StringUtils.isBlank(releaseNumber) || "0".equals(releaseNumber)) {
-                // get off current commit
-                baseName = getCurrentCommit();
-            } else if ("T".equals(releaseNumber)) {
-                // prompt for tag name
-                try {
-                    baseName = prompter.prompt("Enter explicit tag name");
-                } catch (PrompterException e) {
-                    getLog().error(e);
-                }
-            } else {
-                int num = Integer.parseInt(releaseNumber);
-                baseName = releaseTags.get(num - 1);
-            }
-
-        } else {
-            if (gitTagExists(releaseVersion)) {
-                baseName = releaseVersion;
-            } else {
-                if (gitTagExists(gitFlowConfig.getVersionTagPrefix() + releaseVersion)) {
-                    baseName = gitFlowConfig.getVersionTagPrefix() + releaseVersion;
+                if ("T".equals(selectedOption.getKey())) {
+                    releaseVersion = getPrompter().promptValue("Enter explicit tag name");
+                    baseName = getTagForReleaseVersion(releaseVersion,
+                            new GitFlowFailureInfo("Tag '" + releaseVersion + "' doesn't exist.",
+                                    "Run 'mvn flow:maintenance-start' again and enter name of an existing tag or select"
+                                            + " another option from the list."));
+                    getLog().info("Tag [" + baseName + "] for release version [" + releaseVersion
+                            + "] entered by user to start maintenance.");
+                } else if ("0".equals(selectedOption.getKey())) {
+                    baseName = currentBranchOrCommit;
+                    String currentCommit = getCurrentCommit();
+                    getLog().info("Current commit [" + currentCommit
+                            + (currentCommit.equals(currentBranchOrCommit) ? "" : " (" + currentBranchOrCommit + ")")
+                            + "] selected by user to start maintenance.");
                 } else {
-                    throw new MojoFailureException("Release '" + releaseVersion + "' does not exist.");
+                    baseName = selectedOption.getValue();
+                    getLog().info("Tag [" + baseName + "] selected by user to start maintenance.");
                 }
+            } else {
+                baseName = currentBranchOrCommit;
+                String currentCommit = getCurrentCommit();
+                getLog().info("Using current commit [" + currentCommit
+                        + (currentCommit.equals(currentBranchOrCommit) ? "" : " (" + currentBranchOrCommit + ")")
+                        + "] to start maintenance in batch mode.");
             }
+        } else {
+            baseName = getTagForReleaseVersion(releaseVersion, new GitFlowFailureInfo(
+                    "Tag '" + releaseVersion + "' doesn't exist.",
+                    "Run 'mvn flow:maintenance-start' again with existing tag name in 'releaseVersion' "
+                            + "parameter or run in interactive mode to select another option from the list.",
+                    "'mvn flow:maintenance-start -DreleaseVersion=XXX -B' to run with another tag name",
+                    "'mvn flow:maintenance-start' to run in interactive mode and to select another option from the list"));
+            getLog().info("Tag [" + baseName + "] selected for releaseVersion [" + releaseVersion
+                    + "] passed via property to start maintenance.");
         }
 
-        if (StringUtils.isBlank(baseName)) {
-            throw new MojoFailureException("Release to create maintenance branch from is blank.");
+        if (!baseName.equals(currentBranchOrCommit)) {
+            gitCheckout(baseName);
         }
 
-        // checkout the tag
-        gitCheckout(baseName);
-
-        // get current project version from pom
         String currentVersion = getCurrentProjectVersion();
 
         // get default maintenance version
-        String maintenanceBranchVersion = maintenanceVersion != null ? maintenanceVersion : supportVersion;
-        String maintenanceBranchFirstVersion = firstMaintenanceVersion != null ? firstMaintenanceVersion
-                : firstSupportVersion;
-
-        if (maintenanceBranchVersion == null && firstMaintenanceVersion == null) {
+        if (maintenanceVersion == null && firstMaintenanceVersion == null) {
+            getLog().info("Properties 'maintenanceVersion' and 'firstMaintenanceVersion' not provided. "
+                    + "Trying to calculate them from project version.");
             try {
                 final DefaultVersionInfo versionInfo = new DefaultVersionInfo(currentVersion);
                 getLog().info("Version info: " + versionInfo);
@@ -196,65 +148,129 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
                         versionInfo.getBuildSpecifier() != null ? "-" + versionInfo.getBuildSpecifier() : null, null,
                         null, null);
                 getLog().info("Branch Version info: " + branchVersionInfo);
-                maintenanceBranchVersion = branchVersionInfo.getReleaseVersionString();
-                maintenanceBranchFirstVersion = versionInfo.getNextVersion().getSnapshotVersionString();
+                maintenanceVersion = branchVersionInfo.getReleaseVersionString();
+                firstMaintenanceVersion = versionInfo.getNextVersion().getSnapshotVersionString();
+                getLog().info("Project version: " + currentVersion);
+                getLog().info("Calculated maintenanceVersion: " + maintenanceVersion);
+                getLog().info("Calculated firstMaintenanceVersion: " + firstMaintenanceVersion);
+                if (!settings.isInteractiveMode()) {
+                    getLog().info("Using calculated maintenanceVersion and firstMaintenanceVersion for maintenance "
+                            + "branch in batch mode.");
+
+                }
             } catch (VersionParseException e) {
-                throw new MojoFailureException("Failed to calculate maintenance versions", e);
+                if (!baseName.equals(currentBranchOrCommit)) {
+                    gitCheckout(currentBranchOrCommit);
+                }
+                throw new GitFlowFailureException(e,
+                        "Failed to calculate maintenance versions. The project version '" + currentVersion
+                                + "' can't be parsed.",
+                        "Check the version of the project or run 'mvn flow:maintenance-start' with specified "
+                                + "parameters 'maintenanceVersion' and 'firstMaintenanceVersion'.",
+                        "'mvn flow:maintenance-start -DmaintenanceVersion=X.Y -DfirstMaintenanceVersion=X.Y.Z-SNAPSHOT'"
+                                + " to predefine default version used for the branch name and default first project "
+                                + "version in maintenance branch");
             }
-        } else if (maintenanceBranchVersion == null || firstMaintenanceVersion == null) {
-            throw new MojoFailureException(
-                    "Either both <maintenanceVersion> and <firstMaintenanceVersion> must be specified or none");
+        } else if (maintenanceVersion == null || firstMaintenanceVersion == null) {
+            if (!baseName.equals(currentBranchOrCommit)) {
+                gitCheckout(currentBranchOrCommit);
+            }
+            throw new GitFlowFailureException(
+                    "Either both parameters 'maintenanceVersion' and 'firstMaintenanceVersion' must be specified or "
+                            + "none.",
+                    "Run 'mvn flow:maintenance-start' either with both parameters 'maintenanceVersion' and "
+                            + "'firstMaintenanceVersion' or none of them.",
+                    "'mvn flow:maintenance-start -DmaintenanceVersion=X.Y -DfirstMaintenanceVersion=X.Y.Z-SNAPSHOT' to "
+                            + "predefine default version used for the branch name and default first project version in "
+                            + "maintenance branch",
+                    "'mvn flow:maintenance-start' to calculate default version used for the branch name and default "
+                            + "first project version in maintenance branch automatically based on actual project "
+                            + "version");
         }
 
-        String branchVersion = null;
-        try {
-            branchVersion = prompter.prompt("What is the maintenance version? [" + maintenanceBranchVersion + "]");
-        } catch (PrompterException e) {
-            getLog().error(e);
-        }
+        String branchVersion = getPrompter().promptRequiredParameterValue("What is the maintenance version?",
+                "maintenanceVersion", null, maintenanceVersion);
+        String branchFirstVersion = getPrompter().promptRequiredParameterValue(
+                "What is the first version on the maintenance branch?", "firstMaintenanceVersion", null,
+                firstMaintenanceVersion);
 
-        if (StringUtils.isBlank(branchVersion)) {
-            branchVersion = maintenanceBranchVersion;
-        }
+        getLog().info("Using maintenanceVersion: " + branchVersion);
+        getLog().info("Using firstMaintenanceVersion: " + branchFirstVersion);
 
-        String branchFirstVersion = null;
-        try {
-            branchFirstVersion = prompter.prompt(
-                    "What is the first version on the maintenance branch? [" + maintenanceBranchFirstVersion + "]");
-        } catch (PrompterException e) {
-            getLog().error(e);
+        String maintenanceBranch = gitFlowConfig.getMaintenanceBranchPrefix() + branchVersion;
+        if (gitBranchExists(maintenanceBranch)) {
+            if (!baseName.equals(currentBranchOrCommit)) {
+                gitCheckout(currentBranchOrCommit);
+            }
+            throw new GitFlowFailureException(
+                    "Maintenance branch '" + maintenanceBranch + "' already exists. Cannot start maintenance.",
+                    "Either checkout the existing maintenance branch or start a new maintenance with another "
+                            + "maintenance version.",
+                    "'git checkout " + maintenanceBranch + "' to checkout the maintenance branch",
+                    "'mvn flow:maintenance-start' to run again and specify another maintenance version");
         }
-
-        if (StringUtils.isBlank(branchFirstVersion)) {
-            branchFirstVersion = maintenanceBranchFirstVersion;
-        }
-
-        // git for-each-ref refs/heads/maintenance/...
-        final boolean maintenanceBranchExists = gitBranchExists(
-                gitFlowConfig.getMaintenanceBranchPrefix() + branchVersion);
-        if (maintenanceBranchExists) {
-            throw new MojoFailureException(
-                    "Maintenance branch with that name already exists. Cannot start maintenance.");
+        if (gitRemoteBranchExists(maintenanceBranch)) {
+            if (!baseName.equals(currentBranchOrCommit)) {
+                gitCheckout(currentBranchOrCommit);
+            }
+            throw new GitFlowFailureException(
+                    "Remote maintenance branch '" + maintenanceBranch + "' already exists on the remote '"
+                            + gitFlowConfig.getOrigin() + "'. Cannot start maintenance.",
+                    "Either checkout the existing maintenance branch or start a new maintenance with another "
+                            + "maintenance version.",
+                    "'git checkout " + maintenanceBranch + "' to checkout the maintenance branch",
+                    "'mvn flow:maintenance-start' to run again and specify another maintenance version");
         }
 
         // git checkout -b maintenance/... master
-        gitCreateAndCheckout(gitFlowConfig.getMaintenanceBranchPrefix() + branchVersion, baseName);
+        gitCreateAndCheckout(maintenanceBranch, baseName);
 
         if (!currentVersion.equals(branchFirstVersion)) {
-            // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
             mvnSetVersions(branchFirstVersion, "On maintenance branch: ");
-
-            // git commit -a -m updating poms for maintenance
             gitCommit(commitMessages.getMaintenanceStartMessage());
         }
 
         if (pushRemote) {
-            gitPush(gitFlowConfig.getMaintenanceBranchPrefix() + branchVersion, false, false);
+            gitPush(maintenanceBranch, false, false);
         }
 
         if (installProject) {
-            // mvn clean install
             mvnCleanInstall();
         }
+    }
+
+    private String getTagForReleaseVersion(String aReleaseVersion, GitFlowFailureInfo tagNotExistsError)
+            throws GitFlowFailureException, MojoFailureException, CommandLineException {
+        if (gitTagExists(aReleaseVersion)) {
+            return aReleaseVersion;
+        } else {
+            String tagWithPrefix = gitFlowConfig.getVersionTagPrefix() + aReleaseVersion;
+            if (gitTagExists(tagWithPrefix)) {
+                return tagWithPrefix;
+            } else {
+                throw new GitFlowFailureException(tagNotExistsError);
+            }
+        }
+    }
+
+    private List<String> getFilteredReleaseTags() throws MojoFailureException, CommandLineException {
+        boolean regexMode = releaseBranchFilter != null && releaseBranchFilter.startsWith("^");
+        List<String> releaseTags = gitListReleaseTags(gitFlowConfig.getVersionTagPrefix(),
+                regexMode ? null : releaseBranchFilter);
+
+        // post process selection
+        if (regexMode) {
+            Pattern versionFilter = Pattern
+                    .compile("^\\Q" + gitFlowConfig.getVersionTagPrefix() + "\\E" + releaseBranchFilter.substring(1));
+            for (Iterator<String> it = releaseTags.iterator(); it.hasNext();) {
+                if (!versionFilter.matcher(it.next()).matches()) {
+                    it.remove();
+                }
+            }
+        }
+        if (releaseVersionLimit != null && releaseTags.size() > releaseVersionLimit) {
+            releaseTags = releaseTags.subList(0, releaseVersionLimit);
+        }
+        return releaseTags;
     }
 }

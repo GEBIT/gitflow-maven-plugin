@@ -661,18 +661,6 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         return Collections.emptyList();
     }
 
-    protected String gitFindBranch(final String branchName) throws MojoFailureException, CommandLineException {
-        return executeGitCommandReturn("for-each-ref", "refs/heads/" + branchName);
-    }
-
-    protected String gitFindRemoteBranch(String branchName) throws MojoFailureException, CommandLineException {
-        if (fetchRemote) {
-            getLog().info("Fetching remote branch '" + branchName + "' from '" + gitFlowConfig.getOrigin() + "'.");
-            executeGitCommandExitCode("fetch", "--quiet", gitFlowConfig.getOrigin(), branchName);
-        }
-        return executeGitCommandReturn("for-each-ref", "refs/remotes/" + gitFlowConfig.getOrigin() + "/" + branchName);
-    }
-
     /**
      * Executes git checkout.
      *
@@ -869,6 +857,22 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         getLog().info("Retrieving current branch name.");
 
         return executeGitCommandReturn("symbolic-ref", "--short", "HEAD").trim();
+    }
+
+    /**
+     * Execute git symbolic-ref --short HEAD to get the current branch. Return
+     * commit ID when in detached HEAD state.
+     *
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected String gitCurrentBranchOrCommit() throws MojoFailureException, CommandLineException {
+        getLog().info("Retrieving current branch name.");
+        CommandResult result = executeGitCommandExitCode("symbolic-ref", "--short", "HEAD");
+        if (result.getExitCode() == SUCCESS_EXIT_CODE) {
+            return result.getOut().trim();
+        }
+        return getCurrentCommit();
     }
 
     /**
@@ -1583,13 +1587,33 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      *
      * @param branchName
      *            name of the branch to check for.
-     * @return true if a branch with the passed name exists.
+     * @return <code>true</code> if a branch with the passed name exists.
      * @throws MojoFailureException
      * @throws CommandLineException
      */
     protected boolean gitBranchExists(final String branchName) throws MojoFailureException, CommandLineException {
         // git for-each-ref refs/heads/support/...
         final String branchResult = executeGitCommandReturn("for-each-ref", "refs/heads/" + branchName);
+        return (StringUtils.isNotBlank(branchResult));
+    }
+
+    /**
+     * Execute <code>git for-each-ref refs/remotes/[origin]/[branch name]</code>
+     * to find an existing remote branch.
+     *
+     * @param branchName
+     *            name of the branch to check for
+     * @return <code>true</code> if a remote branch with the passed name exists.
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected boolean gitRemoteBranchExists(String branchName) throws MojoFailureException, CommandLineException {
+        if (fetchRemote) {
+            getLog().info("Fetching remote branch '" + branchName + "' from '" + gitFlowConfig.getOrigin() + "'.");
+            executeGitCommandExitCode("fetch", "--quiet", gitFlowConfig.getOrigin(), branchName);
+        }
+        String branchResult = executeGitCommandReturn("for-each-ref",
+                "refs/remotes/" + gitFlowConfig.getOrigin() + "/" + branchName);
         return (StringUtils.isNotBlank(branchResult));
     }
 

@@ -87,9 +87,7 @@ public class GitFlowHotfixStartMojo extends AbstractGitFlowMojo {
         }
 
         // git for-each-ref refs/heads/hotfix/...
-        final String hotfixBranch = gitFindBranch(gitFlowConfig.getHotfixBranchPrefix() + version);
-
-        if (StringUtils.isNotBlank(hotfixBranch)) {
+        if (gitBranchExists(gitFlowConfig.getHotfixBranchPrefix() + version)) {
             throw new MojoFailureException("Hotfix branch with that name already exists. Cannot start hotfix.");
         }
 

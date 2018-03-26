@@ -150,15 +150,13 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
         featureName = StringUtils.deleteWhitespace(featureName);
 
         String featureBranchName = gitFlowConfig.getFeatureBranchPrefix() + featureName;
-        String featureBranchInfo = gitFindBranch(featureBranchName);
-        if (StringUtils.isNotBlank(featureBranchInfo)) {
+        if (gitBranchExists(featureBranchName)) {
             throw new GitFlowFailureException("Feature branch '" + featureBranchName + "' already exists.",
                     "Either checkout the existing feature branch or start a new feature with another name.",
                     "'git checkout " + featureBranchName + "' to checkout the feature branch",
                     "'mvn flow:feature-start' to run again and specify another feature name");
         }
-        String remoteFeatureBranchInfo = gitFindRemoteBranch(featureBranchName);
-        if (StringUtils.isNotBlank(remoteFeatureBranchInfo)) {
+        if (gitRemoteBranchExists(featureBranchName)) {
             throw new GitFlowFailureException(
                     "Remote feature branch '" + featureBranchName + "' already exists on the remote '"
                             + gitFlowConfig.getOrigin() + "'.",

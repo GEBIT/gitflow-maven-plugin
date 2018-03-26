@@ -118,16 +118,13 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
         epicName = StringUtils.deleteWhitespace(epicName);
 
         String epicBranchName = gitFlowConfig.getEpicBranchPrefix() + epicName;
-        // git for-each-ref refs/heads/epic/...
-        final String epicBranchInfo = gitFindBranch(epicBranchName);
-        if (StringUtils.isNotBlank(epicBranchInfo)) {
+        if (gitBranchExists(epicBranchName)) {
             throw new GitFlowFailureException("Epic branch '" + epicBranchName + "' already exists.",
                     "Either checkout the existing epic branch or start a new epic with another name.",
                     "'git checkout " + epicBranchName + "' to checkout the epic branch",
                     "'mvn flow:epic-start' to run again and specify another epic name");
         }
-        String remoteEpicBranchInfo = gitFindRemoteBranch(epicBranchName);
-        if (StringUtils.isNotBlank(remoteEpicBranchInfo)) {
+        if (gitRemoteBranchExists(epicBranchName)) {
             throw new GitFlowFailureException(
                     "Remote epic branch '" + epicBranchName + "' already exists on the remote '"
                             + gitFlowConfig.getOrigin() + "'.",

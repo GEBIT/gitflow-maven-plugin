@@ -189,7 +189,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
 		}
 
 		// release branch must not yet exist
-		if (StringUtils.isNotBlank(gitFindBranch(releaseBranchName))) {
+		if (gitBranchExists(releaseBranchName)) {
 			throw new MojoFailureException(
 					"Release branch '" + releaseBranchName + "' already exists. Cannot start release.");
 		}
