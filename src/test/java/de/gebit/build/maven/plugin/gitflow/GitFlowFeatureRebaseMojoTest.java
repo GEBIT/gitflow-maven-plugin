@@ -1940,6 +1940,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         verify(promptControllerMock).prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y");
         verifyNoMoreInteractions(promptControllerMock);
         assertFeatureRebasedCorrectly();
+        git.assertTestfileContentModified(repositorySet, TESTFILE_NAME);
     }
 
     @Test
@@ -1968,6 +1969,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         verify(promptControllerMock).prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y");
         verifyNoMoreInteractions(promptControllerMock);
         assertGitFlowFailureException(result, "Continuation of feature rebase aborted by user.", null);
+        git.assertTestfileContentModified(repositorySet, TESTFILE_NAME);
     }
 
     @Test
@@ -2002,6 +2004,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         verify(promptControllerMock).prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y");
         verifyNoMoreInteractions(promptControllerMock);
         assertFeatureRebasedCorrectly();
+        git.assertTestfileContentModified(repositorySet, TESTFILE_NAME);
     }
 
     @Test
@@ -2109,6 +2112,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         verify(promptControllerMock).prompt(PROMPT_MERGE_CONTINUE, Arrays.asList("y", "n"), "y");
         verifyNoMoreInteractions(promptControllerMock);
         assertFeatureMergedCorrectly();
+        git.assertTestfileContent(repositorySet, TESTFILE_NAME);
     }
 
     @Test
@@ -2247,6 +2251,72 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FEATURE_TESTFILE,
                 COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_EPIC_UPDATE_VERSION, COMMIT_MESSAGE_SET_VERSION_FOR_EPIC);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), "2.0.0-" + FEATURE_NAME + "-SNAPSHOT");
+    }
+
+    @Ignore("Activate test again while fixing issue GBLD-324")
+    @Test
+    public void testExecuteContinueAfterRebaseConflictResolvedKeepingBaseBranchVersion_GBLD324() throws Exception {
+        // set up
+        final String TESTFILE_NAME = "testfile.txt";
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        git.createAndCommitTestfile(repositorySet, TESTFILE_NAME, COMMIT_MESSAGE_MASTER_TESTFILE);
+        git.push(repositorySet);
+        git.switchToBranch(repositorySet, FEATURE_BRANCH);
+        git.createTestfile(repositorySet, TESTFILE_NAME);
+        git.modifyTestfile(repositorySet, TESTFILE_NAME);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_FEATURE_TESTFILE);
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        verifyZeroInteractions(promptControllerMock);
+        assertGitFlowFailureExceptionRegEx(result, EXPECTED_REBASE_CONFLICT_MESSAGE_PATTERN);
+        git.assertRebaseBranchInProcess(repositorySet, FEATURE_BRANCH, TESTFILE_NAME);
+        repositorySet.getLocalRepoGit().checkout().setStage(Stage.OURS).addPath(TESTFILE_NAME).call();
+        repositorySet.getLocalRepoGit().add().addFilepattern(TESTFILE_NAME).call();
+        when(promptControllerMock.prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("y");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
+        assertFeatureRebasedCorrectly();
+        git.assertTestfileContent(repositorySet, TESTFILE_NAME);
+    }
+
+    @Test
+    public void testExecuteContinueAfterMergeConflictResolvedKeepingBaseBranchVersion() throws Exception {
+        // set up
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        final String TESTFILE_NAME = "testfile.txt";
+        git.createAndCommitTestfile(repositorySet, TESTFILE_NAME, COMMIT_MESSAGE_MASTER_TESTFILE);
+        git.push(repositorySet);
+        git.switchToBranch(repositorySet, FEATURE_BRANCH);
+        git.createTestfile(repositorySet, TESTFILE_NAME);
+        git.modifyTestfile(repositorySet, TESTFILE_NAME);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_FEATURE_TESTFILE);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.updateWithMerge", "true");
+        when(promptControllerMock.prompt(PROMPT_MESSAGE_LATER_REBASE_NOT_POSSIBLE, Arrays.asList("m", "r", "a"), "a"))
+                .thenReturn("m");
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        verify(promptControllerMock).prompt(PROMPT_MESSAGE_LATER_REBASE_NOT_POSSIBLE, Arrays.asList("m", "r", "a"),
+                "a");
+        verifyNoMoreInteractionsAndReset(promptControllerMock);
+        assertGitFlowFailureExceptionRegEx(result, EXPECTED_MERGE_CONFLICT_MESSAGE_PATTERN);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertMergeInProcess(repositorySet, TESTFILE_NAME);
+        repositorySet.getLocalRepoGit().checkout().setStage(Stage.OURS).addPath(TESTFILE_NAME).call();
+        repositorySet.getLocalRepoGit().add().addFilepattern(TESTFILE_NAME).call();
+        when(promptControllerMock.prompt(PROMPT_MERGE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("y");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MERGE_CONTINUE, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
+        assertFeatureMergedCorrectly();
+        git.assertTestfileContentModified(repositorySet, TESTFILE_NAME);
     }
 
 }
