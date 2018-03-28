@@ -41,8 +41,7 @@ public class ExecutorHelper {
 
     public static final String RELEASE_START_POM_RELEASE_VERSION = TestProjects.BASIC.releaseVersion;
 
-    public static final String RELEASE_START_PROMPT_RELEASE_VERSION = "What is the release version? ["
-            + RELEASE_START_POM_RELEASE_VERSION + "]";
+    public static final String RELEASE_START_PROMPT_RELEASE_VERSION = "What is the release version?";
 
     public static final String MAINTENANCE_START_PROMPT_SELECTING_RELEASE = "Release:" + LS + "0. <current commit>" + LS
             + "T. <prompt for explicit tag name>" + LS
@@ -105,9 +104,10 @@ public class ExecutorHelper {
     public static void executeReleaseStart(AbstractGitFlowMojoTestCase testCase, RepositorySet repositorySet,
             String releaseVersion) throws Exception {
         Prompter promptControllerMock = mock(Prompter.class);
-        when(promptControllerMock.prompt(RELEASE_START_PROMPT_RELEASE_VERSION)).thenReturn(releaseVersion);
+        when(promptControllerMock.prompt(RELEASE_START_PROMPT_RELEASE_VERSION, RELEASE_START_POM_RELEASE_VERSION))
+                .thenReturn(releaseVersion);
         testCase.executeMojo(repositorySet.getWorkingDirectory(), "release-start", promptControllerMock);
-        verify(promptControllerMock).prompt(RELEASE_START_PROMPT_RELEASE_VERSION);
+        verify(promptControllerMock).prompt(RELEASE_START_PROMPT_RELEASE_VERSION, RELEASE_START_POM_RELEASE_VERSION);
         verifyNoMoreInteractions(promptControllerMock);
     }
 

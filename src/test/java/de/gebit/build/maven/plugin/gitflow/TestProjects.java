@@ -35,6 +35,17 @@ public class TestProjects {
     public static final TestProjectData INVALID_VERSION = new TestProjectData("invalid-version-project",
             "invalid-version", "GFTST");
 
+    /**
+     * The directory of the test project with snapshot dependencies.
+     */
+    public static final TestProjectData SNAPSHOT_DEPENDENCIES = new TestProjectData("with-snapshot-dependencies",
+            "1.2.3-SNAPSHOT", "GFTST");
+    /**
+     * The directory of the test project with non-snapshot dependencies.
+     */
+    public static final TestProjectData NON_SNAPSHOT_DEPENDENCIES = new TestProjectData("with-dependencies",
+            "1.2.3-SNAPSHOT", "GFTST");
+
     private static File getProjectBasedir(String projectName) {
         return new File(PROJECTS_BASEDIR, projectName);
     }

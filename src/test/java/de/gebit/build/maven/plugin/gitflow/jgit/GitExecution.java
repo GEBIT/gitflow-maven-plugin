@@ -487,6 +487,19 @@ public class GitExecution {
     }
 
     /**
+     * Returns ID of the current commit.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @return the ID of the current commit
+     * @throws IOException
+     *             in case of an I/O error
+     */
+    public String currentCommit(RepositorySet repositorySet) throws IOException {
+        return repositorySet.getLocalRepoGit().getRepository().resolve("HEAD").getName();
+    }
+
+    /**
      * Returns a list with names of branches in local repository.
      *
      * @param repositorySet
@@ -817,7 +830,8 @@ public class GitExecution {
     }
 
     /**
-     * Create tags in local repository and optionally push it to the remote repository.
+     * Create tags in local repository and optionally push it to the remote
+     * repository.
      *
      * @param repositorySet
      *            the repository to be used

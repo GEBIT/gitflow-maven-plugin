@@ -1073,4 +1073,49 @@ public class GitFlowMaintenanceStartMojoTest extends AbstractGitFlowMojoTestCase
         git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
     }
 
+    @Test
+    public void testExecuteWithStagedButUncommitedChanges() throws Exception {
+        // set up
+        git.createAndAddToIndexTestfile(repositorySet);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        // verify
+        assertGitFlowFailureException(result, "You have some uncommitted files.",
+                "Commit or discard local changes in order to proceed.",
+                "'git add' and 'git commit' to commit your changes", "'git reset --hard' to throw away your changes");
+
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
+
+        git.assertAddedFiles(repositorySet, GitExecution.TESTFILE_NAME);
+        git.assertTestfileContent(repositorySet);
+    }
+
+    @Test
+    public void testExecuteWithUnstagedChanges() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        git.modifyTestfile(repositorySet);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        // verify
+        assertGitFlowFailureException(result, "You have some uncommitted files.",
+                "Commit or discard local changes in order to proceed.",
+                "'git add' and 'git commit' to commit your changes", "'git reset --hard' to throw away your changes");
+
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
+
+        git.assertModifiedFiles(repositorySet, GitExecution.TESTFILE_NAME);
+        git.assertTestfileContentModified(repositorySet);
+    }
+
 }
