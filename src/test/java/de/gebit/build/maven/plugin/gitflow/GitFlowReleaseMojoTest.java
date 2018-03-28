@@ -32,6 +32,8 @@ public class GitFlowReleaseMojoTest extends AbstractGitFlowMojoTestCase {
 
     private static final String PROMPT_RELEASE_VERSION = ExecutorHelper.RELEASE_START_PROMPT_RELEASE_VERSION;
 
+    private static final String POM_RELEASE_VERSION = ExecutorHelper.RELEASE_START_POM_RELEASE_VERSION;
+
     private static final String COMMIT_MESSAGE_RELEASE_START_SET_VERSION = "NO-ISSUE: updating versions for release";
 
     private static final String COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION = "NO-ISSUE: updating for next development version";
@@ -40,11 +42,11 @@ public class GitFlowReleaseMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecute() throws Exception {
         try (RepositorySet repositorySet = git.createGitRepositorySet(TestProjects.BASIC.basedir)) {
             // set up
-            when(promptControllerMock.prompt(PROMPT_RELEASE_VERSION)).thenReturn(RELEASE_VERSION);
+            when(promptControllerMock.prompt(PROMPT_RELEASE_VERSION, POM_RELEASE_VERSION)).thenReturn(RELEASE_VERSION);
             // test
             executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
             // verify
-            verify(promptControllerMock).prompt(PROMPT_RELEASE_VERSION);
+            verify(promptControllerMock).prompt(PROMPT_RELEASE_VERSION, POM_RELEASE_VERSION);
             verifyNoMoreInteractions(promptControllerMock);
 
             git.assertClean(repositorySet);
