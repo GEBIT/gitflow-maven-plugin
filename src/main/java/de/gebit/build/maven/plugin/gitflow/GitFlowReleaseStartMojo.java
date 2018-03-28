@@ -134,6 +134,11 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
         throw new IllegalStateException("release-start does not set the next development version project.");
     }
 
+    @Override
+    protected String getCurrentGoal() {
+        return "release-start";
+    }
+
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {

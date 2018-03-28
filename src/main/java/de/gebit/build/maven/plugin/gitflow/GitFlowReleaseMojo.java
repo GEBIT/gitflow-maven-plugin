@@ -239,6 +239,11 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
         return false;
     }
 
+    @Override
+    protected String getCurrentGoal() {
+        return "release";
+    }
+
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {

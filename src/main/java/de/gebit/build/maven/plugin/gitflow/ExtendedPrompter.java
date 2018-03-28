@@ -83,35 +83,40 @@ public class ExtendedPrompter implements Prompter {
         return promptValue(promptMessage, defaultValue, null);
     }
 
-    public String promptValue(String promptMessage, StringValidator validator) throws GitFlowFailureException {
-        return promptValue(promptMessage, null, validator);
+    public String promptValue(String promptMessage, GitFlowFailureInfo missingValueInBatchModeMessage)
+            throws GitFlowFailureException {
+        return promptValue(promptMessage, null, missingValueInBatchModeMessage);
     }
 
-    public String promptValue(String promptMessage, String defaultValue, StringValidator validator)
-            throws GitFlowFailureException {
-        try {
-            String answer = null;
-            do {
-                if (StringUtils.isBlank(defaultValue)) {
-                    answer = prompt(promptMessage);
-                } else {
-                    answer = prompt(promptMessage, defaultValue);
-                }
-                if (StringUtils.isBlank(answer)) {
-                    showMessage("Invalid value. A not blank value is required.");
-                } else if (validator != null) {
-                    ValidationResult validationResult = validator.validate(answer);
-                    if (!validationResult.isValid()) {
-                        String invalidMessage = validationResult.getInvalidMessage();
-                        if (!StringUtils.isBlank(invalidMessage)) {
-                            showMessage(invalidMessage);
-                        }
+    public String promptValue(String promptMessage, String defaultValue,
+            GitFlowFailureInfo missingValueInBatchModeMessage) throws GitFlowFailureException {
+        if (interactiveMode) {
+            try {
+                String answer = null;
+                do {
+                    if (StringUtils.isBlank(defaultValue)) {
+                        answer = prompt(promptMessage);
+                    } else {
+                        answer = prompt(promptMessage, defaultValue);
                     }
+                    if (StringUtils.isBlank(answer)) {
+                        showMessage("Invalid value. A not blank value is required.");
+                    }
+                } while (StringUtils.isBlank(answer));
+                return answer;
+            } catch (PrompterException e) {
+                throw new GitFlowFailureException(e, createPromptErrorMessage("Failed to get value from user prompt"));
+            }
+        } else {
+            String answer = defaultValue;
+            if (StringUtils.isBlank(answer)) {
+                if (missingValueInBatchModeMessage != null) {
+                    throw new GitFlowFailureException(missingValueInBatchModeMessage);
+                } else {
+                    throw new GitFlowFailureException(getInteractiveModeRequiredMessage());
                 }
-            } while (StringUtils.isBlank(answer));
+            }
             return answer;
-        } catch (PrompterException e) {
-            throw new GitFlowFailureException(e, createPromptErrorMessage("Failed to get value from user prompt"));
         }
     }
 

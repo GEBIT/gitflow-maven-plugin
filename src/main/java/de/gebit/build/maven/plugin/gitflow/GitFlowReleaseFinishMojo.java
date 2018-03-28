@@ -208,6 +208,11 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
         return pushReleaseBranch;
     }
 
+    @Override
+    protected String getCurrentGoal() {
+        return "release-finish";
+    }
+
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {

@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.Callable;
 import java.util.regex.Matcher;
@@ -445,16 +446,21 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    protected void checkSnapshotDependencies() throws MojoFailureException {
+    /**
+     * Check if the project has snapshot dependencies.
+     *
+     * @return <code>true</code> if the project has at least one snapshot
+     *         dependency
+     */
+    protected boolean hasProjectSnapshotDependencies() {
         getLog().info("Checking for SNAPSHOT versions in dependencies.");
         List<Dependency> list = project.getDependencies();
         for (Dependency d : list) {
             if (ArtifactUtils.isSnapshot(d.getVersion())) {
-                throw new MojoFailureException(
-                        "There is some SNAPSHOT dependencies in the project. Change them or ignore with `allowSnapshots` property.");
+                return true;
             }
         }
+        return false;
     }
 
     /**
@@ -1336,6 +1342,53 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             throw new GitFlowFailureException("Branch '" + branchName + "' doesn't exist remotely.",
                     "Push the local branch '" + branchName + "' to remote in order to proceed.", "'git push'");
         }
+    }
+
+    /**
+     * Asserts that the passed remote branch is not ahead of local branch and
+     * branches doesn't diverge. If remote branch is ahead of local or branches
+     * diverge a {@link MojoFailureException} will be thrown.
+     *
+     * @param branchName
+     *            the name of the branch to be checked
+     * @param remoteAheadErrorMessage
+     *            the message to be used in exception if remote branch is ahead
+     *            of local (if <code>null</code> a default message will be used)
+     * @param divergeErrorMessage
+     *            the message to be used in exception if local and remote
+     *            branches diverge (if <code>null</code> a default message will
+     *            be used)
+     * @return <code>true</code> if remote branch exists, <code>false</code> if
+     *         not
+     * @throws MojoFailureException
+     *             if local branch is ahead of remote or branches diverge or
+     *             remote branch doesn't exist
+     * @throws CommandLineException
+     *             if a git command can't be executed
+     */
+    protected boolean gitAssertRemoteBranchNotAheadOfLocalBranche(String branchName,
+            GitFlowFailureInfo remoteAheadErrorMessage, GitFlowFailureInfo divergeErrorMessage)
+            throws MojoFailureException, CommandLineException {
+        return gitCompareLocalAndRemoteBranches(branchName, null, new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+                if (remoteAheadErrorMessage != null) {
+                    throw new GitFlowFailureException(replacePlaceholders(remoteAheadErrorMessage, branchName));
+                }
+                throw new GitFlowFailureException("Local branch is ahead of the remote branch '" + branchName + "'.",
+                        "Push commits made on local branch to the remote branch in order to proceed.",
+                        "'git push " + branchName + "'");
+            }
+        }, new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+                if (divergeErrorMessage != null) {
+                    throw new GitFlowFailureException(replacePlaceholders(divergeErrorMessage, branchName));
+                }
+                throw new GitFlowFailureException("Local and remote branches '" + branchName + "' diverge.",
+                        "Rebase or merge the changes in local branch in order to proceed.", "'git pull'");
+            }
+        });
     }
 
     protected void gitEnsureLocalBranchIsUpToDateIfExists(String branchName, GitFlowFailureInfo divergeErrorInfo)
@@ -2564,6 +2617,9 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             result += "." + StringUtils
                     .join(versionInfo.getDigits().subList(3, versionInfo.getDigits().size()).iterator(), "_");
         }
+        if (!Objects.equals(version, result)) {
+            getLog().info("Created a valid OSGi version: " + version + " -> " + result);
+        }
         return result;
     }
 
@@ -2675,6 +2731,18 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected boolean isMaintenanceBranch(String branchName) {
         return branchName.startsWith(gitFlowConfig.getMaintenanceBranchPrefix());
+    }
+
+    /**
+     * Check if passed branch name is the name for development branch.
+     *
+     * @param branchName
+     *            the branch name to be checked
+     * @return <code>true</code> if the branch name is the name for development
+     *         branch
+     */
+    protected boolean isDevelopmentBranch(String branchName) {
+        return Objects.equals(branchName, gitFlowConfig.getDevelopmentBranch());
     }
 
     /**

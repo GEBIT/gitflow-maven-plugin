@@ -12,7 +12,6 @@ import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
-import org.codehaus.plexus.components.interactivity.PrompterException;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
@@ -98,6 +97,11 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
      */
     protected abstract String getDevelopmentVersion();
 
+    /**
+     * The name of maven goal that is being executed currently.
+     */
+    protected abstract String getCurrentGoal();
+
     protected boolean isInstallProject() {
         return installProject;
     }
@@ -114,65 +118,76 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
      */
     protected boolean releaseStart() throws MojoExecutionException, MojoFailureException, CommandLineException {
         // check snapshots dependencies
-        if (!allowSnapshots) {
-            checkSnapshotDependencies();
+        if (!allowSnapshots && hasProjectSnapshotDependencies()) {
+            throw new GitFlowFailureException(
+                    "There are some SNAPSHOT dependencies in the project. Release cannot be started.",
+                    "Change the dependencies or ignore with parameter 'allowSnapshots'.");
         }
 
         String currentBranch = gitCurrentBranch();
-        if (currentBranch.startsWith(gitFlowConfig.getReleaseBranchPrefix())) {
-            throw new MojoFailureException("Current branch '" + currentBranch + "' is already a release branch.");
+        if (!isDevelopmentBranch(currentBranch) && !isMaintenanceBranch(currentBranch)) {
+            throw new GitFlowFailureException(
+                    "Release can be started only on development branch '" + gitFlowConfig.getDevelopmentBranch()
+                            + "' or on a maintenance branch.",
+                    "Please switch to the development branch '" + gitFlowConfig.getDevelopmentBranch()
+                            + "' or to a maintenance branch first in order to proceed.");
         }
 
-        boolean releaseOnMaintenanceBranch = currentBranch.startsWith(gitFlowConfig.getMaintenanceBranchPrefix());
-        String productionBranch = gitFlowConfig.getProductionBranch();
-        if (releaseOnMaintenanceBranch) {
-            // derive production branch from maintenance branch
-            productionBranch = productionBranch + "-" + gitFlowConfig.getMaintenanceBranchPrefix()
-                    + currentBranch.substring(gitFlowConfig.getMaintenanceBranchPrefix().length());
-        }
+        boolean releaseOnMaintenanceBranch = isMaintenanceBranch(currentBranch);
 
-        if (fetchRemote) {
-            gitFetchRemoteAndCompare(currentBranch);
-            if (!gitFlowConfig.isNoProduction()) {
-                // check the production branch, too
-                gitFetchRemoteAndResetIfNecessary(productionBranch);
+        gitAssertRemoteBranchNotAheadOfLocalBranche(currentBranch,
+                new GitFlowFailureInfo("Remote branch '" + currentBranch + "' is ahead of the local branch.",
+                        "Either pull changes on remote branch into local branch or reset the changes on remote "
+                                + "branch in order to proceed.",
+                        "'git pull' to pull remote changes into local branch"),
+                new GitFlowFailureInfo("Remote and local branches '" + currentBranch + "' diverge.",
+                        "Either rebase/merge the changes into local branch '" + currentBranch
+                                + "' or reset the changes on remote branch in order to proceed.",
+                        "'git rebase'"));
+
+        if (!gitFlowConfig.isNoProduction()) {
+            // check the production branch, too
+            String productionBranch = gitFlowConfig.getProductionBranch();
+            if (releaseOnMaintenanceBranch) {
+                // derive production branch from maintenance branch
+                productionBranch = productionBranch + "-" + currentBranch;
             }
+            gitEnsureLocalBranchIsUpToDateIfExists(productionBranch,
+                    new GitFlowFailureInfo(
+                            "Remote and local production branches '" + productionBranch + "' diverge. "
+                                    + "This indicates a severe error condition on your branches.",
+                            "Please consult a gitflow expert on how to fix this!"));
         }
 
         // get current project version from pom in the current (development or
         // maintenance) branch
         final String currentVersion = getCurrentProjectVersion();
 
-        String version = null;
-        if (getReleaseVersion() == null) {
-            String defaultVersion = null;
+        String version = getReleaseVersion();
+        if (version == null) {
+            getLog().info("Property 'releaseVersion' not provided. Trying to calculate it from project version.");
+            getLog().info("Project version: " + currentVersion);
+            String defaultVersion;
             // get default release version
             try {
                 final DefaultVersionInfo versionInfo = new DefaultVersionInfo(currentVersion);
                 defaultVersion = versionInfo.getReleaseVersionString();
+                getLog().info("Calculated releaseVersion: " + defaultVersion);
             } catch (VersionParseException e) {
                 if (getLog().isDebugEnabled()) {
                     getLog().debug(e);
                 }
+                throw new GitFlowFailureException(
+                        "Failed to calculate release version. The project version '" + currentVersion
+                                + "' can't be parsed.",
+                        "Check the version of the project or run 'mvn flow:" + getCurrentGoal()
+                                + "' with specified parameter 'releaseVersion'.",
+                        "'mvn flow:" + getCurrentGoal() + " -DreleaseVersion=X.Y.Z' to predefine release version");
             }
-
-            if (defaultVersion == null) {
-                throw new MojoFailureException("Cannot get default project version.");
+            version = getPrompter().promptValue("What is the release version?", defaultVersion);
+            if (!settings.isInteractiveMode()) {
+                getLog().info("Using calculated releaseVersion for release branch in batch mode.");
             }
-
-            if (settings.isInteractiveMode()) {
-                try {
-                    version = prompter.prompt("What is the release version? [" + defaultVersion + "]");
-                } catch (PrompterException e) {
-                    getLog().error(e);
-                }
-            }
-
-            if (StringUtils.isBlank(version)) {
-                version = defaultVersion;
-            }
-        } else {
-            version = getReleaseVersion();
         }
         if (tychoBuild) {
             // make sure we have an OSGi conforming version
@@ -184,6 +199,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                 }
             }
         }
+        getLog().info("Using releaseVersion: " + version);
 
         // actually create the release branch now
         String releaseBranchName = gitFlowConfig.getReleaseBranchPrefix();
@@ -191,10 +207,20 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
             releaseBranchName += version;
         }
 
-        // release branch must not yet exist
         if (gitBranchExists(releaseBranchName)) {
-            throw new MojoFailureException(
-                    "Release branch '" + releaseBranchName + "' already exists. Cannot start release.");
+            throw new GitFlowFailureException(
+                    "Release branch '" + releaseBranchName + "' already exists. Cannot start release.",
+                    "Either checkout the existing release branch or start a new release with another release version.",
+                    "'git checkout " + releaseBranchName + "' to checkout the release branch",
+                    "'mvn flow:" + getCurrentGoal() + "' to run again and specify another release version");
+        }
+        if (gitRemoteBranchExists(releaseBranchName)) {
+            throw new GitFlowFailureException(
+                    "Remote release branch '" + releaseBranchName + "' already exists on the remote '"
+                            + gitFlowConfig.getOrigin() + "'. Cannot start release.",
+                    "Either checkout the existing release branch or start a new release with another release version.",
+                    "'git checkout " + releaseBranchName + "' to checkout the release branch",
+                    "'mvn flow:" + getCurrentGoal() + "' to run again and specify another release version");
         }
 
         // git checkout -b release/... develop to create the release branch
