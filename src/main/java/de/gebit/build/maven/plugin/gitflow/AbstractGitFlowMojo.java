@@ -2561,8 +2561,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             // version from first 3 components and join remaining in qualifier
             result = StringUtils.join(versionInfo.getDigits().subList(0, 3).iterator(), ".");
             // add remaining to qualifier
-            result += "-" + StringUtils
-                    .join(versionInfo.getDigits().subList(4, versionInfo.getDigits().size() - 1).iterator(), "_");
+            result += "." + StringUtils
+                    .join(versionInfo.getDigits().subList(3, versionInfo.getDigits().size()).iterator(), "_");
         }
         return result;
     }
