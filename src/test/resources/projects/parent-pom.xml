@@ -94,6 +94,8 @@
 				<flow.releaseBranchFilter>[0-9].[0-9].0</flow.releaseBranchFilter>
 				<flow.sameBranchName>false</flow.sameBranchName>
 				<flow.releaseBranchPrefix>release/${project.build-name}-</flow.releaseBranchPrefix>
+				<flow.developmentBranch>master</flow.developmentBranch>
+				<flow.skipTag>false</flow.skipTag>
 
 				<flow.noProduction>true</flow.noProduction>
 				<flow.push>true</flow.push>
@@ -109,7 +111,7 @@
 				<flow.copyProperties>altDeploymentRepository,maven.repo.local</flow.copyProperties>
 				<flow.releaseMergeNoFF>false</flow.releaseMergeNoFF>
 				<flow.releaseMergeProductionNoFF>true</flow.releaseMergeProductionNoFF>
-				<flow.releaseGoals>deploy site site:deploy</flow.releaseGoals>
+				<flow.releaseGoals>validate</flow.releaseGoals>
 				<flow.pushReleaseBranch>false</flow.pushReleaseBranch>
 				<flow.deleteRemoteBranchOnRebase>false</flow.deleteRemoteBranchOnRebase>
 			</properties>
@@ -122,6 +124,7 @@
 							<configuration>
 								<skipFeatureVersion>${flow.skipFeatureVersion}</skipFeatureVersion>
 								<sameBranchName>${flow.sameBranchName}</sameBranchName>
+								<skipTag>${flow.skipTag}</skipTag>
 
 								<commandsAfterVersion>${flow.commandsAfterVersion}</commandsAfterVersion>
 								<commandsAfterFeatureVersion>${flow.commandsAfterFeatureVersion}</commandsAfterFeatureVersion>
@@ -153,7 +156,7 @@
 								<gitFlowConfig>
 									<noProduction>${flow.noProduction}</noProduction>
 									<productionBranch>latest</productionBranch>
-									<developmentBranch>master</developmentBranch>
+									<developmentBranch>${flow.developmentBranch}</developmentBranch>
 									<maintenanceBranchPrefix>maintenance/${project.build-name}-</maintenanceBranchPrefix>
 									<versionTagPrefix>${project.build-name}-</versionTagPrefix>
 									<releaseBranchPrefix>${flow.releaseBranchPrefix}</releaseBranchPrefix>

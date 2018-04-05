@@ -103,11 +103,26 @@ public class ExecutorHelper {
 
     public static void executeReleaseStart(AbstractGitFlowMojoTestCase testCase, RepositorySet repositorySet,
             String releaseVersion) throws Exception {
+        executeReleaseStart(testCase, repositorySet, releaseVersion, RELEASE_START_POM_RELEASE_VERSION, null);
+    }
+
+    public static void executeReleaseStart(AbstractGitFlowMojoTestCase testCase, RepositorySet repositorySet,
+            String releaseVersion, Properties properties) throws Exception {
+        executeReleaseStart(testCase, repositorySet, releaseVersion, RELEASE_START_POM_RELEASE_VERSION, properties);
+    }
+
+    public static void executeReleaseStart(AbstractGitFlowMojoTestCase testCase, RepositorySet repositorySet,
+            String releaseVersion, String calculatedReleaseVersion) throws Exception {
+        executeReleaseStart(testCase, repositorySet, releaseVersion, calculatedReleaseVersion, null);
+    }
+
+    public static void executeReleaseStart(AbstractGitFlowMojoTestCase testCase, RepositorySet repositorySet,
+            String releaseVersion, String calculatedReleaseVersion, Properties properties) throws Exception {
         Prompter promptControllerMock = mock(Prompter.class);
-        when(promptControllerMock.prompt(RELEASE_START_PROMPT_RELEASE_VERSION, RELEASE_START_POM_RELEASE_VERSION))
+        when(promptControllerMock.prompt(RELEASE_START_PROMPT_RELEASE_VERSION, calculatedReleaseVersion))
                 .thenReturn(releaseVersion);
-        testCase.executeMojo(repositorySet.getWorkingDirectory(), "release-start", promptControllerMock);
-        verify(promptControllerMock).prompt(RELEASE_START_PROMPT_RELEASE_VERSION, RELEASE_START_POM_RELEASE_VERSION);
+        testCase.executeMojo(repositorySet.getWorkingDirectory(), "release-start", properties, promptControllerMock);
+        verify(promptControllerMock).prompt(RELEASE_START_PROMPT_RELEASE_VERSION, calculatedReleaseVersion);
         verifyNoMoreInteractions(promptControllerMock);
     }
 

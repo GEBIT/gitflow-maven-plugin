@@ -13,7 +13,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -47,6 +46,7 @@ import org.eclipse.jgit.lib.ObjectStream;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.StoredConfig;
 import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.revwalk.RevTag;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.revwalk.filter.RevFilter;
@@ -453,7 +453,7 @@ public class GitExecution {
      */
     public void assertTestfileMissing(RepositorySet repositorySet, String filename) throws IOException {
         File testFile = new File(repositorySet.getWorkingDirectory(), filename);
-        assertFalse("testfile exists", testFile.exists());
+        assertFalse("testfile '" + filename + "' exists", testFile.exists());
     }
 
     /**
@@ -529,7 +529,9 @@ public class GitExecution {
         List<String> branches = new ArrayList<String>();
         List<Ref> branchRefs = git.branchList().call();
         for (Ref branchRef : branchRefs) {
-            branches.add(branchNameByRef(branchRef));
+            if (branchRef.getName().startsWith(REFS_HEADS_PATH)) {
+                branches.add(branchNameByRef(branchRef));
+            }
         }
         return branches;
     }
@@ -882,18 +884,17 @@ public class GitExecution {
         assertBranches(expectedBranches, branches, "remote");
     }
 
-    @SuppressWarnings("null")
     private void assertBranches(String[] expectedBranches, List<String> branches, String repoName) {
-        int expectedBranchesNumber = (expectedBranches == null) ? 0 : expectedBranches.length;
-        if (expectedBranchesNumber > 0) {
-            for (String expectedBranch : expectedBranches) {
-                if (!branches.contains(expectedBranch)) {
-                    fail("branch '" + expectedBranch + "' is missing in " + repoName + " repository");
-                }
-            }
+        List<String> expectedBranchesList = Arrays.asList(expectedBranches);
+        if (expectedBranches.length != branches.size() || !branches.containsAll(expectedBranchesList)) {
+            List<String> expected = new LinkedList<>(expectedBranchesList);
+            List<String> actual = new LinkedList<>(branches);
+            Collections.sort(expected);
+            Collections.sort(actual);
+            assertEquals("Branches in " + repoName + " repository are different from expected.",
+                    Arrays.toString(expected.toArray(new String[expected.size()])),
+                    Arrays.toString(actual.toArray(new String[actual.size()])));
         }
-        assertEquals("number of branches in " + repoName + " repository is other then expected", expectedBranchesNumber,
-                branches.size());
     }
 
     /**
@@ -1246,20 +1247,33 @@ public class GitExecution {
         assertFalse("rebase in process found", headNameFile.exists());
     }
 
-    public void assertRebaseBranchInProcess(RepositorySet repositorySet, String branch) throws IOException {
+    public void assertRebaseBranchInProcess(RepositorySet repositorySet, String branch,
+            String... expectedConflictingFiles) throws GitAPIException, IOException {
+        assertRebaseBranchInProcessOntoBranch(repositorySet, branch, null, expectedConflictingFiles);
+    }
+
+    public void assertRebaseBranchInProcessOntoBranch(RepositorySet repositorySet, String branch, String ontoBranch,
+            String... expectedConflictingFiles) throws GitAPIException, IOException {
+        boolean rebaseApply = true;
         File headNameFile = FileUtils.getFile(repositorySet.getWorkingDirectory(), ".git/rebase-apply/head-name");
         if (!headNameFile.exists()) {
             headNameFile = FileUtils.getFile(repositorySet.getWorkingDirectory(), ".git/rebase-merge/head-name");
             assertTrue("no rebase in process found", headNameFile.exists());
+            rebaseApply = false;
         }
         String branchRef = StringUtils.trim(FileUtils.readFileToString(headNameFile, "UTF-8"));
         String rebaseBranch = StringUtils.substringAfter(branchRef, REFS_HEADS_PATH);
         assertEquals("reabes in process for wrong branch", branch, rebaseBranch);
-    }
-
-    public void assertRebaseBranchInProcess(RepositorySet repositorySet, String branch,
-            String... expectedConflictingFiles) throws GitAPIException, IOException {
-        assertRebaseBranchInProcess(repositorySet, branch);
+        if (ontoBranch != null) {
+            String branchCommitId = repositorySet.getLocalRepoGit().getRepository().resolve(ontoBranch).getName();
+            File ontoFile = FileUtils.getFile(repositorySet.getWorkingDirectory(),
+                    ".git/rebase-" + (rebaseApply ? "apply" : "merge") + "/onto");
+            if (ontoFile.exists()) {
+                String ontoRef = StringUtils.trim(FileUtils.readFileToString(ontoFile, "UTF-8"));
+                assertEquals("rebase in process is not onto expected branch [" + ontoBranch + "]", branchCommitId,
+                        ontoRef);
+            }
+        }
         if (expectedConflictingFiles != null && expectedConflictingFiles.length > 0) {
             Set<String> conflictingFiles = status(repositorySet).getConflicting();
             assertEquals("number of conflicting files is wrong", expectedConflictingFiles.length,
@@ -1273,8 +1287,18 @@ public class GitExecution {
 
     public void assertMergeInProcess(RepositorySet repositorySet, String... expectedConflictingFiles)
             throws GitAPIException, IOException {
-        File headNameFile = FileUtils.getFile(repositorySet.getWorkingDirectory(), ".git/MERGE_HEAD");
-        assertTrue("no merge in process found", headNameFile.exists());
+        assertMergeInProcessFromBranch(repositorySet, null, expectedConflictingFiles);
+    }
+
+    public void assertMergeInProcessFromBranch(RepositorySet repositorySet, String fromBranch,
+            String... expectedConflictingFiles) throws GitAPIException, IOException {
+        List<ObjectId> mergeHeads = repositorySet.getLocalRepoGit().getRepository().readMergeHeads();
+        assertNotNull("no merge in process found", mergeHeads);
+        if (fromBranch != null) {
+            String branchCommitId = repositorySet.getLocalRepoGit().getRepository().resolve(fromBranch).getName();
+            assertEquals("merge in process is not from expected branch [" + fromBranch + "]", branchCommitId,
+                    mergeHeads.get(0).getName());
+        }
         if (expectedConflictingFiles != null && expectedConflictingFiles.length > 0) {
             Set<String> conflictingFiles = status(repositorySet).getConflicting();
             assertEquals("number of conflicting files is wrong", expectedConflictingFiles.length,
@@ -1325,6 +1349,57 @@ public class GitExecution {
         Collections.sort(actual);
         assertEquals(message, Arrays.toString(expected.toArray(new String[expected.size()])),
                 Arrays.toString(actual.toArray(new String[actual.size()])));
+    }
+
+    /**
+     * Return the commit ID referenced by the passed tag.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param tagName
+     *            the name of the tag
+     * @return the commit ID referenced by the tag
+     * @throws IOException
+     *             in case of an I/O error
+     */
+    public String tagCommit(RepositorySet repositorySet, String tagName) throws IOException {
+        try (RevWalk walk = new RevWalk(repositorySet.getLocalRepoGit().getRepository())) {
+            Ref tagRef = repositorySet.getLocalRepoGit().getRepository().findRef(tagName);
+            RevTag tag = (RevTag) walk.parseAny(tagRef.getObjectId());
+            return tag.getObject().getName();
+        }
+    }
+
+    /**
+     * Assert that passed tag references passed commit ID.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param tagName
+     *            the name of the tag
+     * @param expectedCommitId
+     *            the expected commit ID referenced by the tag
+     * @throws IOException
+     *             in case of an I/O error
+     */
+    public void assertTagCommit(RepositorySet repositorySet, String tagName, String expectedCommitId)
+            throws IOException {
+        assertEquals("tag [" + tagName + "] references wrong commit", expectedCommitId,
+                tagCommit(repositorySet, tagName));
+    }
+
+    /**
+     * Assert that the current commit has the passed commit ID.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param expectedCommitId
+     *            the expected commit ID
+     * @throws IOException
+     *             in case of an I/O error
+     */
+    public void assertCurrentCommit(RepositorySet repositorySet, String expectedCommitId) throws IOException {
+        assertEquals("current commit is wrong", expectedCommitId, currentCommit(repositorySet));
     }
 
     private class CommitRevFilter extends RevFilter {
