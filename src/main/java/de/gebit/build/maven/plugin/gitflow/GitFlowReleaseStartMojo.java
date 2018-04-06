@@ -85,11 +85,6 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
     }
 
     @Override
-    protected boolean isReleaseRebase() {
-        throw new IllegalStateException("release-start does not test the project.");
-    }
-
-    @Override
     protected boolean isReleaseMergeNoFF() {
         throw new IllegalStateException("release-start does not commit the release project.");
     }

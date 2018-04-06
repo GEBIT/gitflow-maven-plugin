@@ -741,36 +741,62 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     protected void gitMerge(final String branchName, boolean rebase, boolean noff)
             throws MojoFailureException, CommandLineException {
         if (rebase) {
-            getLog().info("Rebasing '" + branchName + "' branch.");
-            CommandResult tempResult = executeGitCommandExitCode("rebase", branchName);
-            if (tempResult.getExitCode() != SUCCESS_EXIT_CODE) {
-                // not all commands print errors to error stream
-                String errorStr = tempResult.getError();
-                if (StringUtils.isBlank(errorStr) && StringUtils.isNotBlank(tempResult.getOut())) {
-                    errorStr = tempResult.getOut();
-                } else {
-                    getLog().debug("Command output: " + tempResult.getOut());
-                }
-
-                Pattern p = Pattern.compile("Patch failed at \\d+ .*");
-                Matcher m = p.matcher(tempResult.getOut());
-                if (m.find()) {
-                    errorStr += "\n" + m.group();
-                }
-                throw new MojoFailureException(errorStr);
-            }
-
+            gitRebase(branchName);
         } else {
-            String tempMergeCommitMessage = getMergeMessageFor(branchName, gitCurrentBranch());
-
-            if (noff) {
-                getLog().info("Merging (--no-ff) '" + branchName + "' branch.");
-                executeGitCommand("merge", "--no-ff", "-m", tempMergeCommitMessage, branchName);
-            } else {
-                getLog().info("Merging '" + branchName + "' branch.");
-                executeGitCommand("merge", "-m", tempMergeCommitMessage, branchName);
-            }
+            gitMerge(branchName, noff);
         }
+    }
+
+    /**
+     * Execute <code>git merge</code> or <code>git merge --no-ff</code>.
+     *
+     * @param branchName
+     *            the name of the branch to be merged
+     * @param noff
+     *            <code>true</code> if no fast forward option
+     *            <code>--no-ff</code> should be used
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitMerge(String branchName, boolean noff) throws MojoFailureException, CommandLineException {
+        String tempMergeCommitMessage = getMergeMessageFor(branchName, gitCurrentBranch());
+        if (noff) {
+            getLog().info("Merging (--no-ff) '" + branchName + "' branch.");
+            executeGitCommand("merge", "--no-ff", "-m", tempMergeCommitMessage, branchName);
+        } else {
+            getLog().info("Merging '" + branchName + "' branch.");
+            executeGitCommand("merge", "-m", tempMergeCommitMessage, branchName);
+        }
+    }
+
+    /**
+     * Execute <code>git rebase</code>.
+     *
+     * @param branchName
+     *            the name of the branch to be rebased
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitRebase(String branchName) throws MojoFailureException, CommandLineException {
+        getLog().info("Rebasing '" + branchName + "' branch.");
+        CommandResult tempResult = executeGitCommandExitCode("rebase", branchName);
+        if (tempResult.getExitCode() != SUCCESS_EXIT_CODE) {
+            // not all commands print errors to error stream
+            String errorStr = tempResult.getError();
+            if (StringUtils.isBlank(errorStr) && StringUtils.isNotBlank(tempResult.getOut())) {
+                errorStr = tempResult.getOut();
+            } else {
+                getLog().debug("Command output: " + tempResult.getOut());
+            }
+
+            Pattern p = Pattern.compile("Patch failed at \\d+ .*");
+            Matcher m = p.matcher(tempResult.getOut());
+            if (m.find()) {
+                errorStr += "\n" + m.group();
+            }
+            throw new MojoFailureException(errorStr);
+        }
+
     }
 
     /**
@@ -823,19 +849,6 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Executes git merge --squash.
-     *
-     * @param branchName
-     *            Branch name to merge.
-     * @throws MojoFailureException
-     * @throws CommandLineException
-     */
-    protected void gitMergeSquash(final String branchName) throws MojoFailureException, CommandLineException {
-        getLog().info("Squashing '" + branchName + "' branch.");
-        executeGitCommand("merge", "--squash", branchName);
-    }
-
-    /**
      * Executes git tag -a -m.
      *
      * @param tagName
@@ -879,21 +892,6 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             return result.getOut().trim();
         }
         return getCurrentCommit();
-    }
-
-    /**
-     * Executes git describe --match "[tagPrefix]*" --abbrev=0 to get the latest
-     * relase tag.
-     *
-     * @param tagPrefix
-     *            Prefix of release tags.
-     * @throws MojoFailureException
-     * @throws CommandLineException
-     */
-    protected String gitLastReleaseTag(final String tagPrefix) throws MojoFailureException, CommandLineException {
-        getLog().info("Looking for last release tag.");
-
-        return executeGitCommandReturn("describe", "--match", tagPrefix + "*", "--abbrev=0").trim();
     }
 
     /**
@@ -1101,59 +1099,6 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             public Void call() throws MojoFailureException {
                 throw new MojoFailureException(
                         "Remote branch is ahead of the local branch " + branchName + ". Execute git pull.");
-            }
-        })) {
-            getLog().warn("There were some problems fetching remote branch '" + gitFlowConfig.getOrigin() + " "
-                    + branchName
-                    + "'. You can turn off remote branch fetching by setting the 'fetchRemote' parameter to false.");
-        }
-    }
-
-    /**
-     * @param branchName
-     * @throws MojoFailureException
-     * @throws CommandLineException
-     */
-    protected void gitFetchRemoteAndMergeIfNecessary(final String branchName, final boolean rebase)
-            throws MojoFailureException, CommandLineException {
-        if (!gitFetchRemoteAndCompare(branchName, new Callable<Void>() {
-
-            @Override
-            public Void call() throws MojoFailureException, CommandLineException {
-                getLog().info("Remote branch is ahead of the local branch " + branchName + ", trying to merge:");
-                gitMerge(gitFlowConfig.getOrigin() + "/" + branchName, rebase, false);
-                return null;
-            }
-        })) {
-            getLog().warn("There were some problems fetching remote branch '" + gitFlowConfig.getOrigin() + " "
-                    + branchName
-                    + "'. You can turn off remote branch fetching by setting the 'fetchRemote' parameter to false.");
-        }
-    }
-
-    /**
-     * @param branchName
-     * @throws MojoFailureException
-     * @throws CommandLineException
-     */
-    protected void gitFetchRemoteAndResetIfNecessary(final String branchName)
-            throws MojoFailureException, CommandLineException {
-        if (!gitFetchRemoteAndCompare(branchName, new Callable<Void>() {
-
-            @Override
-            public Void call() throws MojoFailureException, CommandLineException {
-                // is the remote a descendant of the local reference?
-                CommandResult result = executeGitCommandExitCode("merge-base", "--is-ancestor", branchName,
-                        gitFlowConfig.getOrigin() + "/" + branchName);
-                if (result.getExitCode() == SUCCESS_EXIT_CODE) {
-                    // then we can simply update the local branch
-                    executeGitCommand("update-ref", "refs/heads/" + branchName,
-                            "refs/remotes/" + gitFlowConfig.getOrigin() + "/" + branchName);
-                    return null;
-                } else {
-                    throw new MojoFailureException("Remote branch is ahead of the local branch " + branchName
-                            + ", but cannot reset as local is not an ancestor of remote.");
-                }
             }
         })) {
             getLog().warn("There were some problems fetching remote branch '" + gitFlowConfig.getOrigin() + " "
@@ -1391,6 +1336,26 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         });
     }
 
+    /**
+     * Ensure that the local branch is up to date if the branch exists at
+     * all.<br>
+     * If remote branch is ahead of local the local branch reference will be
+     * updated with <code>git update-ref</code>.<br>
+     * If local and remote branches diverge a {@link GitFlowFailureException}
+     * will be thrown.<br>
+     * If local branch doesn't exist it will be created from the remote
+     * branch.<br>
+     * If local branch is ahead of remote or remote or both branches do not
+     * exist nothing will happen.
+     *
+     * @param branchName
+     *            the name of the branch to be checked
+     * @param divergeErrorInfo
+     *            the messate to be used in exception if local and remote
+     *            branches diverge
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
     protected void gitEnsureLocalBranchIsUpToDateIfExists(String branchName, GitFlowFailureInfo divergeErrorInfo)
             throws MojoFailureException, CommandLineException {
         gitCompareLocalAndRemoteBranches(branchName, null, new Callable<Void>() {
@@ -1411,14 +1376,94 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         });
     }
 
+    /**
+     * Ensure that the local branch is up to date.<br>
+     * If remote branch is ahead of local the local branch reference will be
+     * updated with <code>git update-ref</code>.<br>
+     * If local and remote branches diverge or do not exist a
+     * {@link GitFlowFailureException} will be thrown.<br>
+     * If only local branch doesn't exist it will be created from the remote
+     * branch.<br>
+     * If local branch is ahead of remote or only remote branch doesn't exist
+     * nothing will happen.
+     *
+     * @param branchName
+     *            the name of the branch to be checked
+     * @param divergeErrorInfo
+     *            the messate to be used in exception if local and remote
+     *            branches diverge
+     * @param localAndRemoteNotExistingErrorInfo
+     *            the messate to be used in exception if local and remote
+     *            branches do not exist
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitEnsureLocalBranchIsUpToDate(String branchName, GitFlowFailureInfo divergeErrorInfo,
+            GitFlowFailureInfo localAndRemoteNotExistingErrorInfo) throws MojoFailureException, CommandLineException {
+        boolean remoteBranchExists = gitCompareLocalAndRemoteBranches(branchName, null, new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+                gitUpdateRef(branchName, "refs/remotes/" + gitFlowConfig.getOrigin() + "/" + branchName);
+                return null;
+            }
+        }, new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+                if (divergeErrorInfo != null) {
+                    throw new GitFlowFailureException(replacePlaceholders(divergeErrorInfo, branchName));
+                }
+                throw new GitFlowFailureException("Local and remote branches '" + branchName + "' diverge.",
+                        "Rebase or merge the changes in local branch in order to proceed.", "'git pull'");
+            }
+        });
+        if (!remoteBranchExists) {
+            if (!gitBranchExists(branchName)) {
+                if (localAndRemoteNotExistingErrorInfo != null) {
+                    throw new GitFlowFailureException(
+                            replacePlaceholders(localAndRemoteNotExistingErrorInfo, branchName));
+                }
+                throw new GitFlowFailureException("Local and remote branches '" + branchName + "' do not exist.", null);
+            }
+        }
+    }
+
+    /**
+     * Ensure that the local branch exists.<br>
+     * If local branch doesn't exist it will be created from the remote
+     * branch.<br>
+     * If local and remote branches do not exist a
+     * {@link GitFlowFailureException} will be thrown.
+     *
+     * @param branchName
+     *            the name of the branch to be checked
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
     protected void gitEnsureLocalBranchExists(String branchName) throws MojoFailureException, CommandLineException {
         gitEnsureLocalBranchExists(branchName, null);
     }
 
+    /**
+     * Ensure that the local branch exists.<br>
+     * If local branch doesn't exist it will be created from the remote
+     * branch.<br>
+     * If local and remote branches do not exist a
+     * {@link GitFlowFailureException} will be thrown.
+     *
+     * @param branchName
+     *            the name of the branch to be checked
+     * @param branchNotExistingErrorMessage
+     *            the message to be used in exception if neither local nor
+     *            remote branch exists
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
     protected void gitEnsureLocalBranchExists(String branchName, GitFlowFailureInfo branchNotExistingErrorMessage)
             throws MojoFailureException, CommandLineException {
         if (!gitBranchExists(branchName)) {
-            if (!gitFetchRemoteBranch(branchName)) {
+            if (gitFetchRemoteBranch(branchName)) {
+                executeGitCommand("branch", branchName, gitFlowConfig.getOrigin() + "/" + branchName);
+            } else {
                 if (branchNotExistingErrorMessage != null) {
                     throw new GitFlowFailureException(replacePlaceholders(branchNotExistingErrorMessage, branchName));
                 }
@@ -1434,6 +1479,28 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         }
     }
 
+    /**
+     * Ensure that the local and remote branches are on the same state.<br>
+     * If local branch has not pushed commits or remote branch doesn't exist a
+     * {@link GitFlowFailureException} will be thrown.<br>
+     * If remote branch is ahead of local the local branch reference will be
+     * updated with <code>git update-ref</code>.<br>
+     * If local branch doesn't exist it will be created from the remote branch.
+     *
+     * @param branchName
+     *            the name of the branch to be checked
+     * @param localAheadErrorMessage
+     *            the message to be used in exception if local branch is ahead
+     *            of remote
+     * @param divergeErrorMessage
+     *            the messate to be used in exception if local and remote
+     *            branches diverge
+     * @param remoteNotExistingErrorMessage
+     *            the message to be used in exception if remote branch dosn't
+     *            exist
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
     protected void gitEnsureLocalAndRemoteBranchesAreSynchronized(String branchName,
             GitFlowFailureInfo localAheadErrorMessage, GitFlowFailureInfo divergeErrorMessage,
             GitFlowFailureInfo remoteNotExistingErrorMessage) throws MojoFailureException, CommandLineException {
@@ -1472,6 +1539,22 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         }
     }
 
+    /**
+     * Ensure that the current branch is up to date.<br>
+     * If remote branch is ahead of local the local branch reference will be
+     * updated with <code>git update-ref</code> and HEAD reference will be hard
+     * reset.<br>
+     * If local and remote branches diverge a {@link GitFlowFailureException}
+     * will be thrown.<br>
+     * If local branch is ahead of remote or remote branch doesn't exist nothing
+     * will happen.
+     *
+     * @param divergeErrorInfo
+     *            the messate to be used in exception if local and remote
+     *            branches diverge
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
     protected void gitEnsureCurrentLocalBranchIsUpToDate(GitFlowFailureInfo divergeErrorInfo)
             throws MojoFailureException, CommandLineException {
         String branchName = gitCurrentBranch();
@@ -1490,6 +1573,38 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                 }
                 throw new GitFlowFailureException("Local and remote branches '" + branchName + "' diverge.",
                         "Rebase or merge the changes in local branch in order to proceed.", "'git pull'");
+            }
+        });
+    }
+
+    /**
+     * Ensure that the current branch is up to date.<br>
+     * If remote branch is ahead of local the local branch reference will be
+     * updated with <code>git update-ref</code> and HEAD reference will be hard
+     * reset.<br>
+     * If local and remote branches diverge remote branch will be merged into
+     * local branch with <code>git merge</code>.<br>
+     * If local branch is ahead of remote or remote branch doesn't exist nothing
+     * will happen.
+     *
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitEnsureCurrentLocalBranchIsUpToDateByMerging() throws MojoFailureException, CommandLineException {
+        String branchName = gitCurrentBranch();
+        gitCompareLocalAndRemoteBranches(branchName, null, new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+                gitUpdateRef(branchName, "refs/remotes/" + gitFlowConfig.getOrigin() + "/" + branchName);
+                executeGitCommand("reset", "--hard", "HEAD");
+                return null;
+            }
+        }, new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+                getLog().info("Remote branch is ahead of the local branch " + branchName + ", trying to merge:");
+                gitMerge(gitFlowConfig.getOrigin() + "/" + branchName, false);
+                return null;
             }
         });
     }
@@ -2755,6 +2870,18 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected boolean isEpicBranch(String branchName) {
         return branchName.startsWith(gitFlowConfig.getEpicBranchPrefix());
+    }
+
+    /**
+     * Check if passed branch name is name for a release branch.
+     *
+     * @param branchName
+     *            the branch name to be checked
+     * @return <code>true</code> if the branch name starts with epic branch
+     *         prefix
+     */
+    protected boolean isReleaseBranch(String branchName) {
+        return branchName.startsWith(gitFlowConfig.getReleaseBranchPrefix());
     }
 
     /**

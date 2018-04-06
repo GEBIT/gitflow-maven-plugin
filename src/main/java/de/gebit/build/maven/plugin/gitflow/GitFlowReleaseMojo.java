@@ -52,15 +52,6 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
     private boolean skipDeployProject = false;
 
     /**
-     * Whether to rebase branch or merge. If <code>true</code> then rebase will
-     * be performed.
-     *
-     * @since 1.2.3
-     */
-    @Parameter(property = "releaseRebase", defaultValue = "false")
-    private boolean releaseRebase = false;
-
-    /**
      * Whether to use <code>--no-ff</code> option when merging.
      *
      * @since 1.2.3
@@ -176,11 +167,6 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
     @Override
     protected boolean isKeepBranch() {
         return keepBranch;
-    }
-
-    @Override
-    protected boolean isReleaseRebase() {
-        return releaseRebase;
     }
 
     @Override
