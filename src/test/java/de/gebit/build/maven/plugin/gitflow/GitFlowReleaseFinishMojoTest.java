@@ -74,18 +74,9 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
             "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved\\E",
             "\\Q'mvn flow:release-finish' to continue release process\\E");
 
-    private static final GitFlowFailureInfo EXPECTED_RELEASE_REBASE_CONFLICT_MESSAGE_PATTERN = new GitFlowFailureInfo(
-            "\\QAutomatic rebase of development branch '" + MASTER_BRANCH + "' onto release branch '" + RELEASE_BRANCH
-                    + "' failed.\nGit error message:\n\\E.*",
-            "\\QEither abort the release process or fix the rebase conflicts, mark them as resolved and run "
-                    + "'mvn flow:release-finish' again.\nDo NOT run 'git rebase --continue'!\\E",
-            "\\Q'mvn flow:release-abort' to abort the release process\\E",
-            "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved\\E",
-            "\\Q'mvn flow:release-finish' to continue release process\\E");
-
     private static final GitFlowFailureInfo EXPECTED_UPSTREAM_MERGE_CONFLICT_MESSAGE_PATTERN = new GitFlowFailureInfo(
-            "\\QAutomatic merge of remote development branch '" + MASTER_BRANCH + "' into local development branch '"
-                    + MASTER_BRANCH + "' failed.\nGit error message:\n\\E.*",
+            "\\QAutomatic merge of remote branch into local development branch '" + MASTER_BRANCH
+                    + "' failed.\nGit error message:\n\\E.*",
             "\\QEither abort the release process or fix the merge conflicts, mark them as resolved and run "
                     + "'mvn flow:release-finish' again.\nDo NOT run 'git merge --continue'!\\E",
             "\\Q'mvn flow:release-abort' to abort the release process\\E",
@@ -122,9 +113,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -156,9 +146,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.releaseGoals", "deploy site site:deploy");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -179,8 +168,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // set up
         git.createAndAddToIndexTestfile(repositorySet);
         // test
-        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
-                promptControllerMock);
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
         // verify
         assertGitFlowFailureException(result, "You have some uncommitted files.",
                 "Commit or discard local changes in order to proceed.",
@@ -201,8 +189,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.createAndCommitTestfile(repositorySet);
         git.modifyTestfile(repositorySet);
         // test
-        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
-                promptControllerMock);
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
         // verify
         assertGitFlowFailureException(result, "You have some uncommitted files.",
                 "Commit or discard local changes in order to proceed.",
@@ -217,14 +204,11 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertTestfileContentModified(repositorySet);
     }
 
-    // TODO: check after fix
     @Test
     public void testExecuteOnMasterBranch() throws Exception {
         // test
-        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
-                promptControllerMock);
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         assertGitFlowFailureException(result, "Current branch '" + MASTER_BRANCH + "' is not a release branch.",
                 "Please switch to the release branch that you want to finish in order to proceed.",
                 "'git checkout BRANCH' to switch to the release branch");
@@ -234,62 +218,53 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
     }
 
-    // TODO: check after fix
     @Test
     public void testExecuteOnMaintenanceBranch() throws Exception {
         // set up
         ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION, MAINTENANCE_FIRST_VERSION);
         // test
-        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
-                promptControllerMock);
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         assertGitFlowFailureException(result, "Current branch '" + MAINTENANCE_BRANCH + "' is not a release branch.",
                 "Please switch to the release branch that you want to finish in order to proceed.",
                 "'git checkout BRANCH' to switch to the release branch");
         git.assertClean(repositorySet);
-        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH);
         git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH);
     }
 
-    // TODO: check after fix
     @Test
     public void testExecuteOnOtherBranch() throws Exception {
         // set up
         final String OTHER_BRANCH = "otherBranch";
         git.switchToBranch(repositorySet, OTHER_BRANCH, true);
         // test
-        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
-                promptControllerMock);
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         assertGitFlowFailureException(result, "Current branch '" + OTHER_BRANCH + "' is not a release branch.",
                 "Please switch to the release branch that you want to finish in order to proceed.",
-                "'git checkout [BRANCH]' to switch to the release branch");
+                "'git checkout BRANCH' to switch to the release branch");
         git.assertClean(repositorySet);
-        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertCurrentBranch(repositorySet, OTHER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH, OTHER_BRANCH);
         git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
     }
 
-    // TODO: check after fix
     @Test
     public void testExecuteWithoutDevelopmentBranchConfig() throws Exception {
         // set up
         git.switchToBranch(repositorySet, RELEASE_BRANCH, true);
         // test
-        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
-                promptControllerMock);
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         assertGitFlowFailureException(result,
                 "The release branch '" + RELEASE_BRANCH + "' has no development branch configured.",
                 "Please configure development branch for current release branch first in order to proceed.",
                 "'git config branch." + RELEASE_BRANCH
                         + ".development [development branch name]' to configure development branch");
         git.assertClean(repositorySet);
-        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertCurrentBranch(repositorySet, RELEASE_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH, RELEASE_BRANCH);
         git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
     }
@@ -302,9 +277,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.skipTestProject", "false");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -329,9 +303,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("flow.skipTestProject", "false");
         userProperties.setProperty("flow.tychoBuild", "true");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -355,9 +328,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.releaseGoals", "");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -379,9 +351,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.releaseGoals", "validate,clean");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -407,9 +378,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("flow.releaseGoals", "clean");
         userProperties.setProperty("flow.skipDeployProject", "true");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -432,9 +402,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("flow.releaseGoals", "deploy");
         userProperties.setProperty("flow.skipDeployProject", "true");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -457,9 +426,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("flow.releaseGoals", "deploy");
         userProperties.setProperty("flow.skipDeployProject", "false");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -484,9 +452,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("flow.skipDeployProject", "true");
         userProperties.setProperty("deployReplacement", "clean");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -511,9 +478,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("flow.skipDeployProject", "false");
         userProperties.setProperty("deployReplacement", "clean");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -537,9 +503,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("flow.releaseGoals", "deploy clean");
         userProperties.setProperty("flow.skipDeployProject", "true");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -564,9 +529,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("flow.releaseGoals", "clean deploy");
         userProperties.setProperty("flow.skipDeployProject", "true");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -591,9 +555,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("flow.releaseGoals", "validate deploy clean");
         userProperties.setProperty("flow.skipDeployProject", "true");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -618,9 +581,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("flow.releaseGoals", "site-deploy");
         userProperties.setProperty("flow.skipDeployProject", "true");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -644,9 +606,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("flow.skipDeployProject", "true");
         userProperties.setProperty("deployReplacement", "initialize");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -672,9 +633,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("flow.skipDeployProject", "true");
         userProperties.setProperty("deployReplacement", "initialize");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -700,9 +660,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("flow.skipDeployProject", "true");
         userProperties.setProperty("deployReplacement", "initialize");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -728,9 +687,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("flow.skipDeployProject", "true");
         userProperties.setProperty("deployReplacement", "initialize");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -745,7 +703,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertMavenCommandExecuted("site-deploy");
     }
 
-    // TODO: check after fix
     @Test
     public void testExecuteDevelopmentBranchNotExistingLocally() throws Exception {
         // set up
@@ -758,9 +715,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.createAndCommitTestfile(repositorySet);
         git.deleteLocalAndRemoteTrackingBranches(repositorySet, DEVELOPMENT_BRANCH);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, DEVELOPMENT_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH, DEVELOPMENT_BRANCH);
@@ -774,7 +730,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertDefaultDeployGoalExecuted();
     }
 
-    // TODO: check after fix
     @Test
     public void testExecuteDevelopmentBranchNotExistingLocallyAndFetchRemoteFalse() throws Exception {
         // set up
@@ -791,8 +746,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("flow.pushReleaseBranch", "false");
         git.setOffline(repositorySet);
         // test
-        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
-                promptControllerMock);
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
         git.setOnline(repositorySet);
         assertGitFlowFailureException(result,
@@ -803,15 +757,13 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
                         + " on how to fix this.",
                 "'git config branch." + RELEASE_BRANCH
                         + ".development [development branch name]' to configure correct development branch");
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, RELEASE_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH, RELEASE_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, DEVELOPMENT_BRANCH);
         assertDefaultDeployGoalNotExecuted();
     }
 
-    // TODO: check after fix
     @Test
     public void testExecuteDevelopmentBranchNotExistingLocallyAndFetchRemoteFalseWithPrefetch() throws Exception {
         // set up
@@ -829,16 +781,15 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.fetch(repositorySet);
         git.setOffline(repositorySet);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
         git.setOnline(repositorySet);
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, DEVELOPMENT_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH, DEVELOPMENT_BRANCH);
         git.assertRemoteBranches(repositorySet, MASTER_BRANCH, DEVELOPMENT_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
-        git.assertRemoteTags(repositorySet, RELEASE_TAG);
+        git.assertRemoteTags(repositorySet);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, DEVELOPMENT_BRANCH, DEVELOPMENT_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, DEVELOPMENT_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
                 GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
@@ -859,9 +810,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.createAndCommitTestfile(repositorySet);
         git.deleteRemoteBranch(repositorySet, DEVELOPMENT_BRANCH);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, DEVELOPMENT_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH, DEVELOPMENT_BRANCH);
@@ -875,7 +825,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertDefaultDeployGoalExecuted();
     }
 
-    // TODO: check after fix
     @Test
     public void testExecuteDevelopmentBranchNotExistingLocallyAndRemotely() throws Exception {
         // set up
@@ -889,10 +838,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.deleteLocalAndRemoteTrackingBranches(repositorySet, DEVELOPMENT_BRANCH);
         git.deleteRemoteBranch(repositorySet, DEVELOPMENT_BRANCH);
         // test
-        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
-                promptControllerMock);
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         assertGitFlowFailureException(result,
                 "The development branch '" + DEVELOPMENT_BRANCH + "' configured for the current release branch '"
                         + RELEASE_BRANCH + "' doesn't exist.\nThis indicates either a wrong configuration for the "
@@ -916,9 +863,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.skipTag", "true");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -1002,7 +948,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertDefaultDeployGoalExecuted();
     }
 
-    // TODO: check after fix
     @Test
     public void testExecuteWithoutDevelopmentVersionInInteractiveMode() throws Exception {
         // set up
@@ -1029,7 +974,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertDefaultDeployGoalExecuted();
     }
 
-    // TODO: check after fix
     @Test
     public void testExecuteWithIvalidProjectVersionInBatchMode() throws Exception {
         // set up
@@ -1047,13 +991,15 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 "'mvn flow:release-finish -DdevelopmentVersion=X.Y.Z-SNAPSHOT -B' to predefine next development version",
                 "'mvn flow:release-finish' to run in interactive mode");
         git.assertClean(repositorySet);
-        git.assertCurrentBranch(repositorySet, EXPECTED_RELEASE_BRANCH);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH, EXPECTED_RELEASE_BRANCH);
         git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
-        assertDefaultDeployGoalNotExecuted();
+        assertDefaultDeployGoalExecuted();
+        // TODO: following state would be better:
+        // git.assertCurrentBranch(repositorySet, EXPECTED_RELEASE_BRANCH);
+        // assertDefaultDeployGoalNotExecuted();
     }
 
-    // TODO: check after fix
     @Test
     public void testExecuteWithIvalidProjectVersionInInteractiveMode() throws Exception {
         // set up
@@ -1066,7 +1012,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
         // verify
-        verify(promptControllerMock.prompt(PROMPT_NEXT_DEVELOPMENT_VERSION));
+        verify(promptControllerMock).prompt(PROMPT_NEXT_DEVELOPMENT_VERSION);
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
@@ -1091,9 +1037,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         Properties userProperties = new Properties();
         userProperties.setProperty("keepBranch", "true");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH, RELEASE_BRANCH);
@@ -1118,9 +1063,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("keepBranch", "false");
         userProperties.setProperty("flow.pushReleaseBranch", "false");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -1145,9 +1089,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("keepBranch", "false");
         userProperties.setProperty("flow.pushReleaseBranch", "true");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -1173,9 +1116,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("flow.pushReleaseBranch", "true");
         userProperties.setProperty("flow.push", "false");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -1191,7 +1133,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     @Test
-    public void testExecuteReleaseRebaseFalse() throws Exception {
+    public void testExecuteReleaseRebaseTrue_releaseRebaseNotSupportedAnymore() throws Exception {
         // set up
         final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
         ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
@@ -1200,11 +1142,10 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.createAndCommitTestfile(repositorySet, "master-testfile.txt", COMMIT_MESSAGE_MASTER_TESTFILE);
         git.switchToBranch(repositorySet, RELEASE_BRANCH);
         Properties userProperties = new Properties();
-        userProperties.setProperty("releaseRebase", "false");
+        userProperties.setProperty("releaseRebase", "true");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -1220,46 +1161,15 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     @Test
-    public void testExecuteReleaseRebaseTrue() throws Exception {
-        // set up
-        final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
-        git.createAndCommitTestfile(repositorySet);
-        git.switchToBranch(repositorySet, MASTER_BRANCH);
-        git.createAndCommitTestfile(repositorySet, "master-testfile.txt", COMMIT_MESSAGE_MASTER_TESTFILE);
-        git.switchToBranch(repositorySet, RELEASE_BRANCH);
-        Properties userProperties = new Properties();
-        userProperties.setProperty("releaseRebase", "true");
-        // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
-        // verify
-        verifyZeroInteractions(promptControllerMock);
-        git.assertClean(repositorySet);
-        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
-        git.assertLocalTags(repositorySet, RELEASE_TAG);
-        git.assertRemoteTags(repositorySet, RELEASE_TAG);
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
-                COMMIT_MESSAGE_MASTER_TESTFILE, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE,
-                COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
-        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
-        assertDefaultDeployGoalExecuted();
-    }
-
-    @Test
     public void testExecuteReleaseMergeNoFFFalse() throws Exception {
         // set up
         ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
-        userProperties.setProperty("releaseRebase", "false");
         userProperties.setProperty("flow.releaseMergeNoFF", "false");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -1279,12 +1189,10 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
-        userProperties.setProperty("releaseRebase", "false");
         userProperties.setProperty("flow.releaseMergeNoFF", "true");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -1299,7 +1207,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertDefaultDeployGoalExecuted();
     }
 
-    // TODO: check after fix
     @Test
     public void testExecuteTagCorrectCommit() throws Exception {
         // set up
@@ -1310,12 +1217,9 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createAndCommitTestfile(repositorySet, "master-testfile.txt", COMMIT_MESSAGE_MASTER_TESTFILE);
         git.switchToBranch(repositorySet, RELEASE_BRANCH);
-        Properties userProperties = new Properties();
-        userProperties.setProperty("releaseRebase", "false");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -1331,7 +1235,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertTagCommit(repositorySet, RELEASE_TAG, EXPECTED_TAG_COMMIT);
     }
 
-    // TODO: check after fix
     @Test
     public void testExecuteDetachReleaseCommitTrueAndInstallProjectFalse() throws Exception {
         // set up
@@ -1346,9 +1249,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("detachReleaseCommit", "true");
         userProperties.setProperty("flow.installProject", "false");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, EXPECTED_DETACHED_RELEASE_COMMIT);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -1366,7 +1268,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertArtifactNotInstalled();
     }
 
-    // TODO: check after fix
     @Test
     public void testExecuteDetachReleaseCommitTrueAndInstallProjectTrue() throws Exception {
         // set up
@@ -1381,9 +1282,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("detachReleaseCommit", "true");
         userProperties.setProperty("flow.installProject", "true");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, EXPECTED_DETACHED_RELEASE_COMMIT);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -1414,9 +1314,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("detachReleaseCommit", "false");
         userProperties.setProperty("flow.installProject", "false");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -1445,9 +1344,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("detachReleaseCommit", "false");
         userProperties.setProperty("flow.installProject", "true");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -1473,9 +1371,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.tychoBuild", "false");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -1499,9 +1396,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.tychoBuild", "true");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -1515,7 +1411,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertDefaultDeployGoalExecuted();
     }
 
-    // TODO: check after fix
     @Test
     public void testExecuteRemoteReleaseBranchAheadOfLocal() throws Exception {
         // set up
@@ -1524,14 +1419,12 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.push(repositorySet);
         git.remoteCreateTestfileInBranch(repositorySet, RELEASE_BRANCH, "remote-testfile.txt", COMMIT_MESSAGE_REMOTE);
         // test
-        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
-                promptControllerMock);
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
         // verify
         assertGitFlowFailureException(result,
                 "Remote release branch '" + RELEASE_BRANCH + "' is ahead of the local branch.\n"
                         + "This indicates a severe error condition on your branches.",
                 "Please consult a gitflow expert on how to fix this!");
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, RELEASE_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH, RELEASE_BRANCH);
@@ -1554,10 +1447,9 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("flow.pushReleaseBranch", "false");
         git.setOffline(repositorySet);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
         git.setOnline(repositorySet);
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -1572,7 +1464,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertDefaultDeployGoalExecuted();
     }
 
-    // TODO: check after fix
     @Test
     public void testExecuteRemoteReleaseBranchAheadOfLocalAndFetchRemoteFalseWithPrefetch() throws Exception {
         // set up
@@ -1587,15 +1478,13 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.fetch(repositorySet);
         git.setOffline(repositorySet);
         // test
-        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
-                promptControllerMock);
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
         git.setOnline(repositorySet);
         assertGitFlowFailureException(result,
                 "Remote release branch '" + RELEASE_BRANCH + "' is ahead of the local branch.\n"
                         + "This indicates a severe error condition on your branches.",
                 "Please consult a gitflow expert on how to fix this!");
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, RELEASE_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH, RELEASE_BRANCH);
@@ -1605,7 +1494,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertDefaultDeployGoalNotExecuted();
     }
 
-    // TODO: check after fix
     @Test
     public void testExecuteLocalAndRemoteReleaseBranchesDiverge() throws Exception {
         // set up
@@ -1616,14 +1504,12 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.createAndCommitTestfile(repositorySet, "local-testfile.txt", COMMIT_MESSAGE_LOCAL);
         git.remoteCreateTestfileInBranch(repositorySet, RELEASE_BRANCH, "remote-testfile.txt", COMMIT_MESSAGE_REMOTE);
         // test
-        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
-                promptControllerMock);
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
         // verify
         assertGitFlowFailureException(result,
                 "Remote and local release branches '" + RELEASE_BRANCH + "' diverge.\n"
                         + "This indicates a severe error condition on your branches.",
                 "Please consult a gitflow expert on how to fix this!");
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, RELEASE_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH, RELEASE_BRANCH);
@@ -1649,10 +1535,9 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("flow.pushReleaseBranch", "false");
         git.setOffline(repositorySet);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
         git.setOnline(repositorySet);
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -1667,7 +1552,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertDefaultDeployGoalExecuted();
     }
 
-    // TODO: check after fix
     @Test
     public void testExecuteLocalAndRemoteReleaseBranchesDivergeAndFetchRemoteFalseWithPrefetch() throws Exception {
         // set up
@@ -1684,15 +1568,13 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.fetch(repositorySet);
         git.setOffline(repositorySet);
         // test
-        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
-                promptControllerMock);
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
         git.setOnline(repositorySet);
         assertGitFlowFailureException(result,
                 "Remote and local release branches '" + RELEASE_BRANCH + "' diverge.\n"
                         + "This indicates a severe error condition on your branches.",
                 "Please consult a gitflow expert on how to fix this!");
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, RELEASE_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH, RELEASE_BRANCH);
@@ -1714,9 +1596,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.remoteCreateTestfileInBranch(repositorySet, MASTER_BRANCH, "remote-testfile.txt", COMMIT_MESSAGE_REMOTE);
         git.switchToBranch(repositorySet, RELEASE_BRANCH);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -1747,10 +1628,9 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("flow.pushReleaseBranch", "false");
         git.setOffline(repositorySet);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
         git.setOnline(repositorySet);
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -1765,7 +1645,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertDefaultDeployGoalExecuted();
     }
 
-    // TODO: check after fix
     @Test
     public void testExecuteLocalAndRemoteMasterBranchesDivergeAndFetchRemoteFalseWithPrefetch() throws Exception {
         // set up
@@ -1783,10 +1662,9 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.fetch(repositorySet);
         git.setOffline(repositorySet);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
         git.setOnline(repositorySet);
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH);
@@ -1809,9 +1687,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, MAINTENANCE_RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH);
@@ -1826,7 +1703,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertDefaultDeployGoalExecuted();
     }
 
-    // TODO: check after fix
     @Test
     public void testExecuteWithConflictOnReleaseMerge() throws Exception {
         // set up
@@ -1838,39 +1714,13 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.commitAll(repositorySet, "MASTER: Modified test dummy file commit");
         git.switchToBranch(repositorySet, RELEASE_BRANCH);
         // test
-        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
-                promptControllerMock);
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
         // verify
         assertGitFlowFailureExceptionRegEx(result, EXPECTED_RELEASE_MERGE_CONFLICT_MESSAGE_PATTERN);
-        verifyZeroInteractions(promptControllerMock);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertMergeInProcessFromBranch(repositorySet, RELEASE_BRANCH, GitExecution.TESTFILE_NAME);
     }
 
-    // TODO: check after fix
-    @Test
-    public void testExecuteWithConflictOnReleaseRebase() throws Exception {
-        // set up
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
-        git.createAndCommitTestfile(repositorySet);
-        git.switchToBranch(repositorySet, MASTER_BRANCH);
-        git.createTestfile(repositorySet);
-        git.modifyTestfile(repositorySet);
-        git.commitAll(repositorySet, "MASTER: Modified test dummy file commit");
-        git.switchToBranch(repositorySet, RELEASE_BRANCH);
-        Properties userProperties = new Properties();
-        userProperties.setProperty("releaseRebase", "true");
-        // test
-        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
-                promptControllerMock);
-        // verify
-        assertGitFlowFailureExceptionRegEx(result, EXPECTED_RELEASE_REBASE_CONFLICT_MESSAGE_PATTERN);
-        verifyZeroInteractions(promptControllerMock);
-        git.assertRebaseBranchInProcessOntoBranch(repositorySet, MASTER_BRANCH, RELEASE_BRANCH,
-                GitExecution.TESTFILE_NAME);
-    }
-
-    // TODO: check after fix
     @Test
     public void testExecuteWithConflictOnRemoteMasterMerge() throws Exception {
         // set up
@@ -1882,11 +1732,9 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.commitAll(repositorySet, "LOCAL: Modified test dummy file commit");
         git.switchToBranch(repositorySet, RELEASE_BRANCH);
         // test
-        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
-                promptControllerMock);
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
         // verify
         assertGitFlowFailureExceptionRegEx(result, EXPECTED_UPSTREAM_MERGE_CONFLICT_MESSAGE_PATTERN);
-        verifyZeroInteractions(promptControllerMock);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertMergeInProcessFromBranch(repositorySet, "origin/" + MASTER_BRANCH, GitExecution.TESTFILE_NAME);
     }
