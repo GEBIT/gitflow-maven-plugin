@@ -203,55 +203,57 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
-        // check uncommitted changes
-        checkUncommittedChanges();
-
         String currentBranch = gitCurrentBranch();
-        if (!isReleaseBranch(currentBranch)) {
-            throw new GitFlowFailureException("Current branch '" + currentBranch + "' is not a release branch.",
-                    "Please switch to the release branch that you want to finish in order to proceed.",
-                    "'git checkout BRANCH' to switch to the release branch");
-        }
-        String gitConfigName = "branch." + currentBranch + ".development";
-        String developmentBranch = gitGetConfig(gitConfigName);
-        if (StringUtils.isBlank(developmentBranch)) {
-            throw new GitFlowFailureException(
-                    "The release branch '" + currentBranch + "' has no development branch configured.",
-                    "Please configure development branch for current release branch first in order to proceed.",
-                    "'git config branch." + currentBranch
-                            + ".development [development branch name]' to configure development branch");
-        }
-        gitEnsureLocalBranchExists(developmentBranch,
-                new GitFlowFailureInfo(
-                        "The development branch '" + developmentBranch + "' configured for the current release branch '"
-                                + currentBranch + "' doesn't exist.\nThis indicates either a wrong configuration for "
-                                + "the release branch or a severe error condition on your branches.",
-                        "Please configure correct development branch for the current release branch or consult a "
-                                + "gitflow expert on how to fix this.",
+        if (!continueReleaseFinishIfMergeInProcess(currentBranch)) {
+            // check uncommitted changes
+            checkUncommittedChanges();
+
+            if (!isReleaseBranch(currentBranch)) {
+                throw new GitFlowFailureException("Current branch '" + currentBranch + "' is not a release branch.",
+                        "Please switch to the release branch that you want to finish in order to proceed.",
+                        "'git checkout BRANCH' to switch to the release branch");
+            }
+            String gitConfigName = "branch." + currentBranch + ".development";
+            String developmentBranch = gitGetConfig(gitConfigName);
+            if (StringUtils.isBlank(developmentBranch)) {
+                throw new GitFlowFailureException(
+                        "The release branch '" + currentBranch + "' has no development branch configured.",
+                        "Please configure development branch for current release branch first in order to proceed.",
                         "'git config branch." + currentBranch
-                                + ".development [development branch name]' to configure correct development branch"));
+                                + ".development [development branch name]' to configure development branch");
+            }
+            gitEnsureLocalBranchExists(developmentBranch,
+                    new GitFlowFailureInfo(
+                            "The development branch '" + developmentBranch + "' configured for the current release branch '"
+                                    + currentBranch + "' doesn't exist.\nThis indicates either a wrong configuration for "
+                                    + "the release branch or a severe error condition on your branches.",
+                            "Please configure correct development branch for the current release branch or consult a "
+                                    + "gitflow expert on how to fix this.",
+                            "'git config branch." + currentBranch
+                                    + ".development [development branch name]' to configure correct development branch"));
 
-        gitAssertRemoteBranchNotAheadOfLocalBranche(currentBranch,
-                new GitFlowFailureInfo(
-                        "Remote release branch '{0}' is ahead of the local branch.\n"
-                                + "This indicates a severe error condition on your branches.",
-                        "Please consult a gitflow expert on how to fix this!"),
-                new GitFlowFailureInfo(
-                        "Remote and local release branches '{0}' diverge.\n"
-                                + "This indicates a severe error condition on your branches.",
-                        "Please consult a gitflow expert on how to fix this!"));
+            gitAssertRemoteBranchNotAheadOfLocalBranche(currentBranch,
+                    new GitFlowFailureInfo(
+                            "Remote release branch '{0}' is ahead of the local branch.\n"
+                                    + "This indicates a severe error condition on your branches.",
+                            "Please consult a gitflow expert on how to fix this!"),
+                    new GitFlowFailureInfo(
+                            "Remote and local release branches '{0}' diverge.\n"
+                                    + "This indicates a severe error condition on your branches.",
+                            "Please consult a gitflow expert on how to fix this!"));
 
-        boolean releaseOnMaintenanceBranch = isMaintenanceBranch(developmentBranch);
-        String productionBranch = gitFlowConfig.getProductionBranch();
-        if (releaseOnMaintenanceBranch) {
-            productionBranch += "-" + developmentBranch;
+            boolean releaseOnMaintenanceBranch = isMaintenanceBranch(developmentBranch);
+            String productionBranch = gitFlowConfig.getProductionBranch();
+            if (releaseOnMaintenanceBranch) {
+                productionBranch += "-" + developmentBranch;
+            }
+            gitEnsureLocalBranchIsUpToDateIfExists(productionBranch,
+                    new GitFlowFailureInfo(
+                            "Remote and local production branches '{0}' diverge.\n"
+                                    + "This indicates a severe error condition on your branches.",
+                            "Please consult a gitflow expert on how to fix this!"));
+
+            releaseFinish(developmentBranch, releaseOnMaintenanceBranch);
         }
-        gitEnsureLocalBranchIsUpToDateIfExists(productionBranch,
-                new GitFlowFailureInfo(
-                        "Remote and local production branches '{0}' diverge.\n"
-                                + "This indicates a severe error condition on your branches.",
-                        "Please consult a gitflow expert on how to fix this!"));
-
-        releaseFinish(developmentBranch, releaseOnMaintenanceBranch);
     }
 }

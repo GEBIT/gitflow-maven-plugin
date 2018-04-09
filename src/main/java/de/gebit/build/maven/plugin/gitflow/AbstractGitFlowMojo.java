@@ -1990,6 +1990,65 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         }
     }
 
+    protected String gitMergeFromBranchIfInProcess(String... branchCandidates)
+            throws MojoFailureException, CommandLineException {
+        String mergeHeadName = gitGetMergeHeadIfExists();
+        if (mergeHeadName == null) {
+            return null;
+        }
+        String branchName = null;
+        if (mergeHeadName.startsWith("refs/heads/")) {
+            branchName = mergeHeadName.substring("refs/heads/".length());
+        } else if (mergeHeadName.startsWith("refs/remotes/")) {
+            branchName = mergeHeadName.substring("refs/remotes/".length());
+        } else {
+            if (branchCandidates != null && branchCandidates.length > 0) {
+                String barnchesStr = executeGitCommandReturn("branch", "-a", "--contains", mergeHeadName).trim();
+                String[] barnches = barnchesStr.split("\r?\n");
+                for (String branch : barnches) {
+                    if (branch.startsWith("remotes/")) {
+                        branch = branch.substring("remotes/".length());
+                    }
+                    for (String branchCandidate : branchCandidates) {
+                        if (isCandidateBranch(branch, branchCandidate)) {
+                            return branch;
+                        }
+                    }
+                }
+            }
+            throw new GitFlowFailureException("Merging source '" + mergeHeadName + "' is not a branch reference.",
+                    null);
+        }
+        if (branchName != null && branchCandidates != null && branchCandidates.length > 0) {
+            StringBuilder branchCandidatesList = new StringBuilder();
+            boolean first = true;
+            for (String branchCandidate : branchCandidates) {
+                if (isCandidateBranch(branchName, branchCandidate)) {
+                    return branchName;
+                }
+                if (first) {
+                    first = false;
+                } else {
+                    branchCandidatesList.append(", ");
+                }
+                branchCandidatesList.append("'");
+                branchCandidatesList.append(branchCandidate);
+                branchCandidatesList.append("'");
+            }
+            throw new GitFlowFailureException("Merging source '" + branchName
+                    + "' is not a supported branch. Supported branch prefixes: " + branchCandidatesList + ".", null);
+        }
+        return branchName;
+    }
+
+    private boolean isCandidateBranch(String branchName, String branchCandidate) {
+        if (branchCandidate.endsWith("*")) {
+            return branchName.startsWith(branchCandidate.substring(0, branchCandidate.length() - 1));
+        } else {
+            return branchName.equals(branchCandidate);
+        }
+    }
+
     protected String gitGetBranchNameFromMergeHeadIfStartsWith(String mergeHeadName, String branchPrefix)
             throws CommandLineException, MojoFailureException {
         String branchName = null;
@@ -2877,11 +2936,50 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      *
      * @param branchName
      *            the branch name to be checked
-     * @return <code>true</code> if the branch name starts with epic branch
+     * @return <code>true</code> if the branch name starts with release branch
      *         prefix
      */
     protected boolean isReleaseBranch(String branchName) {
         return branchName.startsWith(gitFlowConfig.getReleaseBranchPrefix());
+    }
+
+    protected boolean isRemoteBranch(String branchName) {
+        return branchName.startsWith(gitFlowConfig.getOrigin() + "/");
+    }
+
+    /**
+     * Check if passed branch name is name for a production branch.
+     *
+     * @param branchName
+     *            the branch name to be checked
+     * @return <code>true</code> if the branch name starts with epic branch
+     *         prefix
+     */
+    protected boolean isProductionBranch(String branchName) {
+        return (getDevelopmentBranchForProductionBranch(branchName) != null);
+    }
+
+    protected String getDevelopmentBranchForProductionBranch(String productionBranch) {
+        if (Objects.equals(productionBranch, gitFlowConfig.getProductionBranch())) {
+            return gitFlowConfig.getDevelopmentBranch();
+        }
+        String productionBranchPrefix = gitFlowConfig.getProductionBranch() + "-";
+        if (productionBranch.startsWith(productionBranchPrefix)) {
+            String branch = productionBranch.substring(productionBranchPrefix.length());
+            if (isMaintenanceBranch(branch)) {
+                return branch;
+            }
+        }
+        return null;
+    }
+
+    protected String getProductionBranchForDevelopmentBranch(String developmentBranch) {
+        if (isDevelopmentBranch(developmentBranch)) {
+            return gitFlowConfig.getProductionBranch();
+        } else if (isMaintenanceBranch(developmentBranch)) {
+            return gitFlowConfig.getProductionBranch() + "-" + developmentBranch;
+        }
+        return null;
     }
 
     /**

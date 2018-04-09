@@ -111,7 +111,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
      * @throws MojoFailureException
      * @throws CommandLineException
      */
-    protected boolean releaseStart() throws MojoExecutionException, MojoFailureException, CommandLineException {
+    protected boolean releaseStart() throws MojoFailureException, CommandLineException {
         // check snapshots dependencies
         if (!allowSnapshots && hasProjectSnapshotDependencies()) {
             throw new GitFlowFailureException(
@@ -269,134 +269,8 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                     "'git checkout BRANCH' to switch to the release branch");
         }
 
-        if (!isSkipTestProject()) {
-            // mvn clean test
-            mvnCleanTest();
-        }
-
-        // perform the release goals
-        if (getReleaseGoals() != null) {
-            for (String goals : getReleaseGoals()) {
-                if (isSkipDeployProject()) {
-                    goals = goals.replaceAll("(?:^|\\s+)deploy(?:$|\\s+)",
-                            StringUtils.isEmpty(getDeployReplacement()) ? " " : " " + getDeployReplacement() + " ")
-                            .trim();
-                    if (goals.isEmpty()) {
-                        continue;
-                    }
-                }
-                mvnGoals(goals);
-            }
-        }
-
-        // we're now on the target branch for the release
-        String releaseCommit = getCurrentCommit();
-
         // get current project version from pom
         final String currentVersion = getCurrentProjectVersion();
-
-        // tag the release on the target branch
-        if (!isSkipTag()) {
-            String tagVersion = currentVersion;
-            if (tychoBuild && ArtifactUtils.isSnapshot(currentVersion)) {
-                tagVersion = currentVersion.replace("-" + Artifact.SNAPSHOT_VERSION, "");
-            }
-
-            // git tag -a ...
-            gitTag(gitFlowConfig.getVersionTagPrefix() + tagVersion, commitMessages.getTagReleaseMessage());
-        }
-
-        String productionBranch = gitFlowConfig.getProductionBranch();
-        if (releaseOnMaintenanceBranch) {
-            // derive production branch from maintenance branch
-            productionBranch += "-" + developmentBranch;
-        }
-
-        boolean usingProductionBranch = !gitFlowConfig.isNoProduction() && !developmentBranch.equals(productionBranch);
-        // if we're on a release branch merge it now to maintenance or
-        // production.
-        String targetBranch = usingProductionBranch ? productionBranch : developmentBranch;
-        if (gitBranchExists(targetBranch)) {
-            gitCheckout(targetBranch);
-        } else {
-            gitCreateAndCheckout(targetBranch, releaseBranch);
-        }
-
-        // merge the release branch in the target branch
-        if (usingProductionBranch) {
-            getLog().info("Merging release '" + releaseBranch + "' branch to production branch '" + targetBranch + "'");
-            // merge release branch to production, never rebase
-            try {
-                gitMerge(releaseBranch, isReleaseMergeProductionNoFF());
-            } catch (MojoFailureException ex) {
-                throw new GitFlowFailureException(ex,
-                        "Automatic merge of release branch '" + releaseBranch + "' into production branch '"
-                                + targetBranch + "' failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage()),
-                        "Either abort the release process or fix the merge conflicts, mark them as resolved and run "
-                                + "'mvn flow:" + getCurrentGoal() + "' again.\nDo NOT run 'git merge --continue'!",
-                        "'mvn flow:release-abort' to abort the release process",
-                        "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as "
-                                + "resolved",
-                        "'mvn flow:" + getCurrentGoal() + "' to continue release process");
-            }
-
-            // back to the development branch
-            gitCheckout(developmentBranch);
-        }
-
-        // if there are any changes in the remote development branch, we need to
-        // merge them now
-        try {
-            gitEnsureCurrentLocalBranchIsUpToDateByMerging();
-        } catch (MojoFailureException ex) {
-            throw new GitFlowFailureException(ex,
-                    "Automatic merge of remote branch into local development branch '" + developmentBranch
-                            + "' failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage()),
-                    "Either abort the release process or fix the merge conflicts, mark them as resolved and run "
-                            + "'mvn flow:" + getCurrentGoal() + "' again.\nDo NOT run 'git merge --continue'!",
-                    "'mvn flow:release-abort' to abort the release process",
-                    "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as "
-                            + "resolved",
-                    "'mvn flow:" + getCurrentGoal() + "' to continue release process");
-        }
-
-        if (usingProductionBranch) {
-            getLog().info(
-                    "Merging production branch '" + targetBranch + "' to development branch " + developmentBranch);
-            // and merge back the target, which has the merged release branch,
-            // never rebase
-            try {
-                gitMerge(targetBranch, isReleaseMergeNoFF());
-            } catch (MojoFailureException ex) {
-                throw new GitFlowFailureException(ex,
-                        "Automatic merge of production branch '" + targetBranch + "' into development branch '"
-                                + developmentBranch + "' failed.\nGit error message:\n"
-                                + StringUtils.trim(ex.getMessage()),
-                        "Either abort the release process or fix the merge conflicts, mark them as resolved and run "
-                                + "'mvn flow:" + getCurrentGoal() + "' again.\nDo NOT run 'git merge --continue'!",
-                        "'mvn flow:release-abort' to abort the release process",
-                        "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as "
-                                + "resolved",
-                        "'mvn flow:" + getCurrentGoal() + "' to continue release process");
-            }
-        } else {
-            getLog().info(
-                    "Merging release '" + releaseBranch + "' branch to development branch '" + targetBranch + "'");
-            // merge release branch to development, never rebase
-            try {
-                gitMerge(releaseBranch, isReleaseMergeNoFF());
-            } catch (MojoFailureException ex) {
-                throw new GitFlowFailureException(ex,
-                        "Automatic merge of release branch '" + releaseBranch + "' into development branch '"
-                                + targetBranch + "' failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage()),
-                        "Either abort the release process or fix the merge conflicts, mark them as resolved and run "
-                                + "'mvn flow:" + getCurrentGoal() + "' again.\nDo NOT run 'git merge --continue'!",
-                        "'mvn flow:release-abort' to abort the release process",
-                        "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as "
-                                + "resolved",
-                        "'mvn flow:" + getCurrentGoal() + "' to continue release process");
-            }
-        }
 
         String nextSnapshotVersion = getDevelopmentVersion();
         if (nextSnapshotVersion == null) {
@@ -428,6 +302,165 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
             }
         }
 
+        if (!isSkipTestProject()) {
+            // mvn clean test
+            mvnCleanTest();
+        }
+
+        // perform the release goals
+        if (getReleaseGoals() != null) {
+            for (String goals : getReleaseGoals()) {
+                if (isSkipDeployProject()) {
+                    goals = goals.replaceAll("(?:^|\\s+)deploy(?:$|\\s+)",
+                            StringUtils.isEmpty(getDeployReplacement()) ? " " : " " + getDeployReplacement() + " ")
+                            .trim();
+                    if (goals.isEmpty()) {
+                        continue;
+                    }
+                }
+                mvnGoals(goals);
+            }
+        }
+
+        // we're now on the target branch for the release
+        String releaseCommit = getCurrentCommit();
+
+        // tag the release on the target branch
+        if (!isSkipTag()) {
+            String tagVersion = currentVersion;
+            if (tychoBuild && ArtifactUtils.isSnapshot(currentVersion)) {
+                tagVersion = currentVersion.replace("-" + Artifact.SNAPSHOT_VERSION, "");
+            }
+
+            // git tag -a ...
+            gitTag(gitFlowConfig.getVersionTagPrefix() + tagVersion, commitMessages.getTagReleaseMessage());
+        }
+
+        String productionBranch = gitFlowConfig.getProductionBranch();
+        if (releaseOnMaintenanceBranch) {
+            // derive production branch from maintenance branch
+            productionBranch += "-" + developmentBranch;
+        }
+
+        // if we're on a release branch merge it now to maintenance or
+        // production.
+        if (isUsingProductionBranch(developmentBranch, productionBranch)) {
+            if (gitBranchExists(productionBranch)) {
+                gitCheckout(productionBranch);
+            } else {
+                gitCreateAndCheckout(productionBranch, releaseBranch);
+            }
+            gitSetConfig("branch." + productionBranch + ".releaseCommit", releaseCommit);
+            gitSetConfig("branch." + productionBranch + ".nextSnapshotVersion", nextSnapshotVersion);
+            getLog().info(
+                    "Merging release '" + releaseBranch + "' branch into production branch '" + productionBranch + "'");
+            // merge release branch into production, never rebase
+            try {
+                gitMerge(releaseBranch, isReleaseMergeProductionNoFF());
+            } catch (MojoFailureException ex) {
+                throw new GitFlowFailureException(ex,
+                        "Automatic merge of release branch '" + releaseBranch + "' into production branch '"
+                                + productionBranch + "' failed.\nGit error message:\n"
+                                + StringUtils.trim(ex.getMessage()),
+                        "Either abort the release process or fix the merge conflicts, mark them as resolved and run "
+                                + "'mvn flow:" + getCurrentGoal() + "' again.\nDo NOT run 'git merge --continue'!",
+                        "'mvn flow:release-abort' to abort the release process",
+                        "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as "
+                                + "resolved",
+                        "'mvn flow:" + getCurrentGoal() + "' to continue release process");
+            }
+        }
+
+        prepareDevelopmentBranchAndFinilizeRelease(nextSnapshotVersion, releaseBranch, productionBranch,
+                developmentBranch, releaseCommit);
+    }
+
+    private boolean isUsingProductionBranch(String developmentBranch, String productionBranch) {
+        return !gitFlowConfig.isNoProduction() && !developmentBranch.equals(productionBranch);
+    }
+
+    private void prepareDevelopmentBranchAndFinilizeRelease(String nextSnapshotVersion, String releaseBranch,
+            String productionBranch, String developmentBranch, String releaseCommit)
+            throws MojoFailureException, CommandLineException {
+        if (isUsingProductionBranch(developmentBranch, productionBranch)) {
+            gitSetConfig("branch." + productionBranch + ".releaseCommit", null);
+            gitSetConfig("branch." + productionBranch + ".nextSnapshotVersion", null);
+        }
+        gitCheckout(developmentBranch);
+        gitSetConfig("branch." + developmentBranch + ".releaseCommit", releaseCommit);
+        gitSetConfig("branch." + developmentBranch + ".releaseBranch", releaseBranch);
+        gitSetConfig("branch." + developmentBranch + ".nextSnapshotVersion", nextSnapshotVersion);
+        // if there are any changes in the remote development branch, we need to
+        // merge them now
+        try {
+            gitEnsureCurrentLocalBranchIsUpToDateByMerging();
+        } catch (MojoFailureException ex) {
+            throw new GitFlowFailureException(ex,
+                    "Automatic merge of remote branch into local development branch '" + developmentBranch
+                            + "' failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage()),
+                    "Either abort the release process or fix the merge conflicts, mark them as resolved and run "
+                            + "'mvn flow:" + getCurrentGoal() + "' again.\nDo NOT run 'git merge --continue'!",
+                    "'mvn flow:release-abort' to abort the release process",
+                    "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as "
+                            + "resolved",
+                    "'mvn flow:" + getCurrentGoal() + "' to continue release process");
+        }
+
+        mergeIntoCurrentDevelopmentBranchAndFinilizeRelease(nextSnapshotVersion, releaseBranch, productionBranch,
+                developmentBranch, releaseCommit);
+    }
+
+    private void mergeIntoCurrentDevelopmentBranchAndFinilizeRelease(String nextSnapshotVersion, String releaseBranch,
+            String productionBranch, String developmentBranch, String releaseCommit)
+            throws MojoFailureException, CommandLineException {
+        if (isUsingProductionBranch(developmentBranch, productionBranch)) {
+            getLog().info("Merging production branch '" + productionBranch + "' into development branch "
+                    + developmentBranch);
+            // and merge back the target, which has the merged release branch,
+            // never rebase
+            try {
+                gitMerge(productionBranch, isReleaseMergeNoFF());
+            } catch (MojoFailureException ex) {
+                throw new GitFlowFailureException(ex,
+                        "Automatic merge of production branch '" + productionBranch + "' into development branch '"
+                                + developmentBranch + "' failed.\nGit error message:\n"
+                                + StringUtils.trim(ex.getMessage()),
+                        "Either abort the release process or fix the merge conflicts, mark them as resolved and run "
+                                + "'mvn flow:" + getCurrentGoal() + "' again.\nDo NOT run 'git merge --continue'!",
+                        "'mvn flow:release-abort' to abort the release process",
+                        "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as "
+                                + "resolved",
+                        "'mvn flow:" + getCurrentGoal() + "' to continue release process");
+            }
+        } else {
+            getLog().info("Merging release '" + releaseBranch + "' branch into development branch '" + developmentBranch
+                    + "'");
+            // merge release branch to development, never rebase
+            try {
+                gitMerge(releaseBranch, isReleaseMergeNoFF());
+            } catch (MojoFailureException ex) {
+                throw new GitFlowFailureException(ex,
+                        "Automatic merge of release branch '" + releaseBranch + "' into development branch '"
+                                + developmentBranch + "' failed.\nGit error message:\n"
+                                + StringUtils.trim(ex.getMessage()),
+                        "Either abort the release process or fix the merge conflicts, mark them as resolved and run "
+                                + "'mvn flow:" + getCurrentGoal() + "' again.\nDo NOT run 'git merge --continue'!",
+                        "'mvn flow:release-abort' to abort the release process",
+                        "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as "
+                                + "resolved",
+                        "'mvn flow:" + getCurrentGoal() + "' to continue release process");
+            }
+        }
+
+        finilizeRelease(nextSnapshotVersion, releaseBranch, productionBranch, developmentBranch, releaseCommit);
+    }
+
+    private void finilizeRelease(String nextSnapshotVersion, String releaseBranch, String productionBranch,
+            String developmentBranch, String releaseCommit) throws MojoFailureException, CommandLineException {
+        gitSetConfig("branch." + developmentBranch + ".releaseCommit", null);
+        gitSetConfig("branch." + developmentBranch + ".releaseBranch", null);
+        gitSetConfig("branch." + developmentBranch + ".nextSnapshotVersion", null);
+
         // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
         mvnSetVersions(nextSnapshotVersion, "Next development version: ");
 
@@ -457,6 +490,121 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
             // make sure we leave the workspace in the state as released
             gitCheckout(releaseCommit);
         }
+    }
+
+    /**
+     * Continue release finish if merge in process detected.
+     *
+     * @param currentBranch
+     *            the current branch
+     * @return <code>true</code> if merge in process detected and release finish
+     *         continued
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected boolean continueReleaseFinishIfMergeInProcess(String currentBranch)
+            throws MojoFailureException, CommandLineException {
+        String mergeFromBranch = gitMergeFromBranchIfInProcess(gitFlowConfig.getDevelopmentBranch(),
+                gitFlowConfig.getMaintenanceBranchPrefix() + "*", gitFlowConfig.getProductionBranch(),
+                gitFlowConfig.getProductionBranch() + "-" + gitFlowConfig.getMaintenanceBranchPrefix() + "*",
+                gitFlowConfig.getReleaseBranchPrefix() + "*",
+                gitFlowConfig.getOrigin() + "/" + gitFlowConfig.getDevelopmentBranch(),
+                gitFlowConfig.getOrigin() + "/" + gitFlowConfig.getMaintenanceBranchPrefix() + "*");
+        if (mergeFromBranch != null) {
+            releaseFinishContinueAfterMergeConflict(currentBranch, mergeFromBranch);
+            return true;
+        }
+        return false;
+    }
+
+    private void releaseFinishContinueAfterMergeConflict(String mergeIntoBranch, String mergeFromBranch)
+            throws MojoFailureException, CommandLineException {
+        String developmentBranch;
+        String productionBranch;
+        String releaseBranch;
+        String nextSnapshotVersion;
+        String releaseCommit;
+        if (isReleaseBranch(mergeFromBranch)) {
+            releaseBranch = mergeFromBranch;
+            if (isDevelopmentBranch(mergeIntoBranch) || isMaintenanceBranch(mergeIntoBranch)) {
+                developmentBranch = mergeIntoBranch;
+                productionBranch = getProductionBranchForDevelopmentBranch(developmentBranch);
+                releaseCommit = gitGetConfig("branch." + developmentBranch + ".releaseCommit");
+                nextSnapshotVersion = gitGetConfig("branch." + developmentBranch + ".nextSnapshotVersion");
+                promptAndMergeContinue();
+                finilizeRelease(nextSnapshotVersion, releaseBranch, productionBranch, developmentBranch, releaseCommit);
+            } else if (isProductionBranch(mergeIntoBranch)) {
+                productionBranch = mergeIntoBranch;
+                developmentBranch = getDevelopmentBranchForProductionBranch(productionBranch);
+                releaseCommit = gitGetConfig("branch." + productionBranch + ".releaseCommit");
+                nextSnapshotVersion = gitGetConfig("branch." + productionBranch + ".nextSnapshotVersion");
+                promptAndMergeContinue();
+                prepareDevelopmentBranchAndFinilizeRelease(nextSnapshotVersion, releaseBranch, productionBranch,
+                        developmentBranch, releaseCommit);
+            } else {
+                throw new GitFlowFailureException(
+                        getFailureMessageForUnsupportedMergeConflict(mergeIntoBranch, mergeFromBranch));
+            }
+        } else if (isProductionBranch(mergeFromBranch)) {
+            if (isDevelopmentBranch(mergeIntoBranch) || isMaintenanceBranch(mergeIntoBranch)) {
+                developmentBranch = mergeIntoBranch;
+                productionBranch = mergeFromBranch;
+                releaseCommit = gitGetConfig("branch." + developmentBranch + ".releaseCommit");
+                releaseBranch = gitGetConfig("branch." + developmentBranch + ".releaseBranch");
+                nextSnapshotVersion = gitGetConfig("branch." + developmentBranch + ".nextSnapshotVersion");
+                promptAndMergeContinue();
+                finilizeRelease(nextSnapshotVersion, releaseBranch, productionBranch, developmentBranch, releaseCommit);
+            } else {
+                throw new GitFlowFailureException(
+                        getFailureMessageForUnsupportedMergeConflict(mergeIntoBranch, mergeFromBranch));
+            }
+        } else if (isRemoteBranch(mergeFromBranch)) {
+            if (isDevelopmentBranch(mergeIntoBranch) || isMaintenanceBranch(mergeIntoBranch)) {
+                developmentBranch = mergeIntoBranch;
+                productionBranch = getProductionBranchForDevelopmentBranch(developmentBranch);
+                releaseCommit = gitGetConfig("branch." + developmentBranch + ".releaseCommit");
+                releaseBranch = gitGetConfig("branch." + developmentBranch + ".releaseBranch");
+                nextSnapshotVersion = gitGetConfig("branch." + developmentBranch + ".nextSnapshotVersion");
+                promptAndMergeContinue();
+                mergeIntoCurrentDevelopmentBranchAndFinilizeRelease(nextSnapshotVersion, releaseBranch,
+                        productionBranch, developmentBranch, releaseCommit);
+            } else {
+                throw new GitFlowFailureException(
+                        getFailureMessageForUnsupportedMergeConflict(mergeIntoBranch, mergeFromBranch));
+            }
+        } else {
+            throw new GitFlowFailureException(
+                    getFailureMessageForUnsupportedMergeConflict(mergeIntoBranch, mergeFromBranch));
+        }
+    }
+
+    private void promptAndMergeContinue() throws GitFlowFailureException, CommandLineException {
+        if (!getPrompter().promptConfirmation(
+                "You have a merge in process on your current branch. If you run 'mvn flow:" + getCurrentGoal()
+                        + "' before and merge had conflicts you can continue. "
+                        + "In other case it is better to clarify the reason of merge in process. Continue?",
+                true, true)) {
+            throw new GitFlowFailureException("Continuation of release process aborted by user.", null);
+        }
+        try {
+            gitCommitMerge();
+        } catch (MojoFailureException exc) {
+            throw new GitFlowFailureException(exc,
+                    "There are unresolved conflicts after merge.\nGit error message:\n"
+                            + StringUtils.trim(exc.getMessage()),
+                    "Fix the merge conflicts and mark them as resolved. After that, run 'mvn flow:" + getCurrentGoal()
+                            + "' again.\nDo NOT run 'git merge --continue'.",
+                    "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved",
+                    "'mvn flow:" + getCurrentGoal() + "' to continue release process");
+        }
+    }
+
+    private GitFlowFailureInfo getFailureMessageForUnsupportedMergeConflict(String mergeIntoBranch,
+            String mergeFromBranch) {
+        return new GitFlowFailureInfo(
+                "There is a conflict of merging branch '" + mergeFromBranch + "' into branch '" + mergeIntoBranch
+                        + "'. After such a conflict can't be automatically proceeded.",
+                "Please consult a gitflow expert on how to fix this!");
     }
 
 }

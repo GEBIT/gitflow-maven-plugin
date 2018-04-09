@@ -233,15 +233,17 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
-        // set git flow configuration
-        initGitFlowConfig();
+        String currentBranch = gitCurrentBranch();
+        if (!continueReleaseFinishIfMergeInProcess(currentBranch)) {
+            // set git flow configuration
+            initGitFlowConfig();
 
-        // check uncommitted changes
-        checkUncommittedChanges();
+            // check uncommitted changes
+            checkUncommittedChanges();
 
-        String developmentBranch = gitCurrentBranch();
-        // perform start and finish in one step
-        boolean releaseOnSupportBranch = releaseStart();
-        releaseFinish(developmentBranch, releaseOnSupportBranch);
+            // perform start and finish in one step
+            boolean releaseOnSupportBranch = releaseStart();
+            releaseFinish(currentBranch, releaseOnSupportBranch);
+        }
     }
 }
