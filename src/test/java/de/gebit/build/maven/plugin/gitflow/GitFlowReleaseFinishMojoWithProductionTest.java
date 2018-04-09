@@ -8,10 +8,17 @@
 //
 package de.gebit.build.maven.plugin.gitflow;
 
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.when;
+
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Properties;
 
 import org.apache.maven.execution.MavenExecutionResult;
+import org.eclipse.jgit.api.CheckoutCommand.Stage;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -71,6 +78,10 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
     private static final String COMMIT_MESSAGE_MERGE_MAINTENANCE_PRODUCTION = TestProjects.BASIC.jiraProject
             + "-NONE: Merge branch " + MAINTENANCE_PRODUCTION_BRANCH + " into " + MAINTENANCE_BRANCH;
 
+    private static final String PROMPT_MERGE_CONTINUE = "You have a merge in process on your current branch. If you "
+            + "run 'mvn flow:release-finish' before and merge had conflicts you can continue. In other case it is "
+            + "better to clarify the reason of merge in process. Continue?";
+
     private static final GitFlowFailureInfo EXPECTED_RELEASE_MERGE_CONFLICT_MESSAGE_PATTERN = new GitFlowFailureInfo(
             "\\QAutomatic merge of release branch '" + RELEASE_BRANCH + "' into production branch '" + PRODUCTION_BRANCH
                     + "' failed.\nGit error message:\n\\E.*",
@@ -83,6 +94,15 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
     private static final GitFlowFailureInfo EXPECTED_PRODUCTION_MERGE_CONFLICT_MESSAGE_PATTERN = new GitFlowFailureInfo(
             "\\QAutomatic merge of production branch '" + PRODUCTION_BRANCH + "' into development branch '"
                     + MASTER_BRANCH + "' failed.\nGit error message:\n\\E.*",
+            "\\QEither abort the release process or fix the merge conflicts, mark them as resolved and run "
+                    + "'mvn flow:release-finish' again.\nDo NOT run 'git merge --continue'!\\E",
+            "\\Q'mvn flow:release-abort' to abort the release process\\E",
+            "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved\\E",
+            "\\Q'mvn flow:release-finish' to continue release process\\E");
+
+    private static final GitFlowFailureInfo EXPECTED_PRODUCTION_INTO_MAINTENANCE_MERGE_CONFLICT_MESSAGE_PATTERN = new GitFlowFailureInfo(
+            "\\QAutomatic merge of production branch '" + MAINTENANCE_PRODUCTION_BRANCH + "' into development branch '"
+                    + MAINTENANCE_BRANCH + "' failed.\nGit error message:\n\\E.*",
             "\\QEither abort the release process or fix the merge conflicts, mark them as resolved and run "
                     + "'mvn flow:release-finish' again.\nDo NOT run 'git merge --continue'!\\E",
             "\\Q'mvn flow:release-abort' to abort the release process\\E",
@@ -1467,6 +1487,206 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         assertGitFlowFailureExceptionRegEx(result, EXPECTED_UPSTREAM_MERGE_CONFLICT_MESSAGE_PATTERN);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertMergeInProcessFromBranch(repositorySet, "origin/" + MASTER_BRANCH, GitExecution.TESTFILE_NAME);
+    }
+
+    @Test
+    public void testExecuteWithResolvedConflictOnReleaseMerge() throws Exception {
+        // set up
+        final String COMMIT_MESSAGE_PRODUCTION = "PRODUCTION: Modified test dummy file commit";
+        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
+        git.createAndCommitTestfile(repositorySet);
+        git.switchToBranch(repositorySet, PRODUCTION_BRANCH);
+        git.createTestfile(repositorySet);
+        git.modifyTestfile(repositorySet);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_PRODUCTION);
+        git.switchToBranch(repositorySet, RELEASE_BRANCH);
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        assertGitFlowFailureExceptionRegEx(result, EXPECTED_RELEASE_MERGE_CONFLICT_MESSAGE_PATTERN);
+        git.assertCurrentBranch(repositorySet, PRODUCTION_BRANCH);
+        git.assertMergeInProcessFromBranch(repositorySet, RELEASE_BRANCH, GitExecution.TESTFILE_NAME);
+        repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath(GitExecution.TESTFILE_NAME).call();
+        repositorySet.getLocalRepoGit().add().addFilepattern(GitExecution.TESTFILE_NAME).call();
+        when(promptControllerMock.prompt(PROMPT_MERGE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("y");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MERGE_CONTINUE, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
+        git.assertLocalTags(repositorySet, RELEASE_TAG);
+        git.assertRemoteTags(repositorySet, RELEASE_TAG);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, PRODUCTION_BRANCH, PRODUCTION_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, PRODUCTION_BRANCH, COMMIT_MESSAGE_MERGE_INTO_PRODUCTION,
+                COMMIT_MESSAGE_PRODUCTION, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE,
+                COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
+                COMMIT_MESSAGE_MERGE_INTO_PRODUCTION, COMMIT_MESSAGE_PRODUCTION,
+                GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
+        assertDefaultDeployGoalExecuted();
+    }
+
+    @Test
+    public void testExecuteWithResolvedConflictOnProductionMerge() throws Exception {
+        // set up
+        final String COMMIT_MESSAGE_MASTER = "MASTER: Modified test dummy file commit";
+        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
+        git.switchToBranch(repositorySet, PRODUCTION_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        git.createTestfile(repositorySet);
+        git.modifyTestfile(repositorySet);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_MASTER);
+        git.switchToBranch(repositorySet, RELEASE_BRANCH);
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        assertGitFlowFailureExceptionRegEx(result, EXPECTED_PRODUCTION_MERGE_CONFLICT_MESSAGE_PATTERN);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMergeInProcessFromBranch(repositorySet, PRODUCTION_BRANCH, GitExecution.TESTFILE_NAME);
+        repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath(GitExecution.TESTFILE_NAME).call();
+        repositorySet.getLocalRepoGit().add().addFilepattern(GitExecution.TESTFILE_NAME).call();
+        when(promptControllerMock.prompt(PROMPT_MERGE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("y");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MERGE_CONTINUE, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
+        git.assertLocalTags(repositorySet, RELEASE_TAG);
+        git.assertRemoteTags(repositorySet, RELEASE_TAG);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, PRODUCTION_BRANCH, PRODUCTION_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, PRODUCTION_BRANCH, COMMIT_MESSAGE_MERGE_INTO_PRODUCTION,
+                GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
+                COMMIT_MESSAGE_MERGE_PRODUCTION, COMMIT_MESSAGE_MASTER, COMMIT_MESSAGE_MERGE_INTO_PRODUCTION,
+                GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
+        assertDefaultDeployGoalExecuted();
+    }
+
+    @Test
+    public void testExecuteWithResolvedConflictOnProductionIntoMaintenanceMerge() throws Exception {
+        // set up
+        final String COMMIT_MESSAGE_MAINTENANCE = "MAINTENANCE: Modified test dummy file commit";
+        git.deleteLocalAndRemoteTrackingBranches(repositorySet, PRODUCTION_BRANCH);
+        git.deleteRemoteBranch(repositorySet, PRODUCTION_BRANCH);
+        git.switchToBranch(repositorySet, MAINTENANCE_PRODUCTION_BRANCH, true);
+        git.push(repositorySet);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION, MAINTENANCE_FIRST_VERSION);
+        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, MAINTENANCE_RELEASE_VERSION);
+        git.switchToBranch(repositorySet, MAINTENANCE_PRODUCTION_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
+        git.switchToBranch(repositorySet, MAINTENANCE_BRANCH);
+        git.createTestfile(repositorySet);
+        git.modifyTestfile(repositorySet);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_MAINTENANCE);
+        git.switchToBranch(repositorySet, RELEASE_BRANCH);
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        assertGitFlowFailureExceptionRegEx(result, EXPECTED_PRODUCTION_INTO_MAINTENANCE_MERGE_CONFLICT_MESSAGE_PATTERN);
+        git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
+        git.assertMergeInProcessFromBranch(repositorySet, MAINTENANCE_PRODUCTION_BRANCH, GitExecution.TESTFILE_NAME);
+        repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath(GitExecution.TESTFILE_NAME).call();
+        repositorySet.getLocalRepoGit().add().addFilepattern(GitExecution.TESTFILE_NAME).call();
+        when(promptControllerMock.prompt(PROMPT_MERGE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("y");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MERGE_CONTINUE, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
+        // verify
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH);
+        git.assertLocalTags(repositorySet, RELEASE_TAG);
+        git.assertRemoteTags(repositorySet, RELEASE_TAG);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_PRODUCTION_BRANCH,
+                MAINTENANCE_PRODUCTION_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_PRODUCTION_BRANCH,
+                COMMIT_MESSAGE_MERGE_INTO_MAINTENANCE_PRODUCTION, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE,
+                COMMIT_MESSAGE_RELEASE_START_SET_VERSION, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
+                COMMIT_MESSAGE_MERGE_MAINTENANCE_PRODUCTION, COMMIT_MESSAGE_MAINTENANCE,
+                COMMIT_MESSAGE_MERGE_INTO_MAINTENANCE_PRODUCTION, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE,
+                COMMIT_MESSAGE_RELEASE_START_SET_VERSION, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
+        assertDefaultDeployGoalExecuted();
+    }
+
+    @Test
+    public void testExecuteWithResolvedConflictOnRemoteMasterMerge() throws Exception {
+        // set up
+        final String COMMIT_MESSAGE_LOCAL = "LOCAL: Modified test dummy file commit";
+        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
+        git.remoteCreateTestfileInBranch(repositorySet, MASTER_BRANCH);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        git.createTestfile(repositorySet);
+        git.modifyTestfile(repositorySet);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_LOCAL);
+        git.switchToBranch(repositorySet, RELEASE_BRANCH);
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        assertGitFlowFailureExceptionRegEx(result, EXPECTED_UPSTREAM_MERGE_CONFLICT_MESSAGE_PATTERN);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMergeInProcessFromBranch(repositorySet, "origin/" + MASTER_BRANCH, GitExecution.TESTFILE_NAME);
+        repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath(GitExecution.TESTFILE_NAME).call();
+        repositorySet.getLocalRepoGit().add().addFilepattern(GitExecution.TESTFILE_NAME).call();
+        when(promptControllerMock.prompt(PROMPT_MERGE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("y");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MERGE_CONTINUE, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
+        git.assertLocalTags(repositorySet, RELEASE_TAG);
+        git.assertRemoteTags(repositorySet, RELEASE_TAG);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, PRODUCTION_BRANCH, PRODUCTION_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, PRODUCTION_BRANCH, COMMIT_MESSAGE_MERGE_INTO_PRODUCTION,
+                COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
+                COMMIT_MESSAGE_MERGE_REMOTE_MASTER, COMMIT_MESSAGE_MERGE_PRODUCTION, COMMIT_MESSAGE_LOCAL,
+                COMMIT_MESSAGE_MERGE_INTO_PRODUCTION, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE,
+                COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
+        assertDefaultDeployGoalExecuted();
+    }
+
+    @Test
+    public void testExecuteContinueAfterConflictOnReleaseIntoOtheBranchMerge() throws Exception {
+        // set up
+        final String OTHER_BRANCH = "otherBranch";
+        final String COMMIT_MESSAGE_OTHER_RELEASE = "OTHER: Modified test dummy file commit";
+        git.switchToBranch(repositorySet, OTHER_BRANCH, true);
+        git.createTestfile(repositorySet);
+        git.modifyTestfile(repositorySet);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_OTHER_RELEASE);
+        git.switchToBranch(repositorySet, PRODUCTION_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
+        git.switchToBranch(repositorySet, OTHER_BRANCH);
+        git.mergeWithExpectedConflict(repositorySet, PRODUCTION_BRANCH);
+        repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath(GitExecution.TESTFILE_NAME).call();
+        repositorySet.getLocalRepoGit().add().addFilepattern(GitExecution.TESTFILE_NAME).call();
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertGitFlowFailureException(result,
+                "There is a conflict of merging branch '" + PRODUCTION_BRANCH + "' into branch '" + OTHER_BRANCH
+                        + "'. After such a conflict can't be automatically proceeded.",
+                "Please consult a gitflow expert on how to fix this!");
     }
 
 }

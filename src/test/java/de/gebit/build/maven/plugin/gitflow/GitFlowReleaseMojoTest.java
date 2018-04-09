@@ -13,13 +13,16 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Properties;
 
 import org.apache.maven.execution.MavenExecutionResult;
+import org.eclipse.jgit.api.CheckoutCommand.Stage;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import de.gebit.build.maven.plugin.gitflow.jgit.GitExecution;
 import de.gebit.build.maven.plugin.gitflow.jgit.RepositorySet;
 
 /**
@@ -30,6 +33,10 @@ public class GitFlowReleaseMojoTest extends AbstractGitFlowMojoTestCase {
     private static final String GOAL = "release";
 
     private static final String RELEASE_VERSION = "1.42.0";
+
+    private static final String RELEASE_PREFIX = "release/gitflow-tests-";
+
+    private static final String RELEASE_BRANCH = RELEASE_PREFIX + RELEASE_VERSION;
 
     private static final String NEW_DEVELOPMENT_VERSION = "1.42.1-SNAPSHOT";
 
@@ -56,9 +63,25 @@ public class GitFlowReleaseMojoTest extends AbstractGitFlowMojoTestCase {
     private static final String COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE = "NO-ISSUE: updating versions for"
             + " maintenance branch";
 
+    private static final String COMMIT_MESSAGE_MERGE_INTO_PRODUCTION = TestProjects.BASIC.jiraProject
+            + "-NONE: Merge branch " + RELEASE_BRANCH + " into " + PRODUCTION_BRANCH;
+
     private static final String PROMPT_RELEASE_VERSION = ExecutorHelper.RELEASE_START_PROMPT_RELEASE_VERSION;
 
     private static final String PROMPT_NEXT_DEVELOPMENT_VERSION = "What is the next development version?";
+
+    private static final String PROMPT_MERGE_CONTINUE = "You have a merge in process on your current branch. If you "
+            + "run 'mvn flow:release' before and merge had conflicts you can continue. In other case it is "
+            + "better to clarify the reason of merge in process. Continue?";
+
+    private static final GitFlowFailureInfo EXPECTED_RELEASE_MERGE_CONFLICT_MESSAGE_PATTERN = new GitFlowFailureInfo(
+            "\\QAutomatic merge of release branch '" + RELEASE_BRANCH + "' into production branch '" + PRODUCTION_BRANCH
+                    + "' failed.\nGit error message:\n\\E.*",
+            "\\QEither abort the release process or fix the merge conflicts, mark them as resolved and run "
+                    + "'mvn flow:release' again.\nDo NOT run 'git merge --continue'!\\E",
+            "\\Q'mvn flow:release-abort' to abort the release process\\E",
+            "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved\\E",
+            "\\Q'mvn flow:release' to continue release process\\E");
 
     private static final String DEFAULT_DEPLOY_GOAL = "validate";
 
@@ -110,6 +133,10 @@ public class GitFlowReleaseMojoTest extends AbstractGitFlowMojoTestCase {
 
     private void assertDefaultDeployGoalExecuted() throws IOException {
         assertMavenCommandExecuted(DEFAULT_DEPLOY_GOAL);
+    }
+
+    private void assertDefaultDeployGoalNotExecuted() throws IOException {
+        assertMavenCommandNotExecuted(DEFAULT_DEPLOY_GOAL);
     }
 
     @Test
@@ -194,6 +221,75 @@ public class GitFlowReleaseMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
                 COMMIT_MESSAGE_RELEASE_START_SET_VERSION, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
+        assertDefaultDeployGoalExecuted();
+    }
+
+    @Test
+    public void testExecuteWithIvalidProjectVersionInBatchMode() throws Exception {
+        // set up
+        final String INVALID_RELEASE_VERSION = "invalidReleaseVersion";
+        final String EXPECTED_RELEASE_BRANCH = RELEASE_PREFIX + INVALID_RELEASE_VERSION;
+        Properties userProperties = new Properties();
+        userProperties.setProperty("releaseVersion", INVALID_RELEASE_VERSION);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertGitFlowFailureException(result,
+                "Failed to calculate next development version. The release version '" + INVALID_RELEASE_VERSION
+                        + "' can't be parsed.",
+                "Run 'mvn flow:release' in interactive mode or with specified parameter 'developmentVersion'.",
+                "'mvn flow:release -DdevelopmentVersion=X.Y.Z-SNAPSHOT -B' to predefine next development version",
+                "'mvn flow:release' to run in interactive mode");
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, EXPECTED_RELEASE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, EXPECTED_RELEASE_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        assertDefaultDeployGoalNotExecuted();
+    }
+
+    @Test
+    public void testExecuteWithResolvedConflictOnReleaseMerge() throws Exception {
+        // set up
+        final String COMMIT_MESSAGE_PRODUCTION = "PRODUCTION: Modified test dummy file commit";
+        git.switchToBranch(repositorySet, PRODUCTION_BRANCH, true);
+        git.createTestfile(repositorySet);
+        git.modifyTestfile(repositorySet);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_PRODUCTION);
+        git.push(repositorySet);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.noProduction", "false");
+        userProperties.setProperty("releaseVersion", RELEASE_VERSION);
+        userProperties.setProperty("developmentVersion", NEW_DEVELOPMENT_VERSION);
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        assertGitFlowFailureExceptionRegEx(result, EXPECTED_RELEASE_MERGE_CONFLICT_MESSAGE_PATTERN);
+        git.assertCurrentBranch(repositorySet, PRODUCTION_BRANCH);
+        git.assertMergeInProcessFromBranch(repositorySet, RELEASE_BRANCH, GitExecution.TESTFILE_NAME);
+        repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath(GitExecution.TESTFILE_NAME).call();
+        repositorySet.getLocalRepoGit().add().addFilepattern(GitExecution.TESTFILE_NAME).call();
+        when(promptControllerMock.prompt(PROMPT_MERGE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("y");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MERGE_CONTINUE, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
+        git.assertLocalTags(repositorySet, RELEASE_TAG);
+        git.assertRemoteTags(repositorySet, RELEASE_TAG);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, PRODUCTION_BRANCH, PRODUCTION_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, PRODUCTION_BRANCH, COMMIT_MESSAGE_MERGE_INTO_PRODUCTION,
+                COMMIT_MESSAGE_PRODUCTION, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE,
+                COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
+                COMMIT_MESSAGE_MERGE_INTO_PRODUCTION, COMMIT_MESSAGE_PRODUCTION,
+                GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
     }

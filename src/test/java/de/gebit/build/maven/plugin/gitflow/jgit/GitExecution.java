@@ -732,6 +732,13 @@ public class GitExecution {
                 .setCommit(true).setMessage(mergeMessage).call();
     }
 
+    public void mergeWithExpectedConflict(RepositorySet repositorySet, String fromBranch)
+            throws GitAPIException, IOException {
+        String sourceBranch = fromBranch.startsWith("refs/") ? fromBranch : REFS_HEADS_PATH + fromBranch;
+        repositorySet.getLocalRepoGit().merge()
+                .include(repositorySet.getLocalRepoGit().getRepository().resolve(sourceBranch)).setCommit(true).call();
+    }
+
     /**
      * Asserts that working directory of the local repository is clean
      *
