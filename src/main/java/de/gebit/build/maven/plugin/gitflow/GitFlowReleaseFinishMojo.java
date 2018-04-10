@@ -213,8 +213,7 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
                         "Please switch to the release branch that you want to finish in order to proceed.",
                         "'git checkout BRANCH' to switch to the release branch");
             }
-            String gitConfigName = "branch." + currentBranch + ".development";
-            String developmentBranch = gitGetConfig(gitConfigName);
+            String developmentBranch = gitGetBranchConfig(currentBranch, "development");
             if (StringUtils.isBlank(developmentBranch)) {
                 throw new GitFlowFailureException(
                         "The release branch '" + currentBranch + "' has no development branch configured.",

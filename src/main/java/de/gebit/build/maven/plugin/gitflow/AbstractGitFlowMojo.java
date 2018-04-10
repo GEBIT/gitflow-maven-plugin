@@ -567,6 +567,73 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
+     * Remove git config.
+     *
+     * @param name
+     *            the name of the config entry
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitRemoveConfig(String name) throws MojoFailureException, CommandLineException {
+        // ignore error exit codes
+        executeGitCommandExitCode("config", "--unset", name);
+    }
+
+    /**
+     * Get the config value of the git config for passed branch.<br>
+     * Executes
+     * <code>git config --get branch.&lt;branchName&gt;.&lt;configName&gt;</code>.
+     *
+     * @param branchName
+     *            the name of the branch
+     * @param configName
+     *            the config name
+     * @return the config value or <code>null</code> if config doesn't exist
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected String gitGetBranchConfig(String branchName, String configName)
+            throws MojoFailureException, CommandLineException {
+        return gitGetConfig("branch." + branchName + "." + configName);
+    }
+
+    /**
+     * Set the git config value for passed branch.<br>
+     * Executes
+     * <code>git config branch.&lt;branchName&gt;.&lt;configName&gt; &lt;value&gt;</code>.
+     *
+     * @param branchName
+     *            the name of the branch
+     * @param configName
+     *            the config name
+     * @param value
+     *            the value to be set
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitSetBranchConfig(String branchName, String configName, String value)
+            throws MojoFailureException, CommandLineException {
+        gitSetConfig("branch." + branchName + "." + configName, value);
+    }
+
+    /**
+     * Remove the git config for passed branch.<br>
+     * Executes
+     * <code>git config --unset branch.&lt;branchName&gt;.&lt;configName&gt; &lt;value&gt;</code>.
+     *
+     * @param branchName
+     *            the name of the branch
+     * @param configName
+     *            the config name
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitRemoveBranchConfig(String branchName, String configName)
+            throws MojoFailureException, CommandLineException {
+        gitRemoveConfig("branch." + branchName + "." + configName);
+    }
+
+    /**
      * Executes git for-each-ref with <code>refname:short</code> format.
      *
      * @param branchName
@@ -1783,6 +1850,20 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         String branchResult = executeGitCommandReturn("for-each-ref",
                 "refs/remotes/" + gitFlowConfig.getOrigin() + "/" + branchName);
         return (StringUtils.isNotBlank(branchResult));
+    }
+
+    /**
+     * Check if passed branch exists locally or remotely.
+     *
+     * @param branchName
+     *            the name of the branch
+     * @return <code>true</code> if branch exists locally or remotely
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected boolean gitLocalOrRemoteBranchesExist(String branchName)
+            throws MojoFailureException, CommandLineException {
+        return gitBranchExists(branchName) || gitRemoteBranchExists(branchName);
     }
 
     /**
