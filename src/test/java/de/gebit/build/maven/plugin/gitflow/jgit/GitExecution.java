@@ -12,6 +12,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
@@ -752,23 +753,110 @@ public class GitExecution {
     }
 
     /**
-     * Asserts that passes config entry exists in local repository and has
-     * passed expected value.
+     * Assert that passed config entry exists in local repository and has passed
+     * expected value.
      *
      * @param repositorySet
      *            the repository to be used
-     * @param configKey
-     *            the key of the config entry
+     * @param configSection
+     *            the section part of the config entry key
+     * @param configSubsection
+     *            the sub-section part of the config entry key
+     * @param configName
+     *            the name part of the config entry key
      * @param expectedConfigValue
      *            the expected value of the config entry
      */
     public void assertConfigValue(RepositorySet repositorySet, String configSection, String configSubsection,
             String configName, String expectedConfigValue) {
-        StoredConfig config = repositorySet.getLocalRepoGit().getRepository().getConfig();
-        String value = config.getString(configSection, configSubsection, configName);
+        String value = getConfigValue(repositorySet, configSection, configSubsection, configName);
         assertNotNull("git config [section='" + configSection + "', subsection='" + configSubsection + "', name='"
                 + configName + "'] not found", value);
         assertEquals("git config value is wrong", expectedConfigValue, value);
+    }
+
+    /**
+     * Assert that passed config entry doesn't exist in local repository.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param configSection
+     *            the section part of the config entry key
+     * @param configSubsection
+     *            the sub-section part of the config entry key
+     * @param configName
+     *            the name part of the config entry key
+     */
+    public void assertConfigValueMissing(RepositorySet repositorySet, String configSection, String configSubsection,
+            String configName) {
+        String value = getConfigValue(repositorySet, configSection, configSubsection, configName);
+        assertNull("git config [section='" + configSection + "', subsection='" + configSubsection + "', name='"
+                + configName + "'] found but not expected", value);
+    }
+
+    /**
+     * Return value of passed config entry or <code>null</code> if config entry
+     * doesn't exist.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param configSection
+     *            the section part of the config entry key
+     * @param configSubsection
+     *            the sub-section part of the config entry key
+     * @param configName
+     *            the name part of the config entry key
+     * @return the value of the config entry or <code>null</code> if config
+     *         entry doesn't exist
+     */
+    public String getConfigValue(RepositorySet repositorySet, String configSection, String configSubsection,
+            String configName) {
+        StoredConfig config = repositorySet.getLocalRepoGit().getRepository().getConfig();
+        return config.getString(configSection, configSubsection, configName);
+    }
+
+    /**
+     * Set value for passed config entry.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param configSection
+     *            the section part of the config entry key
+     * @param configSubsection
+     *            the sub-section part of the config entry key
+     * @param configName
+     *            the name part of the config entry key
+     * @param value
+     *            the value to be set
+     * @throws IOException
+     *             in case of an I/O error
+     */
+    public void setConfigValue(RepositorySet repositorySet, String configSection, String configSubsection,
+            String configName, String value) throws IOException {
+        StoredConfig config = repositorySet.getLocalRepoGit().getRepository().getConfig();
+        config.setString(configSection, configSubsection, configName, value);
+        config.save();
+    }
+
+    /**
+     * Remove config entry.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param configSection
+     *            the section part of the config entry key
+     * @param configSubsection
+     *            the sub-section part of the config entry key
+     * @param configName
+     *            the name part of the config entry key
+     * @throws IOException
+     *             in case of an I/O error
+     */
+    public void removeConfigValue(RepositorySet repositorySet, String configSection, String configSubsection,
+            String configName) throws IOException {
+        StoredConfig config = repositorySet.getLocalRepoGit().getRepository().getConfig();
+        config.unset(configSection, configSubsection, configName);
+        config.save();
     }
 
     /**
