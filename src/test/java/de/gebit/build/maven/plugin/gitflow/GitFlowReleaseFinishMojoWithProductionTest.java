@@ -144,7 +144,7 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
     @Test
     public void testExecute() throws Exception {
         // set up
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
+        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userProperties);
         git.createAndCommitTestfile(repositorySet);
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
@@ -166,6 +166,17 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         assertDefaultDeployGoalExecuted();
         assertMavenCommandNotExecuted("clean test");
         assertMavenCommandNotExecuted("clean verify");
+        assertConfigCleanedUp(MASTER_BRANCH);
+    }
+
+    private void assertConfigCleanedUp(String developmentBranch) {
+        git.assertBranchConfigValueMissing(repositorySet, RELEASE_BRANCH, "development");
+        git.assertBranchConfigValueMissing(repositorySet, RELEASE_BRANCH, "developmentCommitRef");
+        git.assertBranchConfigValueMissing(repositorySet, RELEASE_BRANCH, "productionCommitRef");
+        git.assertBranchConfigValueMissing(repositorySet, RELEASE_BRANCH, "releaseTag");
+        git.assertBranchConfigValueMissing(repositorySet, RELEASE_BRANCH, "releaseCommit");
+        git.assertBranchConfigValueMissing(repositorySet, RELEASE_BRANCH, "nextSnapshotVersion");
+        git.assertBranchConfigValueMissing(repositorySet, developmentBranch, "releaseBranch");
     }
 
     private void assertDefaultDeployGoalExecuted() throws IOException {
@@ -204,14 +215,17 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
                 COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
+        assertConfigCleanedUp(DEVELOPMENT_BRANCH);
     }
 
     @Test
     public void testExecuteDevelopmentBranchNotExistingLocallyAndFetchRemoteFalse() throws Exception {
         // set up
         final String DEVELOPMENT_BRANCH = "development";
+        final String EXPECTED_DEVELOPMENT_COMMIT = git.currentCommit(repositorySet);
         userProperties.setProperty("flow.developmentBranch", DEVELOPMENT_BRANCH);
         git.switchToBranch(repositorySet, DEVELOPMENT_BRANCH, true);
+        final String EXPECTED_PRODUCTION_COMMIT = git.localBranchCurrentCommit(repositorySet, PRODUCTION_BRANCH);
         git.push(repositorySet);
         ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userProperties);
         git.createAndCommitTestfile(repositorySet);
@@ -237,6 +251,14 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, RELEASE_BRANCH);
         git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, DEVELOPMENT_BRANCH);
         assertDefaultDeployGoalNotExecuted();
+        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "development", DEVELOPMENT_BRANCH);
+        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "developmentCommitRef", EXPECTED_DEVELOPMENT_COMMIT);
+        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "productionCommitRef", EXPECTED_PRODUCTION_COMMIT);
+
+        git.assertBranchConfigValueMissing(repositorySet, RELEASE_BRANCH, "releaseCommit");
+        git.assertBranchConfigValueMissing(repositorySet, RELEASE_BRANCH, "nextSnapshotVersion");
+        git.assertBranchConfigValueMissing(repositorySet, RELEASE_BRANCH, "releaseTag");
+        git.assertBranchConfigValueMissing(repositorySet, MASTER_BRANCH, "releaseBranch");
     }
 
     @Test
@@ -275,6 +297,7 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         git.assertCommitsInRemoteBranch(repositorySet, DEVELOPMENT_BRANCH);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
+        assertConfigCleanedUp(DEVELOPMENT_BRANCH);
     }
 
     @Test
@@ -305,6 +328,7 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
                 COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
+        assertConfigCleanedUp(DEVELOPMENT_BRANCH);
     }
 
     @Test
@@ -339,7 +363,7 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
     @Test
     public void testExecuteReleaseMergeNoFFFalseAndReleaseMergeProductionNoFFFalse() throws Exception {
         // set up
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
+        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userProperties);
         git.createAndCommitTestfile(repositorySet);
         userProperties.setProperty("flow.releaseMergeNoFF", "false");
         userProperties.setProperty("flow.releaseMergeProductionNoFF", "false");
@@ -365,7 +389,7 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
     @Test
     public void testExecuteReleaseMergeNoFFFalseAndReleaseMergeProductionNoFFTrue() throws Exception {
         // set up
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
+        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userProperties);
         git.createAndCommitTestfile(repositorySet);
         userProperties.setProperty("flow.releaseMergeNoFF", "false");
         userProperties.setProperty("flow.releaseMergeProductionNoFF", "true");
@@ -392,7 +416,7 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
     @Test
     public void testExecuteReleaseMergeNoFFTrueAndReleaseMergeProductionNoFFFalse() throws Exception {
         // set up
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
+        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userProperties);
         git.createAndCommitTestfile(repositorySet);
         userProperties.setProperty("flow.releaseMergeNoFF", "true");
         userProperties.setProperty("flow.releaseMergeProductionNoFF", "false");
@@ -419,7 +443,7 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
     @Test
     public void testExecuteReleaseMergeNoFFTrueAndReleaseMergeProductionNoFFTrue() throws Exception {
         // set up
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
+        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userProperties);
         git.createAndCommitTestfile(repositorySet);
         userProperties.setProperty("flow.releaseMergeNoFF", "true");
         userProperties.setProperty("flow.releaseMergeProductionNoFF", "true");
@@ -448,7 +472,7 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         // set up
         final String COMMIT_MESSAGE_LOCAL = "LOCAL: Unit test dummy file commit";
         final String COMMIT_MESSAGE_REMOTE = "REMOTE: Unit test dummy file commit";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
+        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userProperties);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createAndCommitTestfile(repositorySet, "local-testfile.txt", COMMIT_MESSAGE_LOCAL);
         git.remoteCreateTestfileInBranch(repositorySet, MASTER_BRANCH, "remote-testfile.txt", COMMIT_MESSAGE_REMOTE);
@@ -471,6 +495,7 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
                 COMMIT_MESSAGE_MERGE_INTO_PRODUCTION, COMMIT_MESSAGE_LOCAL, COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
+        assertConfigCleanedUp(MASTER_BRANCH);
     }
 
     @Test
@@ -478,7 +503,7 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         // set up
         final String COMMIT_MESSAGE_LOCAL = "LOCAL: Unit test dummy file commit";
         final String COMMIT_MESSAGE_REMOTE = "REMOTE: Unit test dummy file commit";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
+        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userProperties);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createAndCommitTestfile(repositorySet, "local-testfile.txt", COMMIT_MESSAGE_LOCAL);
         git.remoteCreateTestfileInBranch(repositorySet, MASTER_BRANCH, "remote-testfile.txt", COMMIT_MESSAGE_REMOTE);
@@ -515,7 +540,7 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         // set up
         final String COMMIT_MESSAGE_LOCAL = "LOCAL: Unit test dummy file commit";
         final String COMMIT_MESSAGE_REMOTE = "REMOTE: Unit test dummy file commit";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
+        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userProperties);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createAndCommitTestfile(repositorySet, "local-testfile.txt", COMMIT_MESSAGE_LOCAL);
         git.remoteCreateTestfileInBranch(repositorySet, MASTER_BRANCH, "remote-testfile.txt", COMMIT_MESSAGE_REMOTE);
@@ -579,13 +604,14 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
                 COMMIT_MESSAGE_RELEASE_START_SET_VERSION, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
+        assertConfigCleanedUp(MAINTENANCE_BRANCH);
     }
 
     @Test
     public void testExecuteRemoteProductionBranchAheadOfLocal() throws Exception {
         // set up
         final String COMMIT_MESSAGE_REMOTE = "REMOTE: Unit test dummy file commit";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
+        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userProperties);
         git.remoteCreateTestfileInBranch(repositorySet, PRODUCTION_BRANCH, "remote-testfile.txt",
                 COMMIT_MESSAGE_REMOTE);
         // test
@@ -611,7 +637,7 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
     public void testExecuteRemoteProductionBranchAheadOfLocalAndFetchRemoteFalse() throws Exception {
         // set up
         final String COMMIT_MESSAGE_REMOTE = "REMOTE: Unit test dummy file commit";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
+        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userProperties);
         git.remoteCreateTestfileInBranch(repositorySet, PRODUCTION_BRANCH, "remote-testfile.txt",
                 COMMIT_MESSAGE_REMOTE);
         userProperties.setProperty("flow.fetchRemote", "false");
@@ -644,7 +670,7 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
     public void testExecuteRemoteProductionBranchAheadOfLocalAndFetchRemoteFalseWithPrefetch() throws Exception {
         // set up
         final String COMMIT_MESSAGE_REMOTE = "REMOTE: Unit test dummy file commit";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
+        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userProperties);
         git.remoteCreateTestfileInBranch(repositorySet, PRODUCTION_BRANCH, "remote-testfile.txt",
                 COMMIT_MESSAGE_REMOTE);
         userProperties.setProperty("flow.fetchRemote", "false");
@@ -679,7 +705,7 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         // set up
         final String COMMIT_MESSAGE_LOCAL = "LOCAL: Unit test dummy file commit";
         final String COMMIT_MESSAGE_REMOTE = "REMOTE: Unit test dummy file commit";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
+        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userProperties);
         git.switchToBranch(repositorySet, PRODUCTION_BRANCH);
         git.createAndCommitTestfile(repositorySet, "local-testfile.txt", COMMIT_MESSAGE_LOCAL);
         git.remoteCreateTestfileInBranch(repositorySet, PRODUCTION_BRANCH, "remote-testfile.txt",
@@ -706,7 +732,7 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         // set up
         final String COMMIT_MESSAGE_LOCAL = "LOCAL: Unit test dummy file commit";
         final String COMMIT_MESSAGE_REMOTE = "REMOTE: Unit test dummy file commit";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
+        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userProperties);
         git.switchToBranch(repositorySet, PRODUCTION_BRANCH);
         git.createAndCommitTestfile(repositorySet, "local-testfile.txt", COMMIT_MESSAGE_LOCAL);
         git.remoteCreateTestfileInBranch(repositorySet, PRODUCTION_BRANCH, "remote-testfile.txt",
@@ -743,7 +769,7 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         // set up
         final String COMMIT_MESSAGE_LOCAL = "LOCAL: Unit test dummy file commit";
         final String COMMIT_MESSAGE_REMOTE = "REMOTE: Unit test dummy file commit";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
+        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userProperties);
         git.switchToBranch(repositorySet, PRODUCTION_BRANCH);
         git.createAndCommitTestfile(repositorySet, "local-testfile.txt", COMMIT_MESSAGE_LOCAL);
         git.remoteCreateTestfileInBranch(repositorySet, PRODUCTION_BRANCH, "remote-testfile.txt",
@@ -1021,7 +1047,7 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
     public void testExecuteProductionBranchNotExistingLocally() throws Exception {
         // set up
         final String COMMIT_MESSAGE_REMOTE = "REMOTE: Unit test dummy file commit";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
+        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userProperties);
         git.createAndCommitTestfile(repositorySet);
         git.deleteLocalAndRemoteTrackingBranches(repositorySet, PRODUCTION_BRANCH);
         git.remoteCreateTestfileInBranch(repositorySet, PRODUCTION_BRANCH, "remote-testfile.txt",
@@ -1045,6 +1071,7 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
                 COMMIT_MESSAGE_RELEASE_START_SET_VERSION, COMMIT_MESSAGE_REMOTE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
+        assertConfigCleanedUp(MASTER_BRANCH);
     }
 
     @Test
@@ -1052,7 +1079,7 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         // set up
         final String COMMIT_MESSAGE_MASTER = "MASTER: Unit test dummy file commit";
         final String COMMIT_MESSAGE_REMOTE = "REMOTE: Unit test dummy file commit";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
+        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userProperties);
         git.createAndCommitTestfile(repositorySet);
         git.deleteLocalAndRemoteTrackingBranches(repositorySet, PRODUCTION_BRANCH);
         git.remoteCreateTestfileInBranch(repositorySet, PRODUCTION_BRANCH, "remote-testfile.txt",
@@ -1086,6 +1113,7 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         git.assertCommitsInRemoteBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
+        assertConfigCleanedUp(MASTER_BRANCH);
     }
 
     @Test
@@ -1093,7 +1121,7 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         // set up
         final String COMMIT_MESSAGE_MASTER = "MASTER: Unit test dummy file commit";
         final String COMMIT_MESSAGE_REMOTE = "REMOTE: Unit test dummy file commit";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
+        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userProperties);
         git.createAndCommitTestfile(repositorySet);
         git.deleteLocalAndRemoteTrackingBranches(repositorySet, PRODUCTION_BRANCH);
         git.remoteCreateTestfileInBranch(repositorySet, PRODUCTION_BRANCH, "remote-testfile.txt",
@@ -1130,12 +1158,13 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         git.assertCommitsInRemoteBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
+        assertConfigCleanedUp(MASTER_BRANCH);
     }
 
     @Test
     public void testExecuteProductionBranchNotExistingRemotely() throws Exception {
         // set up
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
+        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userProperties);
         git.createAndCommitTestfile(repositorySet);
         git.deleteRemoteBranch(repositorySet, PRODUCTION_BRANCH);
         // test
@@ -1156,13 +1185,14 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
                 COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
+        assertConfigCleanedUp(MASTER_BRANCH);
     }
 
     @Test
     public void testExecuteProductionBranchNotExistingLocallyAndRemotely() throws Exception {
         // set up
         final String COMMIT_MESSAGE_MASTER = "MASTER: Unit test dummy file commit";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
+        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userProperties);
         git.createAndCommitTestfile(repositorySet);
         git.deleteLocalAndRemoteTrackingBranches(repositorySet, PRODUCTION_BRANCH);
         git.deleteRemoteBranch(repositorySet, PRODUCTION_BRANCH);
@@ -1188,6 +1218,7 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
                 COMMIT_MESSAGE_RELEASE_START_SET_VERSION, COMMIT_MESSAGE_MASTER);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
+        assertConfigCleanedUp(MASTER_BRANCH);
     }
 
     @Test
@@ -1227,6 +1258,7 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
                 COMMIT_MESSAGE_REMOTE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
+        assertConfigCleanedUp(MAINTENANCE_BRANCH);
     }
 
     @Test
@@ -1364,6 +1396,7 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
                 COMMIT_MESSAGE_RELEASE_START_SET_VERSION, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
+        assertConfigCleanedUp(MAINTENANCE_BRANCH);
     }
 
     @Test
@@ -1401,12 +1434,13 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
                 COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
+        assertConfigCleanedUp(MAINTENANCE_BRANCH);
     }
 
     @Test
     public void testExecuteReleaseMergeProductionNoFFFalse() throws Exception {
         // set up
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
+        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userProperties);
         git.createAndCommitTestfile(repositorySet);
         userProperties.setProperty("flow.releaseMergeProductionNoFF", "false");
         // test
@@ -1421,7 +1455,7 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
     @Test
     public void testExecuteReleaseMergeProductionNoFFTrue() throws Exception {
         // set up
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
+        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userProperties);
         git.createAndCommitTestfile(repositorySet);
         userProperties.setProperty("flow.releaseMergeProductionNoFF", "true");
         // test
@@ -1437,8 +1471,11 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
     @Test
     public void testExecuteWithConflictOnReleaseMerge() throws Exception {
         // set up
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
+        final String EXPECTED_DEVELOPMENT_COMMIT = git.currentCommit(repositorySet);
+        final String EXPECTED_PRODUCTION_COMMIT = git.localBranchCurrentCommit(repositorySet, PRODUCTION_BRANCH);
+        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userProperties);
         git.createAndCommitTestfile(repositorySet);
+        final String EXPECTED_RELEASE_COMMIT = git.currentCommit(repositorySet);
         git.switchToBranch(repositorySet, PRODUCTION_BRANCH);
         git.createTestfile(repositorySet);
         git.modifyTestfile(repositorySet);
@@ -1450,12 +1487,23 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         assertGitFlowFailureExceptionRegEx(result, EXPECTED_RELEASE_MERGE_CONFLICT_MESSAGE_PATTERN);
         git.assertCurrentBranch(repositorySet, PRODUCTION_BRANCH);
         git.assertMergeInProcessFromBranch(repositorySet, RELEASE_BRANCH, GitExecution.TESTFILE_NAME);
+        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "development", MASTER_BRANCH);
+        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "developmentCommitRef", EXPECTED_DEVELOPMENT_COMMIT);
+        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "productionCommitRef", EXPECTED_PRODUCTION_COMMIT);
+
+        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "releaseCommit", EXPECTED_RELEASE_COMMIT);
+        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "nextSnapshotVersion", NEW_DEVELOPMENT_VERSION);
+        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "releaseTag", RELEASE_TAG);
+        git.assertBranchConfigValueMissing(repositorySet, MASTER_BRANCH, "releaseBranch");
     }
 
     @Test
     public void testExecuteWithConflictOnProductionMerge() throws Exception {
         // set up
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
+        final String EXPECTED_DEVELOPMENT_COMMIT = git.currentCommit(repositorySet);
+        final String EXPECTED_PRODUCTION_COMMIT = git.localBranchCurrentCommit(repositorySet, PRODUCTION_BRANCH);
+        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userProperties);
+        final String EXPECTED_RELEASE_COMMIT = git.currentCommit(repositorySet);
         git.switchToBranch(repositorySet, PRODUCTION_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
@@ -1469,12 +1517,23 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         assertGitFlowFailureExceptionRegEx(result, EXPECTED_PRODUCTION_MERGE_CONFLICT_MESSAGE_PATTERN);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertMergeInProcessFromBranch(repositorySet, PRODUCTION_BRANCH, GitExecution.TESTFILE_NAME);
+        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "development", MASTER_BRANCH);
+        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "developmentCommitRef", EXPECTED_DEVELOPMENT_COMMIT);
+        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "productionCommitRef", EXPECTED_PRODUCTION_COMMIT);
+
+        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "releaseCommit", EXPECTED_RELEASE_COMMIT);
+        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "nextSnapshotVersion", NEW_DEVELOPMENT_VERSION);
+        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "releaseTag", RELEASE_TAG);
+        git.assertBranchConfigValue(repositorySet, MASTER_BRANCH, "releaseBranch", RELEASE_BRANCH);
     }
 
     @Test
     public void testExecuteWithConflictOnRemoteMasterMerge() throws Exception {
         // set up
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
+        final String EXPECTED_DEVELOPMENT_COMMIT = git.currentCommit(repositorySet);
+        final String EXPECTED_PRODUCTION_COMMIT = git.localBranchCurrentCommit(repositorySet, PRODUCTION_BRANCH);
+        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userProperties);
+        final String EXPECTED_RELEASE_COMMIT = git.currentCommit(repositorySet);
         git.remoteCreateTestfileInBranch(repositorySet, MASTER_BRANCH);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createTestfile(repositorySet);
@@ -1487,13 +1546,21 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         assertGitFlowFailureExceptionRegEx(result, EXPECTED_UPSTREAM_MERGE_CONFLICT_MESSAGE_PATTERN);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertMergeInProcessFromBranch(repositorySet, "origin/" + MASTER_BRANCH, GitExecution.TESTFILE_NAME);
+        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "development", MASTER_BRANCH);
+        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "developmentCommitRef", EXPECTED_DEVELOPMENT_COMMIT);
+        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "productionCommitRef", EXPECTED_PRODUCTION_COMMIT);
+
+        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "releaseCommit", EXPECTED_RELEASE_COMMIT);
+        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "nextSnapshotVersion", NEW_DEVELOPMENT_VERSION);
+        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "releaseTag", RELEASE_TAG);
+        git.assertBranchConfigValue(repositorySet, MASTER_BRANCH, "releaseBranch", RELEASE_BRANCH);
     }
 
     @Test
     public void testExecuteWithResolvedConflictOnReleaseMerge() throws Exception {
         // set up
         final String COMMIT_MESSAGE_PRODUCTION = "PRODUCTION: Modified test dummy file commit";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
+        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userProperties);
         git.createAndCommitTestfile(repositorySet);
         git.switchToBranch(repositorySet, PRODUCTION_BRANCH);
         git.createTestfile(repositorySet);
@@ -1528,13 +1595,14 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
                 GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
+        assertConfigCleanedUp(MASTER_BRANCH);
     }
 
     @Test
     public void testExecuteWithResolvedConflictOnProductionMerge() throws Exception {
         // set up
         final String COMMIT_MESSAGE_MASTER = "MASTER: Modified test dummy file commit";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
+        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userProperties);
         git.switchToBranch(repositorySet, PRODUCTION_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
@@ -1569,6 +1637,7 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
                 GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
+        assertConfigCleanedUp(MASTER_BRANCH);
     }
 
     @Test
@@ -1620,13 +1689,14 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
                 COMMIT_MESSAGE_RELEASE_START_SET_VERSION, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
+        assertConfigCleanedUp(MAINTENANCE_BRANCH);
     }
 
     @Test
     public void testExecuteWithResolvedConflictOnRemoteMasterMerge() throws Exception {
         // set up
         final String COMMIT_MESSAGE_LOCAL = "LOCAL: Modified test dummy file commit";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
+        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userProperties);
         git.remoteCreateTestfileInBranch(repositorySet, MASTER_BRANCH);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createTestfile(repositorySet);
@@ -1661,6 +1731,7 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
                 COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
+        assertConfigCleanedUp(MASTER_BRANCH);
     }
 
     @Test

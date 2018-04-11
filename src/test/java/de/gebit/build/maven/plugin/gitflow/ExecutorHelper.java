@@ -126,6 +126,16 @@ public class ExecutorHelper {
         verifyNoMoreInteractions(promptControllerMock);
     }
 
+    public static MavenExecutionResult executeReleaseFinishWithResult(AbstractGitFlowMojoTestCase testCase,
+            RepositorySet repositorySet) throws Exception {
+        return executeReleaseFinishWithResult(testCase, repositorySet, null);
+    }
+
+    public static MavenExecutionResult executeReleaseFinishWithResult(AbstractGitFlowMojoTestCase testCase,
+            RepositorySet repositorySet, Properties userProperties) throws Exception {
+        return testCase.executeMojoWithResult(repositorySet.getWorkingDirectory(), "release-finish", userProperties);
+    }
+
     public static void executeMaintenanceStart(AbstractGitFlowMojoTestCase testCase, RepositorySet repositorySet,
             String maintenanceVersion) throws Exception {
         executeMaintenanceStart(testCase, repositorySet, maintenanceVersion,

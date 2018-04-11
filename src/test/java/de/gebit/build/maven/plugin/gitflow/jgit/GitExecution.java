@@ -501,6 +501,36 @@ public class GitExecution {
     }
 
     /**
+     * Returns ID of the current commit on passed local branch.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param branch
+     *            the name of the local branch
+     * @return the ID of the current commit on remote branch
+     */
+    public String localBranchCurrentCommit(RepositorySet repositorySet, String branch) throws IOException {
+        return branchCurrentCommit(repositorySet.getLocalRepoGit(), branch);
+    }
+
+    /**
+     * Returns ID of the current commit on passed remote branch.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param branch
+     *            the name of the remote branch
+     * @return the ID of the current commit on remote branch
+     */
+    public String remoteBranchCurrentCommit(RepositorySet repositorySet, String branch) throws IOException {
+        return branchCurrentCommit(repositorySet.getRemoteRepoGit(), branch);
+    }
+
+    private String branchCurrentCommit(Git git, String branch) throws IOException {
+        return git.getRepository().resolve(REFS_HEADS_PATH + branch).getName();
+    }
+
+    /**
      * Returns a list with names of branches in local repository.
      *
      * @param repositorySet
@@ -776,6 +806,24 @@ public class GitExecution {
     }
 
     /**
+     * Assert that passed config entry for passed branch exists in local
+     * repository and has passed expected value.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param branchName
+     *            the name of the branch
+     * @param configName
+     *            the name part of the config entry key
+     * @param expectedConfigValue
+     *            the expected value of the config entry
+     */
+    public void assertBranchConfigValue(RepositorySet repositorySet, String branchName, String configName,
+            String expectedConfigValue) {
+        assertConfigValue(repositorySet, "branch", branchName, configName, expectedConfigValue);
+    }
+
+    /**
      * Assert that passed config entry doesn't exist in local repository.
      *
      * @param repositorySet
@@ -792,6 +840,21 @@ public class GitExecution {
         String value = getConfigValue(repositorySet, configSection, configSubsection, configName);
         assertNull("git config [section='" + configSection + "', subsection='" + configSubsection + "', name='"
                 + configName + "'] found but not expected", value);
+    }
+
+    /**
+     * Assert that passed config entry for passed branch doesn't exist in local
+     * repository.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param branchName
+     *            the name of the branch
+     * @param configName
+     *            the name part of the config entry key
+     */
+    public void assertBranchConfigValueMissing(RepositorySet repositorySet, String branchName, String configName) {
+        assertConfigValueMissing(repositorySet, "branch", branchName, configName);
     }
 
     /**
@@ -947,6 +1010,18 @@ public class GitExecution {
                 repositorySet.getLocalRepoGit().push().add(tag).call();
             }
         }
+    }
+
+    /**
+     * Delete local tag.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param tag
+     *            the tag to be deleted
+     */
+    public void deleteTag(RepositorySet repositorySet, String tag) throws GitAPIException {
+        repositorySet.getLocalRepoGit().tagDelete().setTags(tag).call();
     }
 
     /**
@@ -1495,6 +1570,25 @@ public class GitExecution {
      */
     public void assertCurrentCommit(RepositorySet repositorySet, String expectedCommitId) throws IOException {
         assertEquals("current commit is wrong", expectedCommitId, currentCommit(repositorySet));
+    }
+
+    /**
+     * Assert that the current commit of the passed local branch has the passed
+     * commit ID.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param branch
+     *            the name of the local branch
+     * @param expectedCommitId
+     *            the expected commit ID
+     * @throws IOException
+     *             in case of an I/O error
+     */
+    public void assertLocalBranchCurrentCommit(RepositorySet repositorySet, String branch, String expectedCommitId)
+            throws IOException {
+        assertEquals("local branch current commit is wrong", expectedCommitId,
+                localBranchCurrentCommit(repositorySet, branch));
     }
 
     private class CommitRevFilter extends RevFilter {
