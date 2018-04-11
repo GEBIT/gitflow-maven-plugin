@@ -221,15 +221,14 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
                         "'git config branch." + currentBranch
                                 + ".development [development branch name]' to configure development branch");
             }
-            gitEnsureLocalBranchExists(developmentBranch,
-                    new GitFlowFailureInfo(
-                            "The development branch '" + developmentBranch + "' configured for the current release branch '"
-                                    + currentBranch + "' doesn't exist.\nThis indicates either a wrong configuration for "
-                                    + "the release branch or a severe error condition on your branches.",
-                            "Please configure correct development branch for the current release branch or consult a "
-                                    + "gitflow expert on how to fix this.",
-                            "'git config branch." + currentBranch
-                                    + ".development [development branch name]' to configure correct development branch"));
+            gitEnsureLocalBranchExists(developmentBranch, new GitFlowFailureInfo(
+                    "The development branch '" + developmentBranch + "' configured for the current release branch '"
+                            + currentBranch + "' doesn't exist.\nThis indicates either a wrong configuration for "
+                            + "the release branch or a severe error condition on your branches.",
+                    "Please configure correct development branch for the current release branch or consult a "
+                            + "gitflow expert on how to fix this.",
+                    "'git config branch." + currentBranch
+                            + ".development [development branch name]' to configure correct development branch"));
 
             gitAssertRemoteBranchNotAheadOfLocalBranche(currentBranch,
                     new GitFlowFailureInfo(
@@ -241,18 +240,14 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
                                     + "This indicates a severe error condition on your branches.",
                             "Please consult a gitflow expert on how to fix this!"));
 
-            boolean releaseOnMaintenanceBranch = isMaintenanceBranch(developmentBranch);
-            String productionBranch = gitFlowConfig.getProductionBranch();
-            if (releaseOnMaintenanceBranch) {
-                productionBranch += "-" + developmentBranch;
-            }
+            String productionBranch = getProductionBranchForDevelopmentBranch(developmentBranch);
             gitEnsureLocalBranchIsUpToDateIfExists(productionBranch,
                     new GitFlowFailureInfo(
                             "Remote and local production branches '{0}' diverge.\n"
                                     + "This indicates a severe error condition on your branches.",
                             "Please consult a gitflow expert on how to fix this!"));
 
-            releaseFinish(developmentBranch, releaseOnMaintenanceBranch);
+            releaseFinish(developmentBranch);
         }
     }
 }

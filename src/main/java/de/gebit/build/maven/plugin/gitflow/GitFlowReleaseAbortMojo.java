@@ -35,60 +35,62 @@ public class GitFlowReleaseAbortMojo extends AbstractGitFlowMojo {
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
-        String releaseBranch;
         String currentBranch = gitCurrentBranch();
-        if (isReleaseBranch(currentBranch)) {
-            releaseBranch = currentBranch;
-            String developmentBranch = gitGetBranchConfig(releaseBranch, "development");
-            if (StringUtils.isBlank(developmentBranch)) {
-                developmentBranch = gitFlowConfig.getDevelopmentBranch();
-            }
-            if (!gitLocalOrRemoteBranchesExist(developmentBranch)) {
-                if (!gitFlowConfig.getDevelopmentBranch().equals(developmentBranch)) {
+        String releaseBranch = abortReleaseWithConflictsIfMergeInProcess(currentBranch);
+        if (releaseBranch == null) {
+            if (isReleaseBranch(currentBranch)) {
+                releaseBranch = currentBranch;
+                String developmentBranch = gitGetBranchConfig(releaseBranch, "development");
+                if (StringUtils.isBlank(developmentBranch)) {
                     developmentBranch = gitFlowConfig.getDevelopmentBranch();
-                    if (!gitLocalOrRemoteBranchesExist(developmentBranch)) {
+                }
+                if (!gitLocalOrRemoteBranchesExist(developmentBranch)) {
+                    if (!gitFlowConfig.getDevelopmentBranch().equals(developmentBranch)) {
+                        developmentBranch = gitFlowConfig.getDevelopmentBranch();
+                        if (!gitLocalOrRemoteBranchesExist(developmentBranch)) {
+                            developmentBranch = null;
+                        }
+                    } else {
                         developmentBranch = null;
                     }
-                } else {
-                    developmentBranch = null;
                 }
-            }
-            if (developmentBranch != null) {
-                if (executeGitHasUncommitted()) {
-                    boolean confirmed = getPrompter().promptConfirmation(
-                            "You have some uncommitted files. If you continue any changes will be discarded. Continue?",
-                            false, true);
-                    if (!confirmed) {
-                        throw new GitFlowFailureException(
-                                "You have aborted release-abort process because of uncommitted files.",
-                                "Commit or discard local changes in order to proceed.",
-                                "'git add' and 'git commit' to commit your changes",
-                                "'git reset --hard' to throw away your changes");
+                if (developmentBranch != null) {
+                    if (executeGitHasUncommitted()) {
+                        boolean confirmed = getPrompter().promptConfirmation(
+                                "You have some uncommitted files. If you continue any changes will be discarded. Continue?",
+                                false, true);
+                        if (!confirmed) {
+                            throw new GitFlowFailureException(
+                                    "You have aborted release-abort process because of uncommitted files.",
+                                    "Commit or discard local changes in order to proceed.",
+                                    "'git add' and 'git commit' to commit your changes",
+                                    "'git reset --hard' to throw away your changes");
+                        }
+                        gitResetHard();
                     }
-                    gitResetHard();
+                    gitCheckout(developmentBranch);
+                } else {
+                    throw new GitFlowFailureException(
+                            "No development branch found for current release branch. Cannot abort release.\n"
+                                    + "This indicates a severe error condition on your branches.",
+                            "Please configure correct development branch for the current release branch or consult a "
+                                    + "gitflow expert on how to fix this.",
+                            "'git config branch." + releaseBranch
+                                    + ".development [development branch name]' to configure correct development branch");
                 }
-                gitCheckout(developmentBranch);
             } else {
-                throw new GitFlowFailureException(
-                        "No development branch found for current release branch. Cannot abort release.\n"
-                                + "This indicates a severe error condition on your branches.",
-                        "Please configure correct development branch for the current release branch or consult a "
-                                + "gitflow expert on how to fix this.",
-                        "'git config branch." + releaseBranch
-                                + ".development [development branch name]' to configure correct development branch");
+                List<String> releaseBranches = gitAllBranches(gitFlowConfig.getReleaseBranchPrefix());
+                if (releaseBranches.isEmpty()) {
+                    throw new GitFlowFailureException("There are no release branches in your repository.", null);
+                }
+                if (releaseBranches.size() > 1) {
+                    throw new GitFlowFailureException(
+                            "More than one release branch exists. Cannot abort release from non-release branch.",
+                            "Please switch to a release branch first in order to proceed.",
+                            "'git checkout BRANCH' to switch to the release branch");
+                }
+                releaseBranch = releaseBranches.get(0);
             }
-        } else {
-            List<String> releaseBranches = gitAllBranches(gitFlowConfig.getReleaseBranchPrefix());
-            if (releaseBranches.isEmpty()) {
-                throw new GitFlowFailureException("There are no release branches in your repository.", null);
-            }
-            if (releaseBranches.size() > 1) {
-                throw new GitFlowFailureException(
-                        "More than one release branch exists. Cannot abort release from non-release branch.",
-                        "Please switch to a release branch first in order to proceed.",
-                        "'git checkout BRANCH' to switch to the release branch");
-            }
-            releaseBranch = releaseBranches.get(0);
         }
 
         if (gitBranchExists(releaseBranch)) {
@@ -100,5 +102,121 @@ public class GitFlowReleaseAbortMojo extends AbstractGitFlowMojo {
             // delete the remote branch
             gitBranchDeleteRemote(releaseBranch);
         }
+    }
+
+    private String abortReleaseWithConflictsIfMergeInProcess(String currentBranch)
+            throws MojoFailureException, CommandLineException {
+        String mergeFromBranch = gitMergeFromBranchIfInProcess(gitFlowConfig.getDevelopmentBranch(),
+                gitFlowConfig.getMaintenanceBranchPrefix() + "*", gitFlowConfig.getProductionBranch(),
+                gitFlowConfig.getProductionBranch() + "-" + gitFlowConfig.getMaintenanceBranchPrefix() + "*",
+                gitFlowConfig.getReleaseBranchPrefix() + "*",
+                gitFlowConfig.getOrigin() + "/" + gitFlowConfig.getDevelopmentBranch(),
+                gitFlowConfig.getOrigin() + "/" + gitFlowConfig.getMaintenanceBranchPrefix() + "*");
+        if (mergeFromBranch != null) {
+            return abortReleaseWithMergeConflicts(currentBranch, mergeFromBranch);
+        }
+        return null;
+    }
+
+    private String abortReleaseWithMergeConflicts(String mergeIntoBranch, String mergeFromBranch)
+            throws MojoFailureException, CommandLineException {
+        String developmentBranch;
+        String productionBranch;
+        String releaseBranch;
+        if (isReleaseBranch(mergeFromBranch)) {
+            releaseBranch = mergeFromBranch;
+            if (isDevelopmentBranch(mergeIntoBranch) || isMaintenanceBranch(mergeIntoBranch)) {
+                developmentBranch = mergeIntoBranch;
+                productionBranch = getProductionBranchForDevelopmentBranch(developmentBranch);
+            } else if (isProductionBranch(mergeIntoBranch)) {
+                productionBranch = mergeIntoBranch;
+                developmentBranch = getDevelopmentBranchForProductionBranch(productionBranch);
+            } else {
+                throw new GitFlowFailureException(
+                        getFailureMessageForUnsupportedMergeConflict(mergeIntoBranch, mergeFromBranch));
+            }
+        } else if (isProductionBranch(mergeFromBranch)) {
+            if (isDevelopmentBranch(mergeIntoBranch) || isMaintenanceBranch(mergeIntoBranch)) {
+                developmentBranch = mergeIntoBranch;
+                productionBranch = mergeFromBranch;
+                releaseBranch = gitGetBranchConfig(developmentBranch, "releaseBranch");
+            } else {
+                throw new GitFlowFailureException(
+                        getFailureMessageForUnsupportedMergeConflict(mergeIntoBranch, mergeFromBranch));
+            }
+        } else if (isRemoteBranch(mergeFromBranch)) {
+            if (isDevelopmentBranch(mergeIntoBranch) || isMaintenanceBranch(mergeIntoBranch)) {
+                developmentBranch = mergeIntoBranch;
+                productionBranch = getProductionBranchForDevelopmentBranch(developmentBranch);
+                releaseBranch = gitGetBranchConfig(developmentBranch, "releaseBranch");
+            } else {
+                throw new GitFlowFailureException(
+                        getFailureMessageForUnsupportedMergeConflict(mergeIntoBranch, mergeFromBranch));
+            }
+        } else {
+            throw new GitFlowFailureException(
+                    getFailureMessageForUnsupportedMergeConflict(mergeIntoBranch, mergeFromBranch));
+        }
+        if (!getPrompter().promptConfirmation(
+                "You have a merge in process on your current branch.\n"
+                        + "If you run 'mvn flow:release' or 'mvn flow:release-finish' before and merge had conflicts "
+                        + "and now you want to abort this release then you can continue.\n"
+                        + "In other case it is better to clarify the reason of merge in process. Continue?",
+                true, true)) {
+            throw new GitFlowFailureException("Continuation of release abort process aborted by user.", null);
+        }
+        if (StringUtils.isBlank(releaseBranch)) {
+            throw new GitFlowFailureException(
+                    "There is a conflict of merging branch '" + mergeFromBranch + "' into branch '" + mergeIntoBranch
+                            + "'.\nInformation about release branch couldn't be found in git config.\n"
+                            + "Release can't be automatically aborted.",
+                    "Please consult a gitflow expert on how to fix this!");
+        }
+        String developmentCommitRef = gitGetBranchConfig(releaseBranch, "developmentCommitRef");
+        if (StringUtils.isBlank(developmentCommitRef)) {
+            throw new GitFlowFailureException(
+                    "There is a conflict of merging branch '" + mergeFromBranch + "' into branch '" + mergeIntoBranch
+                            + "'.\nReset point for development branch couldn't be found in git config.\n"
+                            + "Release can't be automatically aborted.",
+                    "Please consult a gitflow expert on how to fix this!");
+        }
+        gitMergeAbort();
+        String tagName = gitGetBranchConfig(releaseBranch, "releaseTag");
+        if (StringUtils.isNotBlank(tagName) && gitTagExists(tagName)) {
+            gitRemoveLocalTag(tagName);
+        }
+        gitUpdateRef(developmentBranch, developmentCommitRef);
+        if (developmentBranch.equals(gitCurrentBranchOrCommit())) {
+            gitResetHard();
+        }
+        gitCheckout(developmentBranch);
+        String productionCommitRef = gitGetBranchConfig(releaseBranch, "productionCommitRef");
+        if (StringUtils.isNotBlank(productionCommitRef)) {
+            gitUpdateRef(productionBranch, productionCommitRef);
+        } else if (isUsingProductionBranch(developmentBranch, productionBranch) && gitBranchExists(productionBranch)) {
+            // production branch was newly created -> can be deleted on abort
+            gitBranchDeleteForce(productionBranch);
+        }
+        removeBranchConfigs(releaseBranch, developmentBranch);
+        return releaseBranch;
+    }
+
+    private void removeBranchConfigs(String releaseBranch, String developmentBranch)
+            throws MojoFailureException, CommandLineException {
+        gitRemoveBranchConfig(releaseBranch, "development");
+        gitRemoveBranchConfig(releaseBranch, "developmentCommitRef");
+        gitRemoveBranchConfig(releaseBranch, "productionCommitRef");
+        gitRemoveBranchConfig(releaseBranch, "releaseTag");
+        gitRemoveBranchConfig(releaseBranch, "releaseCommit");
+        gitRemoveBranchConfig(releaseBranch, "nextSnapshotVersion");
+        gitRemoveBranchConfig(developmentBranch, "releaseBranch");
+    }
+
+    private GitFlowFailureInfo getFailureMessageForUnsupportedMergeConflict(String mergeIntoBranch,
+            String mergeFromBranch) {
+        return new GitFlowFailureInfo(
+                "There is a conflict of merging branch '" + mergeFromBranch + "' into branch '" + mergeIntoBranch
+                        + "'. After such a conflict release can't be automatically aborted.",
+                "Please consult a gitflow expert on how to fix this!");
     }
 }

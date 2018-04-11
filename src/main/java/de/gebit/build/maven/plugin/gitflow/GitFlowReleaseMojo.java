@@ -242,8 +242,8 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
             checkUncommittedChanges();
 
             // perform start and finish in one step
-            boolean releaseOnSupportBranch = releaseStart();
-            releaseFinish(currentBranch, releaseOnSupportBranch);
+            releaseStart();
+            releaseFinish(currentBranch);
         }
     }
 }

@@ -933,6 +933,35 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
+     * Remove local tag. <code>git tag -d tagName</code>
+     *
+     * @param tagName
+     *            the name of the tag
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitRemoveLocalTag(String tagName) throws MojoFailureException, CommandLineException {
+        getLog().info("Removing '" + tagName + "' tag.");
+        executeGitCommand("tag", "-d", tagName);
+    }
+
+    /**
+     * Remove remote tag if <code>pushRemote=false</code>.<br>
+     * <code>git push --delete origin tagName</code>
+     *
+     * @param tagName
+     *            the name of the tag
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitRemoveRemoteTag(String tagName) throws MojoFailureException, CommandLineException {
+        getLog().info("Removing '" + tagName + "' tag.");
+        if (pushRemote) {
+            executeGitCommand("push", "--delete", gitFlowConfig.getOrigin(), tagName);
+        }
+    }
+
+    /**
      * Executes git symbolic-ref --short HEAD to get the current branch. Throws
      * an exception when in detached HEAD state.
      *
@@ -1629,7 +1658,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             @Override
             public Void call() throws Exception {
                 gitUpdateRef(branchName, "refs/remotes/" + gitFlowConfig.getOrigin() + "/" + branchName);
-                executeGitCommand("reset", "--hard", "HEAD");
+                gitResetHard();
                 return null;
             }
         }, new Callable<Void>() {
@@ -1663,7 +1692,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             @Override
             public Void call() throws Exception {
                 gitUpdateRef(branchName, "refs/remotes/" + gitFlowConfig.getOrigin() + "/" + branchName);
-                executeGitCommand("reset", "--hard", "HEAD");
+                gitResetHard();
                 return null;
             }
         }, new Callable<Void>() {
@@ -2212,14 +2241,13 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Checks whether a rebase is in progress by looking at .git/rebase-apply.
+     * Abort the merge in process.
      *
-     * @return true if a branch with the passed name exists.
      * @throws MojoFailureException
      * @throws CommandLineException
      */
-    protected void gitRebaseAbort() throws MojoFailureException, CommandLineException {
-        executeGitCommand("rebase", "--abort");
+    protected void gitMergeAbort() throws MojoFailureException, CommandLineException {
+        executeGitCommand("merge", "--abort");
     }
 
     /**
@@ -3135,6 +3163,20 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             }
         }
         return newVersion;
+    }
+
+    /**
+     * Check if production branch is used.
+     *
+     * @param developmentBranch
+     *            the name of development branch
+     * @param productionBranch
+     *            the name of production branch
+     * @return <code>true</code> if parameter <code>noProduction=false</code>
+     *         and prodaction and development branches are different
+     */
+    protected boolean isUsingProductionBranch(String developmentBranch, String productionBranch) {
+        return !gitFlowConfig.isNoProduction() && !developmentBranch.equals(productionBranch);
     }
 
     private static class CommandResult {
