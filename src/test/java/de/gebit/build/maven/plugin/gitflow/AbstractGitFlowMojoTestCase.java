@@ -169,11 +169,13 @@ public abstract class AbstractGitFlowMojoTestCase {
      *            the basedir of the project which goal should be executed for
      * @param goal
      *            the flow goal to be executed (without 'flow' prefix)
+     * @param activeProfiles
+     *            the optional profiles that should be activated
      * @throws Exception
      *             if an error occurs while preparing maven for mojo execution
      */
-    protected void executeMojo(File basedir, String goal) throws Exception {
-        executeMojo(basedir, goal, WITH_DEFAULTS, null, null);
+    protected void executeMojo(File basedir, String goal, String... activeProfiles) throws Exception {
+        executeMojo(basedir, goal, WITH_DEFAULTS, null, null, activeProfiles);
     }
 
     /**
@@ -221,125 +223,35 @@ public abstract class AbstractGitFlowMojoTestCase {
      *            the basedir of the project which goal should be executed for
      * @param goal
      *            the flow goal to be executed (without 'flow' prefix)
+     * @param activeProfiles
+     *            the optional profiles that should be activated
      * @return the maven execution result
      * @throws Exception
      *             if an error occurs while preparing maven for mojo execution
      */
-    protected MavenExecutionResult executeMojoWithResult(File basedir, String goal) throws Exception {
-        return executeMojoWithResult(basedir, goal, WITH_DEFAULTS, null, null);
-    }
-
-    /**
-     * Executes mojo (with default configurations) for passed goal for a project
-     * in passed basedir.
-     *
-     * @param basedir
-     *            the basedir of the project which goal should be executed for
-     * @param goal
-     *            the flow goal to be executed (without 'flow' prefix)
-     * @param properties
-     *            the user properties to be used while maven execution
-     * @throws Exception
-     *             if an error occurs while preparing maven for mojo execution
-     */
-    protected void executeMojo(File basedir, String goal, Properties properties) throws Exception {
-        executeMojo(basedir, goal, WITH_DEFAULTS, properties, null);
-    }
-
-    /**
-     * Executes mojo (with default configurations) for passed goal for a project
-     * in passed basedir.
-     *
-     * @param basedir
-     *            the basedir of the project which goal should be executed for
-     * @param goal
-     *            the flow goal to be executed (without 'flow' prefix)
-     * @param properties
-     *            the user properties to be used while maven execution
-     * @return the maven execution result
-     * @throws Exception
-     *             if an error occurs while preparing maven for mojo execution
-     */
-    protected MavenExecutionResult executeMojoWithResult(File basedir, String goal, Properties properties)
+    protected MavenExecutionResult executeMojoWithResult(File basedir, String goal, String... activeProfiles)
             throws Exception {
-        return executeMojoWithResult(basedir, goal, WITH_DEFAULTS, properties, null);
+        return executeMojoWithResult(basedir, goal, WITH_DEFAULTS, null, null, activeProfiles);
     }
 
     /**
-     * Executes mojo for passed goal for a project in passed basedir.
+     * Executes mojo (with default configurations) for passed goal for a project
+     * in passed basedir.
      *
      * @param basedir
      *            the basedir of the project which goal should be executed for
-     * @param useProfileWithDefaults
-     *            the flag determines if profile with plugin default
-     *            configurations should be active
      * @param goal
      *            the flow goal to be executed (without 'flow' prefix)
      * @param properties
      *            the user properties to be used while maven execution
+     * @param activeProfiles
+     *            the optional profiles that should be activated
      * @throws Exception
      *             if an error occurs while preparing maven for mojo execution
      */
-    protected void executeMojo(File basedir, String goal, boolean useProfileWithDefaults, Properties properties)
+    protected void executeMojo(File basedir, String goal, Properties properties, String... activeProfiles)
             throws Exception {
-        executeMojo(basedir, goal, useProfileWithDefaults, properties, null);
-    }
-
-    /**
-     * Executes mojo for passed goal for a project in passed basedir.
-     *
-     * @param basedir
-     *            the basedir of the project which goal should be executed for
-     * @param useProfileWithDefaults
-     *            the flag determines if profile with plugin default
-     *            configurations should be active
-     * @param goal
-     *            the flow goal to be executed (without 'flow' prefix)
-     * @param properties
-     *            the user properties to be used while maven execution
-     * @return the maven execution result
-     * @throws Exception
-     *             if an error occurs while preparing maven for mojo execution
-     */
-    protected MavenExecutionResult executeMojoWithResult(File basedir, String goal, boolean useProfileWithDefaults,
-            Properties properties) throws Exception {
-        return executeMojoWithResult(basedir, goal, useProfileWithDefaults, properties, null);
-    }
-
-    /**
-     * Executes mojo (with default configurations) for passed goal for a project
-     * in passed basedir.
-     *
-     * @param basedir
-     *            the basedir of the project which goal should be executed for
-     * @param goal
-     *            the flow goal to be executed (without 'flow' prefix)
-     * @param promptController
-     *            the prompt controller that answers to the maven prompts
-     * @throws Exception
-     *             if an error occurs while preparing maven for mojo execution
-     */
-    protected void executeMojo(File basedir, String goal, Prompter promptController) throws Exception {
-        executeMojo(basedir, goal, WITH_DEFAULTS, null, promptController);
-    }
-
-    /**
-     * Executes mojo (with default configurations) for passed goal for a project
-     * in passed basedir.
-     *
-     * @param basedir
-     *            the basedir of the project which goal should be executed for
-     * @param goal
-     *            the flow goal to be executed (without 'flow' prefix)
-     * @param promptController
-     *            the prompt controller that answers to the maven prompts
-     * @return the maven execution result
-     * @throws Exception
-     *             if an error occurs while preparing maven for mojo execution
-     */
-    protected MavenExecutionResult executeMojoWithResult(File basedir, String goal, Prompter promptController)
-            throws Exception {
-        return executeMojoWithResult(basedir, goal, WITH_DEFAULTS, null, promptController);
+        executeMojo(basedir, goal, WITH_DEFAULTS, properties, null, activeProfiles);
     }
 
     /**
@@ -352,35 +264,146 @@ public abstract class AbstractGitFlowMojoTestCase {
      *            the flow goal to be executed (without 'flow' prefix)
      * @param properties
      *            the user properties to be used while maven execution
-     * @param promptController
-     *            the prompt controller that answers to the maven prompts
-     * @throws Exception
-     *             if an error occurs while preparing maven for mojo execution
-     */
-    protected void executeMojo(File basedir, String goal, Properties properties, Prompter promptController)
-            throws Exception {
-        executeMojo(basedir, goal, WITH_DEFAULTS, properties, promptController);
-    }
-
-    /**
-     * Executes mojo (with default configurations) for passed goal for a project
-     * in passed basedir.
-     *
-     * @param basedir
-     *            the basedir of the project which goal should be executed for
-     * @param goal
-     *            the flow goal to be executed (without 'flow' prefix)
-     * @param properties
-     *            the user properties to be used while maven execution
-     * @param promptController
-     *            the prompt controller that answers to the maven prompts
+     * @param activeProfiles
+     *            the optional profiles that should be activated
      * @return the maven execution result
      * @throws Exception
      *             if an error occurs while preparing maven for mojo execution
      */
     protected MavenExecutionResult executeMojoWithResult(File basedir, String goal, Properties properties,
-            Prompter promptController) throws Exception {
-        return executeMojoWithResult(basedir, goal, WITH_DEFAULTS, properties, promptController);
+            String... activeProfiles) throws Exception {
+        return executeMojoWithResult(basedir, goal, WITH_DEFAULTS, properties, null, activeProfiles);
+    }
+
+    /**
+     * Executes mojo for passed goal for a project in passed basedir.
+     *
+     * @param basedir
+     *            the basedir of the project which goal should be executed for
+     * @param useProfileWithDefaults
+     *            the flag determines if profile with plugin default
+     *            configurations should be active
+     * @param goal
+     *            the flow goal to be executed (without 'flow' prefix)
+     * @param properties
+     *            the user properties to be used while maven execution
+     * @param activeProfiles
+     *            the optional profiles that should be activated
+     * @throws Exception
+     *             if an error occurs while preparing maven for mojo execution
+     */
+    protected void executeMojo(File basedir, String goal, boolean useProfileWithDefaults, Properties properties,
+            String... activeProfiles) throws Exception {
+        executeMojo(basedir, goal, useProfileWithDefaults, properties, null, activeProfiles);
+    }
+
+    /**
+     * Executes mojo for passed goal for a project in passed basedir.
+     *
+     * @param basedir
+     *            the basedir of the project which goal should be executed for
+     * @param useProfileWithDefaults
+     *            the flag determines if profile with plugin default
+     *            configurations should be active
+     * @param goal
+     *            the flow goal to be executed (without 'flow' prefix)
+     * @param properties
+     *            the user properties to be used while maven execution
+     * @param activeProfiles
+     *            the optional profiles that should be activated
+     * @return the maven execution result
+     * @throws Exception
+     *             if an error occurs while preparing maven for mojo execution
+     */
+    protected MavenExecutionResult executeMojoWithResult(File basedir, String goal, boolean useProfileWithDefaults,
+            Properties properties, String... activeProfiles) throws Exception {
+        return executeMojoWithResult(basedir, goal, useProfileWithDefaults, properties, null, activeProfiles);
+    }
+
+    /**
+     * Executes mojo (with default configurations) for passed goal for a project
+     * in passed basedir.
+     *
+     * @param basedir
+     *            the basedir of the project which goal should be executed for
+     * @param goal
+     *            the flow goal to be executed (without 'flow' prefix)
+     * @param promptController
+     *            the prompt controller that answers to the maven prompts
+     * @param activeProfiles
+     *            the optional profiles that should be activated
+     * @throws Exception
+     *             if an error occurs while preparing maven for mojo execution
+     */
+    protected void executeMojo(File basedir, String goal, Prompter promptController, String... activeProfiles)
+            throws Exception {
+        executeMojo(basedir, goal, WITH_DEFAULTS, null, promptController, activeProfiles);
+    }
+
+    /**
+     * Executes mojo (with default configurations) for passed goal for a project
+     * in passed basedir.
+     *
+     * @param basedir
+     *            the basedir of the project which goal should be executed for
+     * @param goal
+     *            the flow goal to be executed (without 'flow' prefix)
+     * @param promptController
+     *            the prompt controller that answers to the maven prompts
+     * @param activeProfiles
+     *            the optional profiles that should be activated
+     * @return the maven execution result
+     * @throws Exception
+     *             if an error occurs while preparing maven for mojo execution
+     */
+    protected MavenExecutionResult executeMojoWithResult(File basedir, String goal, Prompter promptController,
+            String... activeProfiles) throws Exception {
+        return executeMojoWithResult(basedir, goal, WITH_DEFAULTS, null, promptController, activeProfiles);
+    }
+
+    /**
+     * Executes mojo (with default configurations) for passed goal for a project
+     * in passed basedir.
+     *
+     * @param basedir
+     *            the basedir of the project which goal should be executed for
+     * @param goal
+     *            the flow goal to be executed (without 'flow' prefix)
+     * @param properties
+     *            the user properties to be used while maven execution
+     * @param promptController
+     *            the prompt controller that answers to the maven prompts
+     * @param activeProfiles
+     *            the optional profiles that should be activated
+     * @throws Exception
+     *             if an error occurs while preparing maven for mojo execution
+     */
+    protected void executeMojo(File basedir, String goal, Properties properties, Prompter promptController,
+            String... activeProfiles) throws Exception {
+        executeMojo(basedir, goal, WITH_DEFAULTS, properties, promptController, activeProfiles);
+    }
+
+    /**
+     * Executes mojo (with default configurations) for passed goal for a project
+     * in passed basedir.
+     *
+     * @param basedir
+     *            the basedir of the project which goal should be executed for
+     * @param goal
+     *            the flow goal to be executed (without 'flow' prefix)
+     * @param properties
+     *            the user properties to be used while maven execution
+     * @param promptController
+     *            the prompt controller that answers to the maven prompts
+     * @param activeProfiles
+     *            the optional profiles that should be activated
+     * @return the maven execution result
+     * @throws Exception
+     *             if an error occurs while preparing maven for mojo execution
+     */
+    protected MavenExecutionResult executeMojoWithResult(File basedir, String goal, Properties properties,
+            Prompter promptController, String... activeProfiles) throws Exception {
+        return executeMojoWithResult(basedir, goal, WITH_DEFAULTS, properties, promptController, activeProfiles);
     }
 
     /**
@@ -397,13 +420,15 @@ public abstract class AbstractGitFlowMojoTestCase {
      *            the user properties to be used while maven execution
      * @param promptController
      *            the prompt controller that answers to the maven prompts
+     * @param activeProfiles
+     *            the optional profiles that should be activated
      * @throws Exception
      *             if an error occurs while preparing maven for mojo execution
      */
     protected void executeMojo(File basedir, String goal, boolean useProfileWithDefaults, Properties properties,
-            Prompter promptController) throws Exception {
-        handleMavenExecutionResult(
-                executeMojoWithResult(basedir, goal, useProfileWithDefaults, properties, promptController));
+            Prompter promptController, String... activeProfiles) throws Exception {
+        handleMavenExecutionResult(executeMojoWithResult(basedir, goal, useProfileWithDefaults, properties,
+                promptController, activeProfiles));
     }
 
     private void handleMavenExecutionResult(MavenExecutionResult result) {
@@ -448,17 +473,18 @@ public abstract class AbstractGitFlowMojoTestCase {
      *             if an error occurs while preparing maven for mojo execution
      */
     protected MavenExecutionResult executeMojoWithResult(File basedir, String goal, boolean useProfileWithDefaults,
-            Properties properties, Prompter promptController) throws Exception {
-        return executeMojoWithResult(basedir, goal, useProfileWithDefaults, properties, promptController, false);
+            Properties properties, Prompter promptController, String... activeProfiles) throws Exception {
+        return executeMojoWithResult(basedir, goal, useProfileWithDefaults, properties, promptController, false,
+                activeProfiles);
     }
 
     private MavenExecutionResult executeMojoWithResult(File basedir, String goal, boolean useProfileWithDefaults,
-            Properties properties, Prompter promptController, boolean throwCommandLineExceptionOnCommandLineExecution)
-            throws Exception {
+            Properties properties, Prompter promptController, boolean throwCommandLineExceptionOnCommandLineExecution,
+            String... activeProfiles) throws Exception {
         String pluginVersion = readPom(new File(".")).getVersion();
         String fullGoal = GOAL_PREFIX + ":" + goal;
         MavenExecutionRequest request = createMavenExecutionRequest(basedir, fullGoal, useProfileWithDefaults,
-                properties, pluginVersion, throwCommandLineExceptionOnCommandLineExecution);
+                properties, pluginVersion, throwCommandLineExceptionOnCommandLineExecution, activeProfiles);
         request.setInteractiveMode(promptController != null);
         MavenExecutionResult result;
         ClassLoader originClassLoader = Thread.currentThread().getContextClassLoader();
@@ -485,7 +511,7 @@ public abstract class AbstractGitFlowMojoTestCase {
 
     private MavenExecutionRequest createMavenExecutionRequest(File basedir, String fullGoal,
             boolean useProfileWithDefaults, Properties properties, final String pluginVersion,
-            boolean throwCommandLineExceptionOnCommandLineExecution) throws Exception {
+            boolean throwCommandLineExceptionOnCommandLineExecution, String... activeProfiles) throws Exception {
         Properties userProperties = properties != null ? properties : new Properties();
         File pom = new File(basedir, "pom.xml");
         MavenExecutionRequest request = new DefaultMavenExecutionRequest();
@@ -537,6 +563,12 @@ public abstract class AbstractGitFlowMojoTestCase {
         request.setUserProperties(userProperties);
         if (!useProfileWithDefaults) {
             request.addInactiveProfile("flowWithDefaults");
+        }
+        if (activeProfiles != null && activeProfiles.length > 0) {
+            request.addInactiveProfile("flowWithDefaults");
+            for (String activeProfile : activeProfiles) {
+                request.addActiveProfile(activeProfile);
+            }
         }
         return request;
     }
@@ -594,7 +626,9 @@ public abstract class AbstractGitFlowMojoTestCase {
      * property in pom.xml file equals to passed expected version.
      *
      * @param projectPath
-     *            the pass to the maven project
+     *            the path to the maven project
+     * @param expectedVersion
+     *            the expected version
      * @throws ComponentLookupException
      *             if an error occurs while preparing maven processor
      * @throws ModelParseException
@@ -605,9 +639,21 @@ public abstract class AbstractGitFlowMojoTestCase {
     protected void assertVersionsInPom(File projectPath, String expectedVersion)
             throws ComponentLookupException, ModelParseException, IOException {
         Model workingPom = readPom(projectPath);
-        assertEquals("project version in local pom.xml file is wrong", expectedVersion, workingPom.getVersion());
-        assertEquals("version.build property in local pom.xml file is wrong", expectedVersion,
-                workingPom.getProperties().getProperty("version.build"));
+        assertVersionsInPom(workingPom, expectedVersion);
+    }
+
+    /**
+     * Asserts that the project version and the value of the version.build
+     * property in pom.xml file equals to passed expected version.
+     *
+     * @param workingPom
+     *            the model of the pom.xml file
+     * @param expectedVersion
+     *            the expected version
+     */
+    protected void assertVersionsInPom(Model workingPom, String expectedVersion) {
+        assertProjectVersionInPom(workingPom, expectedVersion);
+        assertVersionBuildPropertyInPom(workingPom, expectedVersion);
     }
 
     /**
@@ -615,7 +661,9 @@ public abstract class AbstractGitFlowMojoTestCase {
      * expected version.
      *
      * @param projectPath
-     *            the pass to the maven project
+     *            the path to the maven project
+     * @param expectedVersion
+     *            the expected project version
      * @throws ComponentLookupException
      *             if an error occurs while preparing maven processor
      * @throws ModelParseException
@@ -626,7 +674,55 @@ public abstract class AbstractGitFlowMojoTestCase {
     protected void assertProjectVersionInPom(File projectPath, String expectedVersion)
             throws ComponentLookupException, ModelParseException, IOException {
         Model workingPom = readPom(projectPath);
+        assertProjectVersionInPom(workingPom, expectedVersion);
+    }
+
+    /**
+     * Asserts that the project version in pom.xml file equals to passed
+     * expected version.
+     *
+     * @param workingPom
+     *            the model of the pom.xml file
+     * @param expectedVersion
+     *            the expected project version
+     */
+    protected void assertProjectVersionInPom(Model workingPom, String expectedVersion) {
         assertEquals("project version in local pom.xml file is wrong", expectedVersion, workingPom.getVersion());
+    }
+
+    /**
+     * Asserts that the project parent version in pom.xml file equals to passed
+     * expected version.
+     *
+     * @param projectPath
+     *            the path to the maven project
+     * @param expectedVersion
+     *            the expected project parent version
+     * @throws ComponentLookupException
+     *             if an error occurs while preparing maven processor
+     * @throws ModelParseException
+     *             if an error occurs while parsing pom.xml file
+     * @throws IOException
+     *             if an error occurs while reading pom.xml file
+     */
+    protected void assertParentVersionsInPom(File projectPath, String expectedVersion)
+            throws ComponentLookupException, ModelParseException, IOException {
+        Model workingPom = readPom(projectPath);
+        assertProjectVersionInPom(workingPom, expectedVersion);
+    }
+
+    /**
+     * Asserts that the project parent version in pom.xml file equals to passed
+     * expected version.
+     *
+     * @param workingPom
+     *            the model of the pom.xml file
+     * @param expectedVersion
+     *            the expected project parent version
+     */
+    protected void assertParentVersionsInPom(Model workingPom, String expectedVersion) {
+        assertEquals("project parent version in local pom.xml file is wrong", expectedVersion,
+                workingPom.getParent().getVersion());
     }
 
     /**
@@ -634,7 +730,9 @@ public abstract class AbstractGitFlowMojoTestCase {
      * equals to passed expected version.
      *
      * @param projectPath
-     *            the pass to the maven project
+     *            the path to the maven project
+     * @param expectedVersion
+     *            the expected version value in version.build property
      * @throws ComponentLookupException
      *             if an error occurs while preparing maven processor
      * @throws ModelParseException
@@ -644,9 +742,61 @@ public abstract class AbstractGitFlowMojoTestCase {
      */
     protected void assertVersionBuildPropertyInPom(File projectPath, String expectedVersion)
             throws ComponentLookupException, ModelParseException, IOException {
+        assertCustomVersionPropertyInPom(projectPath, "version.build", expectedVersion);
+    }
+
+    /**
+     * Asserts that the value of the version.build property in pom.xml file
+     * equals to passed expected version.
+     *
+     * @param workingPom
+     *            the model of the pom.xml file
+     * @param expectedVersion
+     *            the expected version value in version.build property
+     */
+    protected void assertVersionBuildPropertyInPom(Model workingPom, String expectedVersion) {
+        assertCustomVersionPropertyInPom(workingPom, "version.build", expectedVersion);
+    }
+
+    /**
+     * Asserts that the value of the passed property in pom.xml file equals to
+     * passed expected version.
+     *
+     * @param projectPath
+     *            the path to the maven project
+     * @param versionProperty
+     *            the version property to be checked
+     * @param expectedVersion
+     *            the expected version value in version property
+     * @throws ComponentLookupException
+     *             if an error occurs while preparing maven processor
+     * @throws ModelParseException
+     *             if an error occurs while parsing pom.xml file
+     * @throws IOException
+     *             if an error occurs while reading pom.xml file
+     */
+    protected void assertCustomVersionPropertyInPom(File projectPath, String versionProperty, String expectedVersion)
+            throws ComponentLookupException, ModelParseException, IOException {
         Model workingPom = readPom(projectPath);
-        assertEquals("version.build property in local pom.xml file is wrong", expectedVersion,
-                workingPom.getProperties().getProperty("version.build"));
+        assertCustomVersionPropertyInPom(workingPom, versionProperty, expectedVersion);
+    }
+
+    /**
+     * Asserts that the value of the passed property in pom.xml file equals to
+     * passed expected version.
+     *
+     * @param workingPom
+     *            the model of the pom.xml file
+     * @param versionProperty
+     *            the version property to be checked
+     * @param expectedVersion
+     *            the expected version value in version property
+     */
+    protected void assertCustomVersionPropertyInPom(Model workingPom, String versionProperty, String expectedVersion) {
+        assertEquals(
+                "version property '" + versionProperty + "' in POM file [" + workingPom.getPomFile().getName()
+                        + "] has wrong value",
+                expectedVersion, workingPom.getProperties().getProperty(versionProperty));
     }
 
     /**
@@ -656,7 +806,7 @@ public abstract class AbstractGitFlowMojoTestCase {
      * project.
      *
      * @param projectPath
-     *            the pass to the maven project
+     *            the path to the maven project
      * @throws ComponentLookupException
      *             if an error occurs while preparing maven processor
      * @throws ModelParseException
@@ -676,7 +826,7 @@ public abstract class AbstractGitFlowMojoTestCase {
      * Asserts that the project artifact with expected version was deployed.
      *
      * @param projectPath
-     *            the pass to the maven project
+     *            the path to the maven project
      * @param version
      *            the expected project version that was deployed
      * @throws ComponentLookupException
@@ -717,15 +867,17 @@ public abstract class AbstractGitFlowMojoTestCase {
     }
 
     protected void assertMavenCommandExecuted(String expectedMvnCommand) throws IOException {
-        List<String> executedMavenCommands = loadExecutedMavenCommands();
-        assertTrue("expected mmaven command '" + expectedMvnCommand + "' was not executed",
-                executedMavenCommands.contains(expectedMvnCommand));
+        assertMavenCommandExecution(expectedMvnCommand, true);
     }
 
     protected void assertMavenCommandNotExecuted(String expectedMvnCommand) throws IOException {
+        assertMavenCommandExecution(expectedMvnCommand, false);
+    }
+
+    protected void assertMavenCommandExecution(String expectedMvnCommand, boolean executed) throws IOException {
         List<String> executedMavenCommands = loadExecutedMavenCommands();
-        assertFalse("expected mmaven command '" + expectedMvnCommand + "' was executed",
-                executedMavenCommands.contains(expectedMvnCommand));
+        assertEquals("expected maven command '" + expectedMvnCommand + "' was " + (executed ? "not " : "") + "executed",
+                executed, executedMavenCommands.contains(expectedMvnCommand));
     }
 
     /**

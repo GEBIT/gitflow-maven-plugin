@@ -16,6 +16,8 @@
 		<version.maven-project-info-reports-plugin>2.9</version.maven-project-info-reports-plugin>
 		<version.maven-site-plugin>3.5</version.maven-site-plugin>
 
+		<version.upstream.build>3.2.1</version.upstream.build>
+
 		<test.deistribution.repository.basedir>file:${project.basedir}/../mvnrepo</test.deistribution.repository.basedir>
 		<test.deistribution.releases>${test.deistribution.repository.basedir}/gebit-releases</test.deistribution.releases>
 		<test.deistribution.snapshots>${test.deistribution.repository.basedir}/gebit-snapshots</test.deistribution.snapshots>
@@ -74,11 +76,11 @@
 				<activeByDefault>true</activeByDefault>
 			</activation>
 			<properties>
+				<project.upstream>upstream</project.upstream>
 				<version.upstream.property></version.upstream.property>
 				<version.upstream.onlySnapshots>true</version.upstream.onlySnapshots>
 				<version.upstream>@{${version.upstream.property}}</version.upstream>
 				<version.upstream.property.update>${version.upstream.property}</version.upstream.property.update>
-				<project.upstream>upstream</project.upstream>
 
 				<flow.skipFeatureVersion>false</flow.skipFeatureVersion>
 				<flow.commandsAfterVersion>version-stamper:stamp -N</flow.commandsAfterVersion>
@@ -182,8 +184,7 @@
 										<defaultValue>${version.upstream}</defaultValue>
 										<enabled>${version.upstream.property}</enabled>
 										<property>version.upstream</property>
-										<command>version-stamper:stamp -N -DonlySnapshots=${version.upstream.onlySnapshots}
-											-Dversion.property=${version.upstream.property.update} -DversionValue=@{value}</command>
+										<command>version-stamper:stamp -N -DonlySnapshots=${version.upstream.onlySnapshots} -Dversion.property=${version.upstream.property.update} -DversionValue=@{value}</command>
 									</additionalVersionCommand>
 								</additionalVersionCommands>
 							</configuration>

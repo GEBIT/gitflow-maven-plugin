@@ -665,9 +665,9 @@ public class GitFlowMaintenanceStartMojoTest extends AbstractGitFlowMojoTestCase
                     "'mvn flow:maintenance-start -DmaintenanceVersion=X.Y -DfirstMaintenanceVersion=X.Y.Z-SNAPSHOT' to "
                             + "predefine default version used for the branch name and default first project version in "
                             + "maintenance branch");
-            git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-            git.assertLocalBranches(repositorySet, MASTER_BRANCH);
-            git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+            git.assertCurrentBranch(otherRepositorySet, MASTER_BRANCH);
+            git.assertLocalBranches(otherRepositorySet, MASTER_BRANCH);
+            git.assertRemoteBranches(otherRepositorySet, MASTER_BRANCH);
         }
     }
 
@@ -694,9 +694,9 @@ public class GitFlowMaintenanceStartMojoTest extends AbstractGitFlowMojoTestCase
                     "'mvn flow:maintenance-start -DmaintenanceVersion=X.Y -DfirstMaintenanceVersion=X.Y.Z-SNAPSHOT' to "
                             + "predefine default version used for the branch name and default first project version in "
                             + "maintenance branch");
-            git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-            git.assertLocalBranches(repositorySet, MASTER_BRANCH);
-            git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+            git.assertCurrentBranch(otherRepositorySet, MASTER_BRANCH);
+            git.assertLocalBranches(otherRepositorySet, MASTER_BRANCH);
+            git.assertRemoteBranches(otherRepositorySet, MASTER_BRANCH);
         }
     }
 

@@ -20,8 +20,7 @@ import org.junit.Test;
 import de.gebit.build.maven.plugin.gitflow.jgit.RepositorySet;
 
 /**
- *
- * @author VMedvid
+ * @author Volodymyr Medvid
  */
 public class GitFlowBuildVersionMojoTest extends AbstractGitFlowMojoTestCase {
 

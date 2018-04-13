@@ -46,6 +46,25 @@ public class TestProjects {
     public static final TestProjectData NON_SNAPSHOT_DEPENDENCIES = new TestProjectData("with-dependencies",
             "1.2.3-SNAPSHOT", "GFTST");
 
+    /**
+     * The directory of the test project with modules.
+     */
+    public static final TestProjectData WITH_MODULES = new TestProjectData("with-modules", "1.2.3-SNAPSHOT", "GFTST");
+
+    public static final String PROFILE_SET_VERSION_WITHOUT_ADDITIONAL_VERSION_COMMANDS = "setVersionWithoutAdditionalVersionCommands";
+
+    public static final String PROFILE_SET_VERSION_ADDITIONAL_VERSION_COMMAND_WITHOUT_DEFAULT = "setVersionAdditionalVersionCommandWithoutDefault";
+
+    public static final String PROFILE_SET_VERSION_ADDITIONAL_VERSION_COMMAND_WITH_NEW_LINE_CHARACTERS = "setVersionAdditionalVersionCommandWithNewLineCharacters";
+
+    public static final String PROFILE_SET_VERSION_WITH_UPSTREAM = "setVersionWithUpstream";
+
+    public static final String PROFILE_SET_VERSION_ADDITIONAL_VERSION_COMMAND_WITHOUT_PROMPT = "setVersionAdditionalVersionCommandWithoutPrompt";
+
+    public static final String PROFILE_SET_VERSION_ADDITIONAL_VERSION_COMMAND_ENABLED_BY_PROMPT = "setVersionAdditionalVersionCommandEnabledByPrompt";
+
+    public static final String PROFILE_SET_VERSION_ADDITIONAL_VERSION_COMMAND_WITH_INTERPOLATION_CYCLE = "setVersionAdditionalVersionCommandWithInterpolationCycle";
+
     private static File getProjectBasedir(String projectName) {
         return new File(PROJECTS_BASEDIR, projectName);
     }
