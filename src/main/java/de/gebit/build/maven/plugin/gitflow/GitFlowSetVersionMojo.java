@@ -19,8 +19,6 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
-import org.codehaus.plexus.components.interactivity.PrompterException;
-import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
@@ -46,31 +44,26 @@ public class GitFlowSetVersionMojo extends AbstractGitFlowMojo {
         // set git flow configuration
         initGitFlowConfig();
 
-        if (settings.isInteractiveMode() && newVersion == null) {
-            // get current project version from pom
-            final String currentVersion = getCurrentProjectVersion();
-            try {
-                final DefaultVersionInfo versionInfo = new DefaultVersionInfo(currentVersion);
-                newVersion = versionInfo.getNextVersion().getReleaseVersionString();
-            } catch (VersionParseException e) {
-                if (getLog().isDebugEnabled()) {
-                    getLog().debug(e);
+        if (newVersion == null) {
+            if (settings.isInteractiveMode()) {
+                // get current project version from pom
+                String currentVersion = getCurrentProjectVersion();
+                try {
+                    DefaultVersionInfo versionInfo = new DefaultVersionInfo(currentVersion);
+                    newVersion = versionInfo.getNextVersion().getReleaseVersionString();
+                } catch (VersionParseException e) {
+                    if (getLog().isDebugEnabled()) {
+                        getLog().debug(e);
+                    }
                 }
+                newVersion = getPrompter().promptValue("What is the new version?", newVersion);
+            } else {
+                throw new GitFlowFailureException(
+                        "Property 'newVersion' is required in non-interactive mode but was not set.",
+                        "Specify a new version or run in interactive mode.",
+                        "'mvn flow:set-version -DnewVersion=X.Y.Z-SNAPSHOT -B' to predifine new version",
+                        "'mvn flow:set-version' to run in interactive mode");
             }
-
-            if (newVersion == null) {
-                throw new MojoFailureException("Cannot get default project version.");
-            }
-
-            try {
-                newVersion = prompter.prompt("What is the new version?", newVersion);
-            } catch (PrompterException e) {
-                getLog().error(e);
-            }
-        }
-
-        if (StringUtils.isBlank(newVersion)) {
-            throw new MojoFailureException("No new version set, aborting....");
         }
 
         // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false

@@ -53,7 +53,6 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.settings.Settings;
 import org.codehaus.plexus.components.interactivity.Prompter;
-import org.codehaus.plexus.components.interactivity.PrompterException;
 import org.codehaus.plexus.interpolation.InterpolationException;
 import org.codehaus.plexus.interpolation.PropertiesBasedValueSource;
 import org.codehaus.plexus.interpolation.SingleResponseValueSource;
@@ -2441,53 +2440,57 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             interpolator.addValueSource(new PropertiesBasedValueSource(properties));
 
             // process additional commands/parameters
-            if (promptPrefix != null) {
-                for (GitFlowParameter parameter : additionalVersionCommands) {
-                    if (!parameter.isEnabled()) {
-                        continue;
-                    }
-                    if (!parameter.isEnabledByPrompt() && parameter.getProperty() != null
-                            && session.getRequest().getUserProperties().getProperty(parameter.getProperty()) != null) {
-                        parameter.setValue(
-                                session.getRequest().getUserProperties().getProperty(parameter.getProperty()));
-                    } else if (settings.isInteractiveMode()) {
-                        if (parameter.getPrompt() != null) {
-                            try {
-                                String value = null;
+            for (GitFlowParameter parameter : additionalVersionCommands) {
+                if (!parameter.isEnabled()) {
+                    continue;
+                }
+                if (!parameter.isEnabledByPrompt() && parameter.getProperty() != null
+                        && session.getRequest().getUserProperties().getProperty(parameter.getProperty()) != null) {
+                    parameter.setValue(session.getRequest().getUserProperties().getProperty(parameter.getProperty()));
+                } else if (settings.isInteractiveMode()) {
+                    if (parameter.getPrompt() != null) {
+                        String value = null;
 
-                                String prompt = interpolator.interpolate(parameter.getPrompt());
-                                if (promptPrefix != null) {
-                                    prompt = promptPrefix + prompt;
-                                }
-                                String defaultValue = parameter.getDefaultValue() != null
-                                        ? interpolator.interpolate(parameter.getDefaultValue()) : null;
-
-                                while (value == null) {
-                                    if (defaultValue != null) {
-                                        value = prompter.prompt(prompt, defaultValue);
-                                    } else {
-                                        value = prompter.prompt(prompt);
-                                    }
-                                }
-
-                                parameter.setValue(value);
-                            } catch (InterpolationException e) {
-                                throw new MojoFailureException("Failed to interpolate values", e);
-                            } catch (PrompterException e) {
-                                throw new MojoFailureException("Failed to prompt for parameter", e);
-                            }
+                        String prompt;
+                        try {
+                            prompt = promptPrefix + interpolator.interpolate(parameter.getPrompt());
+                        } catch (InterpolationException e) {
+                            throw new GitFlowFailureException(e,
+                                    "Expression cycle detected in additionalVersionCommand parameter 'prompt'. "
+                                            + "Versions can't be updated.",
+                                    "Please modify the parameter value to avoid cylces.");
                         }
-                    } else {
                         try {
                             String defaultValue = parameter.getDefaultValue() != null
                                     ? interpolator.interpolate(parameter.getDefaultValue()) : null;
-                            parameter.setValue(defaultValue);
+
+                            if (defaultValue != null) {
+                                value = getPrompter().promptValue(prompt, defaultValue);
+                            } else {
+                                value = getPrompter().promptValue(prompt);
+                            }
+
+                            parameter.setValue(value);
                         } catch (InterpolationException e) {
-                            throw new MojoFailureException("Failed to interpolate values", e);
+                            throw new GitFlowFailureException(e,
+                                    "Expression cycle detected in additionalVersionCommand parameter 'defaultValue'. "
+                                            + "Versions can't be updated.",
+                                    "Please modify the parameter value to avoid cylces.");
                         }
                     }
-                    getLog().info("Parameter set to '" + parameter.getValue() + "'");
+                } else {
+                    try {
+                        String defaultValue = parameter.getDefaultValue() != null
+                                ? interpolator.interpolate(parameter.getDefaultValue()) : null;
+                        parameter.setValue(defaultValue);
+                    } catch (InterpolationException e) {
+                        throw new GitFlowFailureException(e,
+                                "Expression cycle detected in additionalVersionCommand parameter 'defaultValue'. "
+                                        + "Versions can't be updated.",
+                                "Please modify the parameter value to avoid cylces.");
+                    }
                 }
+                getLog().info("Parameter set to '" + parameter.getValue() + "'");
             }
         }
 
@@ -2501,10 +2504,12 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         }
         for (String command : getCommandsAfterVersion(processAdditionalCommands)) {
             try {
-                executeMvnCommand(false,
-                        CommandLineUtils.translateCommandline(command.replaceAll("\\@\\{version\\}", version)));
+                command = command.replaceAll("\\@\\{version\\}", version).replace("\r\n", " ").replace("\n", " ");
+                executeMvnCommand(false, CommandLineUtils.translateCommandline(command));
             } catch (Exception e) {
-                throw new MojoFailureException("Failed to execute " + command, e);
+                throw new GitFlowFailureException(e, "Failed to execute additional version maven command: " + command
+                        + "\nMaven error message:\n" + e.getMessage(),
+                        "Please specify executable additional version maven command.");
             }
         }
     }
@@ -2530,7 +2535,10 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             try {
                 result.add(interpolator.interpolate(parameter.getCommand()));
             } catch (InterpolationException e) {
-                throw new MojoFailureException("Failed to interpolate command", e);
+                throw new GitFlowFailureException(e,
+                        "Expression cycle detected in additionalVersionCommand parameter 'command'. "
+                                + "Versions can't be updated.",
+                        "Please modify the parameter value to avoid cylces.");
             }
         }
         return result;
