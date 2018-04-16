@@ -2504,8 +2504,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         }
         for (String command : getCommandsAfterVersion(processAdditionalCommands)) {
             try {
-                command = command.replaceAll("\\@\\{version\\}", version).replace("\r\n", " ").replace("\n", " ")
-                        .replace("\r", " ");
+                command = normilizeWhitespaces(command.replaceAll("\\@\\{version\\}", version));
                 executeMvnCommand(false, CommandLineUtils.translateCommandline(command));
             } catch (Exception e) {
                 throw new GitFlowFailureException(e, "Failed to execute additional version maven command: " + command
@@ -2513,6 +2512,24 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                         "Please specify executable additional version maven command.");
             }
         }
+    }
+
+    private String normilizeWhitespaces(String text) {
+        String result = "";
+        String[] lines = text.split("\r?\n");
+        boolean first = true;
+        for (String line : lines) {
+            line = line.trim();
+            if (!line.isEmpty()) {
+                if (first) {
+                    first = false;
+                } else {
+                    result += " ";
+                }
+                result += line;
+            }
+        }
+        return result;
     }
 
     protected List<String> getAdditionalVersionCommands() throws MojoFailureException {
