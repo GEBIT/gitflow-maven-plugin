@@ -2504,7 +2504,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         }
         for (String command : getCommandsAfterVersion(processAdditionalCommands)) {
             try {
-                command = command.replaceAll("\\@\\{version\\}", version).replace("\r\n", " ").replace("\n", " ");
+                command = command.replaceAll("\\@\\{version\\}", version).replace("\r\n", " ").replace("\n", " ")
+                        .replace("\r", " ");
                 executeMvnCommand(false, CommandLineUtils.translateCommandline(command));
             } catch (Exception e) {
                 throw new GitFlowFailureException(e, "Failed to execute additional version maven command: " + command
