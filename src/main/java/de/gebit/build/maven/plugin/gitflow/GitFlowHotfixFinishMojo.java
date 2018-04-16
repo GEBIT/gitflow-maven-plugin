@@ -107,8 +107,7 @@ public class GitFlowHotfixFinishMojo extends AbstractGitFlowMojo {
             // git checkout hotfix/...
             gitCheckout(hotfixBranchName);
 
-            // mvn clean test
-            mvnCleanTest();
+            mvnCleanVerify();
         }
 
         // git checkout master

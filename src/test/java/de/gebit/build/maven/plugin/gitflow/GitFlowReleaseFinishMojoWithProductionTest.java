@@ -164,8 +164,8 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
                 COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
-        assertMavenCommandNotExecuted("clean test");
         assertMavenCommandNotExecuted("clean verify");
+        assertMavenCommandNotExecuted("clean test");
         assertConfigCleanedUp(MASTER_BRANCH);
     }
 

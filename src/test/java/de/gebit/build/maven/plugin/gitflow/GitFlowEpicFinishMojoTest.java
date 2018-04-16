@@ -130,8 +130,8 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         verifyZeroInteractions(promptControllerMock);
         assertEpicFinishedCorrectly();
-        assertMavenCommandNotExecuted("clean test");
         assertMavenCommandNotExecuted("clean verify");
+        assertMavenCommandNotExecuted("clean test");
         assertArtifactNotInstalled();
     }
 
@@ -352,8 +352,8 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         verifyZeroInteractions(promptControllerMock);
         assertEpicFinishedCorrectly();
-        assertMavenCommandExecuted("clean test");
-        assertMavenCommandNotExecuted("clean verify");
+        assertMavenCommandExecuted("clean verify");
+        assertMavenCommandNotExecuted("clean test");
     }
 
     @Test

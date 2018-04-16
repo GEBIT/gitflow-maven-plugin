@@ -118,8 +118,7 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
             }
 
             if (!skipTestProject) {
-                // mvn clean test
-                mvnCleanTest();
+                mvnCleanVerify();
             }
 
             if (!tychoBuild) {

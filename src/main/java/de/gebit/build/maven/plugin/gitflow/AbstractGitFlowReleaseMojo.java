@@ -297,8 +297,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         }
 
         if (!isSkipTestProject()) {
-            // mvn clean test
-            mvnCleanTest();
+            mvnCleanVerify();
         }
 
         // perform the release goals

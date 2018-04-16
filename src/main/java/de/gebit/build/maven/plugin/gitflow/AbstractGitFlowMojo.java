@@ -2568,13 +2568,9 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws MojoFailureException
      * @throws CommandLineException
      */
-    protected void mvnCleanTest() throws MojoFailureException, CommandLineException {
-        getLog().info("Cleaning and testing the project.");
-        if (tychoBuild) {
-            executeMvnCommand(printTestOutput, "clean", "verify");
-        } else {
-            executeMvnCommand(printTestOutput, "clean", "test");
-        }
+    protected void mvnCleanVerify() throws MojoFailureException, CommandLineException {
+        getLog().info("Cleaning and verifying the project.");
+        executeMvnCommand(printTestOutput, "clean", "verify");
     }
 
     /**

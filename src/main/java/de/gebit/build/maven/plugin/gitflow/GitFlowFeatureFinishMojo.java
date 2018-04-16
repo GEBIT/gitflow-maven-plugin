@@ -145,8 +145,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
                 }
 
                 if (!skipTestProject) {
-                    // mvn clean test
-                    mvnCleanTest();
+                    mvnCleanVerify();
                 }
 
                 // get current project version from pom
