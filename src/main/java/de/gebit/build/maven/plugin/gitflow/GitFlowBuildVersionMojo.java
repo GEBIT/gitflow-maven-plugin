@@ -12,7 +12,6 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
-import org.codehaus.plexus.components.interactivity.PrompterException;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
@@ -44,7 +43,7 @@ public class GitFlowBuildVersionMojo extends AbstractGitFlowMojo {
         // get current project version from pom
         final String currentVersion = getCurrentProjectVersion();
 
-        String baseVersion = null;
+        String baseVersion;
         // get default release version
         try {
             DefaultVersionInfo versionInfo = new DefaultVersionInfo(currentVersion);
@@ -53,38 +52,33 @@ public class GitFlowBuildVersionMojo extends AbstractGitFlowMojo {
                 baseVersion = makeValidTychoVersion(baseVersion);
             }
         } catch (VersionParseException e) {
-            if (getLog().isDebugEnabled()) {
-                getLog().debug(e);
-            }
+            throw new GitFlowFailureException(
+                    "Failed to calculate base version for build version. The project version '" + currentVersion
+                            + "' can't be parsed.",
+                    "Check the version of the project.\n"
+                            + "'mvn flow:build-version' can not be used for projectes with invalid version.");
         }
 
-        if (baseVersion == null) {
-            throw new MojoFailureException("Cannot get default project version.");
-        }
-
-        if (settings.isInteractiveMode() && buildVersion == null) {
-            try {
-                buildVersion = prompter.prompt("What is build version? ");
-            } catch (PrompterException e) {
-                getLog().error(e);
-            }
-        }
-
-        if (StringUtils.isBlank(buildVersion)) {
-            getLog().info("No Build version set, aborting....");
-            return;
-        }
-
-        // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
+        String buildVersionPrefix = baseVersion;
         if (tychoBuild) {
             // convert the base Version to OSGi
-            if (StringUtils.countMatches(baseVersion, ".") < 4) {
-                mvnSetVersions(baseVersion + "." + buildVersion, "");
+            if (StringUtils.countMatches(baseVersion, ".") < 3) {
+                buildVersionPrefix += ".";
             } else {
-                mvnSetVersions(baseVersion + "_" + buildVersion, "");
+                buildVersionPrefix += "_";
             }
         } else {
-            mvnSetVersions(baseVersion + "-" + buildVersion, "");
+            buildVersionPrefix += "-";
         }
+
+        buildVersion = getPrompter().promptRequiredParameterValue("What is build version? " + buildVersionPrefix,
+                "buildVersion", buildVersion, null,
+                new GitFlowFailureInfo("Property 'buildVersion' is required in non-interactive mode but was not set.",
+                        "Specify a buildVersion or run in interactive mode.",
+                        "'mvn flow:build-version -DbuildVersion=XXX -B' to predefine build version",
+                        "'mvn flow:build-version' to run in interactive mode"));
+
+        // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
+        mvnSetVersions(buildVersionPrefix + buildVersion, "");
     }
 }
