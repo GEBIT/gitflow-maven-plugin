@@ -51,6 +51,11 @@ public class TestProjects {
      */
     public static final TestProjectData WITH_MODULES = new TestProjectData("with-modules", "1.2.3-SNAPSHOT", "GFTST");
 
+    /**
+     * The directory of the test project with tycho version.
+     */
+    public static final TestProjectData TYCHO_PROJECT = new TestProjectData("tycho-project", "1.2.3.4-SNAPSHOT", "GFTST");
+
     public static final String PROFILE_SET_VERSION_WITHOUT_ADDITIONAL_VERSION_COMMANDS = "setVersionWithoutAdditionalVersionCommands";
 
     public static final String PROFILE_SET_VERSION_ADDITIONAL_VERSION_COMMAND_WITHOUT_DEFAULT = "setVersionAdditionalVersionCommandWithoutDefault";

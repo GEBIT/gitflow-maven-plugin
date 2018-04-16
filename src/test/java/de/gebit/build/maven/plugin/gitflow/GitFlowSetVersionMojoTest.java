@@ -150,7 +150,7 @@ public class GitFlowSetVersionMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     @Test
-    public void testExecuteIvalidProjectVersion() throws Exception {
+    public void testExecuteInvalidProjectVersion() throws Exception {
         try (RepositorySet otherRepositorySet = git.createGitRepositorySet(TestProjects.INVALID_VERSION.basedir)) {
             // set up
             when(promptControllerMock.prompt(PROMPT_NEW_VERSION)).thenReturn(NEW_VERSION);
