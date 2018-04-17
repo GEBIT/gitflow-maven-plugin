@@ -673,7 +673,32 @@ public class GitExecution {
      */
     public void createRemoteBranch(RepositorySet repositorySet, String aBranch) throws GitAPIException, IOException {
         String currentBranch = currentBranch(repositorySet.getClonedRemoteRepoGit());
+        pull(repositorySet.getClonedRemoteRepoGit());
         switchToBranch(repositorySet.getClonedRemoteRepoGit(), aBranch, true);
+        push(repositorySet.getClonedRemoteRepoGit());
+        switchToBranch(repositorySet.getClonedRemoteRepoGit(), currentBranch, false);
+
+    }
+
+    /**
+     * Creates passed branch as orphan branch in remote repository.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param aBranch
+     *            the branch to be created
+     * @throws GitAPIException
+     *             if an error occurs on git command execution
+     * @throws IOException
+     *             in case of an I/O error
+     */
+    public void createRemoteOrphanBranch(RepositorySet repositorySet, String aBranch)
+            throws GitAPIException, IOException {
+        String currentBranch = currentBranch(repositorySet.getClonedRemoteRepoGit());
+        pull(repositorySet.getClonedRemoteRepoGit());
+        repositorySet.getClonedRemoteRepoGit().checkout().setName(aBranch).setOrphan(true).call();
+        repositorySet.getClonedRemoteRepoGit().commit().setAllowEmpty(true)
+                .setMessage(COMMIT_MESSAGE_FOR_UNIT_TEST_SETUP).call();
         push(repositorySet.getClonedRemoteRepoGit());
         switchToBranch(repositorySet.getClonedRemoteRepoGit(), currentBranch, false);
 
@@ -728,6 +753,10 @@ public class GitExecution {
 
     private void push(Git git) throws GitAPIException {
         git.push().call();
+    }
+
+    private void pull(Git git) throws GitAPIException {
+        git.pull().call();
     }
 
     /**

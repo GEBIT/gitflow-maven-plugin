@@ -52,23 +52,6 @@ public class GitFlowBranchConfigMojo extends AbstractGitFlowMojo {
     @Parameter(property = "branchName")
     private String branchName;
 
-    /**
-     * Name of the branch used to hold the branch configuration properties.
-     *
-     * @since 1.4.0
-     */
-    @Parameter(property = "configBranchName", defaultValue = "branch-config")
-    private String configBranchName;
-
-    /**
-     * Name of the directory used to temporarily and locally checkout the
-     * configuration branch.
-     *
-     * @since 1.4.0
-     */
-    @Parameter(property = "configBranchDir", defaultValue = ".branch-config")
-    private String configBranchDir;
-
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
@@ -96,9 +79,12 @@ public class GitFlowBranchConfigMojo extends AbstractGitFlowMojo {
         }
 
         // modify the branch config
-        String currentBranch = branchName != null ? branchName : gitCurrentBranch();
-        getLog().info("Settting branch property '" + propertyName + "' for '" + currentBranch + "' to '" + propertyValue
-                + "'");
-        gitBranchConfigWorktree(currentBranch, configBranchName, configBranchDir, propertyName, propertyValue);
+        if (branchName == null) {
+            branchName = gitCurrentBranch();
+        }
+        getLog().info(
+                "Settting branch property '" + propertyName + "' for '" + branchName + "' to '" + propertyValue + "'");
+
+        gitSetBranchCentralConfig(branchName, propertyName, propertyValue);
     }
 }

@@ -40,7 +40,7 @@ public class GitFlowReleaseAbortMojo extends AbstractGitFlowMojo {
         if (releaseBranch == null) {
             if (isReleaseBranch(currentBranch)) {
                 releaseBranch = currentBranch;
-                String developmentBranch = gitGetBranchConfig(releaseBranch, "development");
+                String developmentBranch = gitGetBranchLocalConfig(releaseBranch, "development");
                 if (StringUtils.isBlank(developmentBranch)) {
                     developmentBranch = gitFlowConfig.getDevelopmentBranch();
                 }
@@ -139,7 +139,7 @@ public class GitFlowReleaseAbortMojo extends AbstractGitFlowMojo {
             if (isDevelopmentBranch(mergeIntoBranch) || isMaintenanceBranch(mergeIntoBranch)) {
                 developmentBranch = mergeIntoBranch;
                 productionBranch = mergeFromBranch;
-                releaseBranch = gitGetBranchConfig(developmentBranch, "releaseBranch");
+                releaseBranch = gitGetBranchLocalConfig(developmentBranch, "releaseBranch");
             } else {
                 throw new GitFlowFailureException(
                         getFailureMessageForUnsupportedMergeConflict(mergeIntoBranch, mergeFromBranch));
@@ -148,7 +148,7 @@ public class GitFlowReleaseAbortMojo extends AbstractGitFlowMojo {
             if (isDevelopmentBranch(mergeIntoBranch) || isMaintenanceBranch(mergeIntoBranch)) {
                 developmentBranch = mergeIntoBranch;
                 productionBranch = getProductionBranchForDevelopmentBranch(developmentBranch);
-                releaseBranch = gitGetBranchConfig(developmentBranch, "releaseBranch");
+                releaseBranch = gitGetBranchLocalConfig(developmentBranch, "releaseBranch");
             } else {
                 throw new GitFlowFailureException(
                         getFailureMessageForUnsupportedMergeConflict(mergeIntoBranch, mergeFromBranch));
@@ -172,7 +172,7 @@ public class GitFlowReleaseAbortMojo extends AbstractGitFlowMojo {
                             + "Release can't be automatically aborted.",
                     "Please consult a gitflow expert on how to fix this!");
         }
-        String developmentCommitRef = gitGetBranchConfig(releaseBranch, "developmentCommitRef");
+        String developmentCommitRef = gitGetBranchLocalConfig(releaseBranch, "developmentCommitRef");
         if (StringUtils.isBlank(developmentCommitRef)) {
             throw new GitFlowFailureException(
                     "There is a conflict of merging branch '" + mergeFromBranch + "' into branch '" + mergeIntoBranch
@@ -181,7 +181,7 @@ public class GitFlowReleaseAbortMojo extends AbstractGitFlowMojo {
                     "Please consult a gitflow expert on how to fix this!");
         }
         gitMergeAbort();
-        String tagName = gitGetBranchConfig(releaseBranch, "releaseTag");
+        String tagName = gitGetBranchLocalConfig(releaseBranch, "releaseTag");
         if (StringUtils.isNotBlank(tagName) && gitTagExists(tagName)) {
             gitRemoveLocalTag(tagName);
         }
@@ -190,7 +190,7 @@ public class GitFlowReleaseAbortMojo extends AbstractGitFlowMojo {
             gitResetHard();
         }
         gitCheckout(developmentBranch);
-        String productionCommitRef = gitGetBranchConfig(releaseBranch, "productionCommitRef");
+        String productionCommitRef = gitGetBranchLocalConfig(releaseBranch, "productionCommitRef");
         if (StringUtils.isNotBlank(productionCommitRef)) {
             gitUpdateRef(productionBranch, productionCommitRef);
         } else if (isUsingProductionBranch(developmentBranch, productionBranch) && gitBranchExists(productionBranch)) {
@@ -203,13 +203,13 @@ public class GitFlowReleaseAbortMojo extends AbstractGitFlowMojo {
 
     private void removeBranchConfigs(String releaseBranch, String developmentBranch)
             throws MojoFailureException, CommandLineException {
-        gitRemoveBranchConfig(releaseBranch, "development");
-        gitRemoveBranchConfig(releaseBranch, "developmentCommitRef");
-        gitRemoveBranchConfig(releaseBranch, "productionCommitRef");
-        gitRemoveBranchConfig(releaseBranch, "releaseTag");
-        gitRemoveBranchConfig(releaseBranch, "releaseCommit");
-        gitRemoveBranchConfig(releaseBranch, "nextSnapshotVersion");
-        gitRemoveBranchConfig(developmentBranch, "releaseBranch");
+        gitRemoveBranchLocalConfig(releaseBranch, "development");
+        gitRemoveBranchLocalConfig(releaseBranch, "developmentCommitRef");
+        gitRemoveBranchLocalConfig(releaseBranch, "productionCommitRef");
+        gitRemoveBranchLocalConfig(releaseBranch, "releaseTag");
+        gitRemoveBranchLocalConfig(releaseBranch, "releaseCommit");
+        gitRemoveBranchLocalConfig(releaseBranch, "nextSnapshotVersion");
+        gitRemoveBranchLocalConfig(developmentBranch, "releaseBranch");
     }
 
     private GitFlowFailureInfo getFailureMessageForUnsupportedMergeConflict(String mergeIntoBranch,
