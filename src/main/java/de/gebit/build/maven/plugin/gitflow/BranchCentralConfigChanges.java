@@ -40,15 +40,20 @@ public class BranchCentralConfigChanges {
      *            the value to be set
      */
     public void set(String branchName, String configName, String value) {
-        Properties branchPorperties = setProperties.get(branchName);
-        if (branchPorperties == null) {
-            branchPorperties = new Properties();
-            setProperties.put(branchName, branchPorperties);
-        }
-        branchPorperties.setProperty(configName, value);
-        List<String> removedBranchProperties = removedProperties.get(branchName);
-        if (removedBranchProperties != null) {
-            removedBranchProperties.remove(configName);
+        if (value != null) {
+            Properties branchPorperties = setProperties.get(branchName);
+            if (branchPorperties == null) {
+                branchPorperties = new Properties();
+                setProperties.put(branchName, branchPorperties);
+            }
+            branchPorperties.setProperty(configName, value);
+            List<String> removedBranchProperties = removedProperties.get(branchName);
+            if (removedBranchProperties != null) {
+                removedBranchProperties.remove(configName);
+            }
+        } else {
+            remove(branchName, configName);
+            return;
         }
     }
 
@@ -64,6 +69,7 @@ public class BranchCentralConfigChanges {
         List<String> removedBranchProperties = removedProperties.get(branchName);
         if (removedBranchProperties == null) {
             removedBranchProperties = new LinkedList<>();
+            removedProperties.put(branchName, removedBranchProperties);
         }
         if (!removedBranchProperties.contains(configName)) {
             removedBranchProperties.add(configName);
@@ -74,6 +80,12 @@ public class BranchCentralConfigChanges {
         }
     }
 
+    /**
+     * Return all collected set/remove changes on branch central config.
+     *
+     * @return all collected set/remove changes on branch central config or
+     *         empty map if no changes collected
+     */
     public Map<String, List<Change>> getAllChanges() {
         Map<String, List<Change>> allChanges = new HashMap<>();
         for (Entry<String, Properties> setPropertiesEntry : setProperties.entrySet()) {
@@ -104,28 +116,23 @@ public class BranchCentralConfigChanges {
         return allChanges;
     }
 
-    public enum ChangeType {
-        SET, REMOVE;
-    }
-
+    /**
+     * Data holder for configuration change information. Change type is remove
+     * if <code>value==null</code>. Otherwise the change type is set.
+     *
+     * @author Volodymyr Medvid
+     */
     public class Change {
-        private ChangeType type;
         private String configName;
         private String value;
 
         public Change(String aConfigName, String aValue) {
-            type = ChangeType.SET;
             configName = aConfigName;
             value = aValue;
         }
 
         public Change(String aConfigName) {
-            type = ChangeType.REMOVE;
             configName = aConfigName;
-        }
-
-        public ChangeType getType() {
-            return type;
         }
 
         public String getConfigName() {

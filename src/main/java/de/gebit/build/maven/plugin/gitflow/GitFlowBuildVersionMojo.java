@@ -72,7 +72,7 @@ public class GitFlowBuildVersionMojo extends AbstractGitFlowMojo {
         }
 
         buildVersion = getPrompter().promptRequiredParameterValue("What is build version? " + buildVersionPrefix,
-                "buildVersion", buildVersion, null,
+                "buildVersion", buildVersion,
                 new GitFlowFailureInfo("Property 'buildVersion' is required in non-interactive mode but was not set.",
                         "Specify a buildVersion or run in interactive mode.",
                         "'mvn flow:build-version -DbuildVersion=XXX -B' to predefine build version",

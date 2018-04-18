@@ -67,7 +67,6 @@ import org.codehaus.plexus.util.cli.Commandline;
 import org.codehaus.plexus.util.cli.StreamConsumer;
 
 import de.gebit.build.maven.plugin.gitflow.BranchCentralConfigChanges.Change;
-import de.gebit.build.maven.plugin.gitflow.BranchCentralConfigChanges.ChangeType;
 
 /**
  * Abstract git flow mojo.
@@ -771,15 +770,17 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         try {
             Commandline worktreeCmd = getWorktreeCmd(branchConfigWorktree);
 
-            PropertiesBuilderParameters params = new Parameters().properties().setThrowExceptionOnMissing(false);
             FileBasedConfigurationBuilder<FileBasedConfiguration> builder = new FileBasedConfigurationBuilder<FileBasedConfiguration>(
-                    PropertiesConfiguration.class).configure(params);
+                    PropertiesConfiguration.class);
             Map<String, List<Change>> allChanges = changes.getAllChanges();
             if (!allChanges.isEmpty()) {
                 for (Entry<String, List<Change>> branchChangesEntry : allChanges.entrySet()) {
                     String branchName = branchChangesEntry.getKey();
                     List<Change> branchChanges = branchChangesEntry.getValue();
-
+                    if (branchName.startsWith("..")) {
+                        throw new GitFlowFailureException("Invalid branch name '" + branchName
+                                + "' detected.\nCentral branch config can't be changed.", null);
+                    }
                     File branchPropertyFile = new File(branchConfigWorktree, branchName);
                     if (branchPropertyFile.exists()) {
                         // only set if existing at this point
@@ -788,7 +789,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                     try {
                         Configuration config = builder.getConfiguration();
                         for (Change change : branchChanges) {
-                            if (change.getType() == ChangeType.SET && change.getValue() != null) {
+                            if (change.getValue() != null) {
                                 config.setProperty(change.getConfigName(), change.getValue());
                             } else {
                                 config.clearProperty(change.getConfigName());
@@ -809,12 +810,23 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                 CommandResult result = executeCommand(worktreeCmd, false, "commit", "-m",
                         commitMessages.getBranchConfigMessage());
                 if (result.exitCode == SUCCESS_EXIT_CODE) {
-                    // push the change
-                    executeCommand(worktreeCmd, true, "push");
-                    reloadCentralBranchConfigFromWorktree(branchConfigWorktree);
+                    if (pushRemote) {
+                        // push the change
+                        executeCommand(worktreeCmd, true, "push", gitFlowConfig.getOrigin(), configBranchName);
+                    } else {
+                        getLog().warn("");
+                        getLog().warn("******************************************************************************");
+                        getLog().warn("You have new changes in local branch for central branch config that were not "
+                                + "pushed because of parameter pushRemote=false.");
+                        getLog().warn("IMPORTANT: Do not forget to push branch '" + configBranchName
+                                + "' manually as soon as possible!");
+                        getLog().warn("******************************************************************************");
+                        getLog().warn("");
+                    }
                 } else {
                     getLog().info("No changes detected for central branch config.");
                 }
+                reloadCentralBranchConfigFromWorktree(branchConfigWorktree);
             } else {
                 getLog().info("No changes detected for central branch config.");
             }
@@ -924,8 +936,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
     private Properties readBranchProperties(File branchPropertyFile, String branch) throws MojoFailureException {
         Properties properties = new Properties();
-        PropertiesBuilderParameters params = new Parameters().properties().setThrowExceptionOnMissing(false)
-                .setFile(branchPropertyFile);
+        PropertiesBuilderParameters params = new Parameters().properties().setFile(branchPropertyFile);
         FileBasedConfigurationBuilder<FileBasedConfiguration> builder = new FileBasedConfigurationBuilder<FileBasedConfiguration>(
                 PropertiesConfiguration.class).configure(params);
         try {
@@ -1000,11 +1011,19 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             executeCommand(worktreeCmd, true, "reset", "--hard");
             executeCommand(worktreeCmd, true, "commit", "--allow-empty", "-m", commitMessages.getBranchConfigMessage());
 
-            executeCommand(worktreeCmd, true, "push", "--set-upstream", gitFlowConfig.getOrigin(), configBranchName);
+            if (pushRemote) {
+                executeCommand(worktreeCmd, true, "push", "--set-upstream", gitFlowConfig.getOrigin(),
+                        configBranchName);
+            }
         } else {
             executeGitCommand("worktree", "add", configBranchDir, configBranchName);
             if (pull) {
-                executeCommand(worktreeCmd, true, "pull", gitFlowConfig.getOrigin(), configBranchName);
+                if (fetchRemote) {
+                    executeCommand(worktreeCmd, true, "pull", gitFlowConfig.getOrigin(), configBranchName);
+                } else {
+                    executeCommand(worktreeCmd, true, "rebase", gitFlowConfig.getOrigin() + "/" + configBranchName,
+                            configBranchName);
+                }
             }
         }
         return branchConfigWorktree;

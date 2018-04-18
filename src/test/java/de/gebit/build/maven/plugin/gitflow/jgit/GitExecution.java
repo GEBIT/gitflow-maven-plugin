@@ -685,23 +685,43 @@ public class GitExecution {
      *
      * @param repositorySet
      *            the repository to be used
-     * @param aBranch
+     * @param branch
      *            the branch to be created
      * @throws GitAPIException
      *             if an error occurs on git command execution
      * @throws IOException
      *             in case of an I/O error
      */
-    public void createRemoteOrphanBranch(RepositorySet repositorySet, String aBranch)
+    public void createRemoteOrphanBranch(RepositorySet repositorySet, String branch)
             throws GitAPIException, IOException {
-        String currentBranch = currentBranch(repositorySet.getClonedRemoteRepoGit());
-        pull(repositorySet.getClonedRemoteRepoGit());
-        repositorySet.getClonedRemoteRepoGit().checkout().setName(aBranch).setOrphan(true).call();
-        repositorySet.getClonedRemoteRepoGit().commit().setAllowEmpty(true)
-                .setMessage(COMMIT_MESSAGE_FOR_UNIT_TEST_SETUP).call();
-        push(repositorySet.getClonedRemoteRepoGit());
-        switchToBranch(repositorySet.getClonedRemoteRepoGit(), currentBranch, false);
+        createOrphanBranch(repositorySet.getClonedRemoteRepoGit(), branch, true);
+    }
 
+    /**
+     * Creates passed branch as orphan branch in local repository.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param branch
+     *            the branch to be created
+     * @throws GitAPIException
+     *             if an error occurs on git command execution
+     * @throws IOException
+     *             in case of an I/O error
+     */
+    public void createOrphanBranch(RepositorySet repositorySet, String branch) throws GitAPIException, IOException {
+        createOrphanBranch(repositorySet.getLocalRepoGit(), branch, false);
+    }
+
+    private void createOrphanBranch(Git git, String branch, boolean push) throws GitAPIException, IOException {
+        String currentBranch = currentBranch(git);
+        pull(git);
+        git.checkout().setName(branch).setOrphan(true).call();
+        git.commit().setAllowEmpty(true).setMessage(COMMIT_MESSAGE_FOR_UNIT_TEST_SETUP).call();
+        if (push) {
+            push(git);
+        }
+        switchToBranch(git, currentBranch, false);
     }
 
     /**
@@ -1255,7 +1275,8 @@ public class GitExecution {
      *            the local branch to be checked
      * @param filepath
      *            the relative path to the properties file to be read
-     * @return the properties from the properties file
+     * @return the properties from the properties file or <code>null</code> if
+     *         property file doesn't exist
      * @throws IOException
      *             in case of an I/O error
      * @throws GitAPIException
@@ -1269,7 +1290,7 @@ public class GitExecution {
                 props.load(stream);
                 return props;
             }
-            throw new IllegalStateException("File '" + filepath + "' couldn't be found");
+            return null;
         }
     }
 

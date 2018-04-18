@@ -263,6 +263,33 @@ public class ExtendedPrompter implements Prompter {
 
     /**
      * Prompts for a value if interactive mode is enabled. Propmts in a loop
+     * until non-emptyvalue is entered. If a non-empty init value provided it
+     * will be returned without prompting.<br>
+     * In case of batch mode an {@link GitFlowFailureException} will be thrown
+     * if no non-empty init value provided.
+     *
+     * @param promptMessage
+     *            the message to be shown in prompt
+     * @param parameterName
+     *            the name of the parameter to be used in exception messages
+     * @param initValue
+     *            the init value (can be <code>null</code>)
+     * @param missingValueInBatchModeMessage
+     *            the message to be used in exception if an empty init value
+     *            provided in batch mode
+     * @return a non-empty value
+     * @throws GitFlowFailureException
+     *             in case of empty init value in batch mode or error while
+     *             prompting
+     */
+    public String promptRequiredParameterValue(String promptMessage, String parameterName, String initValue,
+            GitFlowFailureInfo missingValueInBatchModeMessage) throws GitFlowFailureException {
+        return promptRequiredParameterValue(promptMessage, parameterName, initValue, null, null, null,
+                missingValueInBatchModeMessage);
+    }
+
+    /**
+     * Prompts for a value if interactive mode is enabled. Propmts in a loop
      * until non-empty valid value is entered. If a valid init value provided it
      * will be returned without prompting.<br>
      * In case of batch mode an {@link GitFlowFailureException} will be thrown
@@ -458,6 +485,43 @@ public class ExtendedPrompter implements Prompter {
         return new GitFlowFailureInfo(promptError,
                 "Either run in non-interactive mode using '-B' parameter or run in an environment where user "
                         + "interaction is possible.");
+    }
+
+    /**
+     * Prompts for an optional value if interactive mode is enabled. Entered
+     * empty value will be accepted. If a non-empty init value provided it will
+     * be returned without prompting.<br>
+     * In case of batch mode non-empty init value or <code>null</code> will be
+     * returned.
+     *
+     * @param promptMessage
+     *            the message to be shown in prompt
+     * @param parameterName
+     *            the name of the parameter to be used in exception messages
+     * @param initValue
+     *            the init value (can be <code>null</code>)
+     * @return entered or initial value
+     * @throws GitFlowFailureException
+     *             in case of error while prompting
+     */
+    public String promptOptionalParameterValue(String promptMessage, String parameterName, String initValue)
+            throws GitFlowFailureException {
+        String value = initValue;
+        if (interactiveMode) {
+            try {
+                if (StringUtils.isBlank(value)) {
+                    value = prompt(promptMessage);
+                }
+            } catch (PrompterException e) {
+                throw new GitFlowFailureException(e,
+                        createPromptErrorMessage("Failed to get '" + parameterName + "' from user prompt"));
+            }
+        } else {
+            if (StringUtils.isBlank(value)) {
+                value = null;
+            }
+        }
+        return value;
     }
 
     /**

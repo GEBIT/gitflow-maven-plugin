@@ -12,8 +12,6 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
-import org.codehaus.plexus.components.interactivity.PrompterException;
-import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
@@ -58,33 +56,27 @@ public class GitFlowBranchConfigMojo extends AbstractGitFlowMojo {
         // set git flow configuration
         initGitFlowConfig();
 
-        if (settings.isInteractiveMode() && propertyName == null) {
-            try {
-                propertyName = prompter.prompt("Which property to modify?");
-            } catch (PrompterException e) {
-                getLog().error(e);
-            }
-        }
+        propertyName = getPrompter().promptRequiredParameterValue("Which property to modify?", "propertyName",
+                propertyName,
+                new GitFlowFailureInfo("Property 'propertyName' is required in non-interactive mode but was not set.",
+                        "Specify a propertyName or run in interactive mode.",
+                        "'mvn flow:branch-config -DpropertyName=XXX -B' to predefine property name",
+                        "'mvn flow:branch-config' to run in interactive mode"));
 
-        if (settings.isInteractiveMode() && propertyValue == null) {
-            try {
-                propertyValue = prompter.prompt("Set the value to (empty to delete)");
-            } catch (PrompterException e) {
-                getLog().error(e);
-            }
-        }
-
-        if (StringUtils.isBlank(propertyName)) {
-            throw new MojoFailureException("No property name set, aborting....");
-        }
+        propertyValue = getPrompter().promptOptionalParameterValue("Set the value to (empty to delete)",
+                "propertyValue", propertyValue);
 
         // modify the branch config
         if (branchName == null) {
             branchName = gitCurrentBranch();
         }
         getLog().info(
-                "Settting branch property '" + propertyName + "' for '" + branchName + "' to '" + propertyValue + "'");
+                "Setting branch property '" + propertyName + "' for '" + branchName + "' to '" + propertyValue + "'");
 
-        gitSetBranchCentralConfig(branchName, propertyName, propertyValue);
+        if (propertyValue != null) {
+            gitSetBranchCentralConfig(branchName, propertyName, propertyValue);
+        } else {
+            gitRemoveBranchCentralConfig(branchName, propertyName);
+        }
     }
 }
