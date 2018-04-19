@@ -36,11 +36,10 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
 
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
-        // check if rebase in process
+        getLog().info("Starting feature finish process.");
         String baseBranch;
         String epicBranchName = gitMergeFromEpicBranchInProcess();
         if (epicBranchName == null) {
-            // check uncommitted changes
             checkUncommittedChanges();
 
             List<String> branches = gitAllEpicBranches();
@@ -48,18 +47,8 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
                 throw new GitFlowFailureException("There are no epic branches in your repository.",
                         "Please start an epic first.", "'mvn flow:epic-start'");
             }
-            // is the current branch an epic branch?
             String currentBranch = gitCurrentBranch();
-            boolean isOnEpicBranch = false;
-            for (String branch : branches) {
-                if (branch.equals(currentBranch)) {
-                    // we're on an epic branch, no need to ask
-                    isOnEpicBranch = true;
-                    getLog().info("Current epic branch: " + currentBranch);
-                    break;
-                }
-            }
-
+            boolean isOnEpicBranch = branches.contains(currentBranch);
             if (!isOnEpicBranch) {
                 epicBranchName = getPrompter().promptToSelectFromOrderedList("Epic branches:",
                         "Choose epic branch to finish", branches,
@@ -68,14 +57,14 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
                                 "Please switch to an epic branch first or run in interactive mode.",
                                 "'git checkout BRANCH' to switch to the epic branch",
                                 "'mvn flow:epic-finish' to run in interactive mode"));
-
-                // git checkout epic/...
+                getLog().info("Finishing epic on selected epic branch: " + epicBranchName);
                 gitEnsureLocalBranchIsUpToDateIfExists(epicBranchName,
                         new GitFlowFailureInfo("Remote and local epic branches '" + epicBranchName + "' diverge.",
                                 "Rebase or merge the changes in local epic branch '" + epicBranchName + "' first.",
                                 "'git rebase'"));
             } else {
                 epicBranchName = currentBranch;
+                getLog().info("Finishing epic on current epic branch: " + epicBranchName);
                 gitEnsureCurrentLocalBranchIsUpToDate(
                         new GitFlowFailureInfo("Remote and local epic branches '{0}' diverge.",
                                 "Rebase or merge the changes in local epic branch '{0}' first.", "'git rebase'"));
@@ -121,22 +110,31 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
                 mvnCleanVerify();
             }
 
+            String epicVersion = getCurrentProjectVersion();
+            getLog().info("Project version on epic branch: " + epicVersion);
+
+            gitCheckout(baseBranch);
+
+            String baseVersion = getCurrentProjectVersion();
+            getLog().info("Project version on base branch: " + baseVersion);
+
             if (!tychoBuild) {
-                String currentVersion = getCurrentProjectVersion();
-                String issueNumber = extractIssueNumberFromEpicBranchName(epicBranchName);
-                if (currentVersion.contains("-" + issueNumber)) {
-                    String version = currentVersion.replaceFirst("-" + issueNumber, "");
-                    mvnSetVersions(version);
+                if (!epicVersion.equals(baseVersion)) {
+                    getLog().info("Reverting the project version on epic branch to the version on base branch.");
+                    gitCheckout(epicBranchName);
+                    String issueNumber = getEpicIssueNumber(epicBranchName);
                     String epicFinishMessage = substituteInEpicMessage(commitMessages.getEpicFinishMessage(),
                             issueNumber);
+                    mvnSetVersions(baseVersion);
                     gitCommit(epicFinishMessage);
+
+                    gitCheckout(baseBranch);
+                } else {
+                    getLog().info("Project version on epic branch is same as project version on base branch. "
+                            + "Version update not needed.");
                 }
             }
 
-            // git checkout develop
-            gitCheckout(baseBranch);
-
-            // git merge --no-ff epic/...
             try {
                 gitMergeNoff(epicBranchName);
             } catch (MojoFailureException ex) {
@@ -171,16 +169,15 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
         }
 
         if (installProject) {
-            // mvn clean install
             mvnCleanInstall();
         }
 
         if (!keepEpicBranch) {
-            // git branch -D epic/...
+            getLog().info("Removing local epic branch.");
             gitBranchDeleteForce(epicBranchName);
 
-            // delete the remote branch
             if (pushRemote) {
+                getLog().info("Removing remote epic branch.");
                 gitBranchDeleteRemote(epicBranchName);
             }
         }
@@ -188,6 +185,7 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
         if (pushRemote) {
             gitPush(baseBranch, false, false);
         }
+        getLog().info("Epic finish process finished.");
     }
 
 }

@@ -41,6 +41,14 @@ public class CommitMessages {
     private String branchConfigMessage;
 
     /**
+     * An optional pattern for branch config commit messages.
+     * May contain the placeholder @{message} that will be replaced with the
+     * provided commit message.
+     * Other placeholders will be looked up in the project properties.
+     */
+    private String branchConfigMessagePattern;
+
+    /**
      * An optional pattern for merge commit messages.
      * May contain the placeholder @{message} that will be replaced with the
      * original commit message.
@@ -67,6 +75,7 @@ public class CommitMessages {
         maintenanceStartMessage = "updating versions for maintenance branch";
         branchConfigMessage = "changed branch configuration";
 
+        branchConfigMessagePattern = null;
         mergeMessagePattern = null;
     }
 
@@ -78,11 +87,11 @@ public class CommitMessages {
     }
 
     /**
-     * @param featureStartMessage
+     * @param aFeatureStartMessage
      *            the featureStartMessage to set
      */
-    public void setFeatureStartMessage(String featureStartMessage) {
-        this.featureStartMessage = featureStartMessage;
+    public void setFeatureStartMessage(String aFeatureStartMessage) {
+        this.featureStartMessage = aFeatureStartMessage;
     }
 
     /**
@@ -93,11 +102,11 @@ public class CommitMessages {
     }
 
     /**
-     * @param featureFinishMessage
+     * @param aFeatureFinishMessage
      *            the featureFinishMessage to set
      */
-    public void setFeatureFinishMessage(String featureFinishMessage) {
-        this.featureFinishMessage = featureFinishMessage;
+    public void setFeatureFinishMessage(String aFeatureFinishMessage) {
+        this.featureFinishMessage = aFeatureFinishMessage;
     }
 
     /**
@@ -108,11 +117,11 @@ public class CommitMessages {
     }
 
     /**
-     * @param epicStartMessage
+     * @param anEpicStartMessage
      *            the epicStartMessage to set
      */
-    public void setEpicStartMessage(String epicStartMessage) {
-        this.epicStartMessage = epicStartMessage;
+    public void setEpicStartMessage(String anEpicStartMessage) {
+        this.epicStartMessage = anEpicStartMessage;
     }
 
     /**
@@ -123,11 +132,11 @@ public class CommitMessages {
     }
 
     /**
-     * @param epicFinishMessage
+     * @param anEpicFinishMessage
      *            the epicFinishMessage to set
      */
-    public void setEpicFinishMessage(String epicFinishMessage) {
-        this.epicFinishMessage = epicFinishMessage;
+    public void setEpicFinishMessage(String anEpicFinishMessage) {
+        this.epicFinishMessage = anEpicFinishMessage;
     }
 
     /**
@@ -138,11 +147,11 @@ public class CommitMessages {
     }
 
     /**
-     * @param hotfixStartMessage
+     * @param aHotfixStartMessage
      *            the hotfixStartMessage to set
      */
-    public void setHotfixStartMessage(String hotfixStartMessage) {
-        this.hotfixStartMessage = hotfixStartMessage;
+    public void setHotfixStartMessage(String aHotfixStartMessage) {
+        this.hotfixStartMessage = aHotfixStartMessage;
     }
 
     /**
@@ -153,11 +162,11 @@ public class CommitMessages {
     }
 
     /**
-     * @param hotfixFinishMessage
+     * @param aHotfixFinishMessage
      *            the hotfixFinishMessage to set
      */
-    public void setHotfixFinishMessage(String hotfixFinishMessage) {
-        this.hotfixFinishMessage = hotfixFinishMessage;
+    public void setHotfixFinishMessage(String aHotfixFinishMessage) {
+        this.hotfixFinishMessage = aHotfixFinishMessage;
     }
 
     /**
@@ -168,11 +177,11 @@ public class CommitMessages {
     }
 
     /**
-     * @param releaseStartMessage
+     * @param aReleaseStartMessage
      *            the releaseStartMessage to set
      */
-    public void setReleaseStartMessage(String releaseStartMessage) {
-        this.releaseStartMessage = releaseStartMessage;
+    public void setReleaseStartMessage(String aReleaseStartMessage) {
+        this.releaseStartMessage = aReleaseStartMessage;
     }
 
     /**
@@ -183,11 +192,11 @@ public class CommitMessages {
     }
 
     /**
-     * @param releaseFinishMessage
+     * @param aReleaseFinishMessage
      *            the releaseFinishMessage to set
      */
-    public void setReleaseFinishMessage(String releaseFinishMessage) {
-        this.releaseFinishMessage = releaseFinishMessage;
+    public void setReleaseFinishMessage(String aReleaseFinishMessage) {
+        this.releaseFinishMessage = aReleaseFinishMessage;
     }
 
     /**
@@ -198,11 +207,11 @@ public class CommitMessages {
     }
 
     /**
-     * @param tagHotfixMessage
+     * @param aTagHotfixMessage
      *            the tagHotfixMessage to set
      */
-    public void setTagHotfixMessage(String tagHotfixMessage) {
-        this.tagHotfixMessage = tagHotfixMessage;
+    public void setTagHotfixMessage(String aTagHotfixMessage) {
+        this.tagHotfixMessage = aTagHotfixMessage;
     }
 
     /**
@@ -213,20 +222,11 @@ public class CommitMessages {
     }
 
     /**
-     * @param tagReleaseMessage
+     * @param aTagReleaseMessage
      *            the tagReleaseMessage to set
      */
-    public void setTagReleaseMessage(String tagReleaseMessage) {
-        this.tagReleaseMessage = tagReleaseMessage;
-    }
-
-    /**
-     * @param supportStartMessage
-     *            the supportStartMessage to set
-     * @deprecated use {@link #setMaintenanceStartMessage(String)}
-     */
-    public void setSupportStartMessage(String supportStartMessage) {
-        this.maintenanceStartMessage = supportStartMessage;
+    public void setTagReleaseMessage(String aTagReleaseMessage) {
+        this.tagReleaseMessage = aTagReleaseMessage;
     }
 
     /**
@@ -237,11 +237,11 @@ public class CommitMessages {
     }
 
     /**
-     * @param maintenanceStartMessage
+     * @param aMaintenanceStartMessage
      *            the maintenanceStartMessage to set
      */
-    public void setMaintenanceStartMessage(String maintenanceStartMessage) {
-        this.maintenanceStartMessage = maintenanceStartMessage;
+    public void setMaintenanceStartMessage(String aMaintenanceStartMessage) {
+        this.maintenanceStartMessage = aMaintenanceStartMessage;
     }
 
     /**
@@ -252,11 +252,11 @@ public class CommitMessages {
     }
 
     /**
-     * @param branchConfigMessage
+     * @param aBranchConfigMessage
      *            the branchConfigMessage to set
      */
-    public void setBranchConfigMessage(String branchConfigMessage) {
-        this.branchConfigMessage = branchConfigMessage;
+    public void setBranchConfigMessage(String aBranchConfigMessage) {
+        this.branchConfigMessage = aBranchConfigMessage;
     }
 
     /**
@@ -271,5 +271,19 @@ public class CommitMessages {
      */
     public void setMergeMessagePattern(String aMergeMessagePattern) {
         mergeMessagePattern = aMergeMessagePattern;
+    }
+
+    /**
+     * @return the branchConfigMessagePattern
+     */
+    public String getBranchConfigMessagePattern() {
+        return branchConfigMessagePattern;
+    }
+
+    /**
+     * @param aBranchConfigMessagePattern the branchConfigMessagePattern to set
+     */
+    public void setBranchConfigMessagePattern(String aBranchConfigMessagePattern) {
+        branchConfigMessagePattern = aBranchConfigMessagePattern;
     }
 }

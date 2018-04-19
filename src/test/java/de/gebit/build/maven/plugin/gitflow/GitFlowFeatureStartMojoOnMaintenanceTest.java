@@ -8,6 +8,7 @@
 //
 package de.gebit.build.maven.plugin.gitflow;
 
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
@@ -29,7 +30,7 @@ import de.gebit.build.maven.plugin.gitflow.jgit.GitExecution;
 import de.gebit.build.maven.plugin.gitflow.jgit.RepositorySet;
 
 /**
- * @author VMedvid
+ * @author Volodymyr Medvid
  */
 public class GitFlowFeatureStartMojoOnMaintenanceTest extends AbstractGitFlowMojoTestCase {
 
@@ -88,6 +89,20 @@ public class GitFlowFeatureStartMojoOnMaintenanceTest extends AbstractGitFlowMoj
 
         assertFeatureStartedCorrectlyOnMaintenance();
         assertArtifactNotInstalled();
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
+    }
+
+    private void assertCentralBranchConfigSetCorrectly(final String expectedVersionChangeCommit)
+            throws IOException, GitAPIException {
+        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
+        assertEquals("feature", branchConfig.getProperty("branchType"));
+        assertEquals(MAINTENANCE_BRANCH, branchConfig.getProperty("baseBranch"));
+        assertEquals(FEATURE_ISSUE, branchConfig.getProperty("issueNumber"));
+        assertEquals(MAINTENANCE_FIRST_VERSION, branchConfig.getProperty("baseVersion"));
+        assertEquals(COMMIT_MESSAGE_SET_VERSION, branchConfig.getProperty("featureStartMessage"));
+        assertEquals(expectedVersionChangeCommit, branchConfig.getProperty("versionChangeCommit"));
     }
 
     private void assertFeatureStartedCorrectlyOnMaintenance()
@@ -95,8 +110,8 @@ public class GitFlowFeatureStartMojoOnMaintenanceTest extends AbstractGitFlowMoj
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, MAINTENANCE_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION,
                 COMMIT_MESSAGE_MAINTENANCE_SET_VERSION);
     }
@@ -117,9 +132,11 @@ public class GitFlowFeatureStartMojoOnMaintenanceTest extends AbstractGitFlowMoj
         assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, MAINTENANCE_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_MAINTENANCE_SET_VERSION);
+
+        assertCentralBranchConfigSetCorrectly(null);
     }
 
     @Test
@@ -206,6 +223,7 @@ public class GitFlowFeatureStartMojoOnMaintenanceTest extends AbstractGitFlowMoj
         git.remoteCreateTestfileInBranch(repositorySet, MAINTENANCE_BRANCH);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.fetchRemote", "false");
+        userProperties.setProperty("flow.push", "false");
         git.setOffline(repositorySet);
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
@@ -214,7 +232,13 @@ public class GitFlowFeatureStartMojoOnMaintenanceTest extends AbstractGitFlowMoj
         verify(promptControllerMock).prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME);
         verifyNoMoreInteractions(promptControllerMock);
 
-        assertFeatureStartedCorrectlyOnMaintenance();
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION,
+                COMMIT_MESSAGE_MAINTENANCE_SET_VERSION);
     }
 
     @Test
@@ -248,13 +272,16 @@ public class GitFlowFeatureStartMojoOnMaintenanceTest extends AbstractGitFlowMoj
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, INTEGRATION_BRANCH, FEATURE_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, INTEGRATION_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, INTEGRATION_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, INTEGRATION_BRANCH, CONFIG_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, INTEGRATION_BRANCH, MAINTENANCE_BRANCH);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, FEATURE_BRANCH, MAINTENANCE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION,
                 COMMIT_MESSAGE_MAINTENANCE_SET_VERSION);
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
     }
 
     @Test
@@ -271,11 +298,14 @@ public class GitFlowFeatureStartMojoOnMaintenanceTest extends AbstractGitFlowMoj
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, INTEGRATION_BRANCH, FEATURE_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, INTEGRATION_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, INTEGRATION_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, INTEGRATION_BRANCH, CONFIG_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION,
                 COMMIT_MESSAGE_MAINTENANCE_SET_VERSION);
         git.assertTestfileMissing(repositorySet);
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
     }
 
     @Test
@@ -297,11 +327,14 @@ public class GitFlowFeatureStartMojoOnMaintenanceTest extends AbstractGitFlowMoj
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, INTEGRATION_BRANCH, FEATURE_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, INTEGRATION_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, INTEGRATION_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, INTEGRATION_BRANCH, CONFIG_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION,
                 COMMIT_MESSAGE_MAINTENANCE_SET_VERSION);
         git.assertTestfileMissing(repositorySet);
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
     }
 
     @Test
@@ -324,11 +357,14 @@ public class GitFlowFeatureStartMojoOnMaintenanceTest extends AbstractGitFlowMoj
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, INTEGRATION_BRANCH, FEATURE_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, INTEGRATION_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, INTEGRATION_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, INTEGRATION_BRANCH, CONFIG_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION,
                 GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_MAINTENANCE_SET_VERSION);
         git.assertTestfileContent(repositorySet);
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
     }
 
     @Test
@@ -379,10 +415,19 @@ public class GitFlowFeatureStartMojoOnMaintenanceTest extends AbstractGitFlowMoj
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, EPIC_BRANCH, FEATURE_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, EPIC_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, EPIC_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION,
                 COMMIT_MESSAGE_EPIC_SET_VERSION, COMMIT_MESSAGE_MAINTENANCE_SET_VERSION);
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
+        assertEquals("feature", branchConfig.getProperty("branchType"));
+        assertEquals(EPIC_BRANCH, branchConfig.getProperty("baseBranch"));
+        assertEquals(FEATURE_ISSUE, branchConfig.getProperty("issueNumber"));
+        assertEquals(MAINTENANCE_FIRST_VERSION, branchConfig.getProperty("baseVersion"));
+        assertEquals(COMMIT_MESSAGE_SET_VERSION, branchConfig.getProperty("featureStartMessage"));
+        assertEquals(EXPECTED_VERSION_CHANGE_COMMIT, branchConfig.getProperty("versionChangeCommit"));
     }
 
     @Test
@@ -406,10 +451,19 @@ public class GitFlowFeatureStartMojoOnMaintenanceTest extends AbstractGitFlowMoj
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, EPIC_BRANCH, FEATURE_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, EPIC_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, EPIC_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION,
                 COMMIT_MESSAGE_MAINTENANCE_SET_VERSION);
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
+        assertEquals("feature", branchConfig.getProperty("branchType"));
+        assertEquals(EPIC_BRANCH, branchConfig.getProperty("baseBranch"));
+        assertEquals(FEATURE_ISSUE, branchConfig.getProperty("issueNumber"));
+        assertEquals(MAINTENANCE_FIRST_VERSION, branchConfig.getProperty("baseVersion"));
+        assertEquals(COMMIT_MESSAGE_SET_VERSION, branchConfig.getProperty("featureStartMessage"));
+        assertEquals(EXPECTED_VERSION_CHANGE_COMMIT, branchConfig.getProperty("versionChangeCommit"));
     }
 
 }

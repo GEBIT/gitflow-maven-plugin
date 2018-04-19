@@ -26,6 +26,7 @@ public class GitFlowEpicAbortMojo extends AbstractGitFlowEpicMojo {
 
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
+        getLog().info("Starting epic abort process.");
         if (gitRebaseInProcess()) {
             throw new GitFlowFailureException("A rebase of the current branch is in process. Cannot abort epic now.",
                     "Finish rebase process first in order to proceed.");
@@ -39,14 +40,7 @@ public class GitFlowEpicAbortMojo extends AbstractGitFlowEpicMojo {
             throw new GitFlowFailureException("There are no epic branches in your repository.", null);
         }
         String currentBranch = gitCurrentBranch();
-        boolean isOnEpicBranch = false;
-        for (String branch : branches) {
-            if (branch.equals(currentBranch)) {
-                isOnEpicBranch = true;
-                getLog().info("Current epic branch: " + currentBranch);
-                break;
-            }
-        }
+        boolean isOnEpicBranch = branches.contains(currentBranch);
         String epicBranchName;
         if (!isOnEpicBranch) {
             epicBranchName = getPrompter().promptToSelectFromOrderedList("Epic branches:",
@@ -56,7 +50,10 @@ public class GitFlowEpicAbortMojo extends AbstractGitFlowEpicMojo {
                             "Please switch to an epic branch first or run in interactive mode.",
                             "'git checkout BRANCH' to switch to the epic branch",
                             "'mvn flow:epic-abort' to run in interactive mode"));
+            getLog().info("Aborting epic on selected epic branch: " + epicBranchName);
         } else {
+            epicBranchName = currentBranch;
+            getLog().info("Aborting epic on current epic branch: " + epicBranchName);
             if (executeGitHasUncommitted()) {
                 boolean confirmed = getPrompter().promptConfirmation(
                         "You have some uncommitted files. If you continue any changes will be discarded. Continue?",
@@ -74,19 +71,21 @@ public class GitFlowEpicAbortMojo extends AbstractGitFlowEpicMojo {
                             "'git reset --hard' to throw away your changes");
                 }
             }
-            epicBranchName = currentBranch;
             String baseBranch = gitEpicBranchBaseBranch(epicBranchName);
-            gitEnsureLocalBranchExists(baseBranch);
             gitResetHard();
+            getLog().info("Switching to base branch: " + baseBranch);
             gitCheckout(baseBranch);
         }
 
         if (gitBranchExists(epicBranchName)) {
+            getLog().info("Removing local epic branch.");
             gitBranchDeleteForce(epicBranchName);
         }
         if (pushRemote) {
+            getLog().info("Removing remote epic branch.");
             gitBranchDeleteRemote(epicBranchName);
         }
+        getLog().info("Epic abort process finished.");
     }
 
 }

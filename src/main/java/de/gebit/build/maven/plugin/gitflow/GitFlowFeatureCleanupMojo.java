@@ -72,6 +72,7 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
+        getLog().info("Starting feature cleanup process.");
         if (!settings.isInteractiveMode()) {
             throw new GitFlowFailureException(
                     "'mvn flow:feature-rebase-cleanup' can be executed only in interactive mode.",
@@ -88,18 +89,11 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
                         "Please start a feature first.", "'mvn flow:feature-start'");
             }
             String currentBranch = gitCurrentBranch();
-            boolean isOnFeatureBranch = false;
-            for (String branch : branches) {
-                if (branch.equals(currentBranch)) {
-                    // we're on a feature branch, no need to ask
-                    isOnFeatureBranch = true;
-                    getLog().info("Current feature branch: " + currentBranch);
-                    break;
-                }
-            }
+            boolean isOnFeatureBranch = branches.contains(currentBranch);
             if (!isOnFeatureBranch) {
                 featureBranchName = getPrompter().promptToSelectFromOrderedList("Feature branches:",
                         "Choose feature branch to clean up", branches);
+                getLog().info("Cleaning up feature on selected feature branch: " + featureBranchName);
                 gitEnsureLocalBranchIsUpToDateIfExists(featureBranchName, new GitFlowFailureInfo(
                         "Remote and local feature branches '" + featureBranchName + "' diverge.",
                         "Rebase or merge the changes in local feature branch '" + featureBranchName + "' first.",
@@ -108,14 +102,25 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
                 gitCheckout(featureBranchName);
             } else {
                 featureBranchName = currentBranch;
+                getLog().info("Cleaning up feature on current feature branch: " + featureBranchName);
                 gitEnsureCurrentLocalBranchIsUpToDate(
                         new GitFlowFailureInfo("Remote and local feature branches '{0}' diverge.",
                                 "Rebase or merge the changes in local feature branch '{0}' first.", "'git rebase'"));
             }
 
             String baseCommit = gitFeatureBranchBaseCommit(featureBranchName);
+            getLog().info("Base commit (start point) of feature branch: " + baseCommit);
             String versionChangeCommitOnBranch = gitVersionChangeCommitOnFeatureBranch(featureBranchName, baseCommit);
-            String rebaseCommit = (versionChangeCommitOnBranch != null) ? versionChangeCommitOnBranch : baseCommit;
+            String rebaseCommit;
+            if (versionChangeCommitOnBranch != null) {
+                rebaseCommit = versionChangeCommitOnBranch;
+                getLog().info("First commit on feature branch is version change commit. "
+                        + "Exclude it from interactive cleanup rebase.");
+            } else {
+                rebaseCommit = baseCommit;
+                getLog().info("First commit on feature branch is not a version change commit. "
+                        + "Use all feature commits while interactive cleanup rebase.");
+            }
 
             InteractiveRebaseStatus rebaseStatus = gitRebaseInteractive(rebaseCommit);
             if (rebaseStatus == InteractiveRebaseStatus.PAUSED) {
@@ -131,6 +136,7 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
                     + "Continue?", true, true)) {
                 throw new GitFlowFailureException("Continuation of feature clean up aborted by user.", null);
             }
+            getLog().info("Continue interactive rebase.");
             InteractiveRebaseResult rebaseResult = gitInteractiveRebaseContinue();
             switch (rebaseResult.getStatus()) {
             case PAUSED:
@@ -159,10 +165,12 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
         if (pushRemote) {
             // delete remote branch to not run into non-fast-forward error
             if (deleteRemoteBranchOnRebase) {
+                getLog().info("Deleting remote feature branch to not run into non-fast-forward error");
                 gitBranchDeleteRemote(featureBranchName);
             }
             gitPush(featureBranchName, false, true);
         }
+        getLog().info("Feature cleanup process finished.");
     }
 
 }

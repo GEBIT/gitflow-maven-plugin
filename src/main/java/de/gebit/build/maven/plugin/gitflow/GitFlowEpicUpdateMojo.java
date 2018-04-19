@@ -26,6 +26,7 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
 
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
+        getLog().info("Starting epic update process.");
         String epicBranchName = gitMergeIntoEpicBranchInProcess();
         if (epicBranchName == null) {
             checkUncommittedChanges();
@@ -36,14 +37,7 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
                         "Please start an epic first.", "'mvn flow:epic-start'");
             }
             String currentBranch = gitCurrentBranch();
-            boolean isOnEpicBranch = false;
-            for (String branch : branches) {
-                if (branch.equals(currentBranch)) {
-                    isOnEpicBranch = true;
-                    getLog().info("Current epic branch: " + currentBranch);
-                    break;
-                }
-            }
+            boolean isOnEpicBranch = branches.contains(currentBranch);
             if (!isOnEpicBranch) {
                 epicBranchName = getPrompter().promptToSelectFromOrderedList("Epic branches:",
                         "Choose epic branch to update", branches,
@@ -52,6 +46,7 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
                                 "Please switch to an epic branch first or run in interactive mode.",
                                 "'git checkout BRANCH' to switch to the epic branch",
                                 "'mvn flow:epic-update' to run in interactive mode"));
+                getLog().info("Updating epic on selected epic branch: " + epicBranchName);
                 gitEnsureLocalBranchIsUpToDateIfExists(epicBranchName,
                         new GitFlowFailureInfo("Remote and local epic branches '" + epicBranchName + "' diverge.",
                                 "Rebase or merge the changes in local epic branch '" + epicBranchName + "' first.",
@@ -59,6 +54,7 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
                 gitCheckout(epicBranchName);
             } else {
                 epicBranchName = currentBranch;
+                getLog().info("Updating epic on current epic branch: " + epicBranchName);
                 gitEnsureCurrentLocalBranchIsUpToDate(
                         new GitFlowFailureInfo("Remote and local epic branches '{0}' diverge.",
                                 "Rebase or merge the changes in local epic branch '{0}' first.", "'git rebase'"));
@@ -90,7 +86,7 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
             }
 
             try {
-                gitMerge(baseBranch, false, true);
+                gitMerge(baseBranch, true);
             } catch (MojoFailureException ex) {
                 throw new GitFlowFailureException(ex,
                         "Automatic merge failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage()),
@@ -128,6 +124,7 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
         if (pushRemote) {
             gitPush(epicBranchName, false, false);
         }
+        getLog().info("Epic update process finished.");
     }
 
 }

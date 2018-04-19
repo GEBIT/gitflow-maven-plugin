@@ -94,6 +94,8 @@ public abstract class AbstractGitFlowMojoTestCase {
 
     public static final String MASTER_BRANCH = "master";
 
+    public static final String CONFIG_BRANCH = "branch-config";
+
     public static final String COMMAND_LINE_EXCEPTION_MESSAGE_PATTERN = "Working directory \"{0}\" does not exist!";
 
     private PlexusContainer container;

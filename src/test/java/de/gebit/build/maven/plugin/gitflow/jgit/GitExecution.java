@@ -687,14 +687,16 @@ public class GitExecution {
      *            the repository to be used
      * @param branch
      *            the branch to be created
+     * @param initialCommitMessage
+     *            the initial commit message
      * @throws GitAPIException
      *             if an error occurs on git command execution
      * @throws IOException
      *             in case of an I/O error
      */
-    public void createRemoteOrphanBranch(RepositorySet repositorySet, String branch)
+    public void createRemoteOrphanBranch(RepositorySet repositorySet, String branch, String initialCommitMessage)
             throws GitAPIException, IOException {
-        createOrphanBranch(repositorySet.getClonedRemoteRepoGit(), branch, true);
+        createOrphanBranch(repositorySet.getClonedRemoteRepoGit(), branch, initialCommitMessage, true);
     }
 
     /**
@@ -704,20 +706,24 @@ public class GitExecution {
      *            the repository to be used
      * @param branch
      *            the branch to be created
+     * @param initialCommitMessage
+     *            the initial commit message
      * @throws GitAPIException
      *             if an error occurs on git command execution
      * @throws IOException
      *             in case of an I/O error
      */
-    public void createOrphanBranch(RepositorySet repositorySet, String branch) throws GitAPIException, IOException {
-        createOrphanBranch(repositorySet.getLocalRepoGit(), branch, false);
+    public void createOrphanBranch(RepositorySet repositorySet, String branch, String initialCommitMessage)
+            throws GitAPIException, IOException {
+        createOrphanBranch(repositorySet.getLocalRepoGit(), branch, initialCommitMessage, false);
     }
 
-    private void createOrphanBranch(Git git, String branch, boolean push) throws GitAPIException, IOException {
+    private void createOrphanBranch(Git git, String branch, String initialCommitMessage, boolean push)
+            throws GitAPIException, IOException {
         String currentBranch = currentBranch(git);
         pull(git);
         git.checkout().setName(branch).setOrphan(true).call();
-        git.commit().setAllowEmpty(true).setMessage(COMMIT_MESSAGE_FOR_UNIT_TEST_SETUP).call();
+        git.commit().setAllowEmpty(true).setMessage(initialCommitMessage).call();
         if (push) {
             push(git);
         }
@@ -1105,15 +1111,13 @@ public class GitExecution {
 
     private void assertBranches(String[] expectedBranches, List<String> branches, String repoName) {
         List<String> expectedBranchesList = Arrays.asList(expectedBranches);
-        if (expectedBranches.length != branches.size() || !branches.containsAll(expectedBranchesList)) {
-            List<String> expected = new LinkedList<>(expectedBranchesList);
-            List<String> actual = new LinkedList<>(branches);
-            Collections.sort(expected);
-            Collections.sort(actual);
-            assertEquals("Branches in " + repoName + " repository are different from expected.",
-                    Arrays.toString(expected.toArray(new String[expected.size()])),
-                    Arrays.toString(actual.toArray(new String[actual.size()])));
-        }
+        List<String> expected = new LinkedList<>(expectedBranchesList);
+        List<String> actual = new LinkedList<>(branches);
+        Collections.sort(expected);
+        Collections.sort(actual);
+        assertEquals("Branches in " + repoName + " repository are different from expected.",
+                Arrays.toString(expected.toArray(new String[expected.size()])),
+                Arrays.toString(actual.toArray(new String[actual.size()])));
     }
 
     /**
@@ -1170,18 +1174,15 @@ public class GitExecution {
     private void assertCommitMessages(String[] expectedCommitMessages, List<String> commitMessages, String branch,
             String repoName) {
         List<String> expectedCommitMessagesList = Arrays.asList(expectedCommitMessages);
-        if (expectedCommitMessages.length != commitMessages.size()
-                || !commitMessages.containsAll(expectedCommitMessagesList)) {
-            List<String> expected = new LinkedList<>(expectedCommitMessagesList);
-            List<String> actual = new LinkedList<>(commitMessages);
-            Collections.sort(expected);
-            Collections.sort(actual);
-            assertEquals(
-                    "Commit messages in branch '" + branch + "' of " + repoName
-                            + " repository are different from expected.",
-                    Arrays.toString(expected.toArray(new String[expected.size()])),
-                    Arrays.toString(actual.toArray(new String[actual.size()])));
-        }
+        List<String> expected = new LinkedList<>(expectedCommitMessagesList);
+        List<String> actual = new LinkedList<>(commitMessages);
+        Collections.sort(expected);
+        Collections.sort(actual);
+        assertEquals(
+                "Commit messages in branch '" + branch + "' of " + repoName
+                        + " repository are different from expected.",
+                Arrays.toString(expected.toArray(new String[expected.size()])),
+                Arrays.toString(actual.toArray(new String[actual.size()])));
     }
 
     /**

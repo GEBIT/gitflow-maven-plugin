@@ -18,6 +18,8 @@ package de.gebit.build.maven.plugin.gitflow;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -77,6 +79,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
+        getLog().info("Starting feature start process.");
         initGitFlowConfig();
 
         checkUncommittedChanges();
@@ -93,6 +96,8 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
                 }
             }
         }
+        getLog().info("Base branch for new feature: " + baseBranch);
+        String originalBaseBranch = baseBranch;
 
         // use integration branch?
         String integrationBranch = gitFlowConfig.getIntegrationBranchPrefix() + baseBranch;
@@ -117,7 +122,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
                             " Please consult a gitflow expert on how to fix this!");
                 }
 
-                getLog().info("Using integration branch '" + integrationBranch + "'");
+                getLog().info("Using integration branch '" + integrationBranch + "' as start point for new feature.");
                 baseBranch = integrationBranch;
             }
         }
@@ -148,8 +153,10 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
                         "'mvn flow:feature-start -DfeatureName=XXX -B'", "'mvn flow:feature-start'"));
 
         featureName = StringUtils.deleteWhitespace(featureName);
+        getLog().info("New feature name: " + featureName);
 
         String featureBranchName = gitFlowConfig.getFeatureBranchPrefix() + featureName;
+        getLog().info("New feature branch name: " + featureBranchName);
         if (gitBranchExists(featureBranchName)) {
             throw new GitFlowFailureException("Feature branch '" + featureBranchName + "' already exists.",
                     "Either checkout the existing feature branch or start a new feature with another name.",
@@ -166,32 +173,58 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
         }
 
         String featureIssue = extractIssueNumberFromFeatureName(featureName);
+        getLog().info("Feature issue number: " + featureIssue);
         String featureStartMessage = substituteInFeatureMessage(commitMessages.getFeatureStartMessage(), featureIssue);
 
         gitCreateAndCheckout(featureBranchName, baseBranch);
 
+        String currentVersion = getCurrentProjectVersion();
+        String baseVersion = currentVersion;
+        String versionChangeCommit = null;
         if (!skipFeatureVersion && !tychoBuild) {
-            String currentVersion = getCurrentProjectVersion();
+            getLog().info("Creating project version for feature.");
             String version = currentVersion;
+            getLog().info("Base project version: " + version);
             if (isEpicBranch(baseBranch)) {
                 version = removeEpicIssueFromVersion(version, baseBranch);
+                getLog().info("Removed epic issue number from project version: " + version);
             }
+            baseVersion = version;
             version = insertSuffixInVersion(version, featureIssue);
+            getLog().info("Added feature issue number to project version: " + version);
             if (!currentVersion.equals(version)) {
                 mvnSetVersions(version, "On feature branch: ");
                 gitCommit(featureStartMessage);
+                versionChangeCommit = getCurrentCommit();
+            } else {
+                getLog().info(
+                        "Project version for feature is same as base project version. Version update not needed.");
             }
         }
+
+        BranchCentralConfigChanges branchConfigChanges = new BranchCentralConfigChanges();
+        branchConfigChanges.set(featureBranchName, CONFIG_KEY_BRANCH_TYPE, BranchType.FEATURE.getType());
+        branchConfigChanges.set(featureBranchName, CONFIG_KEY_BASE_BRANCH, originalBaseBranch);
+        branchConfigChanges.set(featureBranchName, CONFIG_KEY_ISSUE_NUMBER, featureIssue);
+        branchConfigChanges.set(featureBranchName, CONFIG_KEY_BASE_VERSION, baseVersion);
+        branchConfigChanges.set(featureBranchName, CONFIG_KEY_FEATURE_START_MESSAGE, featureStartMessage);
+        if (versionChangeCommit != null) {
+            branchConfigChanges.set(featureBranchName, CONFIG_KEY_VERSION_CHANGE_COMMIT, versionChangeCommit);
+        }
+        gitApplyBranchCentralConfigChanges(branchConfigChanges, "feature '" + featureName + "' created");
 
         if (installProject) {
             mvnCleanInstall();
         }
+        getLog().info("Feature for issue '" + featureIssue + "' started on branch '" + featureBranchName + "'.");
+        getLog().info("Feature start process finished.");
     }
 
-    private String removeEpicIssueFromVersion(String version, String epicBranch) {
-        String epicIssueNumber = extractIssueNumberFromEpicBranchName(epicBranch);
+    private String removeEpicIssueFromVersion(String version, String epicBranch)
+            throws MojoFailureException, CommandLineException {
+        String epicIssueNumber = getEpicIssueNumber(epicBranch);
         if (version.contains("-" + epicIssueNumber)) {
-           return version.replaceFirst("-" + epicIssueNumber, "");
+            return version.replaceFirst("-" + epicIssueNumber, "");
         }
         return version;
     }
@@ -222,5 +255,23 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
             return true;
         }
         return featureName.matches(featureNamePattern);
+    }
+
+    /**
+     * Extracts the feature issue number from feature name using feature name
+     * pattern. E.g. extracts issue number "GBLD-42" from feature name
+     * "GBLD-42-someDescription" if default feature name pattern is used.
+     * Returns feature name if issue number can't be extracted.
+     *
+     * @param aFeatureName
+     *            the feature name
+     * @return the extracted feature issue number or feature name if issue
+     *         number can't be extracted
+     */
+    private String extractIssueNumberFromFeatureName(String aFeatureName) {
+        return extractIssueNumberFromName(aFeatureName, featureNamePattern,
+                "Feature branch conforms to <featureNamePattern>, but ther is no matching group to extract the issue "
+                        + "number.",
+                "Feature branch does not conform to <featureNamePattern> specified, cannot extract issue number.");
     }
 }

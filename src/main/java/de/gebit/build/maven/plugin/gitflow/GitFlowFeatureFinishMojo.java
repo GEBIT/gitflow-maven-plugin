@@ -57,6 +57,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
+        getLog().info("Starting feature finish process.");
         // check if rebase in process
         String baseBranch;
         String featureBranchName = gitMergeFromFeatureBranchInProcess();
@@ -73,16 +74,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
                 }
                 // is the current branch a feature branch?
                 String currentBranch = gitCurrentBranch();
-                boolean isOnFeatureBranch = false;
-                for (String branch : branches) {
-                    if (branch.equals(currentBranch)) {
-                        // we're on a feature branch, no need to ask
-                        isOnFeatureBranch = true;
-                        getLog().info("Current feature branch: " + currentBranch);
-                        break;
-                    }
-                }
-
+                boolean isOnFeatureBranch = branches.contains(currentBranch);
                 if (!isOnFeatureBranch) {
                     featureBranchName = getPrompter().promptToSelectFromOrderedList("Feature branches:",
                             "Choose feature branch to finish", branches,
@@ -91,6 +83,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
                                     "Please switch to a feature branch first or run in interactive mode.",
                                     "'git checkout BRANCH' to switch to the feature branch",
                                     "'mvn flow:feature-finish' to run in interactive mode"));
+                    getLog().info("Finishing feature on selected feature branch: " + featureBranchName);
 
                     // git checkout feature/...
                     gitEnsureLocalBranchIsUpToDateIfExists(featureBranchName, new GitFlowFailureInfo(
@@ -99,6 +92,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
                             "'git rebase'"));
                 } else {
                     featureBranchName = currentBranch;
+                    getLog().info("Finishing feature on current feature branch: " + featureBranchName);
                     gitEnsureCurrentLocalBranchIsUpToDate(new GitFlowFailureInfo(
                             "Remote and local feature branches '{0}' diverge.",
                             "Rebase or merge the changes in local feature branch '{0}' first.", "'git rebase'"));
@@ -148,11 +142,14 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
                     mvnCleanVerify();
                 }
 
-                // get current project version from pom
-                final String currentVersion = getCurrentProjectVersion();
+                String featureVersion = getCurrentProjectVersion();
+                getLog().info("Project version on feature branch: " + featureVersion);
 
-                // git checkout develop after fetch and check remote
                 gitCheckout(baseBranch);
+
+                String baseVersion = getCurrentProjectVersion();
+                getLog().info("Project version on base branch: " + baseVersion);
+
                 boolean rebased = false;
                 if (rebaseWithoutVersionChange) {
                     String branchPoint = gitBranchPoint(featureBranchName, baseBranch);
@@ -166,19 +163,17 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
                 if (!rebased && !tychoBuild) {
                     // rebase not configured or not possible, then manually
                     // revert the version
-                    gitCheckout(featureBranchName);
-                    String version = currentVersion;
-                    String issueNumber = extractIssueNumberFromFeatureBranchName(featureBranchName);
-                    if (version.contains("-" + issueNumber)) {
-                        version = version.replaceFirst("-" + issueNumber, "");
-                        if (!tychoBuild && isEpicBranch(baseBranch)) {
-                            String epicIssue = extractIssueNumberFromEpicBranchName(baseBranch);
-                            version = insertSuffixInVersion(version, epicIssue);
-                        }
-                        mvnSetVersions(version);
+                    if (!featureVersion.equals(baseVersion)) {
+                        getLog().info("Reverting the project version on feature branch to the version on base branch.");
+                        gitCheckout(featureBranchName);
+                        String issueNumber = getFeatureIssueNumber(featureBranchName);
                         String featureFinishMessage = substituteInFeatureMessage(
                                 commitMessages.getFeatureFinishMessage(), issueNumber);
+                        mvnSetVersions(baseVersion);
                         gitCommit(featureFinishMessage);
+                    } else {
+                        getLog().info("Project version on feature branch is same as project version on base branch. "
+                                + "Version update not needed.");
                     }
                 }
             } else {
@@ -200,14 +195,15 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
                             "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved",
                             "'mvn flow:feature-finish' to continue feature finish process");
                 }
+                baseBranch = gitFeatureBranchBaseBranch(featureBranchName);
             }
 
             // git checkout develop
-            baseBranch = gitFeatureBranchBaseBranch(featureBranchName);
             gitCheckout(baseBranch);
 
             // git merge --no-ff feature/...
             try {
+                getLog().info("Merging feature branch into base branch.");
                 gitMergeNoff(featureBranchName);
             } catch (MojoFailureException ex) {
                 throw new GitFlowFailureException(ex,
@@ -241,16 +237,15 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
         }
 
         if (installProject) {
-            // mvn clean install
             mvnCleanInstall();
         }
 
         if (!keepFeatureBranch) {
-            // git branch -D feature/...
+            getLog().info("Removing local feature branch.");
             gitBranchDeleteForce(featureBranchName);
 
-            // delete the remote branch
             if (pushRemote) {
+                getLog().info("Removing remote feature branch.");
                 gitBranchDeleteRemote(featureBranchName);
             }
         }
@@ -258,6 +253,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
         if (pushRemote) {
             gitPush(baseBranch, false, false);
         }
+        getLog().info("Feature finish process finished.");
     }
 
 }
