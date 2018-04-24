@@ -8,9 +8,7 @@
 //
 package de.gebit.build.maven.plugin.gitflow;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Parameter;
@@ -26,23 +24,6 @@ import org.codehaus.plexus.util.cli.CommandLineException;
 public abstract class AbstractGitFlowFeatureMojo extends AbstractGitFlowMojo {
 
     /**
-     * Branch config key for base version (version without feature issue number
-     * suffix).
-     */
-    protected static final String CONFIG_KEY_BASE_VERSION = "baseVersion";
-
-    /**
-     * Branch config key for feature start commit message (version change commit
-     * message).
-     */
-    protected static final String CONFIG_KEY_FEATURE_START_MESSAGE = "featureStartMessage";
-
-    /**
-     * Branch config key for feature version change commit.
-     */
-    protected static final String CONFIG_KEY_VERSION_CHANGE_COMMIT = "versionChangeCommit";
-
-    /**
      * A regex pattern that a new feature name must match. It is also used to
      * extract a "key" from a branch name which can be referred to as
      * <code>@key</code> in commit messages. The extraction will be performed
@@ -53,24 +34,6 @@ public abstract class AbstractGitFlowFeatureMojo extends AbstractGitFlowMojo {
      */
     @Parameter(property = "featureNamePattern", required = false)
     protected String featureNamePattern;
-
-    /**
-     * Substitute keys of the form <code>@{name}</code> in the messages. By
-     * default knows about <code>key</code>, which will be replaced by issue
-     * number and all project properties.
-     *
-     * @param message
-     *            the message to process
-     * @param issueNumber
-     *            the feature issue number
-     * @return the message with applied substitutions
-     * @see #lookupKey(String)
-     */
-    protected String substituteInFeatureMessage(String message, String issueNumber) throws MojoFailureException {
-        Map<String, String> replacements = new HashMap<String, String>();
-        replacements.put("key", issueNumber);
-        return substituteStrings(message, replacements);
-    }
 
     /**
      * Get the first commit on the branch, which is the version change commit
@@ -108,7 +71,7 @@ public abstract class AbstractGitFlowFeatureMojo extends AbstractGitFlowMojo {
      */
     protected String getFeatureStartCommitMessage(String featureBranch)
             throws MojoFailureException, CommandLineException {
-        return gitGetBranchCentralConfig(featureBranch, CONFIG_KEY_FEATURE_START_MESSAGE);
+        return gitGetBranchCentralConfig(featureBranch, BranchConfigKeys.START_COMMIT_MESSAGE);
     }
 
     /**
@@ -123,7 +86,7 @@ public abstract class AbstractGitFlowFeatureMojo extends AbstractGitFlowMojo {
      * @throws CommandLineException
      */
     protected String getFeatureIssueNumber(String featureBranch) throws MojoFailureException, CommandLineException {
-        return gitGetBranchCentralConfig(featureBranch, CONFIG_KEY_ISSUE_NUMBER);
+        return gitGetBranchCentralConfig(featureBranch, BranchConfigKeys.ISSUE_NUMBER);
     }
 
     protected boolean hasCommitsExceptVersionChangeCommitOnFeatureBranch(String featureBranch, String baseBranch)

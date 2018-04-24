@@ -73,6 +73,7 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         getLog().info("Starting feature cleanup process.");
+        checkCentralBranchConfig();
         if (!settings.isInteractiveMode()) {
             throw new GitFlowFailureException(
                     "'mvn flow:feature-rebase-cleanup' can be executed only in interactive mode.",

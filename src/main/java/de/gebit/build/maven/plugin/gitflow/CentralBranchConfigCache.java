@@ -49,7 +49,7 @@ public class CentralBranchConfigCache {
                 String branchName = branchEntries.getKey();
                 Properties properties = branchEntries.getValue();
                 branchProperties.put(branchName, properties);
-                String type = properties.getProperty(AbstractGitFlowMojo.CONFIG_KEY_BRANCH_TYPE);
+                String type = properties.getProperty(BranchConfigKeys.BRANCH_TYPE);
                 BranchType branchType = BranchType.getByType(type);
                 if (branchType != null) {
                     List<String> typeBranches = branches.get(branchType);

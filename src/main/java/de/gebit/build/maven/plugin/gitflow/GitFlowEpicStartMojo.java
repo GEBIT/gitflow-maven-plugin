@@ -50,6 +50,7 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
         getLog().info("Starting epic start process.");
         initGitFlowConfig();
 
+        checkCentralBranchConfig();
         checkUncommittedChanges();
 
         String currentBranch = gitCurrentBranch();
@@ -163,15 +164,15 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
         }
 
         BranchCentralConfigChanges branchConfigChanges = new BranchCentralConfigChanges();
-        branchConfigChanges.set(epicBranchName, CONFIG_KEY_BRANCH_TYPE, BranchType.EPIC.getType());
-        branchConfigChanges.set(epicBranchName, CONFIG_KEY_BASE_BRANCH, originalBaseBranch);
-        branchConfigChanges.set(epicBranchName, CONFIG_KEY_ISSUE_NUMBER, epicIssue);
-        branchConfigChanges.set(epicBranchName, CONFIG_KEY_BASE_VERSION, baseVersion);
-        branchConfigChanges.set(epicBranchName, CONFIG_KEY_EPIC_START_MESSAGE, epicStartMessage);
+        branchConfigChanges.set(epicBranchName, BranchConfigKeys.BRANCH_TYPE, BranchType.EPIC.getType());
+        branchConfigChanges.set(epicBranchName, BranchConfigKeys.BASE_BRANCH, originalBaseBranch);
+        branchConfigChanges.set(epicBranchName, BranchConfigKeys.ISSUE_NUMBER, epicIssue);
+        branchConfigChanges.set(epicBranchName, BranchConfigKeys.BASE_VERSION, baseVersion);
+        branchConfigChanges.set(epicBranchName, BranchConfigKeys.START_COMMIT_MESSAGE, epicStartMessage);
         if (versionChangeCommit != null) {
-            branchConfigChanges.set(epicBranchName, CONFIG_KEY_VERSION_CHANGE_COMMIT, versionChangeCommit);
+            branchConfigChanges.set(epicBranchName, BranchConfigKeys.VERSION_CHANGE_COMMIT, versionChangeCommit);
         }
-        gitApplyBranchCentralConfigChanges(branchConfigChanges, "epic '" + epicName + "' created");
+        gitApplyBranchCentralConfigChanges(branchConfigChanges, "epic '" + epicName + "' started");
 
         if (installProject) {
             mvnCleanInstall();

@@ -35,12 +35,13 @@ public class GitFlowReleaseAbortMojo extends AbstractGitFlowMojo {
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
+        checkCentralBranchConfig();
         String currentBranch = gitCurrentBranch();
         String releaseBranch = abortReleaseWithConflictsIfMergeInProcess(currentBranch);
         if (releaseBranch == null) {
             if (isReleaseBranch(currentBranch)) {
                 releaseBranch = currentBranch;
-                String developmentBranch = gitGetBranchLocalConfig(releaseBranch, "development");
+                String developmentBranch = gitGetBranchCentralConfig(releaseBranch, BranchConfigKeys.BASE_BRANCH);
                 if (StringUtils.isBlank(developmentBranch)) {
                     developmentBranch = gitFlowConfig.getDevelopmentBranch();
                 }
@@ -75,8 +76,9 @@ public class GitFlowReleaseAbortMojo extends AbstractGitFlowMojo {
                                     + "This indicates a severe error condition on your branches.",
                             "Please configure correct development branch for the current release branch or consult a "
                                     + "gitflow expert on how to fix this.",
-                            "'git config branch." + releaseBranch
-                                    + ".development [development branch name]' to configure correct development branch");
+                            "'mvn flow:branch-config -DbranchName=" + releaseBranch
+                                    + " -DpropertyName=baseBranch -DpropertyValue=[development branch name]' to "
+                                    + "configure correct development branch");
                 }
             } else {
                 List<String> releaseBranches = gitAllBranches(gitFlowConfig.getReleaseBranchPrefix());
@@ -94,12 +96,10 @@ public class GitFlowReleaseAbortMojo extends AbstractGitFlowMojo {
         }
 
         if (gitBranchExists(releaseBranch)) {
-            // git branch -D release/...
             gitBranchDeleteForce(releaseBranch);
         }
 
         if (pushRemote) {
-            // delete the remote branch
             gitBranchDeleteRemote(releaseBranch);
         }
     }
@@ -172,7 +172,8 @@ public class GitFlowReleaseAbortMojo extends AbstractGitFlowMojo {
                             + "Release can't be automatically aborted.",
                     "Please consult a gitflow expert on how to fix this!");
         }
-        String developmentCommitRef = gitGetBranchLocalConfig(releaseBranch, "developmentCommitRef");
+        String developmentCommitRef = gitGetBranchCentralConfig(releaseBranch,
+                BranchConfigKeys.RELEASE_DEVELOPMENT_SAVEPOINT);
         if (StringUtils.isBlank(developmentCommitRef)) {
             throw new GitFlowFailureException(
                     "There is a conflict of merging branch '" + mergeFromBranch + "' into branch '" + mergeIntoBranch
@@ -190,7 +191,8 @@ public class GitFlowReleaseAbortMojo extends AbstractGitFlowMojo {
             gitResetHard();
         }
         gitCheckout(developmentBranch);
-        String productionCommitRef = gitGetBranchLocalConfig(releaseBranch, "productionCommitRef");
+        String productionCommitRef = gitGetBranchCentralConfig(releaseBranch,
+                BranchConfigKeys.RELEASE_PRODUCTION_SAVEPOINT);
         if (StringUtils.isNotBlank(productionCommitRef)) {
             gitUpdateRef(productionBranch, productionCommitRef);
         } else if (isUsingProductionBranch(developmentBranch, productionBranch) && gitBranchExists(productionBranch)) {
@@ -203,9 +205,6 @@ public class GitFlowReleaseAbortMojo extends AbstractGitFlowMojo {
 
     private void removeBranchConfigs(String releaseBranch, String developmentBranch)
             throws MojoFailureException, CommandLineException {
-        gitRemoveBranchLocalConfig(releaseBranch, "development");
-        gitRemoveBranchLocalConfig(releaseBranch, "developmentCommitRef");
-        gitRemoveBranchLocalConfig(releaseBranch, "productionCommitRef");
         gitRemoveBranchLocalConfig(releaseBranch, "releaseTag");
         gitRemoveBranchLocalConfig(releaseBranch, "releaseCommit");
         gitRemoveBranchLocalConfig(releaseBranch, "nextSnapshotVersion");

@@ -140,7 +140,7 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
         // set git flow configuration
         initGitFlowConfig();
 
-        // check uncommitted changes
+        checkCentralBranchConfig();
         checkUncommittedChanges();
 
         releaseStart();

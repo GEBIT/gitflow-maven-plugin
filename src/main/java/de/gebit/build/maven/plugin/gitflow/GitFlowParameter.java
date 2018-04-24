@@ -2,7 +2,7 @@
 // GitFlowParameter.java
 //
 // Copyright (C) 2016
-// GEBIT Solutions GmbH, 
+// GEBIT Solutions GmbH,
 // Berlin, Duesseldorf, Stuttgart (Germany)
 // All rights reserved.
 //
@@ -18,7 +18,7 @@ public class GitFlowParameter {
 
     /**
      * User prompt text. If not set only the command is executed. Can contain the {@literal @}{version} placeholder
-     * which is replaced by the selected feature version as well as any project property with the {@literal @}{property} 
+     * which is replaced by the selected feature version as well as any project property with the {@literal @}{property}
      *syntax.
      */
     @Parameter(required = false)
@@ -32,7 +32,7 @@ public class GitFlowParameter {
     protected String enabled;
 
     /**
-     * If set the prompt is interpreted as a yes/no answer which controls enablement. 
+     * If set the prompt is interpreted as a yes/no answer which controls enablement.
      */
     @Parameter(required = false)
     protected boolean enabledByPrompt;
@@ -43,7 +43,7 @@ public class GitFlowParameter {
      */
     @Parameter(required = false)
     protected String defaultValue;
-    
+
     /**
      * Name of a property which, if defined will be used as the value skipping the querying.
      * @since 1.5.4
@@ -75,7 +75,7 @@ public class GitFlowParameter {
     public String getDefaultValue() {
         return defaultValue;
     }
-    
+
     /**
      * @return the property
      */
@@ -89,14 +89,14 @@ public class GitFlowParameter {
     public String getCommand() {
         return command;
     }
-    
+
     /**
      * @return the enabled
      */
     public String getEnabled() {
         return enabled;
     }
-    
+
     /**
      * @return the enabled
      */
@@ -104,21 +104,21 @@ public class GitFlowParameter {
         return enabled != null && !enabled.isEmpty() && !enabled.toLowerCase().equals("no")
                 && !enabled.toLowerCase().equals("false");
     }
-    
+
     /**
      * @return the enabledByPrompt
      */
     public boolean isEnabledByPrompt() {
         return enabledByPrompt;
     }
-    
+
     /**
-     * @param value the value to set
+     * @param aValue the value to set
      */
-    public void setValue(String value) {
-        this.value = value;
+    public void setValue(String aValue) {
+        this.value = aValue;
     }
-    
+
     /**
      * @return the value
      */

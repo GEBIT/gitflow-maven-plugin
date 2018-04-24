@@ -203,6 +203,7 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
+        checkCentralBranchConfig();
         String currentBranch = gitCurrentBranch();
         if (!continueReleaseFinishIfMergeInProcess(currentBranch)) {
             // check uncommitted changes
@@ -213,13 +214,14 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
                         "Please switch to the release branch that you want to finish in order to proceed.",
                         "'git checkout BRANCH' to switch to the release branch");
             }
-            String developmentBranch = gitGetBranchLocalConfig(currentBranch, "development");
+            String developmentBranch = gitGetBranchCentralConfig(currentBranch, BranchConfigKeys.BASE_BRANCH);
             if (StringUtils.isBlank(developmentBranch)) {
                 throw new GitFlowFailureException(
                         "The release branch '" + currentBranch + "' has no development branch configured.",
                         "Please configure development branch for current release branch first in order to proceed.",
-                        "'git config branch." + currentBranch
-                                + ".development [development branch name]' to configure development branch");
+                        "'mvn flow:branch-config -DbranchName=" + currentBranch
+                                + " -DpropertyName=baseBranch -DpropertyValue=[development branch name]' "
+                                + "to configure development branch");
             }
             gitEnsureLocalBranchExists(developmentBranch, new GitFlowFailureInfo(
                     "The development branch '" + developmentBranch + "' configured for the current release branch '"
@@ -227,8 +229,9 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
                             + "the release branch or a severe error condition on your branches.",
                     "Please configure correct development branch for the current release branch or consult a "
                             + "gitflow expert on how to fix this.",
-                    "'git config branch." + currentBranch
-                            + ".development [development branch name]' to configure correct development branch"));
+                    "'mvn flow:branch-config -DbranchName=" + currentBranch
+                            + " -DpropertyName=baseBranch -DpropertyValue=[development branch name]' to configure "
+                            + "correct development branch"));
 
             gitAssertRemoteBranchNotAheadOfLocalBranche(currentBranch,
                     new GitFlowFailureInfo(

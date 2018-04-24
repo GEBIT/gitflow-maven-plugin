@@ -19,8 +19,6 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
-import org.codehaus.plexus.components.interactivity.PrompterException;
-import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
@@ -45,6 +43,7 @@ public class GitFlowIntegratedMojo extends AbstractGitFlowMojo {
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         initGitFlowConfig();
+        checkCentralBranchConfig();
 
         if (pushRemote) {
             gitAssertCurrentLocalBranchNotAheadOfRemoteBranche(

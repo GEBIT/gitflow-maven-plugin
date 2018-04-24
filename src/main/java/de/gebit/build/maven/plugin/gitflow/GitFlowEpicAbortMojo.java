@@ -27,6 +27,7 @@ public class GitFlowEpicAbortMojo extends AbstractGitFlowEpicMojo {
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         getLog().info("Starting epic abort process.");
+        checkCentralBranchConfig();
         if (gitRebaseInProcess()) {
             throw new GitFlowFailureException("A rebase of the current branch is in process. Cannot abort epic now.",
                     "Finish rebase process first in order to proceed.");

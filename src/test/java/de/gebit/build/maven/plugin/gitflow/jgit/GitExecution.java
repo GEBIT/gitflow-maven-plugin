@@ -16,7 +16,9 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -873,7 +875,7 @@ public class GitExecution {
      * @param expectedConfigValue
      *            the expected value of the config entry
      */
-    public void assertBranchConfigValue(RepositorySet repositorySet, String branchName, String configName,
+    public void assertBranchLocalConfigValue(RepositorySet repositorySet, String branchName, String configName,
             String expectedConfigValue) {
         assertConfigValue(repositorySet, "branch", branchName, configName, expectedConfigValue);
     }
@@ -908,7 +910,7 @@ public class GitExecution {
      * @param configName
      *            the name part of the config entry key
      */
-    public void assertBranchConfigValueMissing(RepositorySet repositorySet, String branchName, String configName) {
+    public void assertBranchLocalConfigValueMissing(RepositorySet repositorySet, String branchName, String configName) {
         assertConfigValueMissing(repositorySet, "branch", branchName, configName);
     }
 
@@ -954,6 +956,48 @@ public class GitExecution {
         StoredConfig config = repositorySet.getLocalRepoGit().getRepository().getConfig();
         config.setString(configSection, configSubsection, configName, value);
         config.save();
+    }
+
+    public void removeBranchCentralConfigValue(RepositorySet repositorySet, String configBranch, String branch,
+            String configName) throws IOException, GitAPIException {
+        Git git = repositorySet.getClonedRemoteRepoGit();
+        String oldBranch = currentBranch(git);
+        git.fetch().call();
+        git.checkout().setName(configBranch).setStartPoint("origin/" + configBranch).setCreateBranch(true).call();
+        Properties properties = new Properties();
+        File branchPropertyFile = new File(repositorySet.getClonedRemoteWorkingDirectory(), branch);
+        try (FileInputStream fis = new FileInputStream(branchPropertyFile)) {
+            properties.load(new FileInputStream(branchPropertyFile));
+        }
+        properties.remove(configName);
+        try (FileOutputStream fos = new FileOutputStream(branchPropertyFile)) {
+            properties.store(new FileOutputStream(branchPropertyFile), null);
+        }
+        git.add().addFilepattern(".").call();
+        git.commit().setMessage("remove property").call();
+        git.push().call();
+        git.checkout().setName(oldBranch).call();
+    }
+
+    public void setBranchCentralConfigValue(RepositorySet repositorySet, String configBranch, String branch,
+            String configName, String value) throws IOException, GitAPIException {
+        Git git = repositorySet.getClonedRemoteRepoGit();
+        String oldBranch = currentBranch(git);
+        git.fetch().call();
+        git.checkout().setName(configBranch).setStartPoint("origin/" + configBranch).setCreateBranch(true).call();
+        Properties properties = new Properties();
+        File branchPropertyFile = new File(repositorySet.getClonedRemoteWorkingDirectory(), branch);
+        try (FileInputStream fis = new FileInputStream(branchPropertyFile)) {
+            properties.load(new FileInputStream(branchPropertyFile));
+        }
+        properties.setProperty(configName, value);
+        try (FileOutputStream fos = new FileOutputStream(branchPropertyFile)) {
+            properties.store(new FileOutputStream(branchPropertyFile), null);
+        }
+        git.add().addFilepattern(".").call();
+        git.commit().setMessage("remove property").call();
+        git.push().call();
+        git.checkout().setName(oldBranch).call();
     }
 
     /**

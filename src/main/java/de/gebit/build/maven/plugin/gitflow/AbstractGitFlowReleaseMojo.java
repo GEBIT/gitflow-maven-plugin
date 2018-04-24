@@ -211,34 +211,35 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
 
         String developmentCommitRef = getCurrentCommit();
 
-        // git checkout -b release/... develop to create the release branch
         gitCreateAndCheckout(releaseBranchName, developmentBranch);
 
+        BranchCentralConfigChanges branchConfigChanges = new BranchCentralConfigChanges();
+        branchConfigChanges.set(releaseBranchName, BranchConfigKeys.BRANCH_TYPE, BranchType.RELEASE.getType());
+        branchConfigChanges.set(releaseBranchName, BranchConfigKeys.BASE_BRANCH, developmentBranch);
+        branchConfigChanges.set(releaseBranchName, BranchConfigKeys.RELEASE_DEVELOPMENT_SAVEPOINT,
+                developmentCommitRef);
+
         // store development branch in branch config
-        gitSetBranchLocalConfig(releaseBranchName, "development", developmentBranch);
-        gitSetBranchLocalConfig(releaseBranchName, "developmentCommitRef", developmentCommitRef);
         if (isUsingProductionBranch(developmentBranch, productionBranch)) {
             if (gitBranchExists(productionBranch)) {
                 String productionCommitRef = getCurrentCommit(productionBranch);
-                gitSetBranchLocalConfig(releaseBranchName, "productionCommitRef", productionCommitRef);
+                branchConfigChanges.set(releaseBranchName, BranchConfigKeys.RELEASE_PRODUCTION_SAVEPOINT,
+                        productionCommitRef);
             }
         }
 
-        // execute if version changed
         if (!version.equals(currentVersion)) {
-            // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
             mvnSetVersions(version);
-
-            // git commit -a -m updating versions for release
             gitCommit(commitMessages.getReleaseStartMessage());
         }
 
         if (pushRemote && isPushReleaseBranch()) {
-            // push the release branch to the remote
             gitPush(gitCurrentBranch(), false, false);
         }
+
+        gitApplyBranchCentralConfigChanges(branchConfigChanges, "release '" + releaseBranchName + "' started");
+
         if (isInstallProject()) {
-            // mvn clean install
             mvnCleanInstall();
         }
     }
@@ -437,10 +438,6 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
     private void finilizeRelease(String nextSnapshotVersion, String releaseBranch, String productionBranch,
             String developmentBranch, String releaseCommit) throws MojoFailureException, CommandLineException {
         gitRemoveBranchLocalConfig(developmentBranch, "releaseBranch");
-
-        gitRemoveBranchLocalConfig(releaseBranch, "development");
-        gitRemoveBranchLocalConfig(releaseBranch, "developmentCommitRef");
-        gitRemoveBranchLocalConfig(releaseBranch, "productionCommitRef");
 
         gitRemoveBranchLocalConfig(releaseBranch, "releaseTag");
         gitRemoveBranchLocalConfig(releaseBranch, "releaseCommit");

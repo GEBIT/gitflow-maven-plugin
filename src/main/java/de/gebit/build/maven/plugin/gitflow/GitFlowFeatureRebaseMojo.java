@@ -67,6 +67,7 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         getLog().info("Starting feature rebase process.");
+        checkCentralBranchConfig();
         boolean confirmedUpdateWithMerge = updateWithMerge;
         String featureBranchName = gitRebaseFeatureBranchInProcess();
         if (featureBranchName == null) {

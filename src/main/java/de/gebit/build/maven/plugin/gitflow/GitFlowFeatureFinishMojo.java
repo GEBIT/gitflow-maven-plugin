@@ -58,6 +58,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         getLog().info("Starting feature finish process.");
+        checkCentralBranchConfig();
         // check if rebase in process
         String baseBranch;
         String featureBranchName = gitMergeFromFeatureBranchInProcess();
@@ -167,7 +168,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
                         getLog().info("Reverting the project version on feature branch to the version on base branch.");
                         gitCheckout(featureBranchName);
                         String issueNumber = getFeatureIssueNumber(featureBranchName);
-                        String featureFinishMessage = substituteInFeatureMessage(
+                        String featureFinishMessage = substituteWithIssueNumber(
                                 commitMessages.getFeatureFinishMessage(), issueNumber);
                         mvnSetVersions(baseVersion);
                         gitCommit(featureFinishMessage);

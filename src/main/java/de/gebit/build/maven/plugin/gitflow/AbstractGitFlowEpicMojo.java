@@ -25,23 +25,6 @@ import org.codehaus.plexus.util.cli.CommandLineException;
 public abstract class AbstractGitFlowEpicMojo extends AbstractGitFlowMojo {
 
     /**
-     * Branch config key for base version (version without epic issue number
-     * suffix).
-     */
-    protected static final String CONFIG_KEY_BASE_VERSION = "baseVersion";
-
-    /**
-     * Branch config key for epic start commit message (version change commit
-     * message).
-     */
-    protected static final String CONFIG_KEY_EPIC_START_MESSAGE = "epicStartMessage";
-
-    /**
-     * Branch config key for epic version change commit.
-     */
-    protected static final String CONFIG_KEY_VERSION_CHANGE_COMMIT = "versionChangeCommit";
-
-    /**
      * Substitute keys of the form <code>@{name}</code> in the messages. By
      * default knows about <code>key</code>, which will be replaced by issue
      * number and all project properties.
@@ -71,7 +54,7 @@ public abstract class AbstractGitFlowEpicMojo extends AbstractGitFlowMojo {
      * @throws CommandLineException
      */
     protected String getEpicStartCommitMessage(String epicBranch) throws MojoFailureException, CommandLineException {
-        return gitGetBranchCentralConfig(epicBranch, CONFIG_KEY_EPIC_START_MESSAGE);
+        return gitGetBranchCentralConfig(epicBranch, BranchConfigKeys.START_COMMIT_MESSAGE);
     }
 
     /**

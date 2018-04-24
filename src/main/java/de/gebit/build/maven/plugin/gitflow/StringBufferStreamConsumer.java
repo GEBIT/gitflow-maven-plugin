@@ -28,9 +28,9 @@ public class StringBufferStreamConsumer implements StreamConsumer {
         this(false);
     }
 
-    public StringBufferStreamConsumer(boolean printOut) {
+    public StringBufferStreamConsumer(boolean aPrintOut) {
         this.buffer = new StringBuffer();
-        this.printOut = printOut;
+        this.printOut = aPrintOut;
     }
 
     @Override

@@ -14,7 +14,7 @@ package de.gebit.build.maven.plugin.gitflow;
  * @author Volodymyr Medvid
  */
 public enum BranchType {
-    FEATURE("feature"), EPIC("epic"), MAINTENANCE("maintenance"), RELEASE("release"), INTEGRATED("integrated");
+    FEATURE("feature"), EPIC("epic"), RELEASE("release");
 
     private String type;
 

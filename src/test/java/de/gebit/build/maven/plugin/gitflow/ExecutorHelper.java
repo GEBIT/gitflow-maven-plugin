@@ -178,4 +178,9 @@ public class ExecutorHelper {
         properties.setProperty("newVersion", newVersion);
         testCase.executeMojo(repositorySet.getWorkingDirectory(), "set-version", properties);
     }
+
+    public static void executeUpgrade(AbstractGitFlowMojoTestCase testCase, RepositorySet repositorySet)
+            throws Exception {
+        testCase.executeMojo(repositorySet.getWorkingDirectory(), "upgrade");
+    }
 }

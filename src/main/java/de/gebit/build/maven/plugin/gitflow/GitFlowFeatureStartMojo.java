@@ -18,8 +18,6 @@ package de.gebit.build.maven.plugin.gitflow;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -82,6 +80,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
         getLog().info("Starting feature start process.");
         initGitFlowConfig();
 
+        checkCentralBranchConfig();
         checkUncommittedChanges();
 
         String currentBranch = gitCurrentBranch();
@@ -174,7 +173,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
 
         String featureIssue = extractIssueNumberFromFeatureName(featureName);
         getLog().info("Feature issue number: " + featureIssue);
-        String featureStartMessage = substituteInFeatureMessage(commitMessages.getFeatureStartMessage(), featureIssue);
+        String featureStartMessage = substituteWithIssueNumber(commitMessages.getFeatureStartMessage(), featureIssue);
 
         gitCreateAndCheckout(featureBranchName, baseBranch);
 
@@ -203,15 +202,15 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
         }
 
         BranchCentralConfigChanges branchConfigChanges = new BranchCentralConfigChanges();
-        branchConfigChanges.set(featureBranchName, CONFIG_KEY_BRANCH_TYPE, BranchType.FEATURE.getType());
-        branchConfigChanges.set(featureBranchName, CONFIG_KEY_BASE_BRANCH, originalBaseBranch);
-        branchConfigChanges.set(featureBranchName, CONFIG_KEY_ISSUE_NUMBER, featureIssue);
-        branchConfigChanges.set(featureBranchName, CONFIG_KEY_BASE_VERSION, baseVersion);
-        branchConfigChanges.set(featureBranchName, CONFIG_KEY_FEATURE_START_MESSAGE, featureStartMessage);
+        branchConfigChanges.set(featureBranchName, BranchConfigKeys.BRANCH_TYPE, BranchType.FEATURE.getType());
+        branchConfigChanges.set(featureBranchName, BranchConfigKeys.BASE_BRANCH, originalBaseBranch);
+        branchConfigChanges.set(featureBranchName, BranchConfigKeys.ISSUE_NUMBER, featureIssue);
+        branchConfigChanges.set(featureBranchName, BranchConfigKeys.BASE_VERSION, baseVersion);
+        branchConfigChanges.set(featureBranchName, BranchConfigKeys.START_COMMIT_MESSAGE, featureStartMessage);
         if (versionChangeCommit != null) {
-            branchConfigChanges.set(featureBranchName, CONFIG_KEY_VERSION_CHANGE_COMMIT, versionChangeCommit);
+            branchConfigChanges.set(featureBranchName, BranchConfigKeys.VERSION_CHANGE_COMMIT, versionChangeCommit);
         }
-        gitApplyBranchCentralConfigChanges(branchConfigChanges, "feature '" + featureName + "' created");
+        gitApplyBranchCentralConfigChanges(branchConfigChanges, "feature '" + featureName + "' started");
 
         if (installProject) {
             mvnCleanInstall();
@@ -250,11 +249,11 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
      * Check whether the given feature name matches the required pattern, if
      * any.
      */
-    protected boolean validateFeatureName(String featureName) {
+    protected boolean validateFeatureName(String aFeatureName) {
         if (featureNamePattern == null) {
             return true;
         }
-        return featureName.matches(featureNamePattern);
+        return aFeatureName.matches(featureNamePattern);
     }
 
     /**
@@ -269,9 +268,10 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
      *         number can't be extracted
      */
     private String extractIssueNumberFromFeatureName(String aFeatureName) {
-        return extractIssueNumberFromName(aFeatureName, featureNamePattern,
+        String issueNumber = extractIssueNumberFromName(aFeatureName, featureNamePattern,
                 "Feature branch conforms to <featureNamePattern>, but ther is no matching group to extract the issue "
                         + "number.",
                 "Feature branch does not conform to <featureNamePattern> specified, cannot extract issue number.");
+        return issueNumber != null ? issueNumber : aFeatureName;
     }
 }

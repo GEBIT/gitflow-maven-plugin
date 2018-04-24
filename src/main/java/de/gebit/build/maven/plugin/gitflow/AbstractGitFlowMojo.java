@@ -25,7 +25,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Properties;
-import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -100,21 +99,6 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     public static final String USER_PROPERTY_KEY_EXTERNAL_GIT_EDITOR_USED = "external.git.editor.used";
 
-    /**
-     * Branch config key for branch type.
-     */
-    protected static final String CONFIG_KEY_BRANCH_TYPE = "branchType";
-
-    /**
-     * Branch config key for base branch.
-     */
-    protected static final String CONFIG_KEY_BASE_BRANCH = "baseBranch";
-
-    /**
-     * Branch config key for issue number.
-     */
-    protected static final String CONFIG_KEY_ISSUE_NUMBER = "issueNumber";
-
     /** A full name of the versions-maven-plugin set goal. */
     private static final String VERSIONS_MAVEN_PLUGIN_SET_GOAL = "org.codehaus.mojo:versions-maven-plugin:2.1:set";
 
@@ -126,8 +110,6 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
     /** Success exit code. */
     private static final int SUCCESS_EXIT_CODE = 0;
-
-    private static final String CENTRAL_BRANCH_CONFIG_VERSION = "1";
 
     /** Command line for Git executable. */
     private final Commandline cmdGit = new ShellCommandLine();
@@ -322,6 +304,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
     private CentralBranchConfigCache centralBranchConfigCache;
 
+    private boolean alreadyFetched = false;
+
     /**
      * Initializes command line executables.
      */
@@ -349,7 +333,6 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     @Override
     public final void execute() throws MojoExecutionException, MojoFailureException {
         try {
-//            checkOrInitCentralBranchConfig();
             executeGoal();
         } catch (CommandLineException e) {
             String message = "External command execution failed with error:\n" + e.getMessage()
@@ -378,196 +361,9 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected abstract void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException;
 
-    private void checkOrInitCentralBranchConfig() throws MojoFailureException, CommandLineException {
-        String configBranchVersion = gitGetBranchCentralConfig(configBranchName, "version");
-        if (!CENTRAL_BRANCH_CONFIG_VERSION.equals(configBranchVersion)) {
-            if (configBranchVersion == null) {
-                getLog().info("Initializing central branch config on version " + CENTRAL_BRANCH_CONFIG_VERSION);
-            } else {
-                getLog().info("Upgrading central branch config from version " + configBranchVersion + " to version "
-                        + CENTRAL_BRANCH_CONFIG_VERSION);
-            }
-            reinitCentralBranchConfig();
-            if (configBranchVersion == null) {
-                getLog().info("Central branch config initialized on version " + CENTRAL_BRANCH_CONFIG_VERSION);
-            } else {
-                getLog().info("Central branch config upgraded from version " + configBranchVersion + " to version "
-                        + CENTRAL_BRANCH_CONFIG_VERSION);
-            }
-        }
-    }
-
-    private void reinitCentralBranchConfig() throws MojoFailureException, CommandLineException {
-        BranchCentralConfigChanges changes = new BranchCentralConfigChanges();
-        CentralBranchConfigCache configCache = getCentralBranchConfigCache();
-        List<String> featureBranches = gitAllBranches(gitFlowConfig.getFeatureBranchPrefix());
-        for (String featureBranch : featureBranches) {
-            Properties properties = configCache.getProperties(featureBranch);
-            if (properties == null) {
-                properties = new Properties();
-            }
-            collectMissingFeatureBranchConfigs(changes, featureBranch, properties);
-        }
-        List<String> epicBranches = gitAllBranches(gitFlowConfig.getEpicBranchPrefix());
-        for (String epicBranch : epicBranches) {
-            Properties properties = configCache.getProperties(epicBranch);
-            if (properties == null) {
-                properties = new Properties();
-            }
-            collectMissingEpicBranchConfigs(changes, epicBranch, properties);
-        }
-        changes.set(configBranchName, "version", CENTRAL_BRANCH_CONFIG_VERSION);
-        gitApplyBranchCentralConfigChanges(changes, "init on version " + CENTRAL_BRANCH_CONFIG_VERSION);
-    }
-
-    protected void collectMissingFeatureBranchConfigs(BranchCentralConfigChanges changes, String featureBranch,
-            Properties properties) throws MojoFailureException, CommandLineException {
-        if (!properties.containsKey(CONFIG_KEY_BRANCH_TYPE)) {
-            changes.set(featureBranch, CONFIG_KEY_BRANCH_TYPE, BranchType.FEATURE.getType());
-        }
-        if (!properties.containsKey(CONFIG_KEY_BASE_BRANCH)) {
-            List<String> baseBranchCandidates = gitFeatureBranchBaseBranches(featureBranch);
-            if (baseBranchCandidates.size() == 1) {
-                changes.set(featureBranch, CONFIG_KEY_BASE_BRANCH, baseBranchCandidates.get(0));
-            } else {
-
-            }
-        }
-//        if (!properties.containsKey(CONFIG_KEY_ISSUE_NUMBER)) {
-//            String featureIssue = extractIssueNumberFromName(name, pattern, warnMessageNoGroups, warnMessageNoMatching);
-//            changes.set(featureBranch, CONFIG_KEY_ISSUE_NUMBER, featureIssue);
-//        }
-//        if (!properties.containsKey(CONFIG_KEY_BASE_VERSION)) {
-//            changes.set(featureBranch, CONFIG_KEY_BASE_VERSION, baseVersion);
-//        }
-//        if (!properties.containsKey(CONFIG_KEY_FEATURE_START_MESSAGE)) {
-//            changes.set(featureBranch, CONFIG_KEY_FEATURE_START_MESSAGE, featureStartMessage);
-//        }
-//        if (!properties.containsKey(CONFIG_KEY_VERSION_CHANGE_COMMIT)) {
-//            if (versionChangeCommit != null) {
-//                changes.set(featureBranch, CONFIG_KEY_VERSION_CHANGE_COMMIT, versionChangeCommit);
-//            }
-//        }
-    }
-
-    protected void collectMissingEpicBranchConfigs(BranchCentralConfigChanges changes, String epicBranch,
-            Properties properties) throws MojoFailureException, CommandLineException {
-        if (!properties.containsKey(CONFIG_KEY_BRANCH_TYPE)) {
-            changes.set(epicBranch, CONFIG_KEY_BRANCH_TYPE, BranchType.EPIC.getType());
-        }
-        if (!properties.containsKey(CONFIG_KEY_BASE_BRANCH)) {
-            List<String> baseBranchCandidates = gitEpicBranchBaseBranches(epicBranch);
-            if (baseBranchCandidates.size() == 1) {
-                changes.set(epicBranch, CONFIG_KEY_BASE_BRANCH, baseBranchCandidates.get(0));
-            } else {
-
-            }
-        }
-//        if (!properties.containsKey(CONFIG_KEY_ISSUE_NUMBER)) {
-//            String epicIssue = extractIssueNumberFromName(name, pattern, warnMessageNoGroups, warnMessageNoMatching);
-//            changes.set(epicBranch, CONFIG_KEY_ISSUE_NUMBER, epicIssue);
-//        }
-//        if (!properties.containsKey(CONFIG_KEY_BASE_VERSION)) {
-//            changes.set(epicBranch, CONFIG_KEY_BASE_VERSION, baseVersion);
-//        }
-//        if (!properties.containsKey(CONFIG_KEY_EPIC_START_MESSAGE)) {
-//            changes.set(epicBranch, CONFIG_KEY_EPIC_START_MESSAGE, epicStartMessage);
-//        }
-//        if (!properties.containsKey(CONFIG_KEY_VERSION_CHANGE_COMMIT)) {
-//            if (versionChangeCommit != null) {
-//                changes.set(epicBranch, CONFIG_KEY_VERSION_CHANGE_COMMIT, versionChangeCommit);
-//            }
-//        }
-    }
-
-    private List<String> gitEpicBranchBaseBranches(String epicBranch)
-            throws MojoFailureException, CommandLineException {
-        Map<String, List<String>> branchPointCandidates = new HashMap<>();
-        addEpicBranchPointCandidates(epicBranch, branchPointCandidates);
-        return gitBranchBaseBranches(epicBranch, branchPointCandidates);
-    }
-
-    private List<String> gitFeatureBranchBaseBranches(String featureBranch)
-            throws MojoFailureException, CommandLineException {
-        Map<String, List<String>> branchPointCandidates = new HashMap<>();
-        addFeatureBranchPointCandidates(featureBranch, branchPointCandidates);
-        return gitBranchBaseBranches(featureBranch, branchPointCandidates);
-    }
-
-    private List<String> gitBranchBaseBranches(String branch, Map<String, List<String>> branchPointCandidates)
-            throws MojoFailureException, CommandLineException {
-        Set<String> branchPoints = branchPointCandidates.keySet();
-        String nearestBranchPoint = gitNearestAncestorCommit(branch, branchPoints);
-        if (nearestBranchPoint != null) {
-            return branchPointCandidates.get(nearestBranchPoint);
-        }
-        return Collections.EMPTY_LIST;
-    }
-
-    protected void addFeatureBranchPointCandidates(String featureBranch,
-            Map<String, List<String>> branchPointCandidates) throws CommandLineException, MojoFailureException {
-        addEpicBranchPointCandidates(featureBranch, branchPointCandidates);
-        List<String> remoteEpicBranches = gitRemoteEpicBranches();
-        if (remoteEpicBranches.size() > 0) {
-            gitFetchBranches(remoteEpicBranches);
-            for (String epicBranch : remoteEpicBranches) {
-                addBranchPointCandidate(branchPointCandidates, featureBranch, epicBranch, true);
-            }
-        }
-        List<String> localEpicBranches = gitLocalEpicBranches();
-        if (localEpicBranches.size() > 0) {
-            for (String epicBranch : localEpicBranches) {
-                if (!branchPointCandidates.containsKey(epicBranch)) {
-                    addBranchPointCandidate(branchPointCandidates, featureBranch, epicBranch, false);
-                }
-            }
-        }
-    }
-
-    private void addEpicBranchPointCandidates(String branch, Map<String, List<String>> branchPointCandidates)
-            throws CommandLineException, MojoFailureException {
-        String developmentBranch = gitFlowConfig.getDevelopmentBranch();
-        gitFetchBranches(developmentBranch);
-        if (gitIsRemoteBranchFetched(gitFlowConfig.getOrigin(), developmentBranch)) {
-            addBranchPointCandidate(branchPointCandidates, branch, developmentBranch, true);
-        } else if (gitBranchExists(developmentBranch)) {
-            addBranchPointCandidate(branchPointCandidates, branch, developmentBranch, false);
-        }
-        List<String> remoteMaintenanceBranches = gitRemoteMaintenanceBranches();
-        if (remoteMaintenanceBranches.size() > 0) {
-            gitFetchBranches(remoteMaintenanceBranches);
-            for (String maintenanceBranch : remoteMaintenanceBranches) {
-                addBranchPointCandidate(branchPointCandidates, branch, maintenanceBranch, true);
-            }
-        }
-        List<String> localMaintenanceBranches = gitLocalMaintenanceBranches();
-        if (localMaintenanceBranches.size() > 0) {
-            for (String maintenanceBranch : localMaintenanceBranches) {
-                if (!branchPointCandidates.containsKey(maintenanceBranch)) {
-                    addBranchPointCandidate(branchPointCandidates, branch, maintenanceBranch, false);
-                }
-            }
-        }
-    }
-
-    private void addBranchPointCandidate(Map<String, List<String>> branchPointCandidates, String featureBranch,
-            String baseBranch, boolean remote) throws MojoFailureException, CommandLineException {
-        String branchPoint = gitBranchPoint((remote ? gitFlowConfig.getOrigin() + "/" : "") + baseBranch, featureBranch);
-        if (branchPoint != null) {
-            List<String> baseBranches = branchPointCandidates.get(branchPoint);
-            if (baseBranches == null) {
-                baseBranches = new ArrayList<>();
-                branchPointCandidates.put(branchPoint, baseBranches);
-            }
-            if (!baseBranches.contains(baseBranch)) {
-                baseBranches.add(baseBranch);
-            }
-        }
-    }
-
     protected String extractIssueNumberFromName(String name, String pattern, String warnMessageNoGroups,
             String warnMessageNoMatching) {
-        String issueNumber = name;
+        String issueNumber = null;
         if (pattern != null) {
             // extract the issue number only
             Matcher m = Pattern.compile(pattern).matcher(name);
@@ -1155,7 +951,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         return logBuilder.toString();
     }
 
-    private CentralBranchConfigCache getCentralBranchConfigCache() throws MojoFailureException, CommandLineException {
+    protected CentralBranchConfigCache getCentralBranchConfigCache() throws MojoFailureException, CommandLineException {
         if (centralBranchConfigCache == null) {
             centralBranchConfigCache = new CentralBranchConfigCache(loadCentralBranchConfig());
         }
@@ -1332,6 +1128,39 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
+     * Check if an upgrade for of central branch config is required.
+     */
+    protected void checkCentralBranchConfig() throws MojoFailureException, CommandLineException {
+        boolean upgradeRequired = false;
+        String configBranchVersion = gitGetBranchCentralConfig(configBranchName, "version");
+        if (configBranchVersion == null) {
+            if (hasConfigurableBranches()) {
+                upgradeRequired = true;
+            } else {
+                gitSetBranchCentralConfig(configBranchName, "version", BranchConfigKeys.CENTRAL_BRANCH_CONFIG_VERSION);
+            }
+        } else if (!BranchConfigKeys.CENTRAL_BRANCH_CONFIG_VERSION.equals(configBranchVersion)) {
+            upgradeRequired = true;
+        }
+        if (upgradeRequired) {
+            throw new GitFlowFailureException(
+                    "An upgrade of central branch config is required in order to use new version of gitflow!",
+                    "Please run 'mvn flow:upgrade' first to upgrade central branch config.",
+                    "'mvn flow:upgrade' to upgrade central branch config");
+        }
+    }
+
+    private boolean hasConfigurableBranches() throws MojoFailureException, CommandLineException {
+        List<String> branches = gitAllBranches("");
+        for (String branch : branches) {
+            if (isFeatureBranch(branch) || isEpicBranch(branch) || isReleaseBranch(branch)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Get base branch for passed branch.
      *
      * @param branch
@@ -1339,7 +1168,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @return the base branch or <code>null</code> if base branch is not known
      */
     protected String gitGetBranchBaseBranch(String branch) throws MojoFailureException, CommandLineException {
-        return gitGetBranchCentralConfig(branch, CONFIG_KEY_BASE_BRANCH);
+        return gitGetBranchCentralConfig(branch, BranchConfigKeys.BASE_BRANCH);
     }
 
     /**
@@ -1354,7 +1183,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws CommandLineException
      */
     protected String getEpicIssueNumber(String epicBranch) throws MojoFailureException, CommandLineException {
-        return gitGetBranchCentralConfig(epicBranch, CONFIG_KEY_ISSUE_NUMBER);
+        return gitGetBranchCentralConfig(epicBranch, BranchConfigKeys.ISSUE_NUMBER);
     }
 
     /**
@@ -1734,6 +1563,32 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             return new ArrayList<>();
         }
         return new ArrayList<>(Arrays.asList(gitResult.split("\\r?\\n")));
+    }
+
+    /**
+     * Execute <code>git fetch</code> if not yet executed and <code>fetchRemote=true</code>.
+     *
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitFetchOnce() throws MojoFailureException, CommandLineException {
+        gitFetchAll(false);
+    }
+
+    /**
+     * Execute <code>git fetch</code> if <code>fetchRemote=true</code> even if already executed.
+     *
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitFetchForced() throws MojoFailureException, CommandLineException {
+        gitFetchAll(true);
+    }
+
+    private void gitFetchAll(boolean forced) throws MojoFailureException, CommandLineException {
+        if (fetchRemote && (forced || !alreadyFetched)) {
+            executeGitCommand("fetch", "--quiet", gitFlowConfig.getOrigin());
+        }
     }
 
     protected void gitFetchBranches(List<String> remoteBranches) throws CommandLineException, MojoFailureException {
@@ -3402,6 +3257,24 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
+     * Substitute keys of the form <code>@{name}</code> in the messages. By
+     * default knows about <code>key</code>, which will be replaced by issue
+     * number and all project properties.
+     *
+     * @param message
+     *            the message to process
+     * @param issueNumber
+     *            the issue number
+     * @return the message with applied substitutions
+     * @see #lookupKey(String)
+     */
+    protected String substituteWithIssueNumber(String message, String issueNumber) throws MojoFailureException {
+        Map<String, String> replacements = new HashMap<String, String>();
+        replacements.put("key", issueNumber);
+        return substituteStrings(message, replacements);
+    }
+
+    /**
      * Lookup keys from the project properties.
      *
      * @return <code>null</code> if not found.
@@ -3637,6 +3510,18 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
+     * Check if passed branch name is name for an integrated branch.
+     *
+     * @param branchName
+     *            the branch name to be checked
+     * @return <code>true</code> if the branch name starts with integrated
+     *         branch prefix
+     */
+    protected boolean isIntegratedBranch(String branchName) {
+        return branchName.startsWith(gitFlowConfig.getIntegrationBranchPrefix());
+    }
+
+    /**
      * Check if passed branch name is the name for development branch.
      *
      * @param branchName
@@ -3658,6 +3543,18 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected boolean isEpicBranch(String branchName) {
         return branchName.startsWith(gitFlowConfig.getEpicBranchPrefix());
+    }
+
+    /**
+     * Check if passed branch name is name for a feature branch.
+     *
+     * @param branchName
+     *            the branch name to be checked
+     * @return <code>true</code> if the branch name starts with feature branch
+     *         prefix
+     */
+    protected boolean isFeatureBranch(String branchName) {
+        return branchName.startsWith(gitFlowConfig.getFeatureBranchPrefix());
     }
 
     /**

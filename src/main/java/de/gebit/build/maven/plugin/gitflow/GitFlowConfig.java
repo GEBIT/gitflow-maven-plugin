@@ -78,11 +78,11 @@ public class GitFlowConfig {
     }
 
     /**
-     * @param productionBranch
+     * @param aProductionBranch
      *            the productionBranch to set
      */
-    public void setProductionBranch(String productionBranch) {
-        this.productionBranch = productionBranch;
+    public void setProductionBranch(String aProductionBranch) {
+        this.productionBranch = aProductionBranch;
     }
 
     /**
@@ -93,11 +93,11 @@ public class GitFlowConfig {
     }
 
     /**
-     * @param developmentBranch
+     * @param aDevelopmentBranch
      *            the developmentBranch to set
      */
-    public void setDevelopmentBranch(String developmentBranch) {
-        this.developmentBranch = developmentBranch;
+    public void setDevelopmentBranch(String aDevelopmentBranch) {
+        this.developmentBranch = aDevelopmentBranch;
     }
 
     /**
@@ -108,11 +108,11 @@ public class GitFlowConfig {
     }
 
     /**
-     * @param featureBranchPrefix
+     * @param aFeatureBranchPrefix
      *            the featureBranchPrefix to set
      */
-    public void setFeatureBranchPrefix(String featureBranchPrefix) {
-        this.featureBranchPrefix = featureBranchPrefix;
+    public void setFeatureBranchPrefix(String aFeatureBranchPrefix) {
+        this.featureBranchPrefix = aFeatureBranchPrefix;
     }
 
     /**
@@ -123,11 +123,11 @@ public class GitFlowConfig {
     }
 
     /**
-     * @param epicBranchPrefix
+     * @param anEpicBranchPrefix
      *            the epicBranchPrefix to set
      */
-    public void setEpicBranchPrefix(String epicBranchPrefix) {
-        this.epicBranchPrefix = epicBranchPrefix;
+    public void setEpicBranchPrefix(String anEpicBranchPrefix) {
+        this.epicBranchPrefix = anEpicBranchPrefix;
     }
 
     /**
@@ -138,11 +138,11 @@ public class GitFlowConfig {
     }
 
     /**
-     * @param releaseBranchPrefix
+     * @param aReleaseBranchPrefix
      *            the releaseBranchPrefix to set
      */
-    public void setReleaseBranchPrefix(String releaseBranchPrefix) {
-        this.releaseBranchPrefix = releaseBranchPrefix;
+    public void setReleaseBranchPrefix(String aReleaseBranchPrefix) {
+        this.releaseBranchPrefix = aReleaseBranchPrefix;
     }
 
     /**
@@ -153,20 +153,11 @@ public class GitFlowConfig {
     }
 
     /**
-     * @param hotfixBranchPrefix
+     * @param aHotfixBranchPrefix
      *            the hotfixBranchPrefix to set
      */
-    public void setHotfixBranchPrefix(String hotfixBranchPrefix) {
-        this.hotfixBranchPrefix = hotfixBranchPrefix;
-    }
-
-    /**
-     * @param supportBranchPrefix
-     *            the supportBranchPrefix to set
-     * @deprecated use {@link #maintenanceBranchPrefix}
-     */
-    public void setSupportBranchPrefix(String supportBranchPrefix) {
-        this.maintenanceBranchPrefix = supportBranchPrefix;
+    public void setHotfixBranchPrefix(String aHotfixBranchPrefix) {
+        this.hotfixBranchPrefix = aHotfixBranchPrefix;
     }
 
     /**
@@ -177,11 +168,11 @@ public class GitFlowConfig {
     }
 
     /**
-     * @param maintenanceBranchPrefix
+     * @param aMaintenanceBranchPrefix
      *            the maintenanceBranchPrefix to set
      */
-    public void setMaintenanceBranchPrefix(String maintenanceBranchPrefix) {
-        this.maintenanceBranchPrefix = maintenanceBranchPrefix;
+    public void setMaintenanceBranchPrefix(String aMaintenanceBranchPrefix) {
+        this.maintenanceBranchPrefix = aMaintenanceBranchPrefix;
     }
 
     /**
@@ -192,11 +183,11 @@ public class GitFlowConfig {
     }
 
     /**
-     * @param integrationBranchPrefix
+     * @param anIntegrationBranchPrefix
      *            the integrationBranchPrefix to set
      */
-    public void setIntegrationBranchPrefix(String integrationBranchPrefix) {
-        this.integrationBranchPrefix = integrationBranchPrefix;
+    public void setIntegrationBranchPrefix(String anIntegrationBranchPrefix) {
+        this.integrationBranchPrefix = anIntegrationBranchPrefix;
     }
 
     /**
@@ -207,11 +198,11 @@ public class GitFlowConfig {
     }
 
     /**
-     * @param versionTagPrefix
+     * @param aVersionTagPrefix
      *            the versionTagPrefix to set
      */
-    public void setVersionTagPrefix(String versionTagPrefix) {
-        this.versionTagPrefix = versionTagPrefix;
+    public void setVersionTagPrefix(String aVersionTagPrefix) {
+        this.versionTagPrefix = aVersionTagPrefix;
     }
 
     /**
@@ -222,11 +213,11 @@ public class GitFlowConfig {
     }
 
     /**
-     * @param origin
+     * @param anOrigin
      *            the origin to set
      */
-    public void setOrigin(String origin) {
-        this.origin = origin;
+    public void setOrigin(String anOrigin) {
+        this.origin = anOrigin;
     }
 
     /**
@@ -237,10 +228,10 @@ public class GitFlowConfig {
     }
 
     /**
-     * @param noProduction
+     * @param isNoProduction
      *            flag whether there is no production branch.
      */
-    public void setNoProduction(boolean noProduction) {
-        this.noProduction = noProduction;
+    public void setNoProduction(boolean isNoProduction) {
+        this.noProduction = isNoProduction;
     }
 }

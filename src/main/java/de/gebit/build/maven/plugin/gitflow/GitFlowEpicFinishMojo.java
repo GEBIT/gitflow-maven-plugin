@@ -37,6 +37,7 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         getLog().info("Starting feature finish process.");
+        checkCentralBranchConfig();
         String baseBranch;
         String epicBranchName = gitMergeFromEpicBranchInProcess();
         if (epicBranchName == null) {

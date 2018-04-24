@@ -27,6 +27,7 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         getLog().info("Starting epic update process.");
+        checkCentralBranchConfig();
         String epicBranchName = gitMergeIntoEpicBranchInProcess();
         if (epicBranchName == null) {
             checkUncommittedChanges();
