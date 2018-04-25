@@ -215,6 +215,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         final String OTHER_BRANCH = "otherBranch";
         git.createBranchWithoutSwitch(repositorySet, OTHER_BRANCH);
         git.createBranchWithoutSwitch(repositorySet, FEATURE_BRANCH_2);
+        ExecutorHelper.executeUpgrade(this, repositorySet);
         startFeatureAndAddTwoCommits();
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
@@ -236,6 +237,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         final String OTHER_BRANCH = "otherBranch";
         git.createBranchWithoutSwitch(repositorySet, OTHER_BRANCH);
         git.createBranchWithoutSwitch(repositorySet, FEATURE_BRANCH_2);
+        ExecutorHelper.executeUpgrade(this, repositorySet);
         startFeatureAndAddTwoCommits();
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         String PROMPT_MESSAGE = "Feature branches:" + LS + "1. " + FEATURE_BRANCH + LS + "2. " + FEATURE_BRANCH_2 + LS
@@ -1519,9 +1521,9 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         verifyZeroInteractions(promptControllerMock);
         assertGitFlowFailureException(result,
-                "Failed to find base branch for feature branch '" + FEATURE_BRANCH
-                        + "' in central branch config.\nThis indicates a severe error condition on your branches.",
-                "Please consult a gitflow expert on how to fix this!");
+                "An upgrade of central branch config is required in order to use new version of gitflow!",
+                "Please run 'mvn flow:upgrade' first to upgrade central branch config.",
+                "'mvn flow:upgrade' to upgrade central branch config");
     }
 
 }

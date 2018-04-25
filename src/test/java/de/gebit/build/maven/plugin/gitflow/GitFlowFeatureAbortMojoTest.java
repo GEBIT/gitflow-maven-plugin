@@ -332,8 +332,8 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
         assertGitFlowFailureException(result, "There are no feature branches in your repository.", null);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
@@ -613,7 +613,7 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
         git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
@@ -637,7 +637,7 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
         git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
@@ -725,9 +725,9 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         verifyZeroInteractions(promptControllerMock);
         assertGitFlowFailureException(result,
-                "Failed to find base branch for feature branch '" + FEATURE_BRANCH
-                        + "' in central branch config.\nThis indicates a severe error condition on your branches.",
-                "Please consult a gitflow expert on how to fix this!");
+                "An upgrade of central branch config is required in order to use new version of gitflow!",
+                "Please run 'mvn flow:upgrade' first to upgrade central branch config.",
+                "'mvn flow:upgrade' to upgrade central branch config");
     }
 
     @Test
@@ -747,9 +747,9 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.setOnline(repositorySet);
         verifyZeroInteractions(promptControllerMock);
         assertGitFlowFailureException(result,
-                "Failed to find base branch for feature branch '" + FEATURE_BRANCH + "' in central branch config.",
-                "Set 'fetchRemote' parameter to true in order to search for base branch also in remote "
-                        + "repository.");
+                "An upgrade of central branch config is required in order to use new version of gitflow!",
+                "Please run 'mvn flow:upgrade' first to upgrade central branch config.",
+                "'mvn flow:upgrade' to upgrade central branch config");
     }
 
     @Test

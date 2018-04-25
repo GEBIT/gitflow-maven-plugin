@@ -238,8 +238,8 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
 
     private void assertNoChangesInRepositories() throws ComponentLookupException, GitAPIException, IOException {
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
     }
 
@@ -327,6 +327,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         final String OTHER_BRANCH = "otherBranch";
         git.createBranchWithoutSwitch(repositorySet, OTHER_BRANCH);
         git.createBranchWithoutSwitch(repositorySet, FEATURE_BRANCH_2);
+        ExecutorHelper.executeUpgrade(this, repositorySet);
         createFeatureBranchDivergentFromMaster();
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
@@ -353,6 +354,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         final String OTHER_BRANCH = "otherBranch";
         git.createBranchWithoutSwitch(repositorySet, OTHER_BRANCH);
         git.createBranchWithoutSwitch(repositorySet, FEATURE_BRANCH_2);
+        ExecutorHelper.executeUpgrade(this, repositorySet);
         createFeatureBranchDivergentFromMaster();
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         String PROMPT_MESSAGE = "Feature branches:" + LS + "1. " + FEATURE_BRANCH + LS + "2. " + FEATURE_BRANCH_2 + LS

@@ -189,13 +189,17 @@ public class GitFlowUpgradeMojo extends AbstractGitFlowMojo {
     private void collectMissingEpicBranchConfigs(BranchCentralConfigChanges changes, String epicBranch,
             Properties properties) throws MojoFailureException, CommandLineException {
         getLog().info("Configuring epic branch '" + epicBranch + "'...");
+        String epicBranchRef = epicBranch;
+        if (!gitBranchExists(epicBranch)) {
+            epicBranchRef = gitFlowConfig.getOrigin() + "/" + epicBranch;
+        }
         Properties tmpChanges = new Properties();
         if (!properties.containsKey(BranchConfigKeys.BRANCH_TYPE)) {
             tmpChanges.setProperty(BranchConfigKeys.BRANCH_TYPE, BranchType.EPIC.getType());
         }
         String baseBranch;
         if (!properties.containsKey(BranchConfigKeys.BASE_BRANCH)) {
-            List<String> baseBranchCandidates = gitEpicBranchBaseBranches(epicBranch);
+            List<String> baseBranchCandidates = gitEpicBranchBaseBranches(epicBranchRef);
             if (baseBranchCandidates.size() == 1) {
                 baseBranch = baseBranchCandidates.get(0);
             } else if (baseBranchCandidates.size() == 0) {
@@ -254,8 +258,8 @@ public class GitFlowUpgradeMojo extends AbstractGitFlowMojo {
             tmpChanges.setProperty(BranchConfigKeys.START_COMMIT_MESSAGE, epicStartMessage);
         }
         if (!properties.containsKey(BranchConfigKeys.VERSION_CHANGE_COMMIT)) {
-            String branchPoint = gitBranchPoint(epicBranch, baseBranch);
-            String firstCommitOnBranch = gitFirstCommitOnBranch(epicBranch, branchPoint);
+            String branchPoint = gitBranchPoint(epicBranchRef, baseBranch);
+            String firstCommitOnBranch = gitFirstCommitOnBranch(epicBranchRef, branchPoint);
             String firstCommitMessage = gitCommitMessage(firstCommitOnBranch);
             if (firstCommitMessage.contains(epicStartMessage)) {
                 tmpChanges.setProperty(BranchConfigKeys.VERSION_CHANGE_COMMIT, firstCommitOnBranch);

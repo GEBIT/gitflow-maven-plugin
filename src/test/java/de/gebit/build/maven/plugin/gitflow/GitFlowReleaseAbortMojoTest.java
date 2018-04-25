@@ -234,8 +234,8 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         assertGitFlowFailureException(result, "There are no release branches in your repository.", null);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
     }
 
     @Test
@@ -243,6 +243,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         final String RELEASE_BRANCH2 = RELEASE_PREFIX + "3.0.0";
         git.createBranchWithoutSwitch(repositorySet, RELEASE_BRANCH);
         git.createBranchWithoutSwitch(repositorySet, RELEASE_BRANCH2);
+        ExecutorHelper.executeUpgrade(this, repositorySet);
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
         // verify
@@ -252,8 +253,8 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
                 "'git checkout BRANCH' to switch to the release branch");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, RELEASE_BRANCH, RELEASE_BRANCH2);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, RELEASE_BRANCH, RELEASE_BRANCH2, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
     }
 
     @Test
@@ -261,6 +262,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         // set up
         final String RELEASE_BRANCH2 = RELEASE_PREFIX + "3.0.0";
         git.createBranchWithoutSwitch(repositorySet, RELEASE_BRANCH2);
+        ExecutorHelper.executeUpgrade(this, repositorySet);
         ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         // test

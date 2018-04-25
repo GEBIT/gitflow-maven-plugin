@@ -198,16 +198,16 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
 
     private void assertNoChangesInRepositories() throws ComponentLookupException, GitAPIException, IOException {
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
     }
 
     private void assertNoChangesInRepositoriesExceptCommitedTestfile()
             throws ComponentLookupException, GitAPIException, IOException {
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
     }
 
@@ -269,6 +269,7 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
         final String OTHER_BRANCH = "otherBranch";
         git.createBranchWithoutSwitch(repositorySet, OTHER_BRANCH);
         git.createBranchWithoutSwitch(repositorySet, EPIC_BRANCH_2);
+        ExecutorHelper.executeUpgrade(this, repositorySet);
         createEpicBranchDivergentFromMaster();
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
@@ -294,6 +295,7 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
         final String OTHER_BRANCH = "otherBranch";
         git.createBranchWithoutSwitch(repositorySet, OTHER_BRANCH);
         git.createBranchWithoutSwitch(repositorySet, EPIC_BRANCH_2);
+        ExecutorHelper.executeUpgrade(this, repositorySet);
         createEpicBranchDivergentFromMaster();
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + EPIC_BRANCH + LS + "2. " + EPIC_BRANCH_2 + LS
