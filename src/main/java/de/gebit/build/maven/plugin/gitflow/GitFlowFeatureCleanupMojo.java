@@ -80,88 +80,117 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
                     "Please run in interactive mode.", "'mvn flow:feature-rebase-cleanup' to run in interactive mode");
         }
         String featureBranchName = gitInteractiveRebaseFeatureBranchInProcess();
+        boolean continueOnCleanInstall = false;
         if (featureBranchName == null) {
-            // check uncommitted changes
-            checkUncommittedChanges();
-
-            List<String> branches = gitAllFeatureBranches();
-            if (branches.isEmpty()) {
-                throw new GitFlowFailureException("There are no feature branches in your repository.",
-                        "Please start a feature first.", "'mvn flow:feature-start'");
-            }
             String currentBranch = gitCurrentBranch();
-            boolean isOnFeatureBranch = branches.contains(currentBranch);
-            if (!isOnFeatureBranch) {
-                featureBranchName = getPrompter().promptToSelectFromOrderedList("Feature branches:",
-                        "Choose feature branch to clean up", branches);
-                getLog().info("Cleaning up feature on selected feature branch: " + featureBranchName);
-                gitEnsureLocalBranchIsUpToDateIfExists(featureBranchName, new GitFlowFailureInfo(
-                        "Remote and local feature branches '" + featureBranchName + "' diverge.",
-                        "Rebase or merge the changes in local feature branch '" + featureBranchName + "' first.",
-                        "'git rebase'"));
-                // git checkout feature/...
-                gitCheckout(featureBranchName);
+            if (isFeatureBranch(currentBranch)) {
+                String breakpoint = gitGetBranchLocalConfig(currentBranch, "breakpoint");
+                if (breakpoint != null) {
+                    if ("featureCleanup.cleanInstall".equals(breakpoint)) {
+                        continueOnCleanInstall = true;
+                        featureBranchName = currentBranch;
+                    }
+                }
+            }
+        }
+        if (!continueOnCleanInstall) {
+            if (featureBranchName == null) {
+                // check uncommitted changes
+                checkUncommittedChanges();
+
+                List<String> branches = gitAllFeatureBranches();
+                if (branches.isEmpty()) {
+                    throw new GitFlowFailureException("There are no feature branches in your repository.",
+                            "Please start a feature first.", "'mvn flow:feature-start'");
+                }
+                String currentBranch = gitCurrentBranch();
+                boolean isOnFeatureBranch = branches.contains(currentBranch);
+                if (!isOnFeatureBranch) {
+                    featureBranchName = getPrompter().promptToSelectFromOrderedList("Feature branches:",
+                            "Choose feature branch to clean up", branches);
+                    getLog().info("Cleaning up feature on selected feature branch: " + featureBranchName);
+                    gitEnsureLocalBranchIsUpToDateIfExists(featureBranchName, new GitFlowFailureInfo(
+                            "Remote and local feature branches '" + featureBranchName + "' diverge.",
+                            "Rebase or merge the changes in local feature branch '" + featureBranchName + "' first.",
+                            "'git rebase'"));
+                    // git checkout feature/...
+                    gitCheckout(featureBranchName);
+                } else {
+                    featureBranchName = currentBranch;
+                    getLog().info("Cleaning up feature on current feature branch: " + featureBranchName);
+                    gitEnsureCurrentLocalBranchIsUpToDate(new GitFlowFailureInfo(
+                            "Remote and local feature branches '{0}' diverge.",
+                            "Rebase or merge the changes in local feature branch '{0}' first.", "'git rebase'"));
+                }
+
+                String baseCommit = gitFeatureBranchBaseCommit(featureBranchName);
+                getLog().info("Base commit (start point) of feature branch: " + baseCommit);
+                String versionChangeCommitOnBranch = gitVersionChangeCommitOnFeatureBranch(featureBranchName,
+                        baseCommit);
+                String rebaseCommit;
+                if (versionChangeCommitOnBranch != null) {
+                    rebaseCommit = versionChangeCommitOnBranch;
+                    getLog().info("First commit on feature branch is version change commit. "
+                            + "Exclude it from interactive cleanup rebase.");
+                } else {
+                    rebaseCommit = baseCommit;
+                    getLog().info("First commit on feature branch is not a version change commit. "
+                            + "Use all feature commits while interactive cleanup rebase.");
+                }
+
+                InteractiveRebaseStatus rebaseStatus = gitRebaseInteractive(rebaseCommit);
+                if (rebaseStatus == InteractiveRebaseStatus.PAUSED) {
+                    throw new GitFlowFailureException(ERROR_REBASE_PAUSED);
+                } else if (rebaseStatus == InteractiveRebaseStatus.CONFLICT) {
+                    throw new GitFlowFailureException(ERROR_REBASE_CONFLICTS);
+                }
+
             } else {
-                featureBranchName = currentBranch;
-                getLog().info("Cleaning up feature on current feature branch: " + featureBranchName);
-                gitEnsureCurrentLocalBranchIsUpToDate(
-                        new GitFlowFailureInfo("Remote and local feature branches '{0}' diverge.",
-                                "Rebase or merge the changes in local feature branch '{0}' first.", "'git rebase'"));
+                if (!getPrompter()
+                        .promptConfirmation("You have an interactive rebase in process on your current branch. "
+                                + "If you run 'mvn flow:feature-rebase-cleanup' before and rebase was paused or had conflicts you "
+                                + "can continue. In other case it is better to clarify the reason of rebase in process. "
+                                + "Continue?", true, true)) {
+                    throw new GitFlowFailureException("Continuation of feature clean up aborted by user.", null);
+                }
+                getLog().info("Continue interactive rebase.");
+                InteractiveRebaseResult rebaseResult = gitInteractiveRebaseContinue();
+                switch (rebaseResult.getStatus()) {
+                case PAUSED:
+                    throw new GitFlowFailureException(ERROR_REBASE_PAUSED);
+                case CONFLICT:
+                    throw new GitFlowFailureException(ERROR_REBASE_CONFLICTS);
+                case UNRESOLVED_CONFLICT:
+                    throw new GitFlowFailureException(
+                            "There are unresolved conflicts after rebase.\nGit error message:\n"
+                                    + rebaseResult.getGitMessage(),
+                            "Fix the rebase conflicts and mark them as resolved. After that, run "
+                                    + "'mvn flow:feature-rebase-cleanup' again. Do NOT run 'git rebase --continue'.",
+                            "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as "
+                                    + "resolved",
+                            "'mvn flow:feature-rebase-cleanup' to continue feature clean up process");
+                case SUCCESS:
+                default:
+                    break;
+                }
             }
-
-            String baseCommit = gitFeatureBranchBaseCommit(featureBranchName);
-            getLog().info("Base commit (start point) of feature branch: " + baseCommit);
-            String versionChangeCommitOnBranch = gitVersionChangeCommitOnFeatureBranch(featureBranchName, baseCommit);
-            String rebaseCommit;
-            if (versionChangeCommitOnBranch != null) {
-                rebaseCommit = versionChangeCommitOnBranch;
-                getLog().info("First commit on feature branch is version change commit. "
-                        + "Exclude it from interactive cleanup rebase.");
-            } else {
-                rebaseCommit = baseCommit;
-                getLog().info("First commit on feature branch is not a version change commit. "
-                        + "Use all feature commits while interactive cleanup rebase.");
-            }
-
-            InteractiveRebaseStatus rebaseStatus = gitRebaseInteractive(rebaseCommit);
-            if (rebaseStatus == InteractiveRebaseStatus.PAUSED) {
-                throw new GitFlowFailureException(ERROR_REBASE_PAUSED);
-            } else if (rebaseStatus == InteractiveRebaseStatus.CONFLICT) {
-                throw new GitFlowFailureException(ERROR_REBASE_CONFLICTS);
-            }
-
         } else {
-            if (!getPrompter().promptConfirmation("You have an interactive rebase in process on your current branch. "
-                    + "If you run 'mvn flow:feature-rebase-cleanup' before and rebase was paused or had conflicts you "
-                    + "can continue. In other case it is better to clarify the reason of rebase in process. "
-                    + "Continue?", true, true)) {
-                throw new GitFlowFailureException("Continuation of feature clean up aborted by user.", null);
-            }
-            getLog().info("Continue interactive rebase.");
-            InteractiveRebaseResult rebaseResult = gitInteractiveRebaseContinue();
-            switch (rebaseResult.getStatus()) {
-            case PAUSED:
-                throw new GitFlowFailureException(ERROR_REBASE_PAUSED);
-            case CONFLICT:
-                throw new GitFlowFailureException(ERROR_REBASE_CONFLICTS);
-            case UNRESOLVED_CONFLICT:
-                throw new GitFlowFailureException(
-                        "There are unresolved conflicts after rebase.\nGit error message:\n"
-                                + rebaseResult.getGitMessage(),
-                        "Fix the rebase conflicts and mark them as resolved. After that, run "
-                                + "'mvn flow:feature-rebase-cleanup' again. Do NOT run 'git rebase --continue'.",
-                        "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as "
-                                + "resolved",
-                        "'mvn flow:feature-rebase-cleanup' to continue feature clean up process");
-            case SUCCESS:
-            default:
-                break;
-            }
+            checkUncommittedChanges();
         }
         if (installProject) {
             // mvn clean install
-            mvnCleanInstall();
+            try {
+                mvnCleanInstall();
+            } catch (MojoFailureException e) {
+                gitSetBranchLocalConfig(featureBranchName, "breakpoint", "featureCleanup.cleanInstall");
+                throw new GitFlowFailureException(e,
+                        "Failed to execute 'mvn clean install' on the project on feature branch after cleanup.",
+                        "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
+                                + "'mvn flow:feature-rebase-cleanup' again in order to continue.\n"
+                                + "Do NOT push the feature branch!");
+            }
         }
+        gitRemoveBranchLocalConfig(featureBranchName, "breakpoint");
 
         if (pushRemote) {
             // delete remote branch to not run into non-fast-forward error

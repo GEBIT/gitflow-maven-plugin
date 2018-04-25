@@ -83,138 +83,163 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
         checkCentralBranchConfig();
         checkUncommittedChanges();
 
+        String featureBranchName;
+        String featureIssue;
         String currentBranch = gitCurrentBranch();
-        String baseBranch = currentBranch;
-        if (!isMaintenanceBranch(baseBranch) && !isEpicBranch(baseBranch)) {
-            baseBranch = gitFlowConfig.getDevelopmentBranch();
-            if (!currentBranch.equals(baseBranch)) {
-                boolean confirmed = getPrompter().promptConfirmation("Feature branch will be started not from current "
-                        + "branch but will be based off branch '" + baseBranch + "'. Continue?", true, true);
-                if (!confirmed) {
-                    throw new GitFlowFailureException("Feature start process aborted by user.", null);
+        boolean continueOnCleanInstall = false;
+        if (isFeatureBranch(currentBranch)) {
+            String breakpoint = gitGetBranchLocalConfig(currentBranch, "breakpoint");
+            if (breakpoint != null) {
+                if ("featureStart.cleanInstall".equals(breakpoint)) {
+                    continueOnCleanInstall = true;
                 }
             }
         }
-        getLog().info("Base branch for new feature: " + baseBranch);
-        String originalBaseBranch = baseBranch;
-
-        // use integration branch?
-        String integrationBranch = gitFlowConfig.getIntegrationBranchPrefix() + baseBranch;
-        gitEnsureLocalBranchIsUpToDateIfExists(integrationBranch,
-                new GitFlowFailureInfo(
-                        "Local and remote integration branches '" + integrationBranch
-                                + "' diverge, this indicates a severe error condition on your branches.",
-                        "Please consult a gitflow expert on how to fix this!"));
-        gitAssertLocalAndRemoteBranchesOnSameState(baseBranch);
-        if (gitBranchExists(integrationBranch)) {
-            boolean useIntegrationBranch = true;
-            if (!Objects.equals(getCurrentCommit(integrationBranch), getCurrentCommit(baseBranch))) {
-                useIntegrationBranch = getPrompter().promptConfirmation("The current commit on " + baseBranch
-                        + " is not integrated. Create a branch of the last integrated commit (" + integrationBranch
-                        + ")?", true, true);
-            }
-            if (useIntegrationBranch) {
-                if (!gitIsAncestorBranch(integrationBranch, baseBranch)) {
-                    throw new GitFlowFailureException(
-                            "Integration branch '" + integrationBranch + "' is ahead of base branch '" + baseBranch
-                                    + "', this indicates a severe error condition on your branches.",
-                            " Please consult a gitflow expert on how to fix this!");
-                }
-
-                getLog().info("Using integration branch '" + integrationBranch + "' as start point for new feature.");
-                baseBranch = integrationBranch;
-            }
-        }
-
-        featureName = getPrompter().promptRequiredParameterValue(
-                "What is a name of feature branch? " + gitFlowConfig.getFeatureBranchPrefix(), "featureName",
-                featureName, new StringValidator() {
-
-                    @Override
-                    public ValidationResult validate(String value) {
-                        if (!validateFeatureName(value)) {
-                            String invalidMessage;
-                            if (featureNamePatternDescription != null) {
-                                invalidMessage = "The feature name '" + value + "' is invalid. "
-                                        + featureNamePatternDescription;
-                            } else {
-                                invalidMessage = "The feature name '" + value
-                                        + "' is invalid. It does not match the required pattern: " + featureNamePattern;
-                            }
-                            return new ValidationResult(invalidMessage);
-                        } else {
-                            return ValidationResult.VALID;
-                        }
+        if (!continueOnCleanInstall) {
+            String baseBranch = currentBranch;
+            if (!isMaintenanceBranch(baseBranch) && !isEpicBranch(baseBranch)) {
+                baseBranch = gitFlowConfig.getDevelopmentBranch();
+                if (!currentBranch.equals(baseBranch)) {
+                    boolean confirmed = getPrompter().promptConfirmation("Feature branch will be started not from current "
+                            + "branch but will be based off branch '" + baseBranch + "'. Continue?", true, true);
+                    if (!confirmed) {
+                        throw new GitFlowFailureException("Feature start process aborted by user.", null);
                     }
-                },
-                new GitFlowFailureInfo("Property 'featureName' is required in non-interactive mode but was not set.",
-                        "Specify a featureName or run in interactive mode.",
-                        "'mvn flow:feature-start -DfeatureName=XXX -B'", "'mvn flow:feature-start'"));
-
-        featureName = StringUtils.deleteWhitespace(featureName);
-        getLog().info("New feature name: " + featureName);
-
-        String featureBranchName = gitFlowConfig.getFeatureBranchPrefix() + featureName;
-        getLog().info("New feature branch name: " + featureBranchName);
-        if (gitBranchExists(featureBranchName)) {
-            throw new GitFlowFailureException("Feature branch '" + featureBranchName + "' already exists.",
-                    "Either checkout the existing feature branch or start a new feature with another name.",
-                    "'git checkout " + featureBranchName + "' to checkout the feature branch",
-                    "'mvn flow:feature-start' to run again and specify another feature name");
-        }
-        if (gitRemoteBranchExists(featureBranchName)) {
-            throw new GitFlowFailureException(
-                    "Remote feature branch '" + featureBranchName + "' already exists on the remote '"
-                            + gitFlowConfig.getOrigin() + "'.",
-                    "Either checkout the existing feature branch or start a new feature with another name.",
-                    "'git checkout " + featureBranchName + "' to checkout the feature branch",
-                    "'mvn flow:feature-start' to run again and specify another feature name");
-        }
-
-        String featureIssue = extractIssueNumberFromFeatureName(featureName);
-        getLog().info("Feature issue number: " + featureIssue);
-        String featureStartMessage = substituteWithIssueNumber(commitMessages.getFeatureStartMessage(), featureIssue);
-
-        gitCreateAndCheckout(featureBranchName, baseBranch);
-
-        String currentVersion = getCurrentProjectVersion();
-        String baseVersion = currentVersion;
-        String versionChangeCommit = null;
-        if (!skipFeatureVersion && !tychoBuild) {
-            getLog().info("Creating project version for feature.");
-            String version = currentVersion;
-            getLog().info("Base project version: " + version);
-            if (isEpicBranch(baseBranch)) {
-                version = removeEpicIssueFromVersion(version, baseBranch);
-                getLog().info("Removed epic issue number from project version: " + version);
+                }
             }
-            baseVersion = version;
-            version = insertSuffixInVersion(version, featureIssue);
-            getLog().info("Added feature issue number to project version: " + version);
-            if (!currentVersion.equals(version)) {
-                mvnSetVersions(version, "On feature branch: ");
-                gitCommit(featureStartMessage);
-                versionChangeCommit = getCurrentCommit();
-            } else {
-                getLog().info(
-                        "Project version for feature is same as base project version. Version update not needed.");
-            }
-        }
+            getLog().info("Base branch for new feature: " + baseBranch);
+            String originalBaseBranch = baseBranch;
 
-        BranchCentralConfigChanges branchConfigChanges = new BranchCentralConfigChanges();
-        branchConfigChanges.set(featureBranchName, BranchConfigKeys.BRANCH_TYPE, BranchType.FEATURE.getType());
-        branchConfigChanges.set(featureBranchName, BranchConfigKeys.BASE_BRANCH, originalBaseBranch);
-        branchConfigChanges.set(featureBranchName, BranchConfigKeys.ISSUE_NUMBER, featureIssue);
-        branchConfigChanges.set(featureBranchName, BranchConfigKeys.BASE_VERSION, baseVersion);
-        branchConfigChanges.set(featureBranchName, BranchConfigKeys.START_COMMIT_MESSAGE, featureStartMessage);
-        if (versionChangeCommit != null) {
-            branchConfigChanges.set(featureBranchName, BranchConfigKeys.VERSION_CHANGE_COMMIT, versionChangeCommit);
+            // use integration branch?
+            String integrationBranch = gitFlowConfig.getIntegrationBranchPrefix() + baseBranch;
+            gitEnsureLocalBranchIsUpToDateIfExists(integrationBranch,
+                    new GitFlowFailureInfo(
+                            "Local and remote integration branches '" + integrationBranch
+                                    + "' diverge, this indicates a severe error condition on your branches.",
+                            "Please consult a gitflow expert on how to fix this!"));
+            gitAssertLocalAndRemoteBranchesOnSameState(baseBranch);
+            if (gitBranchExists(integrationBranch)) {
+                boolean useIntegrationBranch = true;
+                if (!Objects.equals(getCurrentCommit(integrationBranch), getCurrentCommit(baseBranch))) {
+                    useIntegrationBranch = getPrompter().promptConfirmation("The current commit on " + baseBranch
+                            + " is not integrated. Create a branch of the last integrated commit (" + integrationBranch
+                            + ")?", true, true);
+                }
+                if (useIntegrationBranch) {
+                    if (!gitIsAncestorBranch(integrationBranch, baseBranch)) {
+                        throw new GitFlowFailureException(
+                                "Integration branch '" + integrationBranch + "' is ahead of base branch '" + baseBranch
+                                        + "', this indicates a severe error condition on your branches.",
+                                " Please consult a gitflow expert on how to fix this!");
+                    }
+
+                    getLog().info("Using integration branch '" + integrationBranch + "' as start point for new feature.");
+                    baseBranch = integrationBranch;
+                }
+            }
+
+            featureName = getPrompter().promptRequiredParameterValue(
+                    "What is a name of feature branch? " + gitFlowConfig.getFeatureBranchPrefix(), "featureName",
+                    featureName, new StringValidator() {
+
+                        @Override
+                        public ValidationResult validate(String value) {
+                            if (!validateFeatureName(value)) {
+                                String invalidMessage;
+                                if (featureNamePatternDescription != null) {
+                                    invalidMessage = "The feature name '" + value + "' is invalid. "
+                                            + featureNamePatternDescription;
+                                } else {
+                                    invalidMessage = "The feature name '" + value
+                                            + "' is invalid. It does not match the required pattern: " + featureNamePattern;
+                                }
+                                return new ValidationResult(invalidMessage);
+                            } else {
+                                return ValidationResult.VALID;
+                            }
+                        }
+                    },
+                    new GitFlowFailureInfo("Property 'featureName' is required in non-interactive mode but was not set.",
+                            "Specify a featureName or run in interactive mode.",
+                            "'mvn flow:feature-start -DfeatureName=XXX -B'", "'mvn flow:feature-start'"));
+
+            featureName = StringUtils.deleteWhitespace(featureName);
+            getLog().info("New feature name: " + featureName);
+
+            featureBranchName = gitFlowConfig.getFeatureBranchPrefix() + featureName;
+            getLog().info("New feature branch name: " + featureBranchName);
+            if (gitBranchExists(featureBranchName)) {
+                throw new GitFlowFailureException("Feature branch '" + featureBranchName + "' already exists.",
+                        "Either checkout the existing feature branch or start a new feature with another name.",
+                        "'git checkout " + featureBranchName + "' to checkout the feature branch",
+                        "'mvn flow:feature-start' to run again and specify another feature name");
+            }
+            if (gitRemoteBranchExists(featureBranchName)) {
+                throw new GitFlowFailureException(
+                        "Remote feature branch '" + featureBranchName + "' already exists on the remote '"
+                                + gitFlowConfig.getOrigin() + "'.",
+                        "Either checkout the existing feature branch or start a new feature with another name.",
+                        "'git checkout " + featureBranchName + "' to checkout the feature branch",
+                        "'mvn flow:feature-start' to run again and specify another feature name");
+            }
+
+            featureIssue = extractIssueNumberFromFeatureName(featureName);
+            getLog().info("Feature issue number: " + featureIssue);
+            String featureStartMessage = substituteWithIssueNumber(commitMessages.getFeatureStartMessage(), featureIssue);
+
+            gitCreateAndCheckout(featureBranchName, baseBranch);
+
+            String currentVersion = getCurrentProjectVersion();
+            String baseVersion = currentVersion;
+            String versionChangeCommit = null;
+            if (!skipFeatureVersion && !tychoBuild) {
+                getLog().info("Creating project version for feature.");
+                String version = currentVersion;
+                getLog().info("Base project version: " + version);
+                if (isEpicBranch(baseBranch)) {
+                    version = removeEpicIssueFromVersion(version, baseBranch);
+                    getLog().info("Removed epic issue number from project version: " + version);
+                }
+                baseVersion = version;
+                version = insertSuffixInVersion(version, featureIssue);
+                getLog().info("Added feature issue number to project version: " + version);
+                if (!currentVersion.equals(version)) {
+                    mvnSetVersions(version, "On feature branch: ");
+                    gitCommit(featureStartMessage);
+                    versionChangeCommit = getCurrentCommit();
+                } else {
+                    getLog().info(
+                            "Project version for feature is same as base project version. Version update not needed.");
+                }
+            }
+
+            BranchCentralConfigChanges branchConfigChanges = new BranchCentralConfigChanges();
+            branchConfigChanges.set(featureBranchName, BranchConfigKeys.BRANCH_TYPE, BranchType.FEATURE.getType());
+            branchConfigChanges.set(featureBranchName, BranchConfigKeys.BASE_BRANCH, originalBaseBranch);
+            branchConfigChanges.set(featureBranchName, BranchConfigKeys.ISSUE_NUMBER, featureIssue);
+            branchConfigChanges.set(featureBranchName, BranchConfigKeys.BASE_VERSION, baseVersion);
+            branchConfigChanges.set(featureBranchName, BranchConfigKeys.START_COMMIT_MESSAGE, featureStartMessage);
+            if (versionChangeCommit != null) {
+                branchConfigChanges.set(featureBranchName, BranchConfigKeys.VERSION_CHANGE_COMMIT, versionChangeCommit);
+            }
+            gitApplyBranchCentralConfigChanges(branchConfigChanges, "feature '" + featureName + "' started");
+        } else {
+            featureBranchName = currentBranch;
+            featureIssue = gitGetBranchCentralConfig(featureBranchName, BranchConfigKeys.ISSUE_NUMBER);
         }
-        gitApplyBranchCentralConfigChanges(branchConfigChanges, "feature '" + featureName + "' started");
 
         if (installProject) {
-            mvnCleanInstall();
+            try {
+                mvnCleanInstall();
+            } catch (MojoFailureException e) {
+                gitSetBranchLocalConfig(featureBranchName, "breakpoint", "featureStart.cleanInstall");
+                throw new GitFlowFailureException(e,
+                        "Failed to execute 'mvn clean install' on the project on feature branch after feature start.",
+                        "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
+                                + "'mvn flow:feature-start' again in order to continue.");
+            }
         }
+        gitRemoveBranchLocalConfig(featureBranchName, "breakpoint");
 
         if (pushRemote) {
             gitPush(featureBranchName, false, false);

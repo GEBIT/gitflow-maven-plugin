@@ -613,6 +613,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected void gitRemoveConfig(String name) throws MojoFailureException, CommandLineException {
         // ignore error exit codes
+        getLog().info("Remove git local config " + name);
         executeGitCommandExitCode("config", "--unset", name);
     }
 
@@ -650,7 +651,9 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected void gitSetBranchLocalConfig(String branchName, String configName, String value)
             throws MojoFailureException, CommandLineException {
-        gitSetConfig("branch." + branchName + "." + configName, value);
+        String name = "branch." + branchName + "." + configName;
+        getLog().info("Set branch local git config " + name + "=" + value);
+        gitSetConfig(name, value);
     }
 
     /**
@@ -667,7 +670,9 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected void gitRemoveBranchLocalConfig(String branchName, String configName)
             throws MojoFailureException, CommandLineException {
-        gitRemoveConfig("branch." + branchName + "." + configName);
+        String name = "branch." + branchName + "." + configName;
+        getLog().info("Remove branch local git config " + name);
+        gitRemoveConfig(name);
     }
 
     /**
