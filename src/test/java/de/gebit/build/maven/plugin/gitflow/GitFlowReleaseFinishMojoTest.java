@@ -221,8 +221,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 "'git add' and 'git commit' to commit your changes", "'git reset --hard' to throw away your changes");
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
 
         git.assertAddedFiles(repositorySet, GitExecution.TESTFILE_NAME);
@@ -242,8 +242,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 "'git add' and 'git commit' to commit your changes", "'git reset --hard' to throw away your changes");
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
 
         git.assertModifiedFiles(repositorySet, GitExecution.TESTFILE_NAME);
@@ -260,8 +260,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 "'git checkout BRANCH' to switch to the release branch");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
     }
 
     @Test
@@ -293,14 +293,15 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 "'git checkout BRANCH' to switch to the release branch");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, OTHER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, OTHER_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, OTHER_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
     }
 
     @Test
     public void testExecuteWithoutDevelopmentBranchConfig() throws Exception {
         // set up
         git.switchToBranch(repositorySet, RELEASE_BRANCH, true);
+        ExecutorHelper.executeUpgrade(this, repositorySet);
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
         // verify
@@ -312,8 +313,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
                         + "development branch");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, RELEASE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, RELEASE_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, RELEASE_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
     }
 
     @Test

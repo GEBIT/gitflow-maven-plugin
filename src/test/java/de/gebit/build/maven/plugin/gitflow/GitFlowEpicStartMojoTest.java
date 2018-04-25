@@ -373,7 +373,12 @@ public class GitFlowEpicStartMojoTest extends AbstractGitFlowMojoTestCase {
         git.setOnline(repositorySet);
         assertGitFlowFailureException(result, "Remote branch is ahead of the local branch '" + MASTER_BRANCH + "'.",
                 "Pull changes on remote branch to the local branch in order to proceed.", "'git pull'");
-        assertNoChanges();
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
     }
 
     @Test
@@ -395,7 +400,10 @@ public class GitFlowEpicStartMojoTest extends AbstractGitFlowMojoTestCase {
                 "Rebase or merge the changes in local branch in order to proceed.", "'git pull'");
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         git.assertClean(repositorySet);
-        assertNoChangesInRepositoriesExceptCommitedTestfile();
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
     }
 
     @Test
