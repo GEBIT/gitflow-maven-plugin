@@ -16,6 +16,7 @@
 package de.gebit.build.maven.plugin.gitflow;
 
 import java.util.List;
+import java.util.Objects;
 
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -113,6 +114,38 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
             }
 
             String baseBranch = gitFeatureBranchBaseBranch(featureBranchName);
+            // use integration branch?
+            String integrationBranch = gitFlowConfig.getIntegrationBranchPrefix() + baseBranch;
+            gitEnsureLocalBranchIsUpToDateIfExists(integrationBranch,
+                    new GitFlowFailureInfo(
+                            "Local and remote integration branches '" + integrationBranch
+                                    + "' diverge, this indicates a severe error condition on your branches.",
+                            "Please consult a gitflow expert on how to fix this!"));
+            gitEnsureLocalBranchIsUpToDateIfExists(baseBranch,
+                    new GitFlowFailureInfo("Remote and local base branches '" + baseBranch + "' diverge.",
+                            "Rebase the changes in local branch '" + baseBranch + "' in order to proceed.",
+                            "'git checkout " + baseBranch + "' and 'git rebase' to rebase the changes in base "
+                                    + "branch '" + baseBranch + "'"));
+            if (gitBranchExists(integrationBranch)) {
+                boolean useIntegrationBranch = true;
+                if (!Objects.equals(getCurrentCommit(integrationBranch), getCurrentCommit(baseBranch))) {
+                    useIntegrationBranch = getPrompter().promptConfirmation("The current commit on " + baseBranch
+                            + " is not integrated. Rebase the feature branch on top of the last integrated commit ("
+                            + integrationBranch + ")?", true, true);
+                }
+                if (useIntegrationBranch) {
+                    if (!gitIsAncestorBranch(integrationBranch, baseBranch)) {
+                        throw new GitFlowFailureException(
+                                "Integration branch '" + integrationBranch + "' is ahead of base branch '" + baseBranch
+                                        + "', this indicates a severe error condition on your branches.",
+                                " Please consult a gitflow expert on how to fix this!");
+                    }
+
+                    getLog().info(
+                            "Using integration branch '" + integrationBranch + "' as rebase point for feature branch.");
+                    baseBranch = integrationBranch;
+                }
+            }
             if (pushRemote) {
                 gitEnsureLocalAndRemoteBranchesAreSynchronized(baseBranch, new GitFlowFailureInfo(
                         "Local base branch '" + baseBranch + "' is ahead of remote branch. Pushing of the rebased "
@@ -128,12 +161,6 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
                                         + "feature branch will create an inconsistent state in remote repository.",
                                 "Push the base branch '" + baseBranch + "' first or set 'pushRemote' parameter to "
                                         + "false in order to avoid inconsistent state in remote repository."));
-            } else {
-                gitEnsureLocalBranchIsUpToDateIfExists(baseBranch,
-                        new GitFlowFailureInfo("Remote and local base branches '" + baseBranch + "' diverge.",
-                                "Rebase the changes in local branch '" + baseBranch + "' in order to proceed.",
-                                "'git checkout " + baseBranch + "' and 'git rebase' to rebase the changes in base "
-                                        + "branch '" + baseBranch + "'"));
             }
             if (updateWithMerge && rebaseWithoutVersionChange) {
                 String answer = getPrompter().promptSelection(

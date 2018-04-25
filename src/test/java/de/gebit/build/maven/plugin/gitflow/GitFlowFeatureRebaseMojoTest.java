@@ -117,6 +117,15 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
             "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved\\E",
             "\\Q'mvn flow:feature-rebase' to continue feature rebase process\\E");
 
+    private static final String PROMPT_REBASE_ON_LAST_INTEGRATED_MASTER = "The current commit on " + MASTER_BRANCH
+            + " is not integrated. Rebase the feature branch on top of the last integrated commit ("
+            + INTEGRATION_MASTER_BRANCH + ")?";
+
+    private static final String PROMPT_REBASE_ON_LAST_INTEGRATED_MAINTENANCE = "The current commit on "
+            + MAINTENANCE_BRANCH
+            + " is not integrated. Rebase the feature branch on top of the last integrated commit ("
+            + INTEGRATION_MAINTENANCE_BRANCH + ")?";
+
     private RepositorySet repositorySet;
 
     @Before
@@ -750,10 +759,13 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
         createFeatureBranchDivergentFromMaster();
+        when(promptControllerMock.prompt(PROMPT_REBASE_ON_LAST_INTEGRATED_MASTER, Arrays.asList("y", "n"), "y"))
+                .thenReturn("n");
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
         // verify
-        verifyZeroInteractions(promptControllerMock);
+        verify(promptControllerMock).prompt(PROMPT_REBASE_ON_LAST_INTEGRATED_MASTER, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH, INTEGRATION_MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
@@ -769,6 +781,39 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, FEATURE_BRANCH, FEATURE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FEATURE_TESTFILE,
                 COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_MASTER_TESTFILE, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
+    }
+
+    @Test
+    public void testExecuteOnFeatureBranchFeatureStartedOnMasterIntegrationBranchAndRebaseOnIntegrated()
+            throws Exception {
+        // set up
+        ExecutorHelper.executeIntegerated(this, repositorySet, INTEGRATION_MASTER_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        createFeatureBranchDivergentFromMaster();
+        when(promptControllerMock.prompt(PROMPT_REBASE_ON_LAST_INTEGRATED_MASTER, Arrays.asList("y", "n"), "y"))
+                .thenReturn("y");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_REBASE_ON_LAST_INTEGRATED_MASTER, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, INTEGRATION_MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, INTEGRATION_MASTER_BRANCH, FEATURE_BRANCH,
+                CONFIG_BRANCH);
+
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE,
+                GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, INTEGRATION_MASTER_BRANCH,
+                INTEGRATION_MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, INTEGRATION_MASTER_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, FEATURE_BRANCH, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FEATURE_TESTFILE,
+                COMMIT_MESSAGE_SET_VERSION);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
     }
 
@@ -789,10 +834,13 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         git.createAndCommitTestfile(repositorySet, "maintenance_testfile.txt", COMMIT_MESSAGE_MAINTENANCE_TESTFILE);
         git.push(repositorySet);
         git.switchToBranch(repositorySet, FEATURE_BRANCH);
+        when(promptControllerMock.prompt(PROMPT_REBASE_ON_LAST_INTEGRATED_MAINTENANCE, Arrays.asList("y", "n"), "y"))
+                .thenReturn("n");
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
         // verify
-        verifyZeroInteractions(promptControllerMock);
+        verify(promptControllerMock).prompt(PROMPT_REBASE_ON_LAST_INTEGRATED_MAINTENANCE, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, INTEGRATION_MAINTENANCE_BRANCH,
@@ -813,6 +861,53 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FEATURE_TESTFILE,
                 COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_MAINTENANCE_TESTFILE,
                 GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FEATURE_VERSION);
+    }
+
+    @Test
+    public void testExecuteOnFeatureBranchFeatureStartedOnMaintenanceIntegrationBranchAndRebaseOnIntegrated()
+            throws Exception {
+        // set up
+        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION);
+        ExecutorHelper.executeIntegerated(this, repositorySet, INTEGRATION_MAINTENANCE_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        git.createAndCommitTestfile(repositorySet, "master_testfile.txt", COMMIT_MESSAGE_MASTER_TESTFILE);
+        git.push(repositorySet);
+        git.switchToBranch(repositorySet, MAINTENANCE_BRANCH);
+        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
+        git.createAndCommitTestfile(repositorySet, "feature_testfile.txt", COMMIT_MESSAGE_FEATURE_TESTFILE);
+        git.switchToBranch(repositorySet, MAINTENANCE_BRANCH);
+        git.createAndCommitTestfile(repositorySet, "maintenance_testfile.txt", COMMIT_MESSAGE_MAINTENANCE_TESTFILE);
+        git.push(repositorySet);
+        git.switchToBranch(repositorySet, FEATURE_BRANCH);
+        when(promptControllerMock.prompt(PROMPT_REBASE_ON_LAST_INTEGRATED_MAINTENANCE, Arrays.asList("y", "n"), "y"))
+                .thenReturn("y");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_REBASE_ON_LAST_INTEGRATED_MAINTENANCE, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, INTEGRATION_MAINTENANCE_BRANCH,
+                FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, INTEGRATION_MAINTENANCE_BRANCH,
+                FEATURE_BRANCH, CONFIG_BRANCH);
+
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, INTEGRATION_MAINTENANCE_BRANCH,
+                INTEGRATION_MAINTENANCE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, INTEGRATION_MAINTENANCE_BRANCH,
+                COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_MAINTENANCE_TESTFILE,
+                GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, FEATURE_BRANCH, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FEATURE_TESTFILE,
+                COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FEATURE_VERSION);
     }
 
