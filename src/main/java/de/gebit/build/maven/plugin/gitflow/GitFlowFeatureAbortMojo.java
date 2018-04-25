@@ -35,6 +35,8 @@ public class GitFlowFeatureAbortMojo extends AbstractGitFlowFeatureMojo {
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         // check if rebase in process
+        getLog().info("Starting feature abort process.");
+        checkCentralBranchConfig();
         String featureBranchName = gitRebaseFeatureBranchInProcess();
         if (featureBranchName != null) {
             throw new GitFlowFailureException(
@@ -53,16 +55,7 @@ public class GitFlowFeatureAbortMojo extends AbstractGitFlowFeatureMojo {
         }
         // is the current branch a feature branch?
         String currentBranch = gitCurrentBranch();
-        boolean isOnFeatureBranch = false;
-        for (String branch : branches) {
-            if (branch.equals(currentBranch)) {
-                // we're on a feature branch, no need to ask
-                isOnFeatureBranch = true;
-                getLog().info("Current feature branch: " + currentBranch);
-                break;
-            }
-        }
-
+        boolean isOnFeatureBranch = branches.contains(currentBranch);
         if (!isOnFeatureBranch) {
             featureBranchName = getPrompter().promptToSelectFromOrderedList("Feature branches:",
                     "Choose feature branch to abort", branches,
@@ -71,7 +64,10 @@ public class GitFlowFeatureAbortMojo extends AbstractGitFlowFeatureMojo {
                             "Please switch to a feature branch first or run in interactive mode.",
                             "'git checkout BRANCH' to switch to the feature branch",
                             "'mvn flow:feature-abort' to run in interactive mode"));
+            getLog().info("Aborting feature on selected feature branch: " + featureBranchName);
         } else {
+            featureBranchName = currentBranch;
+            getLog().info("Aborting feature on current feature branch: " + featureBranchName);
             if (executeGitHasUncommitted()) {
                 boolean confirmed = getPrompter().promptConfirmation(
                         "You have some uncommitted files. If you continue any changes will be discarded. Continue?",
@@ -88,20 +84,22 @@ public class GitFlowFeatureAbortMojo extends AbstractGitFlowFeatureMojo {
                             "'git reset --hard' to throw away your changes");
                 }
             }
-            featureBranchName = currentBranch;
             String baseBranch = gitFeatureBranchBaseBranch(featureBranchName);
-            gitEnsureLocalBranchExists(baseBranch);
             gitResetHard();
+            getLog().info("Switching to base branch: " + baseBranch);
             gitCheckout(baseBranch);
         }
 
         if (gitBranchExists(featureBranchName)) {
+            getLog().info("Removing local feature branch.");
             // git branch -D feature/...
             gitBranchDeleteForce(featureBranchName);
         }
         if (pushRemote) {
+            getLog().info("Removing remote feature branch.");
             // delete the remote branch
             gitBranchDeleteRemote(featureBranchName);
         }
+        getLog().info("Feature abort process finished.");
     }
 }

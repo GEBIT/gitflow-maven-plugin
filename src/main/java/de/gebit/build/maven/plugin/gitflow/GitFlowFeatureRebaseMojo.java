@@ -66,6 +66,8 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
+        getLog().info("Starting feature rebase process.");
+        checkCentralBranchConfig();
         boolean confirmedUpdateWithMerge = updateWithMerge;
         String featureBranchName = gitRebaseFeatureBranchInProcess();
         if (featureBranchName == null) {
@@ -86,15 +88,7 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
                         "Please start a feature first.", "'mvn flow:feature-start'");
             }
             String currentBranch = gitCurrentBranch();
-            boolean isOnFeatureBranch = false;
-            for (String branch : branches) {
-                if (branch.equals(currentBranch)) {
-                    // we're on a feature branch, no need to ask
-                    isOnFeatureBranch = true;
-                    getLog().info("Current feature branch: " + currentBranch);
-                    break;
-                }
-            }
+            boolean isOnFeatureBranch = branches.contains(currentBranch);
             if (!isOnFeatureBranch) {
                 featureBranchName = getPrompter().promptToSelectFromOrderedList("Feature branches:",
                         "Choose feature branch to rebase", branches,
@@ -103,6 +97,7 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
                                 "Please switch to a feature branch first or run in interactive mode.",
                                 "'git checkout BRANCH' to switch to the feature branch",
                                 "'mvn flow:feature-rebase' to run in interactive mode"));
+                getLog().info("Rebasing feature on selected feature branch: " + featureBranchName);
                 gitEnsureLocalBranchIsUpToDateIfExists(featureBranchName, new GitFlowFailureInfo(
                         "Remote and local feature branches '" + featureBranchName + "' diverge.",
                         "Rebase or merge the changes in local feature branch '" + featureBranchName + "' first.",
@@ -111,13 +106,13 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
                 gitCheckout(featureBranchName);
             } else {
                 featureBranchName = currentBranch;
+                getLog().info("Rebasing feature on current feature branch: " + featureBranchName);
                 gitEnsureCurrentLocalBranchIsUpToDate(
                         new GitFlowFailureInfo("Remote and local feature branches '{0}' diverge.",
                                 "Rebase or merge the changes in local feature branch '{0}' first.", "'git rebase'"));
             }
 
             String baseBranch = gitFeatureBranchBaseBranch(featureBranchName);
-
             if (pushRemote) {
                 gitEnsureLocalAndRemoteBranchesAreSynchronized(baseBranch, new GitFlowFailureInfo(
                         "Local base branch '" + baseBranch + "' is ahead of remote branch. Pushing of the rebased "
@@ -159,42 +154,55 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
                 }
             }
 
-            // merge in development
-            try {
-                gitMerge(baseBranch, !confirmedUpdateWithMerge, true);
-            } catch (MojoFailureException ex) {
-                // rebase conflict on first commit?
-                final String featureStartMessage = substituteInFeatureMessage(commitMessages.getFeatureStartMessage(),
-                        extractIssueNumberFromFeatureBranchName(featureBranchName));
-                String problem;
-                String solutionProposal;
-                if (confirmedUpdateWithMerge) {
-                    problem = "Automatic merge failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage());
-                    solutionProposal = "Fix the merge conflicts and mark them as resolved. After that, run "
-                            + "'mvn flow:feature-rebase' again. Do NOT run 'git merge --continue'.";
-                } else {
-                    problem = "Automatic rebase failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage());
-                    solutionProposal = "Fix the rebase conflicts and mark them as resolved. After that, run "
-                            + "'mvn flow:feature-rebase' again. Do NOT run 'git rebase --continue'.";
+            if (confirmedUpdateWithMerge) {
+                // merge development into feature
+                try {
+                    gitMerge(baseBranch, true);
+                } catch (MojoFailureException ex) {
+                    throw new GitFlowFailureException(ex,
+                            "Automatic merge failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage()),
+                            "Fix the merge conflicts and mark them as resolved. After that, run "
+                                    + "'mvn flow:feature-rebase' again. Do NOT run 'git merge --continue'.",
+                            "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
+                                    + "conflicts as resolved",
+                            "'mvn flow:feature-rebase' to continue feature rebase process");
                 }
-                if (ex.getMessage().contains("Patch failed at 0001 " + featureStartMessage)) {
-                    // try automatic rebase
-                    gitResolveConflictOnSetFeatureVersionCommit(featureBranchName, baseBranch);
-
-                    // continue rebase
-                    try {
-                        gitRebaseContinue();
-                    } catch (MojoFailureException exc) {
-                        throw new GitFlowFailureException(exc, problem, solutionProposal,
+            } else {
+                // rebase feature on top of development
+                try {
+                    gitRebase(baseBranch);
+                } catch (MojoFailureException ex) {
+                    // rebase conflict on first commit?
+                    String featureStartMessage = getFeatureStartCommitMessage(featureBranchName);
+                    if (featureStartMessage != null
+                            && ex.getMessage().contains("Patch failed at 0001 " + featureStartMessage)) {
+                        getLog().info(
+                                "Rebase failed on feature version change commit. Trying automatically to resolve conflict.");
+                        // try automatic rebase
+                        gitResolveConflictOnSetFeatureVersionCommit(featureBranchName, baseBranch);
+                        getLog().info("Continue rebase.");
+                        // continue rebase
+                        try {
+                            gitRebaseContinue();
+                        } catch (MojoFailureException exc) {
+                            throw new GitFlowFailureException(exc,
+                                    "Automatic rebase failed.\nGit error message:\n"
+                                            + StringUtils.trim(ex.getMessage()),
+                                    "Fix the rebase conflicts and mark them as resolved. After that, run "
+                                            + "'mvn flow:feature-rebase' again. Do NOT run 'git rebase --continue'.",
+                                    "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
+                                            + "conflicts as resolved",
+                                    "'mvn flow:feature-rebase' to continue feature rebase process");
+                        }
+                    } else {
+                        throw new GitFlowFailureException(ex,
+                                "Automatic rebase failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage()),
+                                "Fix the rebase conflicts and mark them as resolved. After that, run "
+                                        + "'mvn flow:feature-rebase' again. Do NOT run 'git rebase --continue'.",
                                 "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
                                         + "conflicts as resolved",
                                 "'mvn flow:feature-rebase' to continue feature rebase process");
                     }
-                } else {
-                    throw new GitFlowFailureException(ex, problem, solutionProposal,
-                            "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
-                                    + "conflicts as resolved",
-                            "'mvn flow:feature-rebase' to continue feature rebase process");
                 }
             }
         } else {
@@ -249,11 +257,13 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
 
         if (pushRemote) {
             if (!confirmedUpdateWithMerge && deleteRemoteBranchOnRebase) {
+                getLog().info("Deleting remote feature branch to not run into non-fast-forward error");
                 // delete remote branch to not run into non-fast-forward error
                 gitBranchDeleteRemote(featureBranchName);
             }
             gitPush(featureBranchName, false, true);
         }
+        getLog().info("Feature rebase process finished.");
     }
 
     /**
@@ -266,22 +276,31 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
      */
     private void gitResolveConflictOnSetFeatureVersionCommit(String featureBranchName, String baseBranchName)
             throws MojoFailureException, CommandLineException {
+        getLog().info("Using (checkout) project version from base branch '" + baseBranchName + "'");
         gitCheckoutOurs();
         String currentVersion = getCurrentProjectVersion();
+        getLog().info("Project version: " + currentVersion);
         String version = currentVersion;
         if (isEpicBranch(baseBranchName)) {
             version = removeEpicIssueFromVersion(version, baseBranchName);
+            getLog().info("Removed epic issue number from project version: " + version);
         }
-        String featureIssue = extractIssueNumberFromFeatureBranchName(featureBranchName);
+        String featureIssue = getFeatureIssueNumber(featureBranchName);
+        getLog().info("Feature issue number read from central branch config: " + featureIssue);
         version = insertSuffixInVersion(version, featureIssue);
+        getLog().info("Added feature issue number to project version: " + version);
         if (!currentVersion.equals(version)) {
             mvnSetVersions(version);
             gitAddWithUpdateIndex();
+        } else {
+            getLog().info("New project version for feature is same as project version from base branch. "
+                    + "Version update not needed.");
         }
     }
 
-    private String removeEpicIssueFromVersion(String version, String epicBranch) {
-        String epicIssueNumber = extractIssueNumberFromEpicBranchName(epicBranch);
+    private String removeEpicIssueFromVersion(String version, String epicBranch)
+            throws MojoFailureException, CommandLineException {
+        String epicIssueNumber = getEpicIssueNumber(epicBranch);
         if (version.contains("-" + epicIssueNumber)) {
             return version.replaceFirst("-" + epicIssueNumber, "");
         }

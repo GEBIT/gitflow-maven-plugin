@@ -8,12 +8,9 @@
 //
 package de.gebit.build.maven.plugin.gitflow;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.maven.plugin.MojoFailureException;
 import org.codehaus.plexus.util.StringUtils;
@@ -43,6 +40,21 @@ public abstract class AbstractGitFlowEpicMojo extends AbstractGitFlowMojo {
         Map<String, String> replacements = new HashMap<String, String>();
         replacements.put("key", issueNumber);
         return substituteStrings(message, replacements);
+    }
+
+    /**
+     * Return the commit message for version change commit (first commit) of
+     * epic branch if used on epic start and stored in central branch config.
+     *
+     * @param epicBranch
+     *            the name of the epic branch
+     * @return version change commit message or <code>null</code> if version
+     *         change was not commited on epic start
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected String getEpicStartCommitMessage(String epicBranch) throws MojoFailureException, CommandLineException {
+        return gitGetBranchCentralConfig(epicBranch, BranchConfigKeys.START_COMMIT_MESSAGE);
     }
 
     /**
@@ -76,83 +88,59 @@ public abstract class AbstractGitFlowEpicMojo extends AbstractGitFlowMojo {
     }
 
     /**
-     * Get the branch point of an epic branch.
+     * Get the name of the base branch for passed epic branch.
      *
      * @param epicBranch
-     *            the name of the epic branch
-     * @return commit ID of the branch point (common ancestor with the
-     *         development/maintenance branch)
+     *            epic branch name
+     * @return name of the base branch even if it doesn't exist
      * @throws MojoFailureException
      *             if no branch point can be determined
      */
-    protected String gitEpicBranchBaseBranch(String epicBranch) throws MojoFailureException, CommandLineException {
-        List<String> baseBranchCandidates = gitEpicBranchBaseBranches(epicBranch);
-        if (baseBranchCandidates.isEmpty()) {
+    private String gitEpicBranchBaseBranchName(String epicBranch) throws MojoFailureException, CommandLineException {
+        String baseBranch = gitGetBranchBaseBranch(epicBranch);
+        if (baseBranch == null) {
             if (fetchRemote) {
                 throw new GitFlowFailureException(
-                        "Failed to find base branch for epic branch '" + epicBranch
-                                + "'. This indicates a severe error condition on your branches.",
+                        "Failed to find base branch for epic branch '" + epicBranch + "' in central branch config.\n"
+                                + "This indicates a severe error condition on your branches.",
                         "Please consult a gitflow expert on how to fix this!");
             } else {
-                throw new GitFlowFailureException("Failed to find base branch for epic branch '" + epicBranch + "'.",
+                throw new GitFlowFailureException(
+                        "Failed to find base branch for epic branch '" + epicBranch + "' in central branch config.",
                         "Set 'fetchRemote' parameter to true in order to search for base branch also in remote "
                                 + "repository.");
             }
         }
-        String baseBranch = baseBranchCandidates.get(0);
-        getLog().debug("Epic branch is based on " + baseBranch + ".");
+        getLog().info("Epic branch '" + epicBranch + "' is based on branch '" + baseBranch + "'.");
         return baseBranch;
     }
 
-    protected List<String> gitEpicBranchBaseBranches(String epicBranch)
-            throws MojoFailureException, CommandLineException {
-        getLog().info("Looking for branch base of '" + epicBranch + "'.");
-
-        // try all development branches
-        Map<String, List<String>> branchPointCandidates = new HashMap<>();
-        String developmentBranch = gitFlowConfig.getDevelopmentBranch();
-        gitFetchBranches(developmentBranch);
-        if (gitIsRemoteBranchFetched(gitFlowConfig.getOrigin(), developmentBranch)) {
-            addBranchPointCandidate(branchPointCandidates, epicBranch, developmentBranch, true);
-        } else if (gitBranchExists(developmentBranch)) {
-            addBranchPointCandidate(branchPointCandidates, epicBranch, developmentBranch, false);
+    /**
+     * Get the base branch of an epic branch. Throws
+     * {@link GitFlowFailureException} if base branch doesn't exist or can't be
+     * determined.
+     *
+     * @param epicBranch
+     *            the name of the epic branch
+     * @return base branch that exists locally
+     * @throws MojoFailureException
+     *             if no branch point can be determined
+     */
+    protected String gitEpicBranchBaseBranch(String epicBranch) throws MojoFailureException, CommandLineException {
+        String baseBranch = gitEpicBranchBaseBranchName(epicBranch);
+        GitFlowFailureInfo baseBranchNotExistingErrorMessage;
+        if (fetchRemote) {
+            baseBranchNotExistingErrorMessage = new GitFlowFailureInfo(
+                    "Base branch '" + baseBranch + "' for epic branch '" + epicBranch
+                            + "' doesn't exist.\nThis indicates a severe error condition on your branches.",
+                    "Please consult a gitflow expert on how to fix this!");
+        } else {
+            baseBranchNotExistingErrorMessage = new GitFlowFailureInfo(
+                    "Base branch '" + baseBranch + "' for epic branch '" + epicBranch + "' doesn't exist locally.",
+                    "Set 'fetchRemote' parameter to true in order to try to fetch branch from remote repository.");
         }
-        List<String> remoteMaintenanceBranches = gitRemoteMaintenanceBranches();
-        if (remoteMaintenanceBranches.size() > 0) {
-            gitFetchBranches(remoteMaintenanceBranches);
-            for (String maintenanceBranch : remoteMaintenanceBranches) {
-                addBranchPointCandidate(branchPointCandidates, epicBranch, maintenanceBranch, true);
-            }
-        }
-        List<String> localMaintenanceBranches = gitLocalMaintenanceBranches();
-        if (localMaintenanceBranches.size() > 0) {
-            for (String maintenanceBranch : localMaintenanceBranches) {
-                if (!branchPointCandidates.containsKey(maintenanceBranch)) {
-                    addBranchPointCandidate(branchPointCandidates, epicBranch, maintenanceBranch, false);
-                }
-            }
-        }
-        Set<String> branchPoints = branchPointCandidates.keySet();
-        String nearestBranchPoint = gitNearestAncestorCommit(epicBranch, branchPoints);
-        if (nearestBranchPoint != null) {
-            return branchPointCandidates.get(nearestBranchPoint);
-        }
-        return Collections.EMPTY_LIST;
-    }
-
-    private void addBranchPointCandidate(Map<String, List<String>> branchPointCandidates, String epicBranch,
-            String baseBranch, boolean remote) throws MojoFailureException, CommandLineException {
-        String branchPoint = gitBranchPoint((remote ? gitFlowConfig.getOrigin() + "/" : "") + baseBranch, epicBranch);
-        if (branchPoint != null) {
-            List<String> baseBranches = branchPointCandidates.get(branchPoint);
-            if (baseBranches == null) {
-                baseBranches = new ArrayList<>();
-                branchPointCandidates.put(branchPoint, baseBranches);
-            }
-            if (!baseBranches.contains(baseBranch)) {
-                baseBranches.add(baseBranch);
-            }
-        }
+        gitEnsureLocalBranchExists(baseBranch, baseBranchNotExistingErrorMessage);
+        return baseBranch;
     }
 
     protected boolean hasCommitsExceptVersionChangeCommitOnEpicBranch(String epicBranch, String baseBranch)
@@ -172,9 +160,8 @@ public abstract class AbstractGitFlowEpicMojo extends AbstractGitFlowMojo {
             throws MojoFailureException, CommandLineException {
         String firstCommitOnBranch = gitFirstCommitOnBranch(epicBranch, branchPoint);
         String firstCommitMessage = gitCommitMessage(firstCommitOnBranch);
-        String issueNumber = extractIssueNumberFromEpicBranchName(epicBranch);
-        String epicStartMessage = substituteInEpicMessage(commitMessages.getEpicStartMessage(), issueNumber);
-        if (!firstCommitMessage.contains(epicStartMessage)) {
+        String epicStartMessage = getEpicStartCommitMessage(epicBranch);
+        if (epicStartMessage == null || !firstCommitMessage.contains(epicStartMessage)) {
             if (getLog().isDebugEnabled()) {
                 getLog().debug("First commit is not a version change commit.");
             }

@@ -80,7 +80,7 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
         // set git flow configuration
         initGitFlowConfig();
 
-        // check uncommitted changes
+        checkCentralBranchConfig();
         checkUncommittedChanges();
 
         String currentBranchOrCommit = gitCurrentBranchOrCommit();

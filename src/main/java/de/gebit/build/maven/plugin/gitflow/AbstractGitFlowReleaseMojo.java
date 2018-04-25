@@ -211,34 +211,35 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
 
         String developmentCommitRef = getCurrentCommit();
 
-        // git checkout -b release/... develop to create the release branch
         gitCreateAndCheckout(releaseBranchName, developmentBranch);
 
+        BranchCentralConfigChanges branchConfigChanges = new BranchCentralConfigChanges();
+        branchConfigChanges.set(releaseBranchName, BranchConfigKeys.BRANCH_TYPE, BranchType.RELEASE.getType());
+        branchConfigChanges.set(releaseBranchName, BranchConfigKeys.BASE_BRANCH, developmentBranch);
+        branchConfigChanges.set(releaseBranchName, BranchConfigKeys.RELEASE_DEVELOPMENT_SAVEPOINT,
+                developmentCommitRef);
+
         // store development branch in branch config
-        gitSetBranchConfig(releaseBranchName, "development", developmentBranch);
-        gitSetBranchConfig(releaseBranchName, "developmentCommitRef", developmentCommitRef);
         if (isUsingProductionBranch(developmentBranch, productionBranch)) {
             if (gitBranchExists(productionBranch)) {
                 String productionCommitRef = getCurrentCommit(productionBranch);
-                gitSetBranchConfig(releaseBranchName, "productionCommitRef", productionCommitRef);
+                branchConfigChanges.set(releaseBranchName, BranchConfigKeys.RELEASE_PRODUCTION_SAVEPOINT,
+                        productionCommitRef);
             }
         }
 
-        // execute if version changed
         if (!version.equals(currentVersion)) {
-            // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
             mvnSetVersions(version);
-
-            // git commit -a -m updating versions for release
             gitCommit(commitMessages.getReleaseStartMessage());
         }
 
         if (pushRemote && isPushReleaseBranch()) {
-            // push the release branch to the remote
             gitPush(gitCurrentBranch(), false, false);
         }
+
+        gitApplyBranchCentralConfigChanges(branchConfigChanges, "release '" + releaseBranchName + "' started");
+
         if (isInstallProject()) {
-            // mvn clean install
             mvnCleanInstall();
         }
     }
@@ -317,8 +318,8 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
 
         // we're now on the target branch for the release
         String releaseCommit = getCurrentCommit();
-        gitSetBranchConfig(releaseBranch, "releaseCommit", releaseCommit);
-        gitSetBranchConfig(releaseBranch, "nextSnapshotVersion", nextSnapshotVersion);
+        gitSetBranchLocalConfig(releaseBranch, "releaseCommit", releaseCommit);
+        gitSetBranchLocalConfig(releaseBranch, "nextSnapshotVersion", nextSnapshotVersion);
 
         // tag the release on the target branch
         if (!isSkipTag()) {
@@ -329,7 +330,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
             String releaseTag = gitFlowConfig.getVersionTagPrefix() + tagVersion;
             // git tag -a ...
             gitTag(releaseTag, commitMessages.getTagReleaseMessage());
-            gitSetBranchConfig(releaseBranch, "releaseTag", releaseTag);
+            gitSetBranchLocalConfig(releaseBranch, "releaseTag", releaseTag);
         }
 
         String productionBranch = getProductionBranchForDevelopmentBranch(developmentBranch);
@@ -368,7 +369,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
             String productionBranch, String developmentBranch, String releaseCommit)
             throws MojoFailureException, CommandLineException {
         gitCheckout(developmentBranch);
-        gitSetBranchConfig(developmentBranch, "releaseBranch", releaseBranch);
+        gitSetBranchLocalConfig(developmentBranch, "releaseBranch", releaseBranch);
         // if there are any changes in the remote development branch, we need to
         // merge them now
         try {
@@ -436,15 +437,11 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
 
     private void finilizeRelease(String nextSnapshotVersion, String releaseBranch, String productionBranch,
             String developmentBranch, String releaseCommit) throws MojoFailureException, CommandLineException {
-        gitRemoveBranchConfig(developmentBranch, "releaseBranch");
+        gitRemoveBranchLocalConfig(developmentBranch, "releaseBranch");
 
-        gitRemoveBranchConfig(releaseBranch, "development");
-        gitRemoveBranchConfig(releaseBranch, "developmentCommitRef");
-        gitRemoveBranchConfig(releaseBranch, "productionCommitRef");
-
-        gitRemoveBranchConfig(releaseBranch, "releaseTag");
-        gitRemoveBranchConfig(releaseBranch, "releaseCommit");
-        gitRemoveBranchConfig(releaseBranch, "nextSnapshotVersion");
+        gitRemoveBranchLocalConfig(releaseBranch, "releaseTag");
+        gitRemoveBranchLocalConfig(releaseBranch, "releaseCommit");
+        gitRemoveBranchLocalConfig(releaseBranch, "nextSnapshotVersion");
 
         // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
         mvnSetVersions(nextSnapshotVersion, "Next development version: ");
@@ -514,15 +511,15 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
             if (isDevelopmentBranch(mergeIntoBranch) || isMaintenanceBranch(mergeIntoBranch)) {
                 developmentBranch = mergeIntoBranch;
                 productionBranch = getProductionBranchForDevelopmentBranch(developmentBranch);
-                releaseCommit = gitGetBranchConfig(releaseBranch, "releaseCommit");
-                nextSnapshotVersion = gitGetBranchConfig(releaseBranch, "nextSnapshotVersion");
+                releaseCommit = gitGetBranchLocalConfig(releaseBranch, "releaseCommit");
+                nextSnapshotVersion = gitGetBranchLocalConfig(releaseBranch, "nextSnapshotVersion");
                 promptAndMergeContinue();
                 finilizeRelease(nextSnapshotVersion, releaseBranch, productionBranch, developmentBranch, releaseCommit);
             } else if (isProductionBranch(mergeIntoBranch)) {
                 productionBranch = mergeIntoBranch;
                 developmentBranch = getDevelopmentBranchForProductionBranch(productionBranch);
-                releaseCommit = gitGetBranchConfig(releaseBranch, "releaseCommit");
-                nextSnapshotVersion = gitGetBranchConfig(releaseBranch, "nextSnapshotVersion");
+                releaseCommit = gitGetBranchLocalConfig(releaseBranch, "releaseCommit");
+                nextSnapshotVersion = gitGetBranchLocalConfig(releaseBranch, "nextSnapshotVersion");
                 promptAndMergeContinue();
                 prepareDevelopmentBranchAndFinilizeRelease(nextSnapshotVersion, releaseBranch, productionBranch,
                         developmentBranch, releaseCommit);
@@ -534,9 +531,9 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
             if (isDevelopmentBranch(mergeIntoBranch) || isMaintenanceBranch(mergeIntoBranch)) {
                 developmentBranch = mergeIntoBranch;
                 productionBranch = mergeFromBranch;
-                releaseBranch = gitGetBranchConfig(developmentBranch, "releaseBranch");
-                releaseCommit = gitGetBranchConfig(releaseBranch, "releaseCommit");
-                nextSnapshotVersion = gitGetBranchConfig(releaseBranch, "nextSnapshotVersion");
+                releaseBranch = gitGetBranchLocalConfig(developmentBranch, "releaseBranch");
+                releaseCommit = gitGetBranchLocalConfig(releaseBranch, "releaseCommit");
+                nextSnapshotVersion = gitGetBranchLocalConfig(releaseBranch, "nextSnapshotVersion");
                 promptAndMergeContinue();
                 finilizeRelease(nextSnapshotVersion, releaseBranch, productionBranch, developmentBranch, releaseCommit);
             } else {
@@ -547,9 +544,9 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
             if (isDevelopmentBranch(mergeIntoBranch) || isMaintenanceBranch(mergeIntoBranch)) {
                 developmentBranch = mergeIntoBranch;
                 productionBranch = getProductionBranchForDevelopmentBranch(developmentBranch);
-                releaseBranch = gitGetBranchConfig(developmentBranch, "releaseBranch");
-                releaseCommit = gitGetBranchConfig(releaseBranch, "releaseCommit");
-                nextSnapshotVersion = gitGetBranchConfig(releaseBranch, "nextSnapshotVersion");
+                releaseBranch = gitGetBranchLocalConfig(developmentBranch, "releaseBranch");
+                releaseCommit = gitGetBranchLocalConfig(releaseBranch, "releaseCommit");
+                nextSnapshotVersion = gitGetBranchLocalConfig(releaseBranch, "nextSnapshotVersion");
                 promptAndMergeContinue();
                 mergeIntoCurrentDevelopmentBranchAndFinilizeRelease(nextSnapshotVersion, releaseBranch,
                         productionBranch, developmentBranch, releaseCommit);

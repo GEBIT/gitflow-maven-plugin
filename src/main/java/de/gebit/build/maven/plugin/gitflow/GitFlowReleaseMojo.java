@@ -233,6 +233,7 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
+        checkCentralBranchConfig();
         String currentBranch = gitCurrentBranch();
         if (!continueReleaseFinishIfMergeInProcess(currentBranch)) {
             // set git flow configuration

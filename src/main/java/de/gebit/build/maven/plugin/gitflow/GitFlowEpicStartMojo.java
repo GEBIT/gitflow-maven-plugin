@@ -9,6 +9,8 @@
 package de.gebit.build.maven.plugin.gitflow;
 
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -45,8 +47,10 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
 
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
+        getLog().info("Starting epic start process.");
         initGitFlowConfig();
 
+        checkCentralBranchConfig();
         checkUncommittedChanges();
 
         String currentBranch = gitCurrentBranch();
@@ -61,6 +65,8 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
                 }
             }
         }
+        getLog().info("Base branch for new epic: " + baseBranch);
+        String originalBaseBranch = baseBranch;
 
         // use integration branch?
         final String integrationBranch = gitFlowConfig.getIntegrationBranchPrefix() + baseBranch;
@@ -85,7 +91,7 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
                             " Please consult a gitflow expert on how to fix this!");
                 }
 
-                getLog().info("Using integration branch '" + integrationBranch + "'");
+                getLog().info("Using integration branch '" + integrationBranch + "' as start point for new epic.");
                 baseBranch = integrationBranch;
             }
         }
@@ -116,8 +122,10 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
                         "'mvn flow:epic-start'"));
 
         epicName = StringUtils.deleteWhitespace(epicName);
+        getLog().info("New epic name: " + epicName);
 
         String epicBranchName = gitFlowConfig.getEpicBranchPrefix() + epicName;
+        getLog().info("New epic branch name: " + epicBranchName);
         if (gitBranchExists(epicBranchName)) {
             throw new GitFlowFailureException("Epic branch '" + epicBranchName + "' already exists.",
                     "Either checkout the existing epic branch or start a new epic with another name.",
@@ -135,16 +143,36 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
 
         gitCreateAndCheckout(epicBranchName, baseBranch);
 
+        String epicIssue = extractIssueNumberFromEpicName(epicName);
+        getLog().info("Epic issue number: " + epicIssue);
+        String epicStartMessage = substituteInEpicMessage(commitMessages.getEpicStartMessage(), epicIssue);
+        String currentVersion = getCurrentProjectVersion();
+        String baseVersion = currentVersion;
+        String versionChangeCommit = null;
         if (!tychoBuild) {
-            String currentVersion = getCurrentProjectVersion();
-            String epicIssue = extractIssueNumberFromEpicName(epicName);
+            getLog().info("Creating project version for epic.");
+            getLog().info("Base project version: " + currentVersion);
             String version = insertSuffixInVersion(currentVersion, epicIssue);
+            getLog().info("Added epic issue number to project version: " + version);
             if (!currentVersion.equals(version)) {
                 mvnSetVersions(version, "On epic branch: ");
-                String epicStartMessage = substituteInEpicMessage(commitMessages.getEpicStartMessage(), epicIssue);
                 gitCommit(epicStartMessage);
+                versionChangeCommit = getCurrentCommit();
+            } else {
+                getLog().info("Project version for epic is same as base project version. Version update not needed.");
             }
         }
+
+        BranchCentralConfigChanges branchConfigChanges = new BranchCentralConfigChanges();
+        branchConfigChanges.set(epicBranchName, BranchConfigKeys.BRANCH_TYPE, BranchType.EPIC.getType());
+        branchConfigChanges.set(epicBranchName, BranchConfigKeys.BASE_BRANCH, originalBaseBranch);
+        branchConfigChanges.set(epicBranchName, BranchConfigKeys.ISSUE_NUMBER, epicIssue);
+        branchConfigChanges.set(epicBranchName, BranchConfigKeys.BASE_VERSION, baseVersion);
+        branchConfigChanges.set(epicBranchName, BranchConfigKeys.START_COMMIT_MESSAGE, epicStartMessage);
+        if (versionChangeCommit != null) {
+            branchConfigChanges.set(epicBranchName, BranchConfigKeys.VERSION_CHANGE_COMMIT, versionChangeCommit);
+        }
+        gitApplyBranchCentralConfigChanges(branchConfigChanges, "epic '" + epicName + "' started");
 
         if (installProject) {
             mvnCleanInstall();
@@ -153,6 +181,8 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
         if (pushRemote) {
             gitPush(epicBranchName, false, false);
         }
+        getLog().info("Epic for issue '" + epicIssue + "' started on branch '" + epicBranchName + "'.");
+        getLog().info("Epic start process finished.");
     }
 
     private boolean validateEpicName(String anEpicName) {
@@ -160,6 +190,37 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
             return true;
         }
         return anEpicName.matches(epicNamePattern);
+    }
+
+    /**
+     * Extract the epic issue number from epic name using epic name pattern.
+     * E.g. extract issue number "GBLD-42" from epic name
+     * "GBLD-42-someDescription" if default epic name pattern is used. Return
+     * epic name if issue number can't be extracted.
+     *
+     * @param anEpicName
+     *            the epic name
+     * @return the extracted epic issue number or epic name if issue number
+     *         can't be extracted
+     */
+    private String extractIssueNumberFromEpicName(String anEpicName) {
+        String issueNumber = anEpicName;
+        if (epicNamePattern != null) {
+            // extract the issue number only
+            Matcher m = Pattern.compile(epicNamePattern).matcher(anEpicName);
+            if (m.matches()) {
+                if (m.groupCount() == 0) {
+                    getLog().warn("Epic branch conforms to <epicNamePattern>, but ther is no matching"
+                            + " group to extract the issue number.");
+                } else {
+                    issueNumber = m.group(1);
+                }
+            } else {
+                getLog().warn("Epic branch does not conform to <epicNamePattern> specified, cannot "
+                        + "extract issue number.");
+            }
+        }
+        return issueNumber;
     }
 
 }

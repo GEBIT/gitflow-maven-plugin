@@ -8,6 +8,7 @@
 //
 package de.gebit.build.maven.plugin.gitflow;
 
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
@@ -151,8 +152,8 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, PRODUCTION_BRANCH, PRODUCTION_BRANCH);
@@ -170,13 +171,10 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
     }
 
     private void assertConfigCleanedUp(String developmentBranch) {
-        git.assertBranchConfigValueMissing(repositorySet, RELEASE_BRANCH, "development");
-        git.assertBranchConfigValueMissing(repositorySet, RELEASE_BRANCH, "developmentCommitRef");
-        git.assertBranchConfigValueMissing(repositorySet, RELEASE_BRANCH, "productionCommitRef");
-        git.assertBranchConfigValueMissing(repositorySet, RELEASE_BRANCH, "releaseTag");
-        git.assertBranchConfigValueMissing(repositorySet, RELEASE_BRANCH, "releaseCommit");
-        git.assertBranchConfigValueMissing(repositorySet, RELEASE_BRANCH, "nextSnapshotVersion");
-        git.assertBranchConfigValueMissing(repositorySet, developmentBranch, "releaseBranch");
+        git.assertBranchLocalConfigValueMissing(repositorySet, RELEASE_BRANCH, "releaseTag");
+        git.assertBranchLocalConfigValueMissing(repositorySet, RELEASE_BRANCH, "releaseCommit");
+        git.assertBranchLocalConfigValueMissing(repositorySet, RELEASE_BRANCH, "nextSnapshotVersion");
+        git.assertBranchLocalConfigValueMissing(repositorySet, developmentBranch, "releaseBranch");
     }
 
     private void assertDefaultDeployGoalExecuted() throws IOException {
@@ -202,8 +200,8 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, DEVELOPMENT_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, DEVELOPMENT_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, DEVELOPMENT_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, DEVELOPMENT_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, DEVELOPMENT_BRANCH, CONFIG_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, PRODUCTION_BRANCH, PRODUCTION_BRANCH);
@@ -244,21 +242,25 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
                         + "release branch or a severe error condition on your branches.",
                 "Please configure correct development branch for the current release branch or consult a gitflow expert"
                         + " on how to fix this.",
-                "'git config branch." + RELEASE_BRANCH
-                        + ".development [development branch name]' to configure correct development branch");
+                "'mvn flow:branch-config -DbranchName=" + RELEASE_BRANCH
+                        + " -DpropertyName=baseBranch -DpropertyValue=[development branch name]' to configure correct "
+                        + "development branch");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, RELEASE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, RELEASE_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, DEVELOPMENT_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, RELEASE_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, DEVELOPMENT_BRANCH, CONFIG_BRANCH);
         assertDefaultDeployGoalNotExecuted();
-        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "development", DEVELOPMENT_BRANCH);
-        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "developmentCommitRef", EXPECTED_DEVELOPMENT_COMMIT);
-        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "productionCommitRef", EXPECTED_PRODUCTION_COMMIT);
 
-        git.assertBranchConfigValueMissing(repositorySet, RELEASE_BRANCH, "releaseCommit");
-        git.assertBranchConfigValueMissing(repositorySet, RELEASE_BRANCH, "nextSnapshotVersion");
-        git.assertBranchConfigValueMissing(repositorySet, RELEASE_BRANCH, "releaseTag");
-        git.assertBranchConfigValueMissing(repositorySet, MASTER_BRANCH, "releaseBranch");
+        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
+        assertEquals("release", branchConfig.getProperty("branchType"));
+        assertEquals(DEVELOPMENT_BRANCH, branchConfig.getProperty("baseBranch"));
+        assertEquals(EXPECTED_DEVELOPMENT_COMMIT, branchConfig.getProperty("developmentSavepointCommitRef"));
+        assertEquals(EXPECTED_PRODUCTION_COMMIT, branchConfig.getProperty("productionSavepointCommitRef"));
+
+        git.assertBranchLocalConfigValueMissing(repositorySet, RELEASE_BRANCH, "releaseCommit");
+        git.assertBranchLocalConfigValueMissing(repositorySet, RELEASE_BRANCH, "nextSnapshotVersion");
+        git.assertBranchLocalConfigValueMissing(repositorySet, RELEASE_BRANCH, "releaseTag");
+        git.assertBranchLocalConfigValueMissing(repositorySet, MASTER_BRANCH, "releaseBranch");
     }
 
     @Test
@@ -282,8 +284,8 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         git.setOnline(repositorySet);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, DEVELOPMENT_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, DEVELOPMENT_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, DEVELOPMENT_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, DEVELOPMENT_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, DEVELOPMENT_BRANCH, CONFIG_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, PRODUCTION_BRANCH, PRODUCTION_BRANCH);
@@ -315,8 +317,8 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, DEVELOPMENT_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, DEVELOPMENT_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, DEVELOPMENT_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, DEVELOPMENT_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, DEVELOPMENT_BRANCH, CONFIG_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, PRODUCTION_BRANCH, PRODUCTION_BRANCH);
@@ -351,12 +353,13 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
                         + "release branch or a severe error condition on your branches.",
                 "Please configure correct development branch for the current release branch or consult a gitflow expert"
                         + " on how to fix this.",
-                "'git config branch." + RELEASE_BRANCH
-                        + ".development [development branch name]' to configure correct development branch");
+                "'mvn flow:branch-config -DbranchName=" + RELEASE_BRANCH
+                        + " -DpropertyName=baseBranch -DpropertyValue=[development branch name]' to configure correct "
+                        + "development branch");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, RELEASE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, RELEASE_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, RELEASE_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
         assertDefaultDeployGoalNotExecuted();
     }
 
@@ -372,8 +375,8 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, PRODUCTION_BRANCH, PRODUCTION_BRANCH);
@@ -398,8 +401,8 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, PRODUCTION_BRANCH, PRODUCTION_BRANCH);
@@ -425,8 +428,8 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, PRODUCTION_BRANCH, PRODUCTION_BRANCH);
@@ -452,8 +455,8 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, PRODUCTION_BRANCH, PRODUCTION_BRANCH);
@@ -482,8 +485,8 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, PRODUCTION_BRANCH, PRODUCTION_BRANCH);
@@ -518,8 +521,8 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         git.setOnline(repositorySet);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, PRODUCTION_BRANCH, PRODUCTION_BRANCH);
@@ -556,8 +559,8 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         git.setOnline(repositorySet);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, PRODUCTION_BRANCH, PRODUCTION_BRANCH);
@@ -589,8 +592,10 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH,
+                CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH,
+                CONFIG_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_PRODUCTION_BRANCH,
@@ -619,8 +624,8 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, PRODUCTION_BRANCH, PRODUCTION_BRANCH);
@@ -650,8 +655,8 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         git.setOnline(repositorySet);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, PRODUCTION_BRANCH, PRODUCTION_BRANCH);
@@ -684,8 +689,8 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         git.setOnline(repositorySet);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, PRODUCTION_BRANCH, PRODUCTION_BRANCH);
@@ -720,8 +725,8 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
                 "Please consult a gitflow expert on how to fix this!");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, RELEASE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, RELEASE_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, RELEASE_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, PRODUCTION_BRANCH, PRODUCTION_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, RELEASE_BRANCH, COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
         assertDefaultDeployGoalNotExecuted();
@@ -748,8 +753,8 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         git.setOnline(repositorySet);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, PRODUCTION_BRANCH, PRODUCTION_BRANCH);
@@ -790,8 +795,8 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
                 "Please consult a gitflow expert on how to fix this!");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, RELEASE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, RELEASE_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, RELEASE_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, PRODUCTION_BRANCH, PRODUCTION_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, RELEASE_BRANCH, COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
         assertDefaultDeployGoalNotExecuted();
@@ -815,8 +820,10 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH,
+                CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH,
+                CONFIG_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_PRODUCTION_BRANCH,
@@ -855,8 +862,10 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         git.setOnline(repositorySet);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH,
+                CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH,
+                CONFIG_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, MAINTENANCE_PRODUCTION_BRANCH,
@@ -899,8 +908,10 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         git.setOnline(repositorySet);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH,
+                CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH,
+                CONFIG_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, MAINTENANCE_PRODUCTION_BRANCH,
@@ -945,8 +956,9 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, RELEASE_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH,
-                RELEASE_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH);
+                RELEASE_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH,
+                CONFIG_BRANCH);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, MAINTENANCE_PRODUCTION_BRANCH,
                 MAINTENANCE_PRODUCTION_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, RELEASE_BRANCH, COMMIT_MESSAGE_RELEASE_START_SET_VERSION,
@@ -981,8 +993,10 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         git.setOnline(repositorySet);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH,
+                CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH,
+                CONFIG_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, MAINTENANCE_PRODUCTION_BRANCH,
@@ -1034,8 +1048,9 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, RELEASE_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH,
-                RELEASE_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH);
+                RELEASE_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH,
+                CONFIG_BRANCH);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, MAINTENANCE_PRODUCTION_BRANCH,
                 MAINTENANCE_PRODUCTION_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, RELEASE_BRANCH, COMMIT_MESSAGE_RELEASE_START_SET_VERSION,
@@ -1057,8 +1072,8 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, PRODUCTION_BRANCH, PRODUCTION_BRANCH);
@@ -1098,8 +1113,8 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         git.setOnline(repositorySet);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, PRODUCTION_BRANCH, PRODUCTION_BRANCH);
@@ -1141,8 +1156,8 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         git.setOnline(repositorySet);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, PRODUCTION_BRANCH, PRODUCTION_BRANCH);
@@ -1172,8 +1187,8 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, PRODUCTION_BRANCH, PRODUCTION_BRANCH);
@@ -1205,8 +1220,8 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, PRODUCTION_BRANCH, PRODUCTION_BRANCH);
@@ -1241,8 +1256,10 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH,
+                CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH,
+                CONFIG_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_PRODUCTION_BRANCH,
@@ -1291,8 +1308,10 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         git.setOnline(repositorySet);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH,
+                CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH,
+                CONFIG_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, MAINTENANCE_PRODUCTION_BRANCH,
@@ -1344,8 +1363,10 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         git.setOnline(repositorySet);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH,
+                CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH,
+                CONFIG_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, MAINTENANCE_PRODUCTION_BRANCH,
@@ -1381,8 +1402,10 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH,
+                CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH,
+                CONFIG_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_PRODUCTION_BRANCH,
@@ -1418,8 +1441,10 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH,
+                CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH,
+                CONFIG_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_PRODUCTION_BRANCH,
@@ -1487,14 +1512,17 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         assertGitFlowFailureExceptionRegEx(result, EXPECTED_RELEASE_MERGE_CONFLICT_MESSAGE_PATTERN);
         git.assertCurrentBranch(repositorySet, PRODUCTION_BRANCH);
         git.assertMergeInProcessFromBranch(repositorySet, RELEASE_BRANCH, GitExecution.TESTFILE_NAME);
-        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "development", MASTER_BRANCH);
-        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "developmentCommitRef", EXPECTED_DEVELOPMENT_COMMIT);
-        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "productionCommitRef", EXPECTED_PRODUCTION_COMMIT);
 
-        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "releaseCommit", EXPECTED_RELEASE_COMMIT);
-        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "nextSnapshotVersion", NEW_DEVELOPMENT_VERSION);
-        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "releaseTag", RELEASE_TAG);
-        git.assertBranchConfigValueMissing(repositorySet, MASTER_BRANCH, "releaseBranch");
+        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
+        assertEquals("release", branchConfig.getProperty("branchType"));
+        assertEquals(MASTER_BRANCH, branchConfig.getProperty("baseBranch"));
+        assertEquals(EXPECTED_DEVELOPMENT_COMMIT, branchConfig.getProperty("developmentSavepointCommitRef"));
+        assertEquals(EXPECTED_PRODUCTION_COMMIT, branchConfig.getProperty("productionSavepointCommitRef"));
+
+        git.assertBranchLocalConfigValue(repositorySet, RELEASE_BRANCH, "releaseCommit", EXPECTED_RELEASE_COMMIT);
+        git.assertBranchLocalConfigValue(repositorySet, RELEASE_BRANCH, "nextSnapshotVersion", NEW_DEVELOPMENT_VERSION);
+        git.assertBranchLocalConfigValue(repositorySet, RELEASE_BRANCH, "releaseTag", RELEASE_TAG);
+        git.assertBranchLocalConfigValueMissing(repositorySet, MASTER_BRANCH, "releaseBranch");
     }
 
     @Test
@@ -1517,14 +1545,17 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         assertGitFlowFailureExceptionRegEx(result, EXPECTED_PRODUCTION_MERGE_CONFLICT_MESSAGE_PATTERN);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertMergeInProcessFromBranch(repositorySet, PRODUCTION_BRANCH, GitExecution.TESTFILE_NAME);
-        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "development", MASTER_BRANCH);
-        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "developmentCommitRef", EXPECTED_DEVELOPMENT_COMMIT);
-        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "productionCommitRef", EXPECTED_PRODUCTION_COMMIT);
 
-        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "releaseCommit", EXPECTED_RELEASE_COMMIT);
-        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "nextSnapshotVersion", NEW_DEVELOPMENT_VERSION);
-        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "releaseTag", RELEASE_TAG);
-        git.assertBranchConfigValue(repositorySet, MASTER_BRANCH, "releaseBranch", RELEASE_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
+        assertEquals("release", branchConfig.getProperty("branchType"));
+        assertEquals(MASTER_BRANCH, branchConfig.getProperty("baseBranch"));
+        assertEquals(EXPECTED_DEVELOPMENT_COMMIT, branchConfig.getProperty("developmentSavepointCommitRef"));
+        assertEquals(EXPECTED_PRODUCTION_COMMIT, branchConfig.getProperty("productionSavepointCommitRef"));
+
+        git.assertBranchLocalConfigValue(repositorySet, RELEASE_BRANCH, "releaseCommit", EXPECTED_RELEASE_COMMIT);
+        git.assertBranchLocalConfigValue(repositorySet, RELEASE_BRANCH, "nextSnapshotVersion", NEW_DEVELOPMENT_VERSION);
+        git.assertBranchLocalConfigValue(repositorySet, RELEASE_BRANCH, "releaseTag", RELEASE_TAG);
+        git.assertBranchLocalConfigValue(repositorySet, MASTER_BRANCH, "releaseBranch", RELEASE_BRANCH);
     }
 
     @Test
@@ -1546,14 +1577,17 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         assertGitFlowFailureExceptionRegEx(result, EXPECTED_UPSTREAM_MERGE_CONFLICT_MESSAGE_PATTERN);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertMergeInProcessFromBranch(repositorySet, "origin/" + MASTER_BRANCH, GitExecution.TESTFILE_NAME);
-        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "development", MASTER_BRANCH);
-        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "developmentCommitRef", EXPECTED_DEVELOPMENT_COMMIT);
-        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "productionCommitRef", EXPECTED_PRODUCTION_COMMIT);
 
-        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "releaseCommit", EXPECTED_RELEASE_COMMIT);
-        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "nextSnapshotVersion", NEW_DEVELOPMENT_VERSION);
-        git.assertBranchConfigValue(repositorySet, RELEASE_BRANCH, "releaseTag", RELEASE_TAG);
-        git.assertBranchConfigValue(repositorySet, MASTER_BRANCH, "releaseBranch", RELEASE_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
+        assertEquals("release", branchConfig.getProperty("branchType"));
+        assertEquals(MASTER_BRANCH, branchConfig.getProperty("baseBranch"));
+        assertEquals(EXPECTED_DEVELOPMENT_COMMIT, branchConfig.getProperty("developmentSavepointCommitRef"));
+        assertEquals(EXPECTED_PRODUCTION_COMMIT, branchConfig.getProperty("productionSavepointCommitRef"));
+
+        git.assertBranchLocalConfigValue(repositorySet, RELEASE_BRANCH, "releaseCommit", EXPECTED_RELEASE_COMMIT);
+        git.assertBranchLocalConfigValue(repositorySet, RELEASE_BRANCH, "nextSnapshotVersion", NEW_DEVELOPMENT_VERSION);
+        git.assertBranchLocalConfigValue(repositorySet, RELEASE_BRANCH, "releaseTag", RELEASE_TAG);
+        git.assertBranchLocalConfigValue(repositorySet, MASTER_BRANCH, "releaseBranch", RELEASE_BRANCH);
     }
 
     @Test
@@ -1581,8 +1615,8 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, PRODUCTION_BRANCH, PRODUCTION_BRANCH);
@@ -1624,8 +1658,8 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, PRODUCTION_BRANCH, PRODUCTION_BRANCH);
@@ -1673,8 +1707,10 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH,
+                CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_PRODUCTION_BRANCH, MAINTENANCE_BRANCH,
+                CONFIG_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_PRODUCTION_BRANCH,
@@ -1717,8 +1753,8 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, PRODUCTION_BRANCH, CONFIG_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, PRODUCTION_BRANCH, PRODUCTION_BRANCH);

@@ -12,8 +12,6 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
-import org.codehaus.plexus.components.interactivity.PrompterException;
-import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
@@ -52,53 +50,33 @@ public class GitFlowBranchConfigMojo extends AbstractGitFlowMojo {
     @Parameter(property = "branchName")
     private String branchName;
 
-    /**
-     * Name of the branch used to hold the branch configuration properties.
-     *
-     * @since 1.4.0
-     */
-    @Parameter(property = "configBranchName", defaultValue = "branch-config")
-    private String configBranchName;
-
-    /**
-     * Name of the directory used to temporarily and locally checkout the
-     * configuration branch.
-     *
-     * @since 1.4.0
-     */
-    @Parameter(property = "configBranchDir", defaultValue = ".branch-config")
-    private String configBranchDir;
-
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         // set git flow configuration
         initGitFlowConfig();
 
-        if (settings.isInteractiveMode() && propertyName == null) {
-            try {
-                propertyName = prompter.prompt("Which property to modify?");
-            } catch (PrompterException e) {
-                getLog().error(e);
-            }
-        }
+        propertyName = getPrompter().promptRequiredParameterValue("Which property to modify?", "propertyName",
+                propertyName,
+                new GitFlowFailureInfo("Property 'propertyName' is required in non-interactive mode but was not set.",
+                        "Specify a propertyName or run in interactive mode.",
+                        "'mvn flow:branch-config -DpropertyName=XXX -B' to predefine property name",
+                        "'mvn flow:branch-config' to run in interactive mode"));
 
-        if (settings.isInteractiveMode() && propertyValue == null) {
-            try {
-                propertyValue = prompter.prompt("Set the value to (empty to delete)");
-            } catch (PrompterException e) {
-                getLog().error(e);
-            }
-        }
-
-        if (StringUtils.isBlank(propertyName)) {
-            throw new MojoFailureException("No property name set, aborting....");
-        }
+        propertyValue = getPrompter().promptOptionalParameterValue("Set the value to (empty to delete)",
+                "propertyValue", propertyValue);
 
         // modify the branch config
-        String currentBranch = branchName != null ? branchName : gitCurrentBranch();
-        getLog().info("Settting branch property '" + propertyName + "' for '" + currentBranch + "' to '" + propertyValue
-                + "'");
-        gitBranchConfigWorktree(currentBranch, configBranchName, configBranchDir, propertyName, propertyValue);
+        if (branchName == null) {
+            branchName = gitCurrentBranch();
+        }
+        getLog().info(
+                "Setting branch property '" + propertyName + "' for '" + branchName + "' to '" + propertyValue + "'");
+
+        if (propertyValue != null) {
+            gitSetBranchCentralConfig(branchName, propertyName, propertyValue);
+        } else {
+            gitRemoveBranchCentralConfig(branchName, propertyName);
+        }
     }
 }

@@ -176,6 +176,7 @@
 									<releaseFinishMessage>NO-ISSUE: updating for next development version</releaseFinishMessage>
 									<maintenanceStartMessage>NO-ISSUE: updating versions for maintenance branch</maintenanceStartMessage>
 									<branchConfigMessage>NO-ISSUE: branch configuration update</branchConfigMessage>
+									<branchConfigMessagePattern>@{gitflow.message-prefix} @{message}</branchConfigMessagePattern>
 									<mergeMessagePattern>@{gitflow.message-prefix} @{message}</mergeMessagePattern>
 								</commitMessages>
 								<additionalVersionCommands>

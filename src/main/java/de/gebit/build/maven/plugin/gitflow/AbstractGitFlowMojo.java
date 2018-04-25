@@ -19,8 +19,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.Callable;
@@ -32,6 +34,7 @@ import org.apache.commons.configuration2.FileBasedConfiguration;
 import org.apache.commons.configuration2.PropertiesConfiguration;
 import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder;
 import org.apache.commons.configuration2.builder.fluent.Parameters;
+import org.apache.commons.configuration2.builder.fluent.PropertiesBuilderParameters;
 import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.ArrayUtils;
@@ -62,6 +65,8 @@ import org.codehaus.plexus.util.cli.CommandLineException;
 import org.codehaus.plexus.util.cli.CommandLineUtils;
 import org.codehaus.plexus.util.cli.Commandline;
 import org.codehaus.plexus.util.cli.StreamConsumer;
+
+import de.gebit.build.maven.plugin.gitflow.BranchCentralConfigChanges.Change;
 
 /**
  * Abstract git flow mojo.
@@ -277,7 +282,29 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     @Parameter(property = "epicNamePattern", required = false)
     protected String epicNamePattern;
 
+    /**
+     * Name of the branch used to hold the branch specific configuration
+     * properties.
+     *
+     * @since 1.4.0
+     */
+    @Parameter(property = "configBranchName", defaultValue = "branch-config")
+    protected String configBranchName;
+
+    /**
+     * Name of the directory used to temporarily and locally checkout the
+     * configuration branch.
+     *
+     * @since 1.4.0
+     */
+    @Parameter(property = "configBranchDir", defaultValue = ".branch-config")
+    protected String configBranchDir;
+
     private ExtendedPrompter extendedPrompter;
+
+    private CentralBranchConfigCache centralBranchConfigCache;
+
+    private boolean alreadyFetched = false;
 
     /**
      * Initializes command line executables.
@@ -334,6 +361,25 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected abstract void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException;
 
+    protected String extractIssueNumberFromName(String name, String pattern, String warnMessageNoGroups,
+            String warnMessageNoMatching) {
+        String issueNumber = null;
+        if (pattern != null) {
+            // extract the issue number only
+            Matcher m = Pattern.compile(pattern).matcher(name);
+            if (m.matches()) {
+                if (m.groupCount() == 0) {
+                    getLog().warn(warnMessageNoGroups);
+                } else {
+                    issueNumber = m.group(1);
+                }
+            } else {
+                getLog().warn(warnMessageNoMatching);
+            }
+        }
+        return issueNumber;
+    }
+
     /**
      * Gets current project version from pom.xml file.
      *
@@ -344,8 +390,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         try {
             // read pom.xml
             final MavenXpp3Reader mavenReader = new MavenXpp3Reader();
-            final FileReader fileReader = new FileReader(project.getFile().getAbsoluteFile());
-            try {
+            try (FileReader fileReader = new FileReader(project.getFile().getAbsoluteFile())) {
                 final Model model = mavenReader.read(fileReader);
 
                 if (model.getVersion() == null) {
@@ -354,10 +399,6 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                 }
 
                 return model.getVersion();
-            } finally {
-                if (fileReader != null) {
-                    fileReader.close();
-                }
             }
         } catch (Exception e) {
             throw new MojoFailureException("", e);
@@ -537,12 +578,9 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws CommandLineException
      */
     protected void gitSetConfig(final String name, String value) throws MojoFailureException, CommandLineException {
-        if (value == null || value.isEmpty()) {
-            value = "\"\"";
-        }
-
+        String configValue = StringUtils.isEmpty(value) ? "\"\"" : value;
         // ignore error exit codes
-        executeGitCommandExitCode("config", name, value);
+        executeGitCommandExitCode("config", name, configValue);
     }
 
     /**
@@ -579,7 +617,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Get the config value of the git config for passed branch.<br>
+     * Get the config value of the git local config for passed branch.<br>
      * Executes
      * <code>git config --get branch.&lt;branchName&gt;.&lt;configName&gt;</code>.
      *
@@ -591,13 +629,13 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws MojoFailureException
      * @throws CommandLineException
      */
-    protected String gitGetBranchConfig(String branchName, String configName)
+    protected String gitGetBranchLocalConfig(String branchName, String configName)
             throws MojoFailureException, CommandLineException {
         return gitGetConfig("branch." + branchName + "." + configName);
     }
 
     /**
-     * Set the git config value for passed branch.<br>
+     * Set the git local config value for passed branch.<br>
      * Executes
      * <code>git config branch.&lt;branchName&gt;.&lt;configName&gt; &lt;value&gt;</code>.
      *
@@ -610,13 +648,13 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws MojoFailureException
      * @throws CommandLineException
      */
-    protected void gitSetBranchConfig(String branchName, String configName, String value)
+    protected void gitSetBranchLocalConfig(String branchName, String configName, String value)
             throws MojoFailureException, CommandLineException {
         gitSetConfig("branch." + branchName + "." + configName, value);
     }
 
     /**
-     * Remove the git config for passed branch.<br>
+     * Remove the git local config for passed branch.<br>
      * Executes
      * <code>git config --unset branch.&lt;branchName&gt;.&lt;configName&gt; &lt;value&gt;</code>.
      *
@@ -627,9 +665,525 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws MojoFailureException
      * @throws CommandLineException
      */
-    protected void gitRemoveBranchConfig(String branchName, String configName)
+    protected void gitRemoveBranchLocalConfig(String branchName, String configName)
             throws MojoFailureException, CommandLineException {
         gitRemoveConfig("branch." + branchName + "." + configName);
+    }
+
+    /**
+     * Get the config value of the git local config for current branch.<br>
+     * Executes
+     * <code>git config --get branch.&lt;branchName&gt;.&lt;configName&gt;</code>.
+     *
+     * @param configName
+     *            the config name
+     * @return the config value or <code>null</code> if config doesn't exist
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected String gitGetCurrentBranchLocalConfig(String configName)
+            throws MojoFailureException, CommandLineException {
+        return gitGetBranchLocalConfig(gitCurrentBranch(), configName);
+    }
+
+    /**
+     * Set the git local config value for current branch.<br>
+     * Executes
+     * <code>git config branch.&lt;branchName&gt;.&lt;configName&gt; &lt;value&gt;</code>.
+     *
+     * @param configName
+     *            the config name
+     * @param value
+     *            the value to be set
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitSetCurrentBranchLocalConfig(String configName, String value)
+            throws MojoFailureException, CommandLineException {
+        gitSetBranchLocalConfig(gitCurrentBranch(), configName, value);
+    }
+
+    /**
+     * Remove the git local config for current branch.<br>
+     * Executes
+     * <code>git config --unset branch.&lt;branchName&gt;.&lt;configName&gt; &lt;value&gt;</code>.
+     *
+     * @param configName
+     *            the config name
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitRemoveCurrentBranchLocalConfig(String configName)
+            throws MojoFailureException, CommandLineException {
+        gitRemoveBranchLocalConfig(gitCurrentBranch(), configName);
+    }
+
+    /**
+     * Get branches of passed type using central branch config.
+     *
+     * @param branchType
+     *            the type of branches to be returned
+     * @return list of branches or empty list if no branches for passed type
+     *         found
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected List<String> getBranches(BranchType branchType) throws MojoFailureException, CommandLineException {
+        return getCentralBranchConfigCache().getBranches(branchType);
+    }
+
+    /**
+     * Get the config value of the central branch config for current branch.
+     *
+     * @param configName
+     *            the config name
+     * @return the config value or <code>null</code> if config doesn't exist
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected String gitGetCurrentBranchCentralConfig(String configName)
+            throws MojoFailureException, CommandLineException {
+        return gitGetBranchCentralConfig(gitCurrentBranch(), configName);
+    }
+
+    /**
+     * Set the central branch config value for current branch.
+     *
+     * @param configName
+     *            the config name
+     * @param value
+     *            the value to be set
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitSetCurrentBranchCentralConfig(String configName, String value)
+            throws MojoFailureException, CommandLineException {
+        gitSetBranchCentralConfig(gitCurrentBranch(), configName, value);
+    }
+
+    /**
+     * Remove the central branch config for current branch.
+     *
+     * @param configName
+     *            the config name
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitRemoveCurrentBranchCentralConfig(String configName)
+            throws MojoFailureException, CommandLineException {
+        gitRemoveBranchCentralConfig(gitCurrentBranch(), configName);
+    }
+
+    /**
+     * Get the config value of the central branch config for passed branch.
+     *
+     * @param branchName
+     *            the name of the branch
+     * @param configName
+     *            the config name
+     * @return the config value or <code>null</code> if config doesn't exist
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected String gitGetBranchCentralConfig(String branchName, String configName)
+            throws MojoFailureException, CommandLineException {
+        String value = null;
+        CentralBranchConfigCache configCache = getCentralBranchConfigCache();
+        Properties branchProperties = configCache.getProperties(branchName);
+        if (branchProperties != null) {
+            value = branchProperties.getProperty(configName);
+        }
+        return value;
+    }
+
+    /**
+     * Set the central branch config value for passed branch.
+     *
+     * @param branchName
+     *            the name of the branch
+     * @param configName
+     *            the config name
+     * @param value
+     *            the value to be set
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitSetBranchCentralConfig(String branchName, String configName, String value)
+            throws MojoFailureException, CommandLineException {
+        BranchCentralConfigChanges changes = new BranchCentralConfigChanges();
+        changes.set(branchName, configName, value);
+        gitApplyBranchCentralConfigChanges(changes, null);
+    }
+
+    /**
+     * Remove the central branch config for passed branch.
+     *
+     * @param branchName
+     *            the name of the branch
+     * @param configName
+     *            the config name
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitRemoveBranchCentralConfig(String branchName, String configName)
+            throws MojoFailureException, CommandLineException {
+        BranchCentralConfigChanges changes = new BranchCentralConfigChanges();
+        changes.remove(branchName, configName);
+        gitApplyBranchCentralConfigChanges(changes, null);
+    }
+
+    /**
+     * Apply set/remove changes on branch central config.
+     *
+     * @param changes
+     *            the collection of set/remove changes on branch central config
+     *            to be applied
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitApplyBranchCentralConfigChanges(BranchCentralConfigChanges changes, String commitMessage)
+            throws MojoFailureException, CommandLineException {
+        File branchConfigWorktree = prepareBranchConfigWorktree(true);
+        try {
+            Commandline worktreeCmd = getWorktreeCmd(branchConfigWorktree);
+
+            FileBasedConfigurationBuilder<FileBasedConfiguration> builder = new FileBasedConfigurationBuilder<FileBasedConfiguration>(
+                    PropertiesConfiguration.class);
+            Map<String, List<Change>> allChanges = changes.getAllChanges();
+            if (!allChanges.isEmpty()) {
+                for (Entry<String, List<Change>> branchChangesEntry : allChanges.entrySet()) {
+                    String branchName = branchChangesEntry.getKey();
+                    List<Change> branchChanges = branchChangesEntry.getValue();
+                    if (branchName.contains("..")) {
+                        throw new GitFlowFailureException("Invalid branch name '" + branchName
+                                + "' detected.\nCentral branch config can't be changed.", null);
+                    }
+                    File branchPropertyFile = new File(branchConfigWorktree, branchName);
+                    if (branchPropertyFile.exists()) {
+                        // only set if existing at this point
+                        builder.getFileHandler().setFile(branchPropertyFile);
+                    }
+                    try {
+                        Configuration config = builder.getConfiguration();
+                        for (Change change : branchChanges) {
+                            if (change.getValue() != null) {
+                                config.setProperty(change.getConfigName(), change.getValue());
+                            } else {
+                                config.clearProperty(change.getConfigName());
+                            }
+                        }
+                        builder.getFileHandler().setFile(branchPropertyFile);
+                        builder.save();
+                    } catch (ConfigurationException e) {
+                        throw new GitFlowFailureException(e,
+                                "Failed to change properties in central branch configs for branch '" + branchName
+                                        + "'.",
+                                "Please consult a gitflow expert on how to fix this and report the error in the GBLD JIRA.");
+                    }
+
+                    // now commit the change and push it
+                    executeCommand(worktreeCmd, true, "add", branchName);
+                }
+                CommandResult result = executeCommand(worktreeCmd, false, "commit", "-m",
+                        getBranchConfigMessageFor(commitMessage));
+                if (result.exitCode == SUCCESS_EXIT_CODE) {
+                    getLog().info("Branch config changes committed: " + branchConfigChangesToLogString(allChanges));
+                    if (pushRemote) {
+                        // push the change
+                        getLog().info("Pushing branch config changes to central branch config.");
+                        executeCommand(worktreeCmd, true, "push", gitFlowConfig.getOrigin(), configBranchName);
+                    } else {
+                        getLog().warn("");
+                        getLog().warn("******************************************************************************");
+                        getLog().warn("You have new changes in local branch for central branch config that were not "
+                                + "pushed because of parameter pushRemote=false.");
+                        getLog().warn("IMPORTANT: Do not forget to push branch '" + configBranchName
+                                + "' manually as soon as possible!");
+                        getLog().warn("******************************************************************************");
+                        getLog().warn("");
+                    }
+                } else {
+                    getLog().info("No changes detected for central branch config.");
+                }
+                reloadCentralBranchConfigFromWorktree(branchConfigWorktree);
+            } else {
+                getLog().info("No changes detected for central branch config.");
+            }
+        } finally {
+            cleanupBranchConfigWorktree(branchConfigWorktree);
+        }
+    }
+
+    private String branchConfigChangesToLogString(Map<String, List<Change>> changes) {
+        StringBuilder logBuilder = new StringBuilder();
+        boolean firstBranch = true;
+        for (Entry<String, List<Change>> branchChangesEntry : changes.entrySet()) {
+            String branchName = branchChangesEntry.getKey();
+            List<Change> branchChanges = branchChangesEntry.getValue();
+            if (firstBranch) {
+                firstBranch = false;
+            } else {
+                logBuilder.append(", ");
+            }
+            logBuilder.append(branchName);
+            logBuilder.append("={");
+            boolean firstChange = true;
+            for (Change change : branchChanges) {
+                if (firstChange) {
+                    firstChange = false;
+                } else {
+                    logBuilder.append(", ");
+                }
+                if (change.getValue() != null) {
+                    logBuilder.append("+[");
+                    logBuilder.append(change.getConfigName());
+                    logBuilder.append("=");
+                    logBuilder.append(change.getValue());
+                    logBuilder.append("]");
+                } else {
+                    logBuilder.append("-[");
+                    logBuilder.append(change.getConfigName());
+                    logBuilder.append("]");
+                }
+            }
+            logBuilder.append("}");
+        }
+        return logBuilder.toString();
+    }
+
+    protected CentralBranchConfigCache getCentralBranchConfigCache() throws MojoFailureException, CommandLineException {
+        if (centralBranchConfigCache == null) {
+            centralBranchConfigCache = new CentralBranchConfigCache(loadCentralBranchConfig());
+        }
+        return centralBranchConfigCache;
+    }
+
+    private Map<String, Properties> loadCentralBranchConfig() throws MojoFailureException, CommandLineException {
+        getLog().info("Loading central branch config.");
+        File branchConfigWorktree = prepareBranchConfigWorktree(false);
+        if (branchConfigWorktree != null) {
+            try {
+                return loadCentralBranchConfigFromWorktree(branchConfigWorktree);
+            } finally {
+                cleanupBranchConfigWorktree(branchConfigWorktree);
+            }
+        } else {
+            getLog().info("Branch with central branch config not found.");
+            return new HashMap<>();
+        }
+    }
+
+    private Map<String, Properties> loadCentralBranchConfigFromWorktree(File branchConfigWorktree)
+            throws MojoFailureException {
+        Map<String, Properties> centralBranchConfig = new HashMap<>();
+        appendBranchConfigProperties(branchConfigWorktree, null, centralBranchConfig);
+        return centralBranchConfig;
+    }
+
+    private void reloadCentralBranchConfigFromWorktree(File branchConfigWorktree) throws MojoFailureException {
+        Map<String, Properties> centralBranchConfig = loadCentralBranchConfigFromWorktree(branchConfigWorktree);
+        if (centralBranchConfigCache == null) {
+            centralBranchConfigCache = new CentralBranchConfigCache(centralBranchConfig);
+        } else {
+            centralBranchConfigCache.refresh(centralBranchConfig);
+        }
+    }
+
+    private void appendBranchConfigProperties(File path, String branchPrefix,
+            Map<String, Properties> centralBranchConfig) throws MojoFailureException {
+        String branch = "";
+        if (branchPrefix != null) {
+            branch = ((branchPrefix.length() > 0) ? branchPrefix + "/" : "") + path.getName();
+        }
+        if (!path.getName().equalsIgnoreCase(".git")) {
+            if (path.isFile()) {
+                Properties properties = readBranchProperties(path, branch);
+                centralBranchConfig.put(branch, properties);
+            } else if (path.isDirectory()) {
+                for (File child : path.listFiles()) {
+                    appendBranchConfigProperties(child, branch, centralBranchConfig);
+                }
+            }
+        }
+    }
+
+    private Properties readBranchProperties(File branchPropertyFile, String branch) throws MojoFailureException {
+        Properties properties = new Properties();
+        PropertiesBuilderParameters params = new Parameters().properties().setFile(branchPropertyFile);
+        FileBasedConfigurationBuilder<FileBasedConfiguration> builder = new FileBasedConfigurationBuilder<FileBasedConfiguration>(
+                PropertiesConfiguration.class).configure(params);
+        try {
+            Configuration config = builder.getConfiguration();
+            Iterator<String> keys = config.getKeys();
+            while (keys.hasNext()) {
+                String key = keys.next();
+                properties.setProperty(key, config.getString(key));
+            }
+        } catch (ConfigurationException e) {
+            throw new GitFlowFailureException(e, "Failed to read central branch configs for branch '" + branch + "'",
+                    "Please consult a gitflow expert on how to fix this and report the error in the GBLD JIRA.");
+        }
+        return properties;
+    }
+
+    /**
+     * Checkout configuration branch to a worktree. Creates new configuration
+     * branch if it doesn't exist yet and <code>createIfNotExisting=true</code>.
+     *
+     * @param createIfNotExisting
+     *            <code>true</code> if configuration branch should be created if
+     *            it doesn't exist yet
+     * @return path to the configuration branch worktree or <code>null</code> if
+     *         configuration branch doesn't exist and
+     *         <code>createIfNotExisting=false</code>
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    private File prepareBranchConfigWorktree(boolean createIfNotExisting)
+            throws MojoFailureException, CommandLineException {
+        boolean create = false;
+        boolean pull = false;
+        gitFetchBranches(configBranchName);
+        if (gitIsRemoteBranchFetched(gitFlowConfig.getOrigin(), configBranchName)) {
+            if (gitBranchExists(configBranchName)) {
+                pull = true;
+            } else {
+                gitCreateBranchFromRemote(configBranchName);
+            }
+        } else if (!gitBranchExists(configBranchName)) {
+            if (createIfNotExisting) {
+                create = true;
+            } else {
+                return null;
+            }
+        }
+
+        // clean worktree target directory
+        String basedir = this.session.getRequest().getBaseDirectory();
+        File branchConfigWorktree = new File(basedir, configBranchDir);
+        if (branchConfigWorktree.exists()) {
+            try {
+                FileUtils.deleteDirectory(branchConfigWorktree);
+            } catch (IOException e) {
+                throw new GitFlowFailureException(e,
+                        "Failed to cleanup temporary worktree for central branch config.\nPath: "
+                                + branchConfigWorktree.getAbsolutePath(),
+                        "Ensure that the temporary worktree directory can be deleted.");
+            }
+        }
+
+        Commandline worktreeCmd = getWorktreeCmd(branchConfigWorktree);
+
+        // get rid of stale worktrees
+        executeGitCommand("worktree", "prune");
+
+        if (create) {
+            executeGitCommand("worktree", "add", "--no-checkout", "--detach", configBranchDir);
+
+            executeCommand(worktreeCmd, true, "checkout", "--orphan", configBranchName);
+            executeCommand(worktreeCmd, true, "reset", "--hard");
+            executeCommand(worktreeCmd, true, "commit", "--allow-empty", "-m",
+                    getBranchConfigMessageFor("initialization of config branch"));
+
+            if (pushRemote) {
+                executeCommand(worktreeCmd, true, "push", "--set-upstream", gitFlowConfig.getOrigin(),
+                        configBranchName);
+            }
+        } else {
+            executeGitCommand("worktree", "add", configBranchDir, configBranchName);
+            if (pull) {
+                if (fetchRemote) {
+                    executeCommand(worktreeCmd, true, "pull", gitFlowConfig.getOrigin(), configBranchName);
+                } else {
+                    executeCommand(worktreeCmd, true, "rebase", gitFlowConfig.getOrigin() + "/" + configBranchName,
+                            configBranchName);
+                }
+            }
+        }
+        return branchConfigWorktree;
+    }
+
+    private Commandline getWorktreeCmd(File branchConfigWorktree) {
+        initExecutables();
+        Commandline worktreeCmd = new ShellCommandLine();
+        worktreeCmd.setExecutable(gitExecutable);
+        worktreeCmd.setWorkingDirectory(branchConfigWorktree);
+        return worktreeCmd;
+    }
+
+    private void cleanupBranchConfigWorktree(File branchConfigWorktree) {
+        // clean up
+        try {
+            FileUtils.deleteDirectory(branchConfigWorktree);
+        } catch (IOException e) {
+            getLog().warn("Failed to cleanup temporary worktree for central branch config. Path: "
+                    + branchConfigWorktree.getAbsolutePath(), e);
+        }
+        // get rid of stale worktrees
+        try {
+            executeGitCommand("worktree", "prune");
+        } catch (MojoFailureException | CommandLineException e) {
+            getLog().warn("Failed to prune worktree information on central branch config cleanup.", e);
+        }
+    }
+
+    /**
+     * Check if an upgrade for of central branch config is required.
+     */
+    protected void checkCentralBranchConfig() throws MojoFailureException, CommandLineException {
+        boolean upgradeRequired = false;
+        String configBranchVersion = gitGetBranchCentralConfig(configBranchName, "version");
+        if (configBranchVersion == null) {
+            if (hasConfigurableBranches()) {
+                upgradeRequired = true;
+            } else {
+                gitSetBranchCentralConfig(configBranchName, "version", BranchConfigKeys.CENTRAL_BRANCH_CONFIG_VERSION);
+            }
+        } else if (!BranchConfigKeys.CENTRAL_BRANCH_CONFIG_VERSION.equals(configBranchVersion)) {
+            upgradeRequired = true;
+        }
+        if (upgradeRequired) {
+            throw new GitFlowFailureException(
+                    "An upgrade of central branch config is required in order to use new version of gitflow!",
+                    "Please run 'mvn flow:upgrade' first to upgrade central branch config.",
+                    "'mvn flow:upgrade' to upgrade central branch config");
+        }
+    }
+
+    private boolean hasConfigurableBranches() throws MojoFailureException, CommandLineException {
+        List<String> branches = gitAllBranches("");
+        for (String branch : branches) {
+            if (isFeatureBranch(branch) || isEpicBranch(branch) || isReleaseBranch(branch)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Get base branch for passed branch.
+     *
+     * @param branch
+     *            the name of the branch which base branch should be returned
+     * @return the base branch or <code>null</code> if base branch is not known
+     */
+    protected String gitGetBranchBaseBranch(String branch) throws MojoFailureException, CommandLineException {
+        return gitGetBranchCentralConfig(branch, BranchConfigKeys.BASE_BRANCH);
+    }
+
+    /**
+     * Return issue number of the epic parsed from epic name on epic start and
+     * stored in central branch config.
+     *
+     * @param epicBranch
+     *            the name of the epic branch
+     * @return the epic issue number or <code>null</code> if issue number can't
+     *         be find in central branch config
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected String getEpicIssueNumber(String epicBranch) throws MojoFailureException, CommandLineException {
+        return gitGetBranchCentralConfig(epicBranch, BranchConfigKeys.ISSUE_NUMBER);
     }
 
     /**
@@ -787,7 +1341,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws CommandLineException
      */
     protected void gitCommitMerge() throws MojoFailureException, CommandLineException {
-        getLog().info("Committing changes.");
+        getLog().info("Committing resolved merge conflicts.");
 
         executeGitCommand("commit", "--no-edit");
     }
@@ -827,10 +1381,10 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     protected void gitMerge(String branchName, boolean noff) throws MojoFailureException, CommandLineException {
         String tempMergeCommitMessage = getMergeMessageFor(branchName, gitCurrentBranch());
         if (noff) {
-            getLog().info("Merging (--no-ff) '" + branchName + "' branch.");
+            getLog().info("Merging (--no-ff) '" + branchName + "' branch into current branch.");
             executeGitCommand("merge", "--no-ff", "-m", tempMergeCommitMessage, branchName);
         } else {
-            getLog().info("Merging '" + branchName + "' branch.");
+            getLog().info("Merging '" + branchName + "' branch into current branch.");
             executeGitCommand("merge", "-m", tempMergeCommitMessage, branchName);
         }
     }
@@ -844,7 +1398,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws CommandLineException
      */
     protected void gitRebase(String branchName) throws MojoFailureException, CommandLineException {
-        getLog().info("Rebasing '" + branchName + "' branch.");
+        getLog().info("Rebasing current branch on top of '" + branchName + "' branch.");
         CommandResult tempResult = executeGitCommandExitCode("rebase", branchName);
         if (tempResult.getExitCode() != SUCCESS_EXIT_CODE) {
             // not all commands print errors to error stream
@@ -902,6 +1456,20 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         }
     }
 
+    private String getBranchConfigMessageFor(String message) throws MojoFailureException {
+        String tempCommitMessage = commitMessages.getBranchConfigMessage();
+
+        if (StringUtils.isNotBlank(message) && commitMessages.getBranchConfigMessagePattern() != null) {
+            Map<String, String> tempReplacements = new HashMap<String, String>();
+            tempReplacements.put("message", message);
+            String tempNewMessage = substituteStrings(commitMessages.getBranchConfigMessagePattern(), tempReplacements);
+            if (tempNewMessage != null) {
+                tempCommitMessage = tempNewMessage;
+            }
+        }
+        return tempCommitMessage;
+    }
+
     /**
      * Executes git merge --no-ff.
      *
@@ -911,7 +1479,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws CommandLineException
      */
     protected void gitMergeNoff(final String branchName) throws MojoFailureException, CommandLineException {
-        gitMerge(branchName, false, true);
+        gitMerge(branchName, true);
     }
 
     /**
@@ -945,22 +1513,6 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Remove remote tag if <code>pushRemote=false</code>.<br>
-     * <code>git push --delete origin tagName</code>
-     *
-     * @param tagName
-     *            the name of the tag
-     * @throws MojoFailureException
-     * @throws CommandLineException
-     */
-    protected void gitRemoveRemoteTag(String tagName) throws MojoFailureException, CommandLineException {
-        getLog().info("Removing '" + tagName + "' tag.");
-        if (pushRemote) {
-            executeGitCommand("push", "--delete", gitFlowConfig.getOrigin(), tagName);
-        }
-    }
-
-    /**
      * Executes git symbolic-ref --short HEAD to get the current branch. Throws
      * an exception when in detached HEAD state.
      *
@@ -969,8 +1521,9 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected String gitCurrentBranch() throws MojoFailureException, CommandLineException {
         getLog().info("Retrieving current branch name.");
-
-        return executeGitCommandReturn("symbolic-ref", "--short", "HEAD").trim();
+        String currentBranch = executeGitCommandReturn("symbolic-ref", "--short", "HEAD").trim();
+        getLog().info("Current branch: " + currentBranch);
+        return currentBranch;
     }
 
     /**
@@ -1010,6 +1563,32 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             return new ArrayList<>();
         }
         return new ArrayList<>(Arrays.asList(gitResult.split("\\r?\\n")));
+    }
+
+    /**
+     * Execute <code>git fetch</code> if not yet executed and <code>fetchRemote=true</code>.
+     *
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitFetchOnce() throws MojoFailureException, CommandLineException {
+        gitFetchAll(false);
+    }
+
+    /**
+     * Execute <code>git fetch</code> if <code>fetchRemote=true</code> even if already executed.
+     *
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitFetchForced() throws MojoFailureException, CommandLineException {
+        gitFetchAll(true);
+    }
+
+    private void gitFetchAll(boolean forced) throws MojoFailureException, CommandLineException {
+        if (fetchRemote && (forced || !alreadyFetched)) {
+            executeGitCommand("fetch", "--quiet", gitFlowConfig.getOrigin());
+        }
     }
 
     protected void gitFetchBranches(List<String> remoteBranches) throws CommandLineException, MojoFailureException {
@@ -1221,7 +1800,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             // if there is no local branch create it now and return
             if (!gitBranchExists(branchName)) {
                 // no such local branch, create it now (then it's up to date)
-                executeGitCommand("branch", branchName, gitFlowConfig.getOrigin() + "/" + branchName);
+                gitCreateBranchFromRemote(branchName);
                 return true;
             }
 
@@ -1246,6 +1825,21 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         } else {
             return false;
         }
+    }
+
+    /**
+     * Create branch based on remote branch.<br>
+     * <code>git branch branchName origin/branchName</code>
+     *
+     * @param branchName
+     *            the name of the branch
+     * @throws CommandLineException
+     * @throws MojoFailureException
+     */
+    protected void gitCreateBranchFromRemote(String branchName) throws CommandLineException, MojoFailureException {
+        getLog().info("Creating branch '" + branchName + "' from remote branch '" + gitFlowConfig.getOrigin() + "/"
+                + branchName + "'");
+        executeGitCommand("branch", branchName, gitFlowConfig.getOrigin() + "/" + branchName);
     }
 
     /**
@@ -1472,57 +2066,6 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Ensure that the local branch is up to date.<br>
-     * If remote branch is ahead of local the local branch reference will be
-     * updated with <code>git update-ref</code>.<br>
-     * If local and remote branches diverge or do not exist a
-     * {@link GitFlowFailureException} will be thrown.<br>
-     * If only local branch doesn't exist it will be created from the remote
-     * branch.<br>
-     * If local branch is ahead of remote or only remote branch doesn't exist
-     * nothing will happen.
-     *
-     * @param branchName
-     *            the name of the branch to be checked
-     * @param divergeErrorInfo
-     *            the messate to be used in exception if local and remote
-     *            branches diverge
-     * @param localAndRemoteNotExistingErrorInfo
-     *            the messate to be used in exception if local and remote
-     *            branches do not exist
-     * @throws MojoFailureException
-     * @throws CommandLineException
-     */
-    protected void gitEnsureLocalBranchIsUpToDate(String branchName, GitFlowFailureInfo divergeErrorInfo,
-            GitFlowFailureInfo localAndRemoteNotExistingErrorInfo) throws MojoFailureException, CommandLineException {
-        boolean remoteBranchExists = gitCompareLocalAndRemoteBranches(branchName, null, new Callable<Void>() {
-            @Override
-            public Void call() throws Exception {
-                gitUpdateRef(branchName, "refs/remotes/" + gitFlowConfig.getOrigin() + "/" + branchName);
-                return null;
-            }
-        }, new Callable<Void>() {
-            @Override
-            public Void call() throws Exception {
-                if (divergeErrorInfo != null) {
-                    throw new GitFlowFailureException(replacePlaceholders(divergeErrorInfo, branchName));
-                }
-                throw new GitFlowFailureException("Local and remote branches '" + branchName + "' diverge.",
-                        "Rebase or merge the changes in local branch in order to proceed.", "'git pull'");
-            }
-        });
-        if (!remoteBranchExists) {
-            if (!gitBranchExists(branchName)) {
-                if (localAndRemoteNotExistingErrorInfo != null) {
-                    throw new GitFlowFailureException(
-                            replacePlaceholders(localAndRemoteNotExistingErrorInfo, branchName));
-                }
-                throw new GitFlowFailureException("Local and remote branches '" + branchName + "' do not exist.", null);
-            }
-        }
-    }
-
-    /**
      * Ensure that the local branch exists.<br>
      * If local branch doesn't exist it will be created from the remote
      * branch.<br>
@@ -1557,7 +2100,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             throws MojoFailureException, CommandLineException {
         if (!gitBranchExists(branchName)) {
             if (gitFetchRemoteBranch(branchName)) {
-                executeGitCommand("branch", branchName, gitFlowConfig.getOrigin() + "/" + branchName);
+                gitCreateBranchFromRemote(branchName);
             } else {
                 if (branchNotExistingErrorMessage != null) {
                     throw new GitFlowFailureException(replacePlaceholders(branchNotExistingErrorMessage, branchName));
@@ -1760,7 +2303,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         // if there is no local branch create it now and return
         if (!gitBranchExists(branchName)) {
             // no such local branch, create it now (then it's up to date)
-            executeGitCommand("branch", branchName, gitFlowConfig.getOrigin() + "/" + branchName);
+            gitCreateBranchFromRemote(branchName);
             return true;
         }
         getLog().debug("Comparing local branch '" + branchName + "' with remote '" + gitFlowConfig.getOrigin() + "/"
@@ -2186,6 +2729,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws CommandLineException
      */
     protected void gitRebaseContinue() throws MojoFailureException, CommandLineException {
+        getLog().info("git rebase --continue");
+
         executeGitCommand("rebase", "--continue");
     }
 
@@ -2261,7 +2806,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected InteractiveRebaseStatus gitRebaseInteractive(String commitId)
             throws MojoFailureException, CommandLineException {
-        getLog().info("Rebasing interactively on " + commitId);
+        getLog().info("Rebasing interactively on commit " + commitId);
         initExecutables();
         cmdGit.clearArgs();
         cmdGit.addArguments(new String[] { "rebase", "--interactive", commitId });
@@ -2308,99 +2853,6 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     private boolean isExternalGitEditorUsedconfiguredConfiguredByUserProperties() {
         return Boolean
                 .parseBoolean(session.getUserProperties().getProperty(USER_PROPERTY_KEY_EXTERNAL_GIT_EDITOR_USED));
-    }
-
-    /**
-     * Checkout the branch configuration as a separate worktree. Needs git 2.5+
-     *
-     * @throws MojoFailureException
-     * @throws CommandLineException
-     */
-    protected void gitBranchConfigWorktree(final String branchName, final String configBranchName,
-            final String configBranchDir, final String propertyName, final String propertyValue)
-            throws MojoFailureException, CommandLineException {
-        getLog().info("Creating new worktree for branch configuration.");
-
-        // clean worktree target directory
-        String basedir = this.session.getRequest().getBaseDirectory();
-        File branchConfigWorktree = new File(basedir, configBranchDir);
-        if (branchConfigWorktree.exists()) {
-            try {
-                FileUtils.deleteDirectory(branchConfigWorktree);
-            } catch (IOException ex) {
-                throw new MojoFailureException("Failed to cleanup worktree '" + branchConfigWorktree + "'", ex);
-            }
-        }
-
-        // get rid of stale worktrees
-        executeGitCommand("worktree", "prune");
-
-        initExecutables();
-        Commandline worktreeCmd = new ShellCommandLine();
-        worktreeCmd.setExecutable(gitExecutable);
-        worktreeCmd.setWorkingDirectory(branchConfigWorktree);
-
-        // fetch remote reference first to be up-to-date
-        executeGitCommand("fetch", "--quiet", gitFlowConfig.getOrigin(), configBranchName);
-
-        if (hasRemoteBranch(configBranchName)) {
-            // configuration branch already exists, just create the worktree
-            executeGitCommand("worktree", "add", "-B", configBranchName, configBranchDir,
-                    gitFlowConfig.getOrigin() + "/" + configBranchName);
-        } else {
-            // need to create the branch correctly
-            executeGitCommand("worktree", "add", "--no-checkout", "--detach", configBranchDir);
-
-            executeCommand(worktreeCmd, true, "checkout", "--orphan", configBranchName);
-            executeCommand(worktreeCmd, true, "reset", "--hard");
-            executeCommand(worktreeCmd, true, "commit", "--allow-empty", "-m", commitMessages.getBranchConfigMessage());
-
-            executeCommand(worktreeCmd, true, "push", "--set-upstream", gitFlowConfig.getOrigin(), configBranchName);
-        }
-
-        // now we're ready to actually set a property.
-        File branchPropertyFile = new File(branchConfigWorktree, branchName);
-
-        Parameters params = new Parameters();
-        FileBasedConfigurationBuilder<FileBasedConfiguration> builder = new FileBasedConfigurationBuilder<FileBasedConfiguration>(
-                PropertiesConfiguration.class).configure(params.properties().setThrowExceptionOnMissing(false));
-        if (branchPropertyFile.exists()) {
-            // only set if existing at this point
-            builder.getFileHandler().setFile(branchPropertyFile);
-        }
-        try {
-            Configuration config = builder.getConfiguration();
-            if (StringUtils.isEmpty(propertyValue)) {
-                config.clearProperty(propertyName);
-            } else {
-                config.setProperty(propertyName, propertyValue);
-            }
-            builder.getFileHandler().setFile(branchPropertyFile);
-            builder.save();
-        } catch (ConfigurationException cex) {
-            throw new MojoFailureException("Failed to change branch property '" + propertyName + "'", cex);
-        }
-
-        // now commit the change and push it
-        executeCommand(worktreeCmd, true, "add", branchName);
-        CommandResult result = executeCommand(worktreeCmd, false, "commit", "-m",
-                commitMessages.getBranchConfigMessage());
-        if (result.exitCode == SUCCESS_EXIT_CODE) {
-            // push the change
-            executeCommand(worktreeCmd, true, "push");
-        } else {
-            getLog().info("No changes detected.");
-        }
-
-        // clean up
-        try {
-            FileUtils.deleteDirectory(branchConfigWorktree);
-        } catch (IOException ex) {
-            getLog().debug("Failed to cleanup worktree", ex);
-        }
-
-        // get rid of stale worktrees
-        executeGitCommand("worktree", "prune");
     }
 
     /**
@@ -2805,6 +3257,24 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
+     * Substitute keys of the form <code>@{name}</code> in the messages. By
+     * default knows about <code>key</code>, which will be replaced by issue
+     * number and all project properties.
+     *
+     * @param message
+     *            the message to process
+     * @param issueNumber
+     *            the issue number
+     * @return the message with applied substitutions
+     * @see #lookupKey(String)
+     */
+    protected String substituteWithIssueNumber(String message, String issueNumber) throws MojoFailureException {
+        Map<String, String> replacements = new HashMap<String, String>();
+        replacements.put("key", issueNumber);
+        return substituteStrings(message, replacements);
+    }
+
+    /**
      * Lookup keys from the project properties.
      *
      * @return <code>null</code> if not found.
@@ -2996,6 +3466,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws MojoFailureException
      */
     protected void gitCheckoutOurs() throws CommandLineException, MojoFailureException {
+        getLog().info("git checkout --ours .");
         executeGitCommand("checkout", "--ours", ".");
     }
 
@@ -3039,6 +3510,18 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
+     * Check if passed branch name is name for an integrated branch.
+     *
+     * @param branchName
+     *            the branch name to be checked
+     * @return <code>true</code> if the branch name starts with integrated
+     *         branch prefix
+     */
+    protected boolean isIntegratedBranch(String branchName) {
+        return branchName.startsWith(gitFlowConfig.getIntegrationBranchPrefix());
+    }
+
+    /**
      * Check if passed branch name is the name for development branch.
      *
      * @param branchName
@@ -3060,6 +3543,18 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected boolean isEpicBranch(String branchName) {
         return branchName.startsWith(gitFlowConfig.getEpicBranchPrefix());
+    }
+
+    /**
+     * Check if passed branch name is name for a feature branch.
+     *
+     * @param branchName
+     *            the branch name to be checked
+     * @return <code>true</code> if the branch name starts with feature branch
+     *         prefix
+     */
+    protected boolean isFeatureBranch(String branchName) {
+        return branchName.startsWith(gitFlowConfig.getFeatureBranchPrefix());
     }
 
     /**
@@ -3114,53 +3609,6 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Extract the epic issue number from epic name using epic name pattern.
-     * E.g. extract issue number "GBLD-42" from epic name
-     * "GBLD-42-someDescription" if default epic name pattern is used. Return
-     * epic name if issue number can't be extracted.
-     *
-     * @param epicName
-     *            the epic name
-     * @return the extracted epic issue number or epic name if issue number
-     *         can't be extracted
-     */
-    protected String extractIssueNumberFromEpicName(String epicName) {
-        String issueNumber = epicName;
-        if (epicNamePattern != null) {
-            // extract the issue number only
-            Matcher m = Pattern.compile(epicNamePattern).matcher(epicName);
-            if (m.matches()) {
-                if (m.groupCount() == 0) {
-                    getLog().warn("Epic branch conforms to <epicNamePattern>, but ther is no matching"
-                            + " group to extract the issue number.");
-                } else {
-                    issueNumber = m.group(1);
-                }
-            } else {
-                getLog().warn("Epic branch does not conform to <epicNamePattern> specified, cannot "
-                        + "extract issue number.");
-            }
-        }
-        return issueNumber;
-    }
-
-    /**
-     * Extract the epic issue number from epic branch name using epic name
-     * pattern and epic branch prefix. E.g. extract issue number "GBLD-42" from
-     * epic branch name "epic/GBLD-42-someDescription" if default epic name
-     * pattern is used. Return epic name if issue number can't be extracted.
-     *
-     * @param epicBranchName
-     *            the epic branch name
-     * @return the extracted epic issue number or epic name if issue number
-     *         can't be extracted
-     */
-    protected String extractIssueNumberFromEpicBranchName(String epicBranchName) {
-        String epicName = epicBranchName.replaceFirst(gitFlowConfig.getEpicBranchPrefix(), "");
-        return extractIssueNumberFromEpicName(epicName);
-    }
-
-    /**
      * Insert passed suffix into passed version. E.g. result for version
      * <code>1.2.3-SNAPSHOT</code> and suffix <code>GBLD-42</code> will be
      * version <code>1.2.3-GBLD-42-SNAPSHOT</code>.
@@ -3209,10 +3657,10 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
         private final String error;
 
-        private CommandResult(final int exitCode, final String out, final String error) {
-            this.exitCode = exitCode;
-            this.out = out;
-            this.error = error;
+        private CommandResult(final int anExitCode, final String anOut, final String anError) {
+            this.exitCode = anExitCode;
+            this.out = anOut;
+            this.error = anError;
         }
 
         /**

@@ -16,7 +16,9 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -673,10 +675,61 @@ public class GitExecution {
      */
     public void createRemoteBranch(RepositorySet repositorySet, String aBranch) throws GitAPIException, IOException {
         String currentBranch = currentBranch(repositorySet.getClonedRemoteRepoGit());
+        pull(repositorySet.getClonedRemoteRepoGit());
         switchToBranch(repositorySet.getClonedRemoteRepoGit(), aBranch, true);
         push(repositorySet.getClonedRemoteRepoGit());
         switchToBranch(repositorySet.getClonedRemoteRepoGit(), currentBranch, false);
 
+    }
+
+    /**
+     * Creates passed branch as orphan branch in remote repository.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param branch
+     *            the branch to be created
+     * @param initialCommitMessage
+     *            the initial commit message
+     * @throws GitAPIException
+     *             if an error occurs on git command execution
+     * @throws IOException
+     *             in case of an I/O error
+     */
+    public void createRemoteOrphanBranch(RepositorySet repositorySet, String branch, String initialCommitMessage)
+            throws GitAPIException, IOException {
+        createOrphanBranch(repositorySet.getClonedRemoteRepoGit(), branch, initialCommitMessage, true);
+    }
+
+    /**
+     * Creates passed branch as orphan branch in local repository.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param branch
+     *            the branch to be created
+     * @param initialCommitMessage
+     *            the initial commit message
+     * @throws GitAPIException
+     *             if an error occurs on git command execution
+     * @throws IOException
+     *             in case of an I/O error
+     */
+    public void createOrphanBranch(RepositorySet repositorySet, String branch, String initialCommitMessage)
+            throws GitAPIException, IOException {
+        createOrphanBranch(repositorySet.getLocalRepoGit(), branch, initialCommitMessage, false);
+    }
+
+    private void createOrphanBranch(Git git, String branch, String initialCommitMessage, boolean push)
+            throws GitAPIException, IOException {
+        String currentBranch = currentBranch(git);
+        pull(git);
+        git.checkout().setName(branch).setOrphan(true).call();
+        git.commit().setAllowEmpty(true).setMessage(initialCommitMessage).call();
+        if (push) {
+            push(git);
+        }
+        switchToBranch(git, currentBranch, false);
     }
 
     /**
@@ -728,6 +781,10 @@ public class GitExecution {
 
     private void push(Git git) throws GitAPIException {
         git.push().call();
+    }
+
+    private void pull(Git git) throws GitAPIException {
+        git.pull().call();
     }
 
     /**
@@ -818,7 +875,7 @@ public class GitExecution {
      * @param expectedConfigValue
      *            the expected value of the config entry
      */
-    public void assertBranchConfigValue(RepositorySet repositorySet, String branchName, String configName,
+    public void assertBranchLocalConfigValue(RepositorySet repositorySet, String branchName, String configName,
             String expectedConfigValue) {
         assertConfigValue(repositorySet, "branch", branchName, configName, expectedConfigValue);
     }
@@ -853,7 +910,7 @@ public class GitExecution {
      * @param configName
      *            the name part of the config entry key
      */
-    public void assertBranchConfigValueMissing(RepositorySet repositorySet, String branchName, String configName) {
+    public void assertBranchLocalConfigValueMissing(RepositorySet repositorySet, String branchName, String configName) {
         assertConfigValueMissing(repositorySet, "branch", branchName, configName);
     }
 
@@ -899,6 +956,48 @@ public class GitExecution {
         StoredConfig config = repositorySet.getLocalRepoGit().getRepository().getConfig();
         config.setString(configSection, configSubsection, configName, value);
         config.save();
+    }
+
+    public void removeBranchCentralConfigValue(RepositorySet repositorySet, String configBranch, String branch,
+            String configName) throws IOException, GitAPIException {
+        Git git = repositorySet.getClonedRemoteRepoGit();
+        String oldBranch = currentBranch(git);
+        git.fetch().call();
+        git.checkout().setName(configBranch).setStartPoint("origin/" + configBranch).setCreateBranch(true).call();
+        Properties properties = new Properties();
+        File branchPropertyFile = new File(repositorySet.getClonedRemoteWorkingDirectory(), branch);
+        try (FileInputStream fis = new FileInputStream(branchPropertyFile)) {
+            properties.load(new FileInputStream(branchPropertyFile));
+        }
+        properties.remove(configName);
+        try (FileOutputStream fos = new FileOutputStream(branchPropertyFile)) {
+            properties.store(new FileOutputStream(branchPropertyFile), null);
+        }
+        git.add().addFilepattern(".").call();
+        git.commit().setMessage("remove property").call();
+        git.push().call();
+        git.checkout().setName(oldBranch).call();
+    }
+
+    public void setBranchCentralConfigValue(RepositorySet repositorySet, String configBranch, String branch,
+            String configName, String value) throws IOException, GitAPIException {
+        Git git = repositorySet.getClonedRemoteRepoGit();
+        String oldBranch = currentBranch(git);
+        git.fetch().call();
+        git.checkout().setName(configBranch).setStartPoint("origin/" + configBranch).setCreateBranch(true).call();
+        Properties properties = new Properties();
+        File branchPropertyFile = new File(repositorySet.getClonedRemoteWorkingDirectory(), branch);
+        try (FileInputStream fis = new FileInputStream(branchPropertyFile)) {
+            properties.load(new FileInputStream(branchPropertyFile));
+        }
+        properties.setProperty(configName, value);
+        try (FileOutputStream fos = new FileOutputStream(branchPropertyFile)) {
+            properties.store(new FileOutputStream(branchPropertyFile), null);
+        }
+        git.add().addFilepattern(".").call();
+        git.commit().setMessage("remove property").call();
+        git.push().call();
+        git.checkout().setName(oldBranch).call();
     }
 
     /**
@@ -1056,15 +1155,13 @@ public class GitExecution {
 
     private void assertBranches(String[] expectedBranches, List<String> branches, String repoName) {
         List<String> expectedBranchesList = Arrays.asList(expectedBranches);
-        if (expectedBranches.length != branches.size() || !branches.containsAll(expectedBranchesList)) {
-            List<String> expected = new LinkedList<>(expectedBranchesList);
-            List<String> actual = new LinkedList<>(branches);
-            Collections.sort(expected);
-            Collections.sort(actual);
-            assertEquals("Branches in " + repoName + " repository are different from expected.",
-                    Arrays.toString(expected.toArray(new String[expected.size()])),
-                    Arrays.toString(actual.toArray(new String[actual.size()])));
-        }
+        List<String> expected = new LinkedList<>(expectedBranchesList);
+        List<String> actual = new LinkedList<>(branches);
+        Collections.sort(expected);
+        Collections.sort(actual);
+        assertEquals("Branches in " + repoName + " repository are different from expected.",
+                Arrays.toString(expected.toArray(new String[expected.size()])),
+                Arrays.toString(actual.toArray(new String[actual.size()])));
     }
 
     /**
@@ -1121,18 +1218,15 @@ public class GitExecution {
     private void assertCommitMessages(String[] expectedCommitMessages, List<String> commitMessages, String branch,
             String repoName) {
         List<String> expectedCommitMessagesList = Arrays.asList(expectedCommitMessages);
-        if (expectedCommitMessages.length != commitMessages.size()
-                || !commitMessages.containsAll(expectedCommitMessagesList)) {
-            List<String> expected = new LinkedList<>(expectedCommitMessagesList);
-            List<String> actual = new LinkedList<>(commitMessages);
-            Collections.sort(expected);
-            Collections.sort(actual);
-            assertEquals(
-                    "Commit messages in branch '" + branch + "' of " + repoName
-                            + " repository are different from expected.",
-                    Arrays.toString(expected.toArray(new String[expected.size()])),
-                    Arrays.toString(actual.toArray(new String[actual.size()])));
-        }
+        List<String> expected = new LinkedList<>(expectedCommitMessagesList);
+        List<String> actual = new LinkedList<>(commitMessages);
+        Collections.sort(expected);
+        Collections.sort(actual);
+        assertEquals(
+                "Commit messages in branch '" + branch + "' of " + repoName
+                        + " repository are different from expected.",
+                Arrays.toString(expected.toArray(new String[expected.size()])),
+                Arrays.toString(actual.toArray(new String[actual.size()])));
     }
 
     /**
@@ -1226,7 +1320,8 @@ public class GitExecution {
      *            the local branch to be checked
      * @param filepath
      *            the relative path to the properties file to be read
-     * @return the properties from the properties file
+     * @return the properties from the properties file or <code>null</code> if
+     *         property file doesn't exist
      * @throws IOException
      *             in case of an I/O error
      * @throws GitAPIException
@@ -1240,7 +1335,7 @@ public class GitExecution {
                 props.load(stream);
                 return props;
             }
-            throw new IllegalStateException("File '" + filepath + "' couldn't be found");
+            return null;
         }
     }
 

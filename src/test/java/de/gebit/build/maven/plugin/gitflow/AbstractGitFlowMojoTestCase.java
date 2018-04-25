@@ -35,7 +35,6 @@ import org.apache.maven.cli.ExtCliRequest;
 import org.apache.maven.cli.MavenCli;
 import org.apache.maven.cli.configuration.ConfigurationProcessor;
 import org.apache.maven.cli.configuration.SettingsXmlConfigurationProcessor;
-import org.apache.maven.execution.DefaultMavenExecutionRequest;
 import org.apache.maven.execution.MavenExecutionRequest;
 import org.apache.maven.execution.MavenExecutionRequestPopulator;
 import org.apache.maven.execution.MavenExecutionResult;
@@ -94,6 +93,8 @@ public abstract class AbstractGitFlowMojoTestCase {
     private static final String NOT_EXISTING_DIR = "notExistingDir";
 
     public static final String MASTER_BRANCH = "master";
+
+    public static final String CONFIG_BRANCH = "branch-config";
 
     public static final String COMMAND_LINE_EXCEPTION_MESSAGE_PATTERN = "Working directory \"{0}\" does not exist!";
 
@@ -514,7 +515,6 @@ public abstract class AbstractGitFlowMojoTestCase {
             boolean throwCommandLineExceptionOnCommandLineExecution, String... activeProfiles) throws Exception {
         Properties userProperties = properties != null ? properties : new Properties();
         File pom = new File(basedir, "pom.xml");
-        MavenExecutionRequest request = new DefaultMavenExecutionRequest();
         MavenExecutionRequestPopulator executionRequestPopulator = container
                 .lookup(MavenExecutionRequestPopulator.class);
         ExtCliRequest cliRequest = new ExtCliRequest(new String[] { fullGoal });
@@ -523,7 +523,8 @@ public abstract class AbstractGitFlowMojoTestCase {
         cliRequest.setUserProperties(userProperties);
         Map<String, ConfigurationProcessor> configurationProcessors = container.lookupMap(ConfigurationProcessor.class);
         configurationProcessors.get(SettingsXmlConfigurationProcessor.HINT).process(cliRequest);
-        request = cliRequest.getRequest();
+        MavenExecutionRequest request = cliRequest.getRequest();
+        request.setSystemProperties(System.getProperties());
         WorkspaceReader workspaceReader = new WorkspaceReader() {
 
             WorkspaceRepository workspaceRepo = new WorkspaceRepository("ide", getClass());

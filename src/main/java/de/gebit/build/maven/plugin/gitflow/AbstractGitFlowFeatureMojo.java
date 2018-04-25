@@ -8,14 +8,7 @@
 //
 package de.gebit.build.maven.plugin.gitflow;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Parameter;
@@ -43,72 +36,6 @@ public abstract class AbstractGitFlowFeatureMojo extends AbstractGitFlowMojo {
     protected String featureNamePattern;
 
     /**
-     * Extracts the feature issue number from feature name using feature name
-     * pattern. E.g. extracts issue number "GBLD-42" from feature name
-     * "GBLD-42-someDescription" if default feature name pattern is used.
-     * Returns feature name if issue number can't be extracted.
-     *
-     * @param aFeatureName
-     *            the feature name
-     * @return the extracted feature issue number or feature name if issue
-     *         number can't be extracted
-     */
-    protected String extractIssueNumberFromFeatureName(String aFeatureName) {
-        String issueNumber = aFeatureName;
-        if (featureNamePattern != null) {
-            // extract the issue number only
-            Matcher m = Pattern.compile(featureNamePattern).matcher(aFeatureName);
-            if (m.matches()) {
-                if (m.groupCount() == 0) {
-                    getLog().warn("Feature branch conforms to <featureNamePattern>, but ther is no matching"
-                            + " group to extract the issue number.");
-                } else {
-                    issueNumber = m.group(1);
-                }
-            } else {
-                getLog().warn("Feature branch does not conform to <featureNamePattern> specified, cannot "
-                        + "extract issue number.");
-            }
-        }
-        return issueNumber;
-    }
-
-    /**
-     * Extracts the feature issue number from feature branch name using feature
-     * name pattern and feature branch prefix. E.g. extracts issue number
-     * "GBLD-42" from feature branch name "feature/GBLD-42-someDescription" if
-     * default feature name pattern is used. Returns feature name if issue
-     * number can't be extracted.
-     *
-     * @param featureBranchName
-     *            the feature branch name
-     * @return the extracted feature issue number or feature name if issue
-     *         number can't be extracted
-     */
-    protected String extractIssueNumberFromFeatureBranchName(String featureBranchName) {
-        String featureName = featureBranchName.replaceFirst(gitFlowConfig.getFeatureBranchPrefix(), "");
-        return extractIssueNumberFromFeatureName(featureName);
-    }
-
-    /**
-     * Substitute keys of the form <code>@{name}</code> in the messages. By
-     * default knows about <code>key</code>, which will be replaced by issue
-     * number and all project properties.
-     *
-     * @param message
-     *            the message to process
-     * @param issueNumber
-     *            the feature issue number
-     * @return the message with applied substitutions
-     * @see #lookupKey(String)
-     */
-    protected String substituteInFeatureMessage(String message, String issueNumber) throws MojoFailureException {
-        Map<String, String> replacements = new HashMap<String, String>();
-        replacements.put("key", issueNumber);
-        return substituteStrings(message, replacements);
-    }
-
-    /**
      * Get the first commit on the branch, which is the version change commit
      *
      * @param featureBranch
@@ -120,15 +47,46 @@ public abstract class AbstractGitFlowFeatureMojo extends AbstractGitFlowMojo {
             throws MojoFailureException, CommandLineException {
         String firstCommitOnBranch = gitFirstCommitOnBranch(featureBranch, branchPoint);
         String firstCommitMessage = gitCommitMessage(firstCommitOnBranch);
-        String featureStartMessage = substituteInFeatureMessage(commitMessages.getFeatureStartMessage(),
-                extractIssueNumberFromFeatureBranchName(featureBranch));
-        if (!firstCommitMessage.contains(featureStartMessage)) {
+        String featureStartMessage = getFeatureStartCommitMessage(featureBranch);
+        if (featureStartMessage == null || !firstCommitMessage.contains(featureStartMessage)) {
             if (getLog().isDebugEnabled()) {
                 getLog().debug("First commit is not a version change commit.");
             }
             return null;
         }
         return firstCommitOnBranch;
+    }
+
+    /**
+     * Return the commit message for version change commit (first commit) of
+     * feature branch if used on feature start and stored in central branch
+     * config.
+     *
+     * @param featureBranch
+     *            the name of the feature branch
+     * @return version change commit message or <code>null</code> if version
+     *         change was not commited on feature start
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected String getFeatureStartCommitMessage(String featureBranch)
+            throws MojoFailureException, CommandLineException {
+        return gitGetBranchCentralConfig(featureBranch, BranchConfigKeys.START_COMMIT_MESSAGE);
+    }
+
+    /**
+     * Return issue number of the feature parsed from feature name on feature
+     * start and stored in central branch config.
+     *
+     * @param featureBranch
+     *            the name of the feature branch
+     * @return the feature issue number or <code>null</code> if issue number
+     *         can't be find in central branch config
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected String getFeatureIssueNumber(String featureBranch) throws MojoFailureException, CommandLineException {
+        return gitGetBranchCentralConfig(featureBranch, BranchConfigKeys.ISSUE_NUMBER);
     }
 
     protected boolean hasCommitsExceptVersionChangeCommitOnFeatureBranch(String featureBranch, String baseBranch)
@@ -166,16 +124,15 @@ public abstract class AbstractGitFlowFeatureMojo extends AbstractGitFlowMojo {
      */
     protected boolean gitTryRebaseWithoutVersionChange(String featureBranch, String branchPoint,
             String versionChangeCommitId) throws MojoFailureException, CommandLineException {
+        getLog().info("First commit on feature branch is version change commit. "
+                + "Trying to remove version change commit using rebase.");
         if (!gitHasNoMergeCommits(featureBranch, versionChangeCommitId)) {
-            if (getLog().isDebugEnabled()) {
-                getLog().debug("Cannot rebase due to merge commits.");
-            }
+            getLog().info("Feature branch contains merge commits. Removing of version change commit is not possible.");
             return false;
         }
-
-        getLog().info("Removing version change commit.");
         try {
             removeCommits(branchPoint, versionChangeCommitId, featureBranch);
+            getLog().info("Version change commit in feature branch removed.");
         } catch (MojoFailureException ex) {
             throw new GitFlowFailureException(ex,
                     "Automatic rebase failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage()),
@@ -188,100 +145,63 @@ public abstract class AbstractGitFlowFeatureMojo extends AbstractGitFlowMojo {
     }
 
     /**
-     * Get the branch point of a feature branch.
+     * Get the base branch of a feature branch. Throws
+     * {@link GitFlowFailureException} if base branch doesn't exist or can't be
+     * determined.
      *
      * @param featureBranch
      *            feature branch name
-     * @return commit ID of the branch point (common ancestor with the
-     *         development branch)
+     * @return base branch that exists locally
      * @throws MojoFailureException
      *             if no branch point can be determined
      */
     protected String gitFeatureBranchBaseBranch(String featureBranch)
             throws MojoFailureException, CommandLineException {
-        List<String> baseBranchCandidates = gitFeatureBranchBaseBranches(featureBranch);
-        if (baseBranchCandidates.isEmpty()) {
+        String baseBranch = gitFeatureBranchBaseBranchName(featureBranch);
+        GitFlowFailureInfo baseBranchNotExistingErrorMessage;
+        if (fetchRemote) {
+            baseBranchNotExistingErrorMessage = new GitFlowFailureInfo(
+                    "Base branch '" + baseBranch + "' for feature branch '" + featureBranch
+                            + "' doesn't exist.\nThis indicates a severe error condition on your branches.",
+                    "Please consult a gitflow expert on how to fix this!");
+        } else {
+            baseBranchNotExistingErrorMessage = new GitFlowFailureInfo(
+                    "Base branch '" + baseBranch + "' for feature branch '" + featureBranch
+                            + "' doesn't exist locally.",
+                    "Set 'fetchRemote' parameter to true in order to try to fetch branch from remote repository.");
+        }
+        gitEnsureLocalBranchExists(baseBranch, baseBranchNotExistingErrorMessage);
+        return baseBranch;
+    }
+
+    /**
+     * Get the name of the base branch for passed feature branch.
+     *
+     * @param featureBranch
+     *            feature branch name
+     * @return name of the base branch even if it doesn't exist
+     * @throws MojoFailureException
+     *             if no branch point can be determined
+     */
+    private String gitFeatureBranchBaseBranchName(String featureBranch)
+            throws MojoFailureException, CommandLineException {
+        String baseBranch = gitGetBranchBaseBranch(featureBranch);
+        if (baseBranch == null) {
             if (fetchRemote) {
                 throw new GitFlowFailureException(
                         "Failed to find base branch for feature branch '" + featureBranch
-                                + "'. This indicates a severe error condition on your branches.",
+                                + "' in central branch config.\nThis indicates a severe error condition on your branches.",
                         "Please consult a gitflow expert on how to fix this!");
             } else {
                 throw new GitFlowFailureException(
-                        "Failed to find base branch for feature branch '" + featureBranch + "'.",
+                        "Failed to find base branch for feature branch '" + featureBranch
+                                + "' in central branch config.",
                         "Set 'fetchRemote' parameter to true in order to search for base branch also in remote "
                                 + "repository.");
             }
         }
-        String baseBranch = baseBranchCandidates.get(0);
-        getLog().debug("Feature branch is based on " + baseBranch + ".");
+        getLog().info("Feature branch '" + featureBranch + "' is based on branch '" + baseBranch + "'.");
         return baseBranch;
-    }
-
-    protected List<String> gitFeatureBranchBaseBranches(String featureBranch)
-            throws MojoFailureException, CommandLineException {
-        getLog().info("Looking for branch base of '" + featureBranch + "'.");
-
-        // try all development branches
-        Map<String, List<String>> branchPointCandidates = new HashMap<>();
-        String developmentBranch = gitFlowConfig.getDevelopmentBranch();
-        gitFetchBranches(developmentBranch);
-        if (gitIsRemoteBranchFetched(gitFlowConfig.getOrigin(), developmentBranch)) {
-            addBranchPointCandidate(branchPointCandidates, featureBranch, developmentBranch, true);
-        } else if (gitBranchExists(developmentBranch)) {
-            addBranchPointCandidate(branchPointCandidates, featureBranch, developmentBranch, false);
-        }
-        List<String> remoteMaintenanceBranches = gitRemoteMaintenanceBranches();
-        if (remoteMaintenanceBranches.size() > 0) {
-            gitFetchBranches(remoteMaintenanceBranches);
-            for (String maintenanceBranch : remoteMaintenanceBranches) {
-                addBranchPointCandidate(branchPointCandidates, featureBranch, maintenanceBranch, true);
-            }
-        }
-        List<String> localMaintenanceBranches = gitLocalMaintenanceBranches();
-        if (localMaintenanceBranches.size() > 0) {
-            for (String maintenanceBranch : localMaintenanceBranches) {
-                if (!branchPointCandidates.containsKey(maintenanceBranch)) {
-                    addBranchPointCandidate(branchPointCandidates, featureBranch, maintenanceBranch, false);
-                }
-            }
-        }
-        List<String> remoteEpicBranches = gitRemoteEpicBranches();
-        if (remoteEpicBranches.size() > 0) {
-            gitFetchBranches(remoteEpicBranches);
-            for (String epicBranch : remoteEpicBranches) {
-                addBranchPointCandidate(branchPointCandidates, featureBranch, epicBranch, true);
-            }
-        }
-        List<String> localEpicBranches = gitLocalEpicBranches();
-        if (localEpicBranches.size() > 0) {
-            for (String epicBranch : localEpicBranches) {
-                if (!branchPointCandidates.containsKey(epicBranch)) {
-                    addBranchPointCandidate(branchPointCandidates, featureBranch, epicBranch, false);
-                }
-            }
-        }
-        Set<String> branchPoints = branchPointCandidates.keySet();
-        String nearestBranchPoint = gitNearestAncestorCommit(featureBranch, branchPoints);
-        if (nearestBranchPoint != null) {
-            return branchPointCandidates.get(nearestBranchPoint);
-        }
-        return Collections.EMPTY_LIST;
-    }
-
-    private void addBranchPointCandidate(Map<String, List<String>> branchPointCandidates, String featureBranch,
-            String baseBranch, boolean remote) throws MojoFailureException, CommandLineException {
-        String branchPoint = gitBranchPoint((remote ? gitFlowConfig.getOrigin() + "/" : "") + baseBranch, featureBranch);
-        if (branchPoint != null) {
-            List<String> baseBranches = branchPointCandidates.get(branchPoint);
-            if (baseBranches == null) {
-                baseBranches = new ArrayList<>();
-                branchPointCandidates.put(branchPoint, baseBranches);
-            }
-            if (!baseBranches.contains(baseBranch)) {
-                baseBranches.add(baseBranch);
-            }
-        }
     }
 
     /**
@@ -295,10 +215,22 @@ public abstract class AbstractGitFlowFeatureMojo extends AbstractGitFlowMojo {
      */
     protected String gitFeatureBranchBaseCommit(String featureBranch)
             throws MojoFailureException, CommandLineException {
-        String baseBranch = gitFeatureBranchBaseBranch(featureBranch);
+        String baseBranch = gitFeatureBranchBaseBranchName(featureBranch);
         gitFetchBranches(baseBranch);
         if (gitIsRemoteBranchFetched(gitFlowConfig.getOrigin(), baseBranch)) {
             baseBranch = gitFlowConfig.getOrigin() + "/" + baseBranch;
+        } else if (!gitBranchExists(baseBranch)) {
+            if (fetchRemote) {
+                throw new GitFlowFailureException(
+                        "Base commit for feature branch '" + featureBranch
+                                + "' can't be estimated because the base branch '" + baseBranch + "' doesn't exist.\n"
+                                + "This indicates a severe error condition on your branches.",
+                        "Please consult a gitflow expert on how to fix this!");
+            } else {
+                throw new GitFlowFailureException("Base commit for feature branch '" + featureBranch
+                        + "' can't be estimated because the base branch '" + baseBranch + "' doesn't exist locally.",
+                        "Set 'fetchRemote' parameter to true in order to try to fetch branch from remote repository.");
+            }
         }
         return gitBranchPoint(baseBranch, featureBranch);
     }
