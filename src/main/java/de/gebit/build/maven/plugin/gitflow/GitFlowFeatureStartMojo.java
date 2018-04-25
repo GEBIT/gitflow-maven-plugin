@@ -215,6 +215,10 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
         if (installProject) {
             mvnCleanInstall();
         }
+
+        if (pushRemote) {
+            gitPush(featureBranchName, false, false);
+        }
         getLog().info("Feature for issue '" + featureIssue + "' started on branch '" + featureBranchName + "'.");
         getLog().info("Feature start process finished.");
     }
