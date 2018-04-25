@@ -862,6 +862,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                     if (branchPropertyFile.exists()) {
                         // only set if existing at this point
                         builder.getFileHandler().setFile(branchPropertyFile);
+                    } else {
+                        builder.getFileHandler().clearLocation();
                     }
                     try {
                         Configuration config = builder.getConfiguration();
@@ -874,6 +876,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                         }
                         builder.getFileHandler().setFile(branchPropertyFile);
                         builder.save();
+                        builder.resetResult();
                     } catch (ConfigurationException e) {
                         throw new GitFlowFailureException(e,
                                 "Failed to change properties in central branch configs for branch '" + branchName
