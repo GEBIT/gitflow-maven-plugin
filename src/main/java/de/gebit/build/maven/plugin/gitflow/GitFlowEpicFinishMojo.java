@@ -34,6 +34,15 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
     @Parameter(property = "skipTestProject", defaultValue = "false")
     private boolean skipTestProject = false;
 
+    /**
+     * Whether to allow fast forward merge of epic branch into development
+     * branch.
+     *
+     * @since 2.0.0
+     */
+    @Parameter(property = "allowFF", defaultValue = "false")
+    private boolean allowFF = false;
+
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         getLog().info("Starting feature finish process.");
@@ -137,7 +146,7 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
             }
 
             try {
-                gitMergeNoff(epicBranchName);
+                gitMerge(epicBranchName, !allowFF);
             } catch (MojoFailureException ex) {
                 throw new GitFlowFailureException(ex,
                         "Automatic merge failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage()),

@@ -54,6 +54,15 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
     @Parameter(property = "rebaseWithoutVersionChange", defaultValue = "false")
     private boolean rebaseWithoutVersionChange = false;
 
+    /**
+     * Whether to allow fast forward merge of feature branch into development
+     * branch.
+     *
+     * @since 2.0.0
+     */
+    @Parameter(property = "allowFF", defaultValue = "false")
+    private boolean allowFF = false;
+
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
@@ -205,7 +214,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
             // git merge --no-ff feature/...
             try {
                 getLog().info("Merging feature branch into base branch.");
-                gitMergeNoff(featureBranchName);
+                gitMerge(featureBranchName, !allowFF);
             } catch (MojoFailureException ex) {
                 throw new GitFlowFailureException(ex,
                         "Automatic merge failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage()),
