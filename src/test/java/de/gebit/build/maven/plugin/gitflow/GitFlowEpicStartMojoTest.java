@@ -1100,4 +1100,107 @@ public class GitFlowEpicStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
     }
 
+    @Test
+    public void testExecuteFailureOnCleanInstall() throws Exception {
+        // set up
+        final String COMMIT_MESSAGE_INVALID_JAVA_FILE = "Invalid java file";
+        git.createAndCommitTestfile(repositorySet, "src/main/java/InvalidJavaFile.java",
+                COMMIT_MESSAGE_INVALID_JAVA_FILE);
+        git.push(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("epicName", EPIC_NAME);
+        userProperties.setProperty("flow.installProject", "true");
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertGitFlowFailureException(result,
+                "Failed to execute 'mvn clean install' on the project on epic branch after epic start.",
+                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
+                        + "'mvn flow:epic-start' again in order to continue.");
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), EPIC_BRANCH_VERSION);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_INVALID_JAVA_FILE,
+                COMMIT_MESSAGE_SET_VERSION);
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
+
+        git.assertBranchLocalConfigValue(repositorySet, EPIC_BRANCH, "breakpoint", "epicStart.cleanInstall");
+    }
+
+    @Test
+    public void testExecuteContinueAfterFailureOnCleanInstall() throws Exception {
+        // set up
+        final String COMMIT_MESSAGE_INVALID_JAVA_FILE = "Invalid java file";
+        final String COMMIT_MESSAGE_INVALID_JAVA_FILE_REMOVED = "Invalid java file removed";
+        git.createAndCommitTestfile(repositorySet, "src/main/java/InvalidJavaFile.java",
+                COMMIT_MESSAGE_INVALID_JAVA_FILE);
+        git.push(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("epicName", EPIC_NAME);
+        userProperties.setProperty("flow.installProject", "true");
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        assertGitFlowFailureException(result,
+                "Failed to execute 'mvn clean install' on the project on epic branch after epic start.",
+                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
+                        + "'mvn flow:epic-start' again in order to continue.");
+        git.assertBranchLocalConfigValue(repositorySet, EPIC_BRANCH, "breakpoint", "epicStart.cleanInstall");
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        repositorySet.getLocalRepoGit().rm().addFilepattern("src/main/java/InvalidJavaFile.java").call();
+        git.commitAll(repositorySet, COMMIT_MESSAGE_INVALID_JAVA_FILE_REMOVED);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), EPIC_BRANCH_VERSION);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, EPIC_BRANCH, EPIC_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_INVALID_JAVA_FILE_REMOVED,
+                COMMIT_MESSAGE_INVALID_JAVA_FILE, COMMIT_MESSAGE_SET_VERSION);
+
+        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
+
+        git.assertBranchLocalConfigValueMissing(repositorySet, EPIC_BRANCH, "breakpoint");
+    }
+
+    @Test
+    public void testExecuteContinueWithInstallProjectFalseAfterFailureOnCleanInstall() throws Exception {
+        // set up
+        final String COMMIT_MESSAGE_INVALID_JAVA_FILE = "Invalid java file";
+        git.createAndCommitTestfile(repositorySet, "src/main/java/InvalidJavaFile.java",
+                COMMIT_MESSAGE_INVALID_JAVA_FILE);
+        git.push(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("epicName", EPIC_NAME);
+        userProperties.setProperty("flow.installProject", "true");
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        assertGitFlowFailureException(result,
+                "Failed to execute 'mvn clean install' on the project on epic branch after epic start.",
+                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
+                        + "'mvn flow:epic-start' again in order to continue.");
+        git.assertBranchLocalConfigValue(repositorySet, EPIC_BRANCH, "breakpoint", "epicStart.cleanInstall");
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        userProperties.setProperty("flow.installProject", "false");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), EPIC_BRANCH_VERSION);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, EPIC_BRANCH, EPIC_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_INVALID_JAVA_FILE,
+                COMMIT_MESSAGE_SET_VERSION);
+
+        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
+
+        git.assertBranchLocalConfigValueMissing(repositorySet, EPIC_BRANCH, "breakpoint");
+    }
+
 }

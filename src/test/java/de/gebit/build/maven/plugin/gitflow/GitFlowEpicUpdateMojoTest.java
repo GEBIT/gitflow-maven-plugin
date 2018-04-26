@@ -1751,4 +1751,117 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertMergeInProcess(repositorySet, TESTFILE_NAME);
     }
 
+    @Test
+    public void testExecuteFailureOnCleanInstall() throws Exception {
+        // set up
+        final String COMMIT_MESSAGE_INVALID_JAVA_FILE = "Invalid java file";
+        createEpicBranchDivergentFromMaster();
+        git.createAndCommitTestfile(repositorySet, "src/main/java/InvalidJavaFile.java",
+                COMMIT_MESSAGE_INVALID_JAVA_FILE);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.installProject", "true");
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertGitFlowFailureException(result,
+                "Failed to execute 'mvn clean install' on the project on epic branch after update.",
+                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
+                        + "'mvn flow:epic-update' again in order to continue.");
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
+
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE);
+        git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, EPIC_BRANCH, EPIC_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_INVALID_JAVA_FILE,
+                COMMIT_MESSAGE_EPIC_TESTFILE, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_MASTER_TESTFILE,
+                COMMIT_MESSAGE_MARGE);
+        git.assertCommitsInRemoteBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_SET_VERSION);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), EPIC_VERSION);
+
+        git.assertBranchLocalConfigValue(repositorySet, EPIC_BRANCH, "breakpoint", "epicUpdate.cleanInstall");
+    }
+
+    @Test
+    public void testExecuteContinueAfterFailureOnCleanInstall() throws Exception {
+        // set up
+        final String COMMIT_MESSAGE_INVALID_JAVA_FILE = "Invalid java file";
+        final String COMMIT_MESSAGE_INVALID_JAVA_FILE_REMOVED = "Invalid java file removed";
+        createEpicBranchDivergentFromMaster();
+        git.createAndCommitTestfile(repositorySet, "src/main/java/InvalidJavaFile.java",
+                COMMIT_MESSAGE_INVALID_JAVA_FILE);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.installProject", "true");
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        verifyZeroInteractions(promptControllerMock);
+        assertGitFlowFailureException(result,
+                "Failed to execute 'mvn clean install' on the project on epic branch after update.",
+                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
+                        + "'mvn flow:epic-update' again in order to continue.");
+        git.assertBranchLocalConfigValue(repositorySet, EPIC_BRANCH, "breakpoint", "epicUpdate.cleanInstall");
+        repositorySet.getLocalRepoGit().rm().addFilepattern("src/main/java/InvalidJavaFile.java").call();
+        git.commitAll(repositorySet, COMMIT_MESSAGE_INVALID_JAVA_FILE_REMOVED);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
+
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, EPIC_BRANCH, EPIC_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_INVALID_JAVA_FILE_REMOVED,
+                COMMIT_MESSAGE_INVALID_JAVA_FILE, COMMIT_MESSAGE_EPIC_TESTFILE, COMMIT_MESSAGE_SET_VERSION,
+                COMMIT_MESSAGE_MASTER_TESTFILE, COMMIT_MESSAGE_MARGE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), EPIC_VERSION);
+
+        git.assertBranchLocalConfigValueMissing(repositorySet, EPIC_BRANCH, "breakpoint");
+    }
+
+    @Test
+    public void testExecuteContinueWithInstallProjectFalseAfterFailureOnCleanInstall() throws Exception {
+        // set up
+        final String COMMIT_MESSAGE_INVALID_JAVA_FILE = "Invalid java file";
+        createEpicBranchDivergentFromMaster();
+        git.createAndCommitTestfile(repositorySet, "src/main/java/InvalidJavaFile.java",
+                COMMIT_MESSAGE_INVALID_JAVA_FILE);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.installProject", "true");
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        verifyZeroInteractions(promptControllerMock);
+        assertGitFlowFailureException(result,
+                "Failed to execute 'mvn clean install' on the project on epic branch after update.",
+                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
+                        + "'mvn flow:epic-update' again in order to continue.");
+        git.assertBranchLocalConfigValue(repositorySet, EPIC_BRANCH, "breakpoint", "epicUpdate.cleanInstall");
+        userProperties.setProperty("flow.installProject", "false");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
+
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, EPIC_BRANCH, EPIC_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_INVALID_JAVA_FILE,
+                COMMIT_MESSAGE_EPIC_TESTFILE, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_MASTER_TESTFILE,
+                COMMIT_MESSAGE_MARGE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), EPIC_VERSION);
+
+        git.assertBranchLocalConfigValueMissing(repositorySet, EPIC_BRANCH, "breakpoint");
+    }
+
 }

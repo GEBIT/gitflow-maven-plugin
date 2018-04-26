@@ -2420,4 +2420,116 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertTestfileContentModified(repositorySet, TESTFILE_NAME);
     }
 
+    @Test
+    public void testExecuteFailureOnCleanInstall() throws Exception {
+        // set up
+        final String COMMIT_MESSAGE_INVALID_JAVA_FILE = "Invalid java file";
+        createFeatureBranchDivergentFromMaster();
+        git.createAndCommitTestfile(repositorySet, "src/main/java/InvalidJavaFile.java",
+                COMMIT_MESSAGE_INVALID_JAVA_FILE);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.installProject", "true");
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertGitFlowFailureException(result,
+                "Failed to execute 'mvn clean install' on the project on feature branch after rebase.",
+                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
+                        + "'mvn flow:feature-rebase' again in order to continue.\n"
+                        + "Do NOT push the feature branch!");
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE);
+        git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, FEATURE_BRANCH, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_INVALID_JAVA_FILE,
+                COMMIT_MESSAGE_FEATURE_TESTFILE, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_MASTER_TESTFILE);
+        git.assertCommitsInRemoteBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
+
+        git.assertBranchLocalConfigValue(repositorySet, FEATURE_BRANCH, "breakpoint", "featureRebase.cleanInstall");
+    }
+
+    @Test
+    public void testExecuteContinueAfterFailureOnCleanInstall() throws Exception {
+        // set up
+        final String COMMIT_MESSAGE_INVALID_JAVA_FILE = "Invalid java file";
+        final String COMMIT_MESSAGE_INVALID_JAVA_FILE_REMOVED = "Invalid java file removed";
+        createFeatureBranchDivergentFromMaster();
+        git.createAndCommitTestfile(repositorySet, "src/main/java/InvalidJavaFile.java",
+                COMMIT_MESSAGE_INVALID_JAVA_FILE);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.installProject", "true");
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        verifyZeroInteractions(promptControllerMock);
+        assertGitFlowFailureException(result,
+                "Failed to execute 'mvn clean install' on the project on feature branch after rebase.",
+                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
+                        + "'mvn flow:feature-rebase' again in order to continue.\n"
+                        + "Do NOT push the feature branch!");
+        git.assertBranchLocalConfigValue(repositorySet, FEATURE_BRANCH, "breakpoint", "featureRebase.cleanInstall");
+        repositorySet.getLocalRepoGit().rm().addFilepattern("src/main/java/InvalidJavaFile.java").call();
+        git.commitAll(repositorySet, COMMIT_MESSAGE_INVALID_JAVA_FILE_REMOVED);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, FEATURE_BRANCH, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_INVALID_JAVA_FILE_REMOVED,
+                COMMIT_MESSAGE_INVALID_JAVA_FILE, COMMIT_MESSAGE_FEATURE_TESTFILE, COMMIT_MESSAGE_SET_VERSION,
+                COMMIT_MESSAGE_MASTER_TESTFILE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
+        git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "breakpoint");
+    }
+
+    @Test
+    public void testExecuteContinueWithInstallProjectFalseAfterFailureOnCleanInstall() throws Exception {
+        // set up
+        final String COMMIT_MESSAGE_INVALID_JAVA_FILE = "Invalid java file";
+        createFeatureBranchDivergentFromMaster();
+        git.createAndCommitTestfile(repositorySet, "src/main/java/InvalidJavaFile.java",
+                COMMIT_MESSAGE_INVALID_JAVA_FILE);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.installProject", "true");
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        verifyZeroInteractions(promptControllerMock);
+        assertGitFlowFailureException(result,
+                "Failed to execute 'mvn clean install' on the project on feature branch after rebase.",
+                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
+                        + "'mvn flow:feature-rebase' again in order to continue.\n"
+                        + "Do NOT push the feature branch!");
+        git.assertBranchLocalConfigValue(repositorySet, FEATURE_BRANCH, "breakpoint", "featureRebase.cleanInstall");
+        userProperties.setProperty("flow.installProject", "false");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, FEATURE_BRANCH, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_INVALID_JAVA_FILE,
+                COMMIT_MESSAGE_FEATURE_TESTFILE, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_MASTER_TESTFILE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
+        git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "breakpoint");
+    }
+
 }

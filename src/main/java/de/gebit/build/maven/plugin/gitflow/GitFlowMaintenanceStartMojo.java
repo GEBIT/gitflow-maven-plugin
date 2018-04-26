@@ -235,7 +235,14 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
         }
 
         if (installProject) {
-            mvnCleanInstall();
+            try {
+                mvnCleanInstall();
+            } catch (MojoFailureException e) {
+                throw new GitFlowFailureException(e,
+                        "Failed to execute 'mvn clean install' on the project on maintenance branch after maintenance "
+                                + "start.",
+                        "Maintenance branch was created successfully. No further steps with gitflow are required.");
+            }
         }
     }
 
