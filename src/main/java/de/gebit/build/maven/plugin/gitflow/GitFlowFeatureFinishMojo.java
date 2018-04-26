@@ -246,6 +246,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
                 }
             } else {
                 baseBranch = tmpBaseBranch;
+                checkUncommittedChanges();
             }
         } else {
             if (!getPrompter().promptConfirmation(

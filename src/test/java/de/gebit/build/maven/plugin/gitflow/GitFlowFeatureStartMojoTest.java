@@ -1279,7 +1279,6 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         assertGitFlowFailureException(result,
                 "Failed to execute 'mvn clean install' on the project on feature branch after feature start.",
                 "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
@@ -1310,7 +1309,6 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("featureName", FEATURE_NAME);
         userProperties.setProperty("flow.installProject", "true");
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
-        verifyZeroInteractions(promptControllerMock);
         assertGitFlowFailureException(result,
                 "Failed to execute 'mvn clean install' on the project on feature branch after feature start.",
                 "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
@@ -1320,9 +1318,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         repositorySet.getLocalRepoGit().rm().addFilepattern("src/main/java/InvalidJavaFile.java").call();
         git.commitAll(repositorySet, COMMIT_MESSAGE_INVALID_JAVA_FILE_REMOVED);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
@@ -1348,7 +1345,6 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("featureName", FEATURE_NAME);
         userProperties.setProperty("flow.installProject", "true");
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
-        verifyZeroInteractions(promptControllerMock);
         assertGitFlowFailureException(result,
                 "Failed to execute 'mvn clean install' on the project on feature branch after feature start.",
                 "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
@@ -1357,9 +1353,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
         userProperties.setProperty("flow.installProject", "false");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        verifyZeroInteractions(promptControllerMock);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
