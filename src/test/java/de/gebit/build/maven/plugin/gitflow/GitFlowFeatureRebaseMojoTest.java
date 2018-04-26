@@ -1853,7 +1853,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, FEATURE_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, FEATURE_BRANCH, CONFIG_BRANCH);
 
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE);
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FEATURE_TESTFILE,
