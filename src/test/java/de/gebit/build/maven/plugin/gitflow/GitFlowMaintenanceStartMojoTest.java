@@ -1118,4 +1118,43 @@ public class GitFlowMaintenanceStartMojoTest extends AbstractGitFlowMojoTestCase
         git.assertTestfileContentModified(repositorySet);
     }
 
+    @Test
+    public void testExecuteFailureOnCleanInstall() throws Exception {
+        // set up
+        final String COMMIT_MESSAGE_INVALID_JAVA_FILE = "Invalid java file";
+        git.createAndCommitTestfile(repositorySet);
+        git.createAndCommitTestfile(repositorySet, "src/main/java/InvalidJavaFile.java",
+                COMMIT_MESSAGE_INVALID_JAVA_FILE);
+        git.push(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.installProject", "true");
+        when(promptControllerMock.prompt(PROMPT_SELECTING_RELEASE_NO_TAGS, Arrays.asList("0", "T"))).thenReturn("0");
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION))
+                .thenReturn(MAINTENANCE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION))
+                .thenReturn(MAINTENANCE_FIRST_VERSION);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_SELECTING_RELEASE_NO_TAGS, Arrays.asList("0", "T"));
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION);
+        verifyNoMoreInteractions(promptControllerMock);
+        assertGitFlowFailureException(result,
+                "Failed to execute 'mvn clean install' on the project on maintenance branch after maintenance start.",
+                "Maintenance branch was created successfully. No further steps with gitflow are required.");
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE,
+                COMMIT_MESSAGE_INVALID_JAVA_FILE);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE,
+                GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_INVALID_JAVA_FILE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
+    }
+
 }
