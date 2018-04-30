@@ -96,16 +96,18 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
                 baseBranch = gitEpicBranchBaseBranch(epicBranchName);
                 gitEnsureLocalBranchIsUpToDateIfExists(baseBranch,
                         new GitFlowFailureInfo("Remote and local base branches '" + baseBranch + "' diverge.",
-                                "Rebase the changes in local branch '" + baseBranch
-                                        + "' and then include these changes in the epic branch '" + epicBranchName
-                                        + "' in order to proceed.",
-                                "'git checkout " + baseBranch + "' and 'git rebase' to rebase the changes in base branch '"
-                                        + baseBranch + "'",
+                                "Rebase the changes in local branch '"
+                                        + baseBranch + "' and then include these changes in the epic branch '"
+                                        + epicBranchName + "' in order to proceed.",
+                                "'git checkout " + baseBranch
+                                        + "' and 'git rebase' to rebase the changes in base branch '" + baseBranch
+                                        + "'",
                                 "'git checkout " + epicBranchName
                                         + "' and 'mvn flow:epic-update' to include these changes in the epic branch '"
                                         + epicBranchName + "'"));
                 if (!hasCommitsExceptVersionChangeCommitOnEpicBranch(epicBranchName, baseBranch)) {
-                    throw new GitFlowFailureException("There are no real changes in epic branch '" + epicBranchName + "'.",
+                    throw new GitFlowFailureException(
+                            "There are no real changes in epic branch '" + epicBranchName + "'.",
                             "Delete the epic branch or commit some changes first.",
                             "'mvn flow:epic-abort' to delete the epic branch",
                             "'git add' and 'git commit' to commit some changes into epic branch and "
@@ -119,9 +121,8 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
                                     + "run 'mvn flow:epic-finish' again. Are you sure you want to continue?",
                             false, false);
                     if (!confirmed) {
-                        throw new GitFlowFailureException(
-                                "Base branch '" + baseBranch + "' has changes that are not yet included in epic branch '"
-                                        + epicBranchName + "'.",
+                        throw new GitFlowFailureException("Base branch '" + baseBranch
+                                + "' has changes that are not yet included in epic branch '" + epicBranchName + "'.",
                                 "Merge the changes into epic branch first in order to proceed.",
                                 "'mvn flow:epic-update' to merge the changes into epic branch");
                     }
@@ -147,7 +148,7 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
                         getLog().info("Reverting the project version on epic branch to the version on base branch.");
                         gitCheckout(epicBranchName);
                         String issueNumber = getEpicIssueNumber(epicBranchName);
-                        String epicFinishMessage = substituteInEpicMessage(commitMessages.getEpicFinishMessage(),
+                        String epicFinishMessage = substituteWithIssueNumber(commitMessages.getEpicFinishMessage(),
                                 issueNumber);
                         mvnSetVersions(baseVersion);
                         gitCommit(epicFinishMessage);

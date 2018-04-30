@@ -499,7 +499,11 @@ public class GitExecution {
      *             in case of an I/O error
      */
     public String currentCommit(RepositorySet repositorySet) throws IOException {
-        return repositorySet.getLocalRepoGit().getRepository().resolve("HEAD").getName();
+        return commitId(repositorySet, "HEAD");
+    }
+
+    public String commitId(RepositorySet repositorySet, String ref) throws IOException {
+        return repositorySet.getLocalRepoGit().getRepository().resolve(ref).getName();
     }
 
     /**

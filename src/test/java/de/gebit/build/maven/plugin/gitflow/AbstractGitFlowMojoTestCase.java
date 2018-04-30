@@ -17,6 +17,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import java.io.Closeable;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
@@ -42,6 +43,7 @@ import org.apache.maven.lifecycle.LifecycleExecutionException;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.building.ModelProcessor;
 import org.apache.maven.model.io.ModelParseException;
+import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.codehaus.plexus.ContainerConfiguration;
@@ -510,7 +512,7 @@ public abstract class AbstractGitFlowMojoTestCase {
         return result;
     }
 
-    private MavenExecutionRequest createMavenExecutionRequest(File basedir, String fullGoal,
+    private MavenExecutionRequest createMavenExecutionRequest(final File basedir, String fullGoal,
             boolean useProfileWithDefaults, Properties properties, final String pluginVersion,
             boolean throwCommandLineExceptionOnCommandLineExecution, String... activeProfiles) throws Exception {
         Properties userProperties = properties != null ? properties : new Properties();
@@ -534,6 +536,12 @@ public abstract class AbstractGitFlowMojoTestCase {
                 if (aArtifact.getArtifactId().equals("gitflow-maven-plugin")) {
                     if (aArtifact.getExtension().equals("pom")) {
                         return new File("pom.xml");
+                    } else {
+                        return WorkspaceUtils.getWorkspaceClasspath();
+                    }
+                } else if (aArtifact.getArtifactId().equals("upstream-pom")) {
+                    if (aArtifact.getExtension().equals("pom")) {
+                        return new File(basedir, "upstream-pom-" + aArtifact.getVersion() + ".xml").getAbsoluteFile();
                     } else {
                         return WorkspaceUtils.getWorkspaceClasspath();
                     }
@@ -620,6 +628,12 @@ public abstract class AbstractGitFlowMojoTestCase {
     protected Model readPom(File basedir) throws ComponentLookupException, ModelParseException, IOException {
         ModelProcessor modelProcessor = container.lookup(ModelProcessor.class);
         return modelProcessor.read(new File(basedir, "pom.xml"), null);
+    }
+
+    protected void writePom(File basedir, Model pom) throws IOException {
+        try (FileWriter writer = new FileWriter(new File(basedir, "pom.xml"))) {
+            new MavenXpp3Writer().write(writer, pom);
+        }
     }
 
     /**

@@ -105,15 +105,15 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
 
     private static final GitFlowFailureInfo EXPECTED_REBASE_CONFLICT_MESSAGE_PATTERN = new GitFlowFailureInfo(
             "\\QAutomatic rebase failed.\nGit error message:\n\\E.*",
-            "\\QFix the rebase conflicts and mark them as resolved. After that, run 'mvn flow:feature-rebase' again. "
-                    + "Do NOT run 'git rebase --continue'.\\E",
+            "\\QFix the rebase conflicts and mark them as resolved. After that, run 'mvn flow:feature-rebase' again.\n"
+                    + "Do NOT run 'git rebase --continue'!\\E",
             "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved\\E",
             "\\Q'mvn flow:feature-rebase' to continue feature rebase process\\E");
 
     private static final GitFlowFailureInfo EXPECTED_MERGE_CONFLICT_MESSAGE_PATTERN = new GitFlowFailureInfo(
             "\\QAutomatic merge failed.\nGit error message:\n\\E.*",
-            "\\QFix the merge conflicts and mark them as resolved. After that, run 'mvn flow:feature-rebase' again. "
-                    + "Do NOT run 'git merge --continue'.\\E",
+            "\\QFix the merge conflicts and mark them as resolved. After that, run 'mvn flow:feature-rebase' again.\n"
+                    + "Do NOT run 'git merge --continue'!\\E",
             "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved\\E",
             "\\Q'mvn flow:feature-rebase' to continue feature rebase process\\E");
 
@@ -2134,7 +2134,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         assertGitFlowFailureExceptionRegEx(result,
                 new GitFlowFailureInfo("\\QThere are unresolved conflicts after rebase.\nGit error message:\n\\E.*",
                         "\\QFix the rebase conflicts and mark them as resolved. After that, run "
-                                + "'mvn flow:feature-rebase' again. Do NOT run 'git rebase --continue'.\\E",
+                                + "'mvn flow:feature-rebase' again.\nDo NOT run 'git rebase --continue'!\\E",
                         "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
                                 + "conflicts as resolved\\E",
                         "\\Q'mvn flow:feature-rebase' to continue feature rebase process\\E"));
@@ -2173,7 +2173,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         assertGitFlowFailureExceptionRegEx(result,
                 new GitFlowFailureInfo("\\QThere are unresolved conflicts after rebase.\nGit error message:\n\\E.*",
                         "\\QFix the rebase conflicts and mark them as resolved. After that, run "
-                                + "'mvn flow:feature-rebase' again. Do NOT run 'git rebase --continue'.\\E",
+                                + "'mvn flow:feature-rebase' again.\nDo NOT run 'git rebase --continue'!\\E",
                         "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
                                 + "conflicts as resolved\\E",
                         "\\Q'mvn flow:feature-rebase' to continue feature rebase process\\E"));
@@ -2284,7 +2284,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         assertGitFlowFailureExceptionRegEx(result,
                 new GitFlowFailureInfo("\\QThere are unresolved conflicts after merge.\nGit error message:\n\\E.*",
                         "\\QFix the merge conflicts and mark them as resolved. After that, run "
-                                + "'mvn flow:feature-rebase' again. Do NOT run 'git merge --continue'.\\E",
+                                + "'mvn flow:feature-rebase' again.\nDo NOT run 'git merge --continue'!\\E",
                         "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts "
                                 + "as resolved\\E",
                         "\\Q'mvn flow:feature-rebase' to continue feature rebase process\\E"));

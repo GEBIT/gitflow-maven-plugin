@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.maven.cli.CLIManager;
 import org.apache.maven.cli.ExtCliRequest;
 import org.apache.maven.cli.MavenCli;
 import org.apache.maven.execution.MavenExecutionRequest;
@@ -75,6 +76,27 @@ public class ExtMavenCli extends MavenCli {
         if (pluginVersion == null) {
             throw new IllegalArgumentException("Missing system property '" + PROPERTY_KEY_PLUGIN_VERSION + "'");
         }
+        String workingDirectory = System.getProperty("user.dir");
+        final File basedir;
+        String alternatePomFile = null;
+        if (aCliRequest.getCommandLine().hasOption(CLIManager.ALTERNATE_POM_FILE)) {
+            alternatePomFile = aCliRequest.getCommandLine().getOptionValue(CLIManager.ALTERNATE_POM_FILE);
+            if (alternatePomFile != null) {
+                File pom = ExtCliRequest.resolveFile(new File(alternatePomFile), workingDirectory);
+                if (pom.isDirectory()) {
+                    pom = new File(pom, "pom.xml");
+                }
+                if (pom.getParentFile() != null) {
+                    basedir = pom.getParentFile();
+                } else {
+                    basedir = new File(workingDirectory, "").getAbsoluteFile();
+                }
+            } else {
+                basedir = new File(workingDirectory, "").getAbsoluteFile();
+            }
+        } else {
+            basedir = new File(workingDirectory, "").getAbsoluteFile();
+        }
         WorkspaceReader workspaceReader = new WorkspaceReader() {
 
             WorkspaceRepository workspaceRepo = new WorkspaceRepository("ide", getClass());
@@ -101,6 +123,12 @@ public class ExtMavenCli extends MavenCli {
                             }
                         }
                         return targetClasses;
+                    }
+                } else if (aArtifact.getArtifactId().equals("upstream-pom")) {
+                    if (aArtifact.getExtension().equals("pom")) {
+                        return new File(basedir, "upstream-pom-" + aArtifact.getVersion() + ".xml").getAbsoluteFile();
+                    } else {
+                        return WorkspaceUtils.getWorkspaceClasspath();
                     }
                 }
                 return null;
@@ -133,8 +161,8 @@ public class ExtMavenCli extends MavenCli {
                 continue;
             }
             if ("-P".equals(arg) || "-s".equals(arg) || "-f".equals(arg)) {
-                skip = true;
-                continue;
+                 skip = true;
+                 continue;
             }
             if (arg.startsWith("-Dversion.gitflow-maven-plugin=")) {
                 continue;

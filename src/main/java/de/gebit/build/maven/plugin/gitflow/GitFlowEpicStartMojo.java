@@ -122,7 +122,8 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
                                             + epicNamePatternDescription;
                                 } else {
                                     invalidMessage = "The epic name '" + value
-                                            + "' is invalid. It does not match the required pattern: " + epicNamePattern;
+                                            + "' is invalid. It does not match the required pattern: "
+                                            + epicNamePattern;
                                 }
                                 return new ValidationResult(invalidMessage);
                             } else {
@@ -158,7 +159,7 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
 
             epicIssue = extractIssueNumberFromEpicName(epicName);
             getLog().info("Epic issue number: " + epicIssue);
-            String epicStartMessage = substituteInEpicMessage(commitMessages.getEpicStartMessage(), epicIssue);
+            String epicStartMessage = substituteWithIssueNumber(commitMessages.getEpicStartMessage(), epicIssue);
             String currentVersion = getCurrentProjectVersion();
             String baseVersion = currentVersion;
             String versionChangeCommit = null;
@@ -172,7 +173,8 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
                     gitCommit(epicStartMessage);
                     versionChangeCommit = getCurrentCommit();
                 } else {
-                    getLog().info("Project version for epic is same as base project version. Version update not needed.");
+                    getLog().info(
+                            "Project version for epic is same as base project version. Version update not needed.");
                 }
             }
 
