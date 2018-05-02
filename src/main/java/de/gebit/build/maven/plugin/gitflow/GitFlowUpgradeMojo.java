@@ -164,7 +164,11 @@ public class GitFlowUpgradeMojo extends AbstractGitFlowMojo {
             tmpChanges.setProperty(BranchConfigKeys.START_COMMIT_MESSAGE, featureStartMessage);
         }
         if (!properties.containsKey(BranchConfigKeys.VERSION_CHANGE_COMMIT)) {
-            String branchPoint = gitBranchPoint(featureBranchRef, baseBranch);
+            String baseBranchRef = baseBranch;
+            if (!gitBranchExists(baseBranch)) {
+                baseBranchRef = gitFlowConfig.getOrigin() + "/" + baseBranch;
+            }
+            String branchPoint = gitBranchPoint(featureBranchRef, baseBranchRef);
             String firstCommitOnBranch = gitFirstCommitOnBranch(featureBranchRef, branchPoint);
             String firstCommitMessage = gitCommitMessage(firstCommitOnBranch);
             if (firstCommitMessage.contains(featureStartMessage)) {
@@ -258,7 +262,11 @@ public class GitFlowUpgradeMojo extends AbstractGitFlowMojo {
             tmpChanges.setProperty(BranchConfigKeys.START_COMMIT_MESSAGE, epicStartMessage);
         }
         if (!properties.containsKey(BranchConfigKeys.VERSION_CHANGE_COMMIT)) {
-            String branchPoint = gitBranchPoint(epicBranchRef, baseBranch);
+            String baseBranchRef = baseBranch;
+            if (!gitBranchExists(baseBranch)) {
+                baseBranchRef = gitFlowConfig.getOrigin() + "/" + baseBranch;
+            }
+            String branchPoint = gitBranchPoint(epicBranchRef, baseBranchRef);
             String firstCommitOnBranch = gitFirstCommitOnBranch(epicBranchRef, branchPoint);
             String firstCommitMessage = gitCommitMessage(firstCommitOnBranch);
             if (firstCommitMessage.contains(epicStartMessage)) {
