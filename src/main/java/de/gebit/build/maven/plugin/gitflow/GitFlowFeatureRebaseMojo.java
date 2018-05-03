@@ -15,7 +15,6 @@
  */
 package de.gebit.build.maven.plugin.gitflow;
 
-import java.util.List;
 import java.util.Objects;
 
 import org.apache.maven.plugin.MojoExecutionException;
@@ -79,9 +78,10 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
         } else {
             confirmedUpdateWithMerge = false;
         }
+        String currentBranch = null;
         boolean continueOnCleanInstall = false;
         if (featureBranchName == null) {
-            String currentBranch = gitCurrentBranch();
+            currentBranch = gitCurrentBranch();
             if (isFeatureBranch(currentBranch)) {
                 String breakpoint = gitGetBranchLocalConfig(currentBranch, "breakpoint");
                 if (breakpoint != null) {
@@ -97,36 +97,21 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
                 // check uncommitted changes
                 checkUncommittedChanges();
 
-                List<String> branches = gitAllFeatureBranches();
-                if (branches.isEmpty()) {
-                    throw new GitFlowFailureException("There are no feature branches in your repository.",
-                            "Please start a feature first.", "'mvn flow:feature-start'");
+                if (currentBranch == null) {
+                    currentBranch = gitCurrentBranch();
                 }
-                String currentBranch = gitCurrentBranch();
-                boolean isOnFeatureBranch = branches.contains(currentBranch);
-                if (!isOnFeatureBranch) {
-                    featureBranchName = getPrompter().promptToSelectFromOrderedList("Feature branches:",
-                            "Choose feature branch to rebase", branches,
-                            new GitFlowFailureInfo(
-                                    "In non-interactive mode 'mvn flow:feature-rebase' can be executed only on a "
-                                            + "feature branch.",
-                                    "Please switch to a feature branch first or run in interactive mode.",
-                                    "'git checkout BRANCH' to switch to the feature branch",
-                                    "'mvn flow:feature-rebase' to run in interactive mode"));
-                    getLog().info("Rebasing feature on selected feature branch: " + featureBranchName);
-                    gitEnsureLocalBranchIsUpToDateIfExists(featureBranchName, new GitFlowFailureInfo(
-                            "Remote and local feature branches '" + featureBranchName + "' diverge.",
-                            "Rebase or merge the changes in local feature branch '" + featureBranchName + "' first.",
-                            "'git rebase'"));
-                    // git checkout feature/...
-                    gitCheckout(featureBranchName);
-                } else {
-                    featureBranchName = currentBranch;
-                    getLog().info("Rebasing feature on current feature branch: " + featureBranchName);
-                    gitEnsureCurrentLocalBranchIsUpToDate(new GitFlowFailureInfo(
-                            "Remote and local feature branches '{0}' diverge.",
-                            "Rebase or merge the changes in local feature branch '{0}' first.", "'git rebase'"));
+                if (!isFeatureBranch(currentBranch)) {
+                    throw new GitFlowFailureException(
+                            "'mvn flow:feature-rebase' can be executed only on a feature branch.",
+                            "Please switch to a feature branch first.",
+                            "'git checkout BRANCH' to switch to the feature branch");
                 }
+
+                featureBranchName = currentBranch;
+                getLog().info("Rebasing feature on current feature branch: " + featureBranchName);
+                gitEnsureCurrentLocalBranchIsUpToDate(
+                        new GitFlowFailureInfo("Remote and local feature branches '{0}' diverge.",
+                                "Rebase or merge the changes in local feature branch '{0}' first.", "'git rebase'"));
 
                 String baseBranch = gitFeatureBranchBaseBranch(featureBranchName);
                 // use integration branch?
