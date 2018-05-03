@@ -108,7 +108,8 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
                     featureBranchName = getPrompter().promptToSelectFromOrderedList("Feature branches:",
                             "Choose feature branch to rebase", branches,
                             new GitFlowFailureInfo(
-                                    "In non-interactive mode 'mvn flow:feature-rebase' can be executed only on a feature branch.",
+                                    "In non-interactive mode 'mvn flow:feature-rebase' can be executed only on a "
+                                            + "feature branch.",
                                     "Please switch to a feature branch first or run in interactive mode.",
                                     "'git checkout BRANCH' to switch to the feature branch",
                                     "'mvn flow:feature-rebase' to run in interactive mode"));
@@ -179,8 +180,8 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
                 }
                 if (updateWithMerge && rebaseWithoutVersionChange) {
                     String answer = getPrompter().promptSelection(
-                            "Updating is configured for merges, a later rebase will not be possible. "
-                                    + "Select if you want to proceed with (m)erge or you want to use (r)ebase instead or (a)bort "
+                            "Updating is configured for merges, a later rebase will not be possible. Select if you "
+                                    + "want to proceed with (m)erge or you want to use (r)ebase instead or (a)bort "
                                     + "the process.",
                             new String[] { "m", "r", "a" }, "a",
                             new GitFlowFailureInfo(
@@ -207,7 +208,8 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
                                         + "'mvn flow:feature-rebase' again.\nDo NOT run 'git merge --continue'!",
                                 "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
                                         + "conflicts as resolved",
-                                "'mvn flow:feature-rebase' to continue feature rebase process");
+                                "'mvn flow:feature-rebase' to continue feature rebase process",
+                                "'mvn flow:feature-rebase-abort' to abort feature rebase process");
                     }
                 } else {
                     // rebase feature on top of development
@@ -218,6 +220,9 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
                         String tempFeatureBranch = createTempFeatureBranchName(featureBranchName);
                         getLog().info("Creating temporary branch with new version change commit to be used for feature "
                                 + "rebase.");
+                        if (gitBranchExists(tempFeatureBranch)) {
+                            gitBranchDeleteForce(tempFeatureBranch);
+                        }
                         gitCreateAndCheckout(tempFeatureBranch, baseBranch);
                         String currentVersion = getCurrentProjectVersion();
                         String baseVersion = currentVersion;
@@ -245,10 +250,12 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
                                     "Automatic rebase failed.\nGit error message:\n"
                                             + StringUtils.trim(ex.getMessage()),
                                     "Fix the rebase conflicts and mark them as resolved. After that, run "
-                                            + "'mvn flow:feature-rebase' again.\nDo NOT run 'git rebase --continue'!",
+                                            + "'mvn flow:feature-rebase' again.\n"
+                                            + "Do NOT run 'git rebase --continue' and 'git rebase --abort'!",
                                     "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
                                             + "conflicts as resolved",
-                                    "'mvn flow:feature-rebase' to continue feature rebase process");
+                                    "'mvn flow:feature-rebase' to continue feature rebase process",
+                                    "'mvn flow:feature-rebase-abort' to abort feature rebase process");
                         }
                     } else {
                         try {
@@ -258,10 +265,12 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
                                     "Automatic rebase failed.\nGit error message:\n"
                                             + StringUtils.trim(ex.getMessage()),
                                     "Fix the rebase conflicts and mark them as resolved. After that, run "
-                                            + "'mvn flow:feature-rebase' again.\nDo NOT run 'git rebase --continue'!",
+                                            + "'mvn flow:feature-rebase' again.\n"
+                                            + "Do NOT run 'git rebase --continue' and 'git rebase --abort'!",
                                     "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
                                             + "conflicts as resolved",
-                                    "'mvn flow:feature-rebase' to continue feature rebase process");
+                                    "'mvn flow:feature-rebase' to continue feature rebase process",
+                                    "'mvn flow:feature-rebase-abort' to abort feature rebase process");
                         }
                     }
                 }
@@ -285,7 +294,8 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
                                         + "'mvn flow:feature-rebase' again.\nDo NOT run 'git merge --continue'!",
                                 "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
                                         + "conflicts as resolved",
-                                "'mvn flow:feature-rebase' to continue feature rebase process");
+                                "'mvn flow:feature-rebase' to continue feature rebase process",
+                                "'mvn flow:feature-rebase-abort' to abort feature rebase process");
                     }
                 } else {
                     // continue with the rebase
@@ -302,10 +312,12 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
                                 "There are unresolved conflicts after rebase.\nGit error message:\n"
                                         + StringUtils.trim(exc.getMessage()),
                                 "Fix the rebase conflicts and mark them as resolved. After that, run "
-                                        + "'mvn flow:feature-rebase' again.\nDo NOT run 'git rebase --continue'!",
+                                        + "'mvn flow:feature-rebase' again.\n"
+                                        + "Do NOT run 'git rebase --continue' and 'git rebase --abort'!",
                                 "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
                                         + "conflicts as resolved",
-                                "'mvn flow:feature-rebase' to continue feature rebase process");
+                                "'mvn flow:feature-rebase' to continue feature rebase process",
+                                "'mvn flow:feature-rebase-abort' to abort feature rebase process");
                     }
                 }
             }
@@ -356,10 +368,6 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
             gitPush(featureBranchName, false, true);
         }
         getLog().info("Feature rebase process finished.");
-    }
-
-    private String createTempFeatureBranchName(String featureBranchName) {
-        return "tmp-" + featureBranchName;
     }
 
     private String createFeatureVersion(String baseVersion, String featureBranchName, String baseBranchName)

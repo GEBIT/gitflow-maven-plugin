@@ -314,4 +314,15 @@ public abstract class AbstractGitFlowFeatureMojo extends AbstractGitFlowMojo {
         return featureBranch;
     }
 
+    /**
+     * Create a name of temporary feature branch for passed feature branch.
+     *
+     * @param featureBranchName
+     *            the name of feature branch
+     * @return the name of temporary feature branch
+     */
+    protected String createTempFeatureBranchName(String featureBranchName) {
+        return "tmp-" + featureBranchName;
+    }
+
 }

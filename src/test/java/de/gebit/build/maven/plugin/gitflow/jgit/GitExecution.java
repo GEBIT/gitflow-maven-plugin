@@ -919,6 +919,40 @@ public class GitExecution {
     }
 
     /**
+     * Assert that passed config entry exists in local repository.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param configSection
+     *            the section part of the config entry key
+     * @param configSubsection
+     *            the sub-section part of the config entry key
+     * @param configName
+     *            the name part of the config entry key
+     */
+    public void assertConfigValueExists(RepositorySet repositorySet, String configSection, String configSubsection,
+            String configName) {
+        String value = getConfigValue(repositorySet, configSection, configSubsection, configName);
+        assertNotNull("git config [section='" + configSection + "', subsection='" + configSubsection + "', name='"
+                + configName + "'] found but not expected", value);
+    }
+
+    /**
+     * Assert that passed config entry for passed branch exists in local
+     * repository.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param branchName
+     *            the name of the branch
+     * @param configName
+     *            the name part of the config entry key
+     */
+    public void assertBranchLocalConfigValueExists(RepositorySet repositorySet, String branchName, String configName) {
+        assertConfigValueExists(repositorySet, "branch", branchName, configName);
+    }
+
+    /**
      * Return value of passed config entry or <code>null</code> if config entry
      * doesn't exist.
      *

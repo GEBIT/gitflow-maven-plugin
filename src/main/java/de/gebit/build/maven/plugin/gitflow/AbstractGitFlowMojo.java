@@ -2820,6 +2820,16 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
+     * Abort the rebase in process.
+     *
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitRebaseAbort() throws MojoFailureException, CommandLineException {
+        executeGitCommand("rebase", "--abort");
+    }
+
+    /**
      * Start a rebase --interactive in the current branch on the given commit.
      *
      * @param commitId
