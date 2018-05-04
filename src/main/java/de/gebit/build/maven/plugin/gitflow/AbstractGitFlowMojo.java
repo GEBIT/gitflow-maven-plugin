@@ -1428,6 +1428,21 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
+     * Rebase branch starting from oldBase on top of newBase.<br>
+     * Execute: <code>git rebase --onto newBase oldBase branch</code>
+     *
+     * @param newBase
+     * @param oldBase
+     * @param branch
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitRebaseOnto(String newBase, String oldBase, String branch)
+            throws MojoFailureException, CommandLineException {
+        executeGitCommand("rebase", "--onto", newBase, oldBase, branch);
+    }
+
+    /**
      * @param aBranchName
      * @param aCurrentBranchName
      * @return
@@ -1574,7 +1589,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Execute <code>git fetch</code> if not yet executed and <code>fetchRemote=true</code>.
+     * Execute <code>git fetch</code> if not yet executed and
+     * <code>fetchRemote=true</code>.
      *
      * @throws MojoFailureException
      * @throws CommandLineException
@@ -1584,7 +1600,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Execute <code>git fetch</code> if <code>fetchRemote=true</code> even if already executed.
+     * Execute <code>git fetch</code> if <code>fetchRemote=true</code> even if
+     * already executed.
      *
      * @throws MojoFailureException
      * @throws CommandLineException
@@ -2803,6 +2820,16 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
+     * Abort the rebase in process.
+     *
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitRebaseAbort() throws MojoFailureException, CommandLineException {
+        executeGitCommand("rebase", "--abort");
+    }
+
+    /**
      * Start a rebase --interactive in the current branch on the given commit.
      *
      * @param commitId
@@ -2890,7 +2917,32 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected void mvnSetVersions(final String version, String promptPrefix)
             throws MojoFailureException, CommandLineException {
+        mvnSetVersions(version, promptPrefix, null, false);
+    }
 
+    /**
+     * Executes 'set' goal of versions-maven-plugin or 'set-version' of
+     * tycho-versions-plugin in case it is tycho build.
+     *
+     * @param version
+     *            New version to set.
+     * @param promptPrefix
+     *            Specify a prompt prefix. A value <code>!= null</code> triggers
+     *            processing of {@link #additionalVersionCommands}
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void mvnSetVersions(final String version, String promptPrefix, String branchWithAdditionalVersionInfo,
+            boolean sameBaseVersion) throws MojoFailureException, CommandLineException {
+        BranchCentralConfigChanges branchConfigChanges = new BranchCentralConfigChanges();
+        String currentBranch = branchWithAdditionalVersionInfo;
+        if (currentBranch == null) {
+            try {
+                currentBranch = gitCurrentBranch();
+            } catch (MojoFailureException e) {
+                // we are on a detached commit
+            }
+        }
         boolean processAdditionalCommands = (promptPrefix != null);
         if (processAdditionalCommands && additionalVersionCommands != null) {
             StringSearchInterpolator interpolator = new StringSearchInterpolator("@{", "}");
@@ -2900,7 +2952,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             interpolator.addValueSource(new PropertiesBasedValueSource(properties));
 
             // process additional commands/parameters
-            for (GitFlowParameter parameter : additionalVersionCommands) {
+            for (int i = 0; i < additionalVersionCommands.length; i++) {
+                GitFlowParameter parameter = additionalVersionCommands[i];
                 if (!parameter.isEnabled()) {
                     continue;
                 }
@@ -2923,13 +2976,22 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                         try {
                             String defaultValue = parameter.getDefaultValue() != null
                                     ? interpolator.interpolate(parameter.getDefaultValue()) : null;
-
-                            if (defaultValue != null) {
-                                value = getPrompter().promptValue(prompt, defaultValue);
-                            } else {
-                                value = getPrompter().promptValue(prompt);
+                            if (sameBaseVersion && branchWithAdditionalVersionInfo != null) {
+                                value = gitGetBranchCentralConfig(branchWithAdditionalVersionInfo,
+                                        BranchConfigKeys.PREFIX_ADDITIONAL_VERSION_PARAM + i);
                             }
-
+                            if (value == null) {
+                                if (defaultValue != null) {
+                                    value = getPrompter().promptValue(prompt, defaultValue);
+                                } else {
+                                    value = getPrompter().promptValue(prompt);
+                                }
+                            }
+                            if (currentBranch != null
+                                    && (isFeatureBranch(currentBranch) || isEpicBranch(currentBranch))) {
+                                branchConfigChanges.set(currentBranch,
+                                        BranchConfigKeys.PREFIX_ADDITIONAL_VERSION_PARAM + i, value);
+                            }
                             parameter.setValue(value);
                         } catch (InterpolationException e) {
                             throw new GitFlowFailureException(e,
@@ -2971,6 +3033,10 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                         + "\nMaven error message:\n" + e.getMessage(),
                         "Please specify executable additional version maven command.");
             }
+        }
+        if (!branchConfigChanges.isEmpty()) {
+            gitApplyBranchCentralConfigChanges(branchConfigChanges,
+                    "additional version values for '" + currentBranch + "'");
         }
     }
 

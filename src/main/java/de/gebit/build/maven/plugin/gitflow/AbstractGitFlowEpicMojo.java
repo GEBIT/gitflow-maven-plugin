@@ -25,24 +25,6 @@ import org.codehaus.plexus.util.cli.CommandLineException;
 public abstract class AbstractGitFlowEpicMojo extends AbstractGitFlowMojo {
 
     /**
-     * Substitute keys of the form <code>@{name}</code> in the messages. By
-     * default knows about <code>key</code>, which will be replaced by issue
-     * number and all project properties.
-     *
-     * @param message
-     *            the message to process
-     * @param issueNumber
-     *            the epic issue number
-     * @return the message with applied substitutions
-     * @see #lookupKey(String)
-     */
-    protected String substituteInEpicMessage(String message, String issueNumber) throws MojoFailureException {
-        Map<String, String> replacements = new HashMap<String, String>();
-        replacements.put("key", issueNumber);
-        return substituteStrings(message, replacements);
-    }
-
-    /**
      * Return the commit message for version change commit (first commit) of
      * epic branch if used on epic start and stored in central branch config.
      *

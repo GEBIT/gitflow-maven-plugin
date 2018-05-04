@@ -499,7 +499,11 @@ public class GitExecution {
      *             in case of an I/O error
      */
     public String currentCommit(RepositorySet repositorySet) throws IOException {
-        return repositorySet.getLocalRepoGit().getRepository().resolve("HEAD").getName();
+        return commitId(repositorySet, "HEAD");
+    }
+
+    public String commitId(RepositorySet repositorySet, String ref) throws IOException {
+        return repositorySet.getLocalRepoGit().getRepository().resolve(ref).getName();
     }
 
     /**
@@ -912,6 +916,40 @@ public class GitExecution {
      */
     public void assertBranchLocalConfigValueMissing(RepositorySet repositorySet, String branchName, String configName) {
         assertConfigValueMissing(repositorySet, "branch", branchName, configName);
+    }
+
+    /**
+     * Assert that passed config entry exists in local repository.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param configSection
+     *            the section part of the config entry key
+     * @param configSubsection
+     *            the sub-section part of the config entry key
+     * @param configName
+     *            the name part of the config entry key
+     */
+    public void assertConfigValueExists(RepositorySet repositorySet, String configSection, String configSubsection,
+            String configName) {
+        String value = getConfigValue(repositorySet, configSection, configSubsection, configName);
+        assertNotNull("git config [section='" + configSection + "', subsection='" + configSubsection + "', name='"
+                + configName + "'] found but not expected", value);
+    }
+
+    /**
+     * Assert that passed config entry for passed branch exists in local
+     * repository.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param branchName
+     *            the name of the branch
+     * @param configName
+     *            the name part of the config entry key
+     */
+    public void assertBranchLocalConfigValueExists(RepositorySet repositorySet, String branchName, String configName) {
+        assertConfigValueExists(repositorySet, "branch", branchName, configName);
     }
 
     /**

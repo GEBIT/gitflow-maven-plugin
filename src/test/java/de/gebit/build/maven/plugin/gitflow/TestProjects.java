@@ -52,6 +52,11 @@ public class TestProjects {
     public static final TestProjectData WITH_MODULES = new TestProjectData("with-modules", "1.2.3-SNAPSHOT", "GFTST");
 
     /**
+     * The directory of the test project with modules and upstream project configured.
+     */
+    public static final TestProjectData WITH_UPSTREAM = new TestProjectData("with-upstream", "1.2.3-SNAPSHOT", "GFTST");
+
+    /**
      * The directory of the test project with tycho version.
      */
     public static final TestProjectData TYCHO_PROJECT = new TestProjectData("tycho-project", "1.2.3.4-SNAPSHOT", "GFTST");

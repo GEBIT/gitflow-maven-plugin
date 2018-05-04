@@ -8,6 +8,8 @@
 //
 package org.apache.maven.cli;
 
+import java.io.File;
+
 import org.apache.commons.cli.ParseException;
 import org.codehaus.plexus.classworlds.ClassWorld;
 
@@ -63,5 +65,9 @@ public class ExtCliRequest extends CliRequest {
      */
     public void setWorkingDirector(String aWorkingDirectory) {
         this.workingDirectory = aWorkingDirectory;
+    }
+
+    public static File resolveFile(File file, String workingDirectory) {
+        return MavenCli.resolveFile(file, workingDirectory);
     }
 }

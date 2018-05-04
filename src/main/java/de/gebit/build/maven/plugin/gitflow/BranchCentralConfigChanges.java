@@ -117,6 +117,25 @@ public class BranchCentralConfigChanges {
     }
 
     /**
+     * Check if the collection of changes is empty.
+     *
+     * @return <code>true</code> if collection of changes is empty
+     */
+    public boolean isEmpty() {
+        for (Properties properties : setProperties.values()) {
+            if (!properties.isEmpty()) {
+                return false;
+            }
+        }
+        for (List<String> keys : removedProperties.values()) {
+            if (!keys.isEmpty()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
      * Data holder for configuration change information. Change type is remove
      * if <code>value==null</code>. Otherwise the change type is set.
      *

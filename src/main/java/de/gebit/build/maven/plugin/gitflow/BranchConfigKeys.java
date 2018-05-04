@@ -67,4 +67,10 @@ public interface BranchConfigKeys {
      */
     public static final String RELEASE_PRODUCTION_SAVEPOINT = "productionSavepointCommitRef";
 
+    /**
+     * Prefix of branch config key for additional version parameter values used
+     * while setting version in feature branch.
+     */
+    public static final String PREFIX_ADDITIONAL_VERSION_PARAM = "additionalVersionParameter";
+
 }

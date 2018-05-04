@@ -1,0 +1,31 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>de.gebit.build.maven.test</groupId>
+		<artifactId>upstream-pom</artifactId>
+		<version>1.0.0</version>
+		<relativePath>upstream-pom-1.0.0.xml</relativePath>
+	</parent>
+	<groupId>de.gebit.build.maven.test</groupId>
+	<artifactId>with-upstream</artifactId>
+	<version>1.2.3-SNAPSHOT</version>
+	<packaging>pom</packaging>
+	<properties>
+		<version.build>1.2.3-SNAPSHOT</version.build>
+
+		<project.upstream>Test Parent Pom</project.upstream>
+		<version.upstream.property>version.up</version.upstream.property>
+		<version.upstream.property.update>parent</version.upstream.property.update>
+	</properties>
+	<modules>
+		<module>module1</module>
+		<module>module2</module>
+	</modules>
+	<distributionManagement>
+		<site>
+			<id>TestSiteTarget</id>
+			<url>${test.deistribution.site}</url>
+		</site>
+	</distributionManagement>
+</project>
