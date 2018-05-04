@@ -74,6 +74,14 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
     @Parameter(property = "featureName", defaultValue = "${featureName}", required = false, readonly = true)
     protected String featureName;
 
+    /**
+     * Whether to configure automatical Jenkins job creation.
+     *
+     * @since 2.0.1
+     */
+    @Parameter(property = "jobBuild", required = false, readonly = true)
+    protected boolean jobBuild = false;
+
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
@@ -100,8 +108,11 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
             if (!isMaintenanceBranch(baseBranch) && !isEpicBranch(baseBranch)) {
                 baseBranch = gitFlowConfig.getDevelopmentBranch();
                 if (!currentBranch.equals(baseBranch)) {
-                    boolean confirmed = getPrompter().promptConfirmation("Feature branch will be started not from current "
-                            + "branch but will be based off branch '" + baseBranch + "'. Continue?", true, true);
+                    boolean confirmed = getPrompter()
+                            .promptConfirmation(
+                                    "Feature branch will be started not from current "
+                                            + "branch but will be based off branch '" + baseBranch + "'. Continue?",
+                                    true, true);
                     if (!confirmed) {
                         throw new GitFlowFailureException("Feature start process aborted by user.", null);
                     }
@@ -133,7 +144,8 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
                                 " Please consult a gitflow expert on how to fix this!");
                     }
 
-                    getLog().info("Using integration branch '" + integrationBranch + "' as start point for new feature.");
+                    getLog().info(
+                            "Using integration branch '" + integrationBranch + "' as start point for new feature.");
                     baseBranch = integrationBranch;
                 }
             }
@@ -151,7 +163,8 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
                                             + featureNamePatternDescription;
                                 } else {
                                     invalidMessage = "The feature name '" + value
-                                            + "' is invalid. It does not match the required pattern: " + featureNamePattern;
+                                            + "' is invalid. It does not match the required pattern: "
+                                            + featureNamePattern;
                                 }
                                 return new ValidationResult(invalidMessage);
                             } else {
@@ -159,7 +172,8 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
                             }
                         }
                     },
-                    new GitFlowFailureInfo("Property 'featureName' is required in non-interactive mode but was not set.",
+                    new GitFlowFailureInfo(
+                            "Property 'featureName' is required in non-interactive mode but was not set.",
                             "Specify a featureName or run in interactive mode.",
                             "'mvn flow:feature-start -DfeatureName=XXX -B'", "'mvn flow:feature-start'"));
 
@@ -185,7 +199,8 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
 
             featureIssue = extractIssueNumberFromFeatureName(featureName);
             getLog().info("Feature issue number: " + featureIssue);
-            String featureStartMessage = substituteWithIssueNumber(commitMessages.getFeatureStartMessage(), featureIssue);
+            String featureStartMessage = substituteWithIssueNumber(commitMessages.getFeatureStartMessage(),
+                    featureIssue);
 
             gitCreateAndCheckout(featureBranchName, baseBranch);
 
@@ -244,6 +259,15 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
         if (pushRemote) {
             gitPush(featureBranchName, false, false);
         }
+
+        if (jobBuild) {
+            try {
+                gitSetBranchCentralConfig(featureBranchName, "JOB_BUILD", "true");
+            } catch (Exception exc) {
+                getLog().error("Central branch config for automatical Jenkins job creation couldn't be stored.");
+            }
+        }
+
         getLog().info("Feature for issue '" + featureIssue + "' started on branch '" + featureBranchName + "'.");
         getLog().info("Feature start process finished.");
     }
