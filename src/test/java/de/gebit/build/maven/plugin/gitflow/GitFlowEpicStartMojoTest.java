@@ -103,6 +103,8 @@ public class GitFlowEpicStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertEquals(TestProjects.BASIC.version, branchConfig.getProperty("baseVersion"));
         assertEquals(COMMIT_MESSAGE_SET_VERSION, branchConfig.getProperty("startCommitMessage"));
         assertEquals(expectedVersionChangeCommit, branchConfig.getProperty("versionChangeCommit"));
+
+        assertEquals(null, branchConfig.getProperty("JOB_BUILD"));
     }
 
     private void assertEpicStartedCorrectly()
@@ -1201,6 +1203,32 @@ public class GitFlowEpicStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
 
         git.assertBranchLocalConfigValueMissing(repositorySet, EPIC_BRANCH, "breakpoint");
+    }
+
+    @Test
+    public void testExecuteWithJobBuild() throws Exception {
+        // set up
+        Properties userProperties = new Properties();
+        userProperties.setProperty("epicName", EPIC_NAME);
+        userProperties.setProperty("jobBuild", "true");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+
+        assertEpicStartedCorrectly();
+        assertArtifactNotInstalled();
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, EPIC_BRANCH);
+        assertEquals("epic", branchConfig.getProperty("branchType"));
+        assertEquals(MASTER_BRANCH, branchConfig.getProperty("baseBranch"));
+        assertEquals(EPIC_ISSUE, branchConfig.getProperty("issueNumber"));
+        assertEquals(TestProjects.BASIC.version, branchConfig.getProperty("baseVersion"));
+        assertEquals(COMMIT_MESSAGE_SET_VERSION, branchConfig.getProperty("startCommitMessage"));
+        assertEquals(EXPECTED_VERSION_CHANGE_COMMIT, branchConfig.getProperty("versionChangeCommit"));
+
+        assertEquals("true", branchConfig.getProperty("JOB_BUILD"));
     }
 
 }

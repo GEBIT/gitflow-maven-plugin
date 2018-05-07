@@ -45,6 +45,14 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
     @Parameter(property = "epicName", defaultValue = "${epicName}", required = false, readonly = true)
     protected String epicName;
 
+    /**
+     * Whether to configure automatical Jenkins job creation.
+     *
+     * @since 2.0.1
+     */
+    @Parameter(property = "jobBuild", required = false, readonly = true)
+    protected boolean jobBuild = false;
+
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         getLog().info("Starting epic start process.");
@@ -209,6 +217,15 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
         if (pushRemote) {
             gitPush(epicBranchName, false, false);
         }
+
+        if (jobBuild) {
+            try {
+                gitSetBranchCentralConfig(epicBranchName, "JOB_BUILD", "true");
+            } catch (Exception exc) {
+                getLog().error("Central branch config for automatical Jenkins job creation couldn't be stored.");
+            }
+        }
+
         getLog().info("Epic for issue '" + epicIssue + "' started on branch '" + epicBranchName + "'.");
         getLog().info("Epic start process finished.");
     }
