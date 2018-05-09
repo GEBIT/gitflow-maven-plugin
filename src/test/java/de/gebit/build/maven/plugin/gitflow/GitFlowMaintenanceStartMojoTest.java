@@ -1157,4 +1157,15 @@ public class GitFlowMaintenanceStartMojoTest extends AbstractGitFlowMojoTestCase
         assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
     }
 
+    @Test
+    public void testExecuteAndCheckIfUpstreamSet() throws Exception {
+        Properties userProperties = new Properties();
+        userProperties.setProperty("maintenanceVersion", MAINTENANCE_VERSION);
+        userProperties.setProperty("firstMaintenanceVersion", MAINTENANCE_FIRST_VERSION);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        git.assertTrackingBranch(repositorySet, "origin/" + MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
+    }
+
 }

@@ -1324,4 +1324,15 @@ public class GitFlowReleaseStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), EXPECTED_RELEASE_VERSION);
     }
 
+    @Test
+    public void testExecuteAndCheckIfUpstreamSet() throws Exception {
+        Properties userProperties = new Properties();
+        userProperties.setProperty("releaseVersion", RELEASE_VERSION);
+        userProperties.setProperty("flow.pushReleaseBranch", "true");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        git.assertTrackingBranch(repositorySet, "origin/" + RELEASE_BRANCH, RELEASE_BRANCH);
+    }
+
 }

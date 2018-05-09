@@ -1397,4 +1397,15 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertEquals("true", branchConfig.getProperty("JOB_BUILD"));
     }
 
+    @Test
+    public void testExecuteAndCheckIfUpstreamSet() throws Exception {
+        // set up
+        Properties userProperties = new Properties();
+        userProperties.setProperty("featureName", FEATURE_NAME);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        git.assertTrackingBranch(repositorySet, "origin/" + FEATURE_BRANCH, FEATURE_BRANCH);
+    }
+
 }

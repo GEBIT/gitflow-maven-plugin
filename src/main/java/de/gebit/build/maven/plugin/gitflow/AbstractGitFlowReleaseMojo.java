@@ -234,7 +234,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         }
 
         if (pushRemote && isPushReleaseBranch()) {
-            gitPush(gitCurrentBranch(), false, false);
+            gitPush(gitCurrentBranch(), false, false, true);
         }
 
         gitApplyBranchCentralConfigChanges(branchConfigChanges, "release '" + releaseBranchName + "' started");

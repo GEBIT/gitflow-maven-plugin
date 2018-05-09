@@ -2396,6 +2396,30 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected void gitPush(final String branchName, boolean pushTags, boolean force)
             throws MojoFailureException, CommandLineException {
+        gitPush(branchName, pushTags, force, false);
+    }
+
+    /**
+     * Executes git push, optionally with the <code>--follow-tags</code>,
+     * <code>-f</code> or <code>--set-upstream</code> arguments.
+     *
+     * @param branchName
+     *            Branch name to push.
+     * @param pushTags
+     *            If <code>true</code> adds <code>--follow-tags</code> argument
+     *            to the git <code>push</code> command.
+     * @param force
+     *            <code>true</code> to force overwriting remote branch (e.g. for
+     *            feature branches). Argument <code>-f</code> will be added to
+     *            the git <code>push</code> command.
+     * @param setUpstream
+     *            If <code>true</code> adds <code>--set-upstream</code> argument
+     *            to the git <code>push</code> command.
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitPush(final String branchName, boolean pushTags, boolean force, boolean setUpstream)
+            throws MojoFailureException, CommandLineException {
         getLog().info("Pushing '" + branchName + "' branch" + " to '" + gitFlowConfig.getOrigin() + "'.");
 
         List<String> cmd = new ArrayList<String>();
@@ -2406,6 +2430,9 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         }
         if (pushTags) {
             cmd.add("--follow-tags");
+        }
+        if (setUpstream) {
+            cmd.add("--set-upstream");
         }
         cmd.add(gitFlowConfig.getOrigin());
         cmd.add(branchName);

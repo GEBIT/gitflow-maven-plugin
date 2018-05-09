@@ -257,7 +257,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
         gitRemoveBranchLocalConfig(featureBranchName, "breakpoint");
 
         if (pushRemote) {
-            gitPush(featureBranchName, false, false);
+            gitPush(featureBranchName, false, false, true);
         }
 
         if (jobBuild) {

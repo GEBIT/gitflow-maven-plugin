@@ -43,10 +43,13 @@ import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.errors.IncorrectObjectTypeException;
 import org.eclipse.jgit.errors.MissingObjectException;
 import org.eclipse.jgit.errors.StopWalkException;
+import org.eclipse.jgit.lib.BranchConfig;
+import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.ObjectLoader;
 import org.eclipse.jgit.lib.ObjectStream;
 import org.eclipse.jgit.lib.Ref;
+import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.lib.StoredConfig;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTag;
@@ -1722,6 +1725,20 @@ public class GitExecution {
             throws IOException {
         assertEquals("local branch current commit is wrong", expectedCommitId,
                 localBranchCurrentCommit(repositorySet, branch));
+    }
+
+    public void assertTrackingBranch(RepositorySet repositorySet, String expectedTrackingBranch, String branch) {
+        String shortTrackingName = Repository.shortenRefName(expectedTrackingBranch);
+        String fullTrackingName = Constants.R_REMOTES + shortTrackingName;
+        assertEquals("tracking branch of the branch '" + branch + "' is different from expected",
+                fullTrackingName, getUpstreamBranch(repositorySet, branch));
+    }
+
+    public String getUpstreamBranch(RepositorySet repositorySet, String branchName) {
+        String shortBranchName = Repository.shortenRefName(branchName);
+        BranchConfig branchConfig = new BranchConfig(repositorySet.getLocalRepoGit().getRepository().getConfig(),
+                shortBranchName);
+        return branchConfig.getTrackingBranch();
     }
 
     private class CommitRevFilter extends RevFilter {

@@ -215,7 +215,7 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
         gitRemoveBranchLocalConfig(epicBranchName, "breakpoint");
 
         if (pushRemote) {
-            gitPush(epicBranchName, false, false);
+            gitPush(epicBranchName, false, false, true);
         }
 
         if (jobBuild) {
