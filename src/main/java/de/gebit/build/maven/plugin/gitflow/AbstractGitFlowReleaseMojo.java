@@ -456,7 +456,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
 
         if (!isKeepBranch()) {
             // remove the release branch
-            gitBranchDelete(releaseBranch);
+            gitBranchDeleteForce(releaseBranch);
             if (pushRemote && isPushReleaseBranch()) {
                 gitBranchDeleteRemote(releaseBranch);
             }
