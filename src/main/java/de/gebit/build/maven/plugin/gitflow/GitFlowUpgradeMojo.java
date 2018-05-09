@@ -317,7 +317,6 @@ public class GitFlowUpgradeMojo extends AbstractGitFlowMojo {
         addEpicBranchPointCandidates(featureBranch, branchPointCandidates);
         List<String> remoteEpicBranches = gitRemoteEpicBranches();
         if (remoteEpicBranches.size() > 0) {
-            gitFetchBranches(remoteEpicBranches);
             for (String epicBranch : remoteEpicBranches) {
                 addBranchPointCandidate(branchPointCandidates, featureBranch, epicBranch, true);
             }
@@ -335,15 +334,13 @@ public class GitFlowUpgradeMojo extends AbstractGitFlowMojo {
     private void addEpicBranchPointCandidates(String branch, Map<String, List<String>> branchPointCandidates)
             throws CommandLineException, MojoFailureException {
         String developmentBranch = gitFlowConfig.getDevelopmentBranch();
-        gitFetchBranches(developmentBranch);
-        if (gitIsRemoteBranchFetched(gitFlowConfig.getOrigin(), developmentBranch)) {
+        if (gitRemoteBranchExists(developmentBranch)) {
             addBranchPointCandidate(branchPointCandidates, branch, developmentBranch, true);
         } else if (gitBranchExists(developmentBranch)) {
             addBranchPointCandidate(branchPointCandidates, branch, developmentBranch, false);
         }
         List<String> remoteMaintenanceBranches = gitRemoteMaintenanceBranches();
         if (remoteMaintenanceBranches.size() > 0) {
-            gitFetchBranches(remoteMaintenanceBranches);
             for (String maintenanceBranch : remoteMaintenanceBranches) {
                 addBranchPointCandidate(branchPointCandidates, branch, maintenanceBranch, true);
             }

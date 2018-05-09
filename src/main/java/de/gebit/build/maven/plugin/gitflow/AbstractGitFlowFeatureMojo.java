@@ -216,8 +216,7 @@ public abstract class AbstractGitFlowFeatureMojo extends AbstractGitFlowMojo {
     protected String gitFeatureBranchBaseCommit(String featureBranch)
             throws MojoFailureException, CommandLineException {
         String baseBranch = gitFeatureBranchBaseBranchName(featureBranch);
-        gitFetchBranches(baseBranch);
-        if (gitIsRemoteBranchFetched(gitFlowConfig.getOrigin(), baseBranch)) {
+        if (gitRemoteBranchExists(baseBranch)) {
             baseBranch = gitFlowConfig.getOrigin() + "/" + baseBranch;
         } else if (!gitBranchExists(baseBranch)) {
             if (fetchRemote) {
