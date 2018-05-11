@@ -1476,6 +1476,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         if (fetchRemote && (forced || !alreadyFetched)) {
             getLog().info("Fetching changes from '" + gitFlowConfig.getOrigin() + "'.");
             executeGitCommand("fetch", "--quiet", gitFlowConfig.getOrigin());
+            alreadyFetched = true;
         }
     }
 
