@@ -291,7 +291,7 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
                         throw new GitFlowFailureException("Continuation of feature rebase aborted by user.", null);
                     }
                     try {
-                        gitRebaseContinue();
+                        gitRebaseContinueOrSkip();
                     } catch (MojoFailureException exc) {
                         throw new GitFlowFailureException(exc,
                                 "There are unresolved conflicts after rebase.\nGit error message:\n"

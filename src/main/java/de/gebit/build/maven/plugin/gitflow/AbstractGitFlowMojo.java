@@ -2553,16 +2553,39 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Checks whether a rebase is in progress by looking at .git/rebase-apply.
+     * Continue rebase using <code>git rebase --continue</code> or <code>git rebase --skip</code>.
      *
-     * @return true if a branch with the passed name exists.
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitRebaseContinueOrSkip() throws MojoFailureException, CommandLineException {
+        if (executeGitHasUncommitted()) {
+            gitRebaseContinue();
+        } else {
+            gitRebaseSkip();
+        }
+    }
+
+    /**
+     * Continue rebase using <code>git rebase --continue</code>.
+     *
      * @throws MojoFailureException
      * @throws CommandLineException
      */
     protected void gitRebaseContinue() throws MojoFailureException, CommandLineException {
         getLog().info("git rebase --continue");
-
         executeGitCommand("rebase", "--continue");
+    }
+
+    /**
+     * Continue rebase by skipping the current patch using <code>git rebase --skip</code>.
+     *
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitRebaseSkip() throws MojoFailureException, CommandLineException {
+        getLog().info("git rebase --skip");
+        executeGitCommand("rebase", "--skip");
     }
 
     protected InteractiveRebaseResult gitInteractiveRebaseContinue() throws MojoFailureException, CommandLineException {

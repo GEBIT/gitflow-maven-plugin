@@ -358,10 +358,8 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
         // verify
-        assertGitFlowFailureException(result,
-                "'mvn flow:feature-rebase' can be executed only on a feature branch.",
-                "Please switch to a feature branch first.",
-                "'git checkout BRANCH' to switch to the feature branch");
+        assertGitFlowFailureException(result, "'mvn flow:feature-rebase' can be executed only on a feature branch.",
+                "Please switch to a feature branch first.", "'git checkout BRANCH' to switch to the feature branch");
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
@@ -2037,7 +2035,6 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), "2.0.0-" + FEATURE_NAME + "-SNAPSHOT");
     }
 
-    @Ignore("Activate test again while fixing issue GBLD-324")
     @Test
     public void testExecuteContinueAfterRebaseConflictResolvedKeepingBaseBranchVersion_GBLD324() throws Exception {
         // set up
@@ -2063,7 +2060,17 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         verify(promptControllerMock).prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y");
         verifyNoMoreInteractions(promptControllerMock);
-        assertFeatureRebasedCorrectly();
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, FEATURE_BRANCH, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION,
+                COMMIT_MESSAGE_MASTER_TESTFILE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertTestfileContent(repositorySet, TESTFILE_NAME);
     }
 
