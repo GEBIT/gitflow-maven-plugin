@@ -67,11 +67,9 @@ public class GitFlowHotfixFinishMojo extends AbstractGitFlowMojo {
         }
 
         // fetch and check remote
-        if (fetchRemote) {
-            gitFetchRemoteAndCompare(gitFlowConfig.getDevelopmentBranch());
-            if (!gitFlowConfig.isNoProduction()) {
-                gitFetchRemoteAndCompare(gitFlowConfig.getProductionBranch());
-            }
+        gitFetchRemoteAndCompare(gitFlowConfig.getDevelopmentBranch());
+        if (!gitFlowConfig.isNoProduction()) {
+            gitFetchRemoteAndCompare(gitFlowConfig.getProductionBranch());
         }
 
         String[] branches = hotfixBranches.split("\\r?\\n");

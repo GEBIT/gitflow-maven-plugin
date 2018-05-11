@@ -48,10 +48,8 @@ public class GitFlowHotfixStartMojo extends AbstractGitFlowMojo {
                 : gitFlowConfig.getProductionBranch());
 
         // fetch and check remote
-        if (fetchRemote) {
-            gitFetchRemoteAndCompare(gitFlowConfig.isNoProduction() ? gitFlowConfig.getDevelopmentBranch()
-                    : gitFlowConfig.getProductionBranch());
-        }
+        gitFetchRemoteAndCompare(gitFlowConfig.isNoProduction() ? gitFlowConfig.getDevelopmentBranch()
+                : gitFlowConfig.getProductionBranch());
 
         // get current project version from pom
         final String currentVersion = getCurrentProjectVersion();

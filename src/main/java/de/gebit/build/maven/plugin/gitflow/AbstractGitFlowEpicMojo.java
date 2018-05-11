@@ -8,9 +8,7 @@
 //
 package de.gebit.build.maven.plugin.gitflow;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.maven.plugin.MojoFailureException;
 import org.codehaus.plexus.util.StringUtils;

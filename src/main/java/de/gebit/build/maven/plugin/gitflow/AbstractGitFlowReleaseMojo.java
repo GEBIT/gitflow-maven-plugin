@@ -316,6 +316,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
             }
         }
 
+        gitFetchForced();
         // we're now on the target branch for the release
         String releaseCommit = getCurrentCommit();
         gitSetBranchLocalConfig(releaseBranch, "releaseCommit", releaseCommit);
