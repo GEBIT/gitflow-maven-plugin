@@ -107,44 +107,6 @@ public abstract class AbstractGitFlowFeatureMojo extends AbstractGitFlowMojo {
     }
 
     /**
-     * Merges the first commit on the given branch ignoring any changes. This
-     * first commit is the commit that changed the versions.
-     *
-     * @param featureBranch
-     *            The feature branch name.
-     * @param branchPoint
-     *            the branch point on both feature and development branch
-     * @param versionChangeCommitId
-     *            commit ID of the version change commit. Must be first commit
-     *            on featuereBranch after branchPoint
-     * @return true if the version has been premerged and does not need to be
-     *         turned back
-     * @throws MojoFailureException
-     * @throws CommandLineException
-     */
-    protected boolean gitTryRebaseWithoutVersionChange(String featureBranch, String branchPoint,
-            String versionChangeCommitId) throws MojoFailureException, CommandLineException {
-        getLog().info("First commit on feature branch is version change commit. "
-                + "Trying to remove version change commit using rebase.");
-        if (!gitHasNoMergeCommits(featureBranch, versionChangeCommitId)) {
-            getLog().info("Feature branch contains merge commits. Removing of version change commit is not possible.");
-            return false;
-        }
-        try {
-            removeCommits(branchPoint, versionChangeCommitId, featureBranch);
-            getLog().info("Version change commit in feature branch removed.");
-        } catch (MojoFailureException ex) {
-            throw new GitFlowFailureException(ex,
-                    "Automatic rebase failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage()),
-                    "Fix the rebase conflicts and mark them as resolved. "
-                            + "After that, run 'mvn flow:feature-finish' again. Do NOT run 'git rebase --continue'.",
-                    "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved",
-                    "'mvn flow:feature-finish' to continue feature finish process");
-        }
-        return true;
-    }
-
-    /**
      * Get the base branch of a feature branch. Throws
      * {@link GitFlowFailureException} if base branch doesn't exist or can't be
      * determined.
