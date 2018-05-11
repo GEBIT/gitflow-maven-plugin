@@ -675,54 +675,6 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Get the config value of the git local config for current branch.<br>
-     * Executes
-     * <code>git config --get branch.&lt;branchName&gt;.&lt;configName&gt;</code>.
-     *
-     * @param configName
-     *            the config name
-     * @return the config value or <code>null</code> if config doesn't exist
-     * @throws MojoFailureException
-     * @throws CommandLineException
-     */
-    protected String gitGetCurrentBranchLocalConfig(String configName)
-            throws MojoFailureException, CommandLineException {
-        return gitGetBranchLocalConfig(gitCurrentBranch(), configName);
-    }
-
-    /**
-     * Set the git local config value for current branch.<br>
-     * Executes
-     * <code>git config branch.&lt;branchName&gt;.&lt;configName&gt; &lt;value&gt;</code>.
-     *
-     * @param configName
-     *            the config name
-     * @param value
-     *            the value to be set
-     * @throws MojoFailureException
-     * @throws CommandLineException
-     */
-    protected void gitSetCurrentBranchLocalConfig(String configName, String value)
-            throws MojoFailureException, CommandLineException {
-        gitSetBranchLocalConfig(gitCurrentBranch(), configName, value);
-    }
-
-    /**
-     * Remove the git local config for current branch.<br>
-     * Executes
-     * <code>git config --unset branch.&lt;branchName&gt;.&lt;configName&gt; &lt;value&gt;</code>.
-     *
-     * @param configName
-     *            the config name
-     * @throws MojoFailureException
-     * @throws CommandLineException
-     */
-    protected void gitRemoveCurrentBranchLocalConfig(String configName)
-            throws MojoFailureException, CommandLineException {
-        gitRemoveBranchLocalConfig(gitCurrentBranch(), configName);
-    }
-
-    /**
      * Get branches of passed type using central branch config.
      *
      * @param branchType
@@ -734,48 +686,6 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected List<String> getBranches(BranchType branchType) throws MojoFailureException, CommandLineException {
         return getCentralBranchConfigCache().getBranches(branchType);
-    }
-
-    /**
-     * Get the config value of the central branch config for current branch.
-     *
-     * @param configName
-     *            the config name
-     * @return the config value or <code>null</code> if config doesn't exist
-     * @throws MojoFailureException
-     * @throws CommandLineException
-     */
-    protected String gitGetCurrentBranchCentralConfig(String configName)
-            throws MojoFailureException, CommandLineException {
-        return gitGetBranchCentralConfig(gitCurrentBranch(), configName);
-    }
-
-    /**
-     * Set the central branch config value for current branch.
-     *
-     * @param configName
-     *            the config name
-     * @param value
-     *            the value to be set
-     * @throws MojoFailureException
-     * @throws CommandLineException
-     */
-    protected void gitSetCurrentBranchCentralConfig(String configName, String value)
-            throws MojoFailureException, CommandLineException {
-        gitSetBranchCentralConfig(gitCurrentBranch(), configName, value);
-    }
-
-    /**
-     * Remove the central branch config for current branch.
-     *
-     * @param configName
-     *            the config name
-     * @throws MojoFailureException
-     * @throws CommandLineException
-     */
-    protected void gitRemoveCurrentBranchCentralConfig(String configName)
-            throws MojoFailureException, CommandLineException {
-        gitRemoveBranchCentralConfig(gitCurrentBranch(), configName);
     }
 
     /**
@@ -1325,27 +1235,6 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         getLog().info("Committing resolved merge conflicts.");
 
         executeGitCommand("commit", "--no-edit");
-    }
-
-    /**
-     * Executes git rebase or git merge --no-ff or git merge.
-     *
-     * @param branchName
-     *            Branch name to merge.
-     * @param rebase
-     *            Do rebase.
-     * @param noff
-     *            Merge with --no-ff.
-     * @throws MojoFailureException
-     * @throws CommandLineException
-     */
-    protected void gitMerge(final String branchName, boolean rebase, boolean noff)
-            throws MojoFailureException, CommandLineException {
-        if (rebase) {
-            gitRebase(branchName);
-        } else {
-            gitMerge(branchName, noff);
-        }
     }
 
     /**
@@ -2037,22 +1926,6 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                         "Rebase or merge the changes in local branch in order to proceed.", "'git pull'");
             }
         });
-    }
-
-    /**
-     * Ensure that the local branch exists.<br>
-     * If local branch doesn't exist it will be created from the remote
-     * branch.<br>
-     * If local and remote branches do not exist a
-     * {@link GitFlowFailureException} will be thrown.
-     *
-     * @param branchName
-     *            the name of the branch to be checked
-     * @throws MojoFailureException
-     * @throws CommandLineException
-     */
-    protected void gitEnsureLocalBranchExists(String branchName) throws MojoFailureException, CommandLineException {
-        gitEnsureLocalBranchExists(branchName, null);
     }
 
     /**
@@ -3477,14 +3350,6 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * @throws CommandLineException
-     * @throws MojoFailureException
-     */
-    protected void gitAddWithUpdateIndex() throws CommandLineException, MojoFailureException {
-        executeGitCommand("add", "-u");
-    }
-
-    /**
      * Rebase <code>branch</code> to remove a range of commits. Commits between
      * <code>lastCommitToBeKept</code> (not incl.) and
      * <code>lastCommitToBeRemoved</code> (incl.) will be removed.
@@ -3513,18 +3378,6 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected boolean isMaintenanceBranch(String branchName) {
         return branchName.startsWith(gitFlowConfig.getMaintenanceBranchPrefix());
-    }
-
-    /**
-     * Check if passed branch name is name for an integrated branch.
-     *
-     * @param branchName
-     *            the branch name to be checked
-     * @return <code>true</code> if the branch name starts with integrated
-     *         branch prefix
-     */
-    protected boolean isIntegratedBranch(String branchName) {
-        return branchName.startsWith(gitFlowConfig.getIntegrationBranchPrefix());
     }
 
     /**
