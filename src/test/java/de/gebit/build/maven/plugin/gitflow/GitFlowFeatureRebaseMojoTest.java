@@ -25,7 +25,6 @@ import org.eclipse.jgit.api.CheckoutCommand.Stage;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import de.gebit.build.maven.plugin.gitflow.jgit.GitExecution;
