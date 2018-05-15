@@ -28,6 +28,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import de.gebit.build.maven.plugin.gitflow.TestProjects.BasicConstants;
 import de.gebit.build.maven.plugin.gitflow.jgit.GitExecution;
 import de.gebit.build.maven.plugin.gitflow.jgit.RepositorySet;
 
@@ -57,7 +58,7 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
 
     @Before
     public void setUp() throws Exception {
-        repositorySet = git.createGitRepositorySet(TestProjects.BASIC.basedir);
+        repositorySet = git.useGitRepositorySet(TestProjects.BASIC);
     }
 
     @After
@@ -111,8 +112,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
     }
 
@@ -132,8 +133,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH);
 
         assertCentralBranchConfigSetCorrectly(null);
@@ -155,8 +156,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH);
 
         assertCentralBranchConfigSetCorrectly(null);
@@ -177,8 +178,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
             assertVersionsInPom(otherRepositorySet.getWorkingDirectory(), TestProjects.INVALID_VERSION.version);
             git.assertClean(otherRepositorySet);
             git.assertCurrentBranch(otherRepositorySet, FEATURE_BRANCH);
-            git.assertLocalBranches(otherRepositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
-            git.assertRemoteBranches(otherRepositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+            git.assertExistingLocalBranches(otherRepositorySet, FEATURE_BRANCH);
+            git.assertExistingRemoteBranches(otherRepositorySet, FEATURE_BRANCH);
             git.assertCommitsInLocalBranch(otherRepositorySet, FEATURE_BRANCH);
 
             Properties branchConfig = git.readPropertiesFileInLocalBranch(otherRepositorySet, CONFIG_BRANCH,
@@ -229,8 +230,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionBuildPropertyInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
 
         final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
@@ -251,8 +252,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
 
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
 
         git.assertUntrackedFiles(repositorySet, GitExecution.TESTFILE_NAME);
@@ -360,16 +361,16 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
 
     private void assertNoChangesInRepositories() throws ComponentLookupException, GitAPIException, IOException {
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, FEATURE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
     }
 
     private void assertNoChangesInRepositoriesExceptCommitedTestfile()
             throws ComponentLookupException, GitAPIException, IOException {
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, FEATURE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
     }
 
@@ -414,8 +415,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
 
         final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
@@ -440,8 +441,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
     }
 
@@ -465,8 +466,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
     }
 
@@ -648,8 +649,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), EXPECTED_FEATURE_VERSION_NUMBER);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, EXPECTED_FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, EXPECTED_FEATURE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EXPECTED_FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, EXPECTED_FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, EXPECTED_FEATURE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, EXPECTED_FEATURE_BRANCH, FEATURE_START_MESSAGE);
 
         final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
@@ -677,8 +678,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, EXPECTED_FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, EXPECTED_FEATURE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EXPECTED_FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, EXPECTED_FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, EXPECTED_FEATURE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, EXPECTED_FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
 
         final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
@@ -710,8 +711,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), EXPECTED_FEATURE_VERSION_NUMBER);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, EXPECTED_FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, EXPECTED_FEATURE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EXPECTED_FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, EXPECTED_FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, EXPECTED_FEATURE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, EXPECTED_FEATURE_BRANCH, FEATURE_START_MESSAGE);
 
         final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
@@ -729,82 +730,68 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteFeatureBranchAlreadyExistsLocally() throws Exception {
         // set up
         Properties userProperties = new Properties();
-        userProperties.setProperty("featureName", FEATURE_NAME);
-        git.createBranchWithoutSwitch(repositorySet, FEATURE_BRANCH);
-        ExecutorHelper.executeUpgrade(this, repositorySet);
+        userProperties.setProperty("featureName", BasicConstants.EXISTING_FEATURE_NAME);
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        assertGitFlowFailureException(result, "Feature branch '" + FEATURE_BRANCH + "' already exists.",
+        assertGitFlowFailureException(result,
+                "Feature branch '" + BasicConstants.EXISTING_FEATURE_BRANCH + "' already exists.",
                 "Either checkout the existing feature branch or start a new feature with another name.",
-                "'git checkout " + FEATURE_BRANCH + "' to checkout the feature branch",
+                "'git checkout " + BasicConstants.EXISTING_FEATURE_BRANCH + "' to checkout the feature branch",
                 "'mvn flow:feature-start' to run again and specify another feature name");
 
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
     }
 
     @Test
     public void testExecuteFeatureBranchAlreadyExistsRemotely() throws Exception {
         // set up
         Properties userProperties = new Properties();
-        userProperties.setProperty("featureName", FEATURE_NAME);
-        git.createRemoteBranch(repositorySet, FEATURE_BRANCH);
-        ExecutorHelper.executeUpgrade(this, repositorySet);
+        userProperties.setProperty("featureName", BasicConstants.REMOTE_FEATURE_NAME);
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
         assertGitFlowFailureException(result,
-                "Remote feature branch '" + FEATURE_BRANCH + "' already exists on the remote 'origin'.",
+                "Remote feature branch '" + BasicConstants.REMOTE_FEATURE_BRANCH
+                        + "' already exists on the remote 'origin'.",
                 "Either checkout the existing feature branch or start a new feature with another name.",
-                "'git checkout " + FEATURE_BRANCH + "' to checkout the feature branch",
+                "'git checkout " + BasicConstants.REMOTE_FEATURE_BRANCH + "' to checkout the feature branch",
                 "'mvn flow:feature-start' to run again and specify another feature name");
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
     }
 
     @Test
     public void testExecuteFeatureBranchAlreadyExistsRemotelyAndFetchRemoteFalse() throws Exception {
         // set up
         Properties userProperties = new Properties();
-        userProperties.setProperty("featureName", FEATURE_NAME);
+        userProperties.setProperty("featureName", BasicConstants.REMOTE_FEATURE_NAME);
         userProperties.setProperty("flow.fetchRemote", "false");
         userProperties.setProperty("flow.push", "false");
-        git.createRemoteBranch(repositorySet, FEATURE_BRANCH);
         git.setOffline(repositorySet);
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
         git.setOnline(repositorySet);
-        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), BasicConstants.REMOTE_FEATURE_VERSION);
         git.assertClean(repositorySet);
-        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH);
-        git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, FEATURE_BRANCH, FEATURE_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
-
-        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
-        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
+        git.assertCurrentBranch(repositorySet, BasicConstants.REMOTE_FEATURE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, BasicConstants.REMOTE_FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, BasicConstants.REMOTE_FEATURE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, BasicConstants.REMOTE_FEATURE_BRANCH,
+                BasicConstants.REMOTE_FEATURE_BRANCH);
     }
 
     @Test
     public void testExecuteFetchedFeatureBranchAlreadyExistsRemotelyAndFetchRemoteFalse() throws Exception {
         // set up
         Properties userProperties = new Properties();
-        userProperties.setProperty("featureName", FEATURE_NAME);
+        userProperties.setProperty("featureName", BasicConstants.REMOTE_FEATURE_NAME);
         userProperties.setProperty("flow.fetchRemote", "false");
         userProperties.setProperty("flow.push", "false");
-        git.createRemoteBranch(repositorySet, FEATURE_BRANCH);
-        ExecutorHelper.executeUpgrade(this, repositorySet);
         git.fetch(repositorySet);
         git.setOffline(repositorySet);
         // test
@@ -812,15 +799,14 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.setOnline(repositorySet);
         assertGitFlowFailureException(result,
-                "Remote feature branch '" + FEATURE_BRANCH + "' already exists on the remote 'origin'.",
+                "Remote feature branch '" + BasicConstants.REMOTE_FEATURE_BRANCH
+                        + "' already exists on the remote 'origin'.",
                 "Either checkout the existing feature branch or start a new feature with another name.",
-                "'git checkout " + FEATURE_BRANCH + "' to checkout the feature branch",
+                "'git checkout " + BasicConstants.REMOTE_FEATURE_BRANCH + "' to checkout the feature branch",
                 "'mvn flow:feature-start' to run again and specify another feature name");
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
     }
 
@@ -843,7 +829,7 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteWithIntegrationBranchSameAsMasterBranch() throws Exception {
         // set up
-        ExecutorHelper.executeIntegerated(this, repositorySet, INTEGRATION_BRANCH);
+        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_BRANCH);
         Properties userProperties = new Properties();
         userProperties.setProperty("featureName", FEATURE_NAME);
         // test
@@ -853,8 +839,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, INTEGRATION_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, INTEGRATION_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, INTEGRATION_BRANCH, MASTER_BRANCH);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, FEATURE_BRANCH, MASTER_BRANCH);
@@ -867,7 +853,7 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteWithIntegrationBranchDifferentFromMasterBranch() throws Exception {
         // set up
-        ExecutorHelper.executeIntegerated(this, repositorySet, INTEGRATION_BRANCH);
+        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
         Properties userProperties = new Properties();
@@ -878,8 +864,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, INTEGRATION_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, INTEGRATION_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
         git.assertTestfileMissing(repositorySet);
 
@@ -890,7 +876,7 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteWithIntegrationBranchDifferentFromMasterBranchInInteractiveMode() throws Exception {
         // set up
-        ExecutorHelper.executeIntegerated(this, repositorySet, INTEGRATION_BRANCH);
+        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
         when(promptControllerMock.prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME))
@@ -906,8 +892,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, INTEGRATION_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, INTEGRATION_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
         git.assertTestfileMissing(repositorySet);
 
@@ -918,7 +904,7 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteWithIntegrationBranchDifferentFromMasterBranchInInteractiveModeAnswerNo() throws Exception {
         // set up
-        ExecutorHelper.executeIntegerated(this, repositorySet, INTEGRATION_BRANCH);
+        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
         when(promptControllerMock.prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME))
@@ -934,8 +920,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, INTEGRATION_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, INTEGRATION_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION,
                 GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
         git.assertTestfileContent(repositorySet);
@@ -947,7 +933,7 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteWithIntegrationBranchAndNewerRemoteIntegartionBranch() throws Exception {
         // set up
-        ExecutorHelper.executeIntegerated(this, repositorySet, INTEGRATION_BRANCH);
+        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_BRANCH);
         git.remoteCreateTestfileInBranch(repositorySet, INTEGRATION_BRANCH);
         when(promptControllerMock.prompt(PROMPT_BRANCH_OF_LAST_INTEGRATED, Arrays.asList("y", "n"), "y"))
                 .thenReturn("y");
@@ -964,8 +950,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, INTEGRATION_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, INTEGRATION_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, INTEGRATION_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
@@ -974,7 +960,7 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteWithIntegrationBranchAndNewerRemoteIntegartionBranchAndFetchRemoteFalse() throws Exception {
         // set up
-        ExecutorHelper.executeIntegerated(this, repositorySet, INTEGRATION_BRANCH);
+        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_BRANCH);
         git.remoteCreateTestfileInBranch(repositorySet, INTEGRATION_BRANCH);
         Properties userProperties = new Properties();
         userProperties.setProperty("featureName", FEATURE_NAME);
@@ -988,8 +974,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, INTEGRATION_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, INTEGRATION_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, INTEGRATION_BRANCH, MASTER_BRANCH);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, FEATURE_BRANCH, MASTER_BRANCH);
@@ -1003,7 +989,7 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteWithIntegrationBranchAndFetchedNewerRemoteIntegartionBranchAndFetchRemoteFalse()
             throws Exception {
         // set up
-        ExecutorHelper.executeIntegerated(this, repositorySet, INTEGRATION_BRANCH);
+        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_BRANCH);
         git.remoteCreateTestfileInBranch(repositorySet, INTEGRATION_BRANCH);
         git.fetch(repositorySet);
         when(promptControllerMock.prompt(PROMPT_BRANCH_OF_LAST_INTEGRATED, Arrays.asList("y", "n"), "y"))
@@ -1025,8 +1011,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, INTEGRATION_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, INTEGRATION_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, INTEGRATION_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
@@ -1035,7 +1021,7 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteWithDivergentLocalAndRemoteIntegrationBranches() throws Exception {
         // set up
-        ExecutorHelper.executeIntegerated(this, repositorySet, INTEGRATION_BRANCH);
+        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_BRANCH);
         git.switchToBranch(repositorySet, INTEGRATION_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
@@ -1054,8 +1040,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, INTEGRATION_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, INTEGRATION_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, INTEGRATION_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
@@ -1085,8 +1071,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, OTHER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION,
                 GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
 
@@ -1117,8 +1103,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
 
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, OTHER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, OTHER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, FEATURE_BRANCH);
     }
 
     @Test
@@ -1135,8 +1121,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, OTHER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
 
         final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
@@ -1164,8 +1150,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, OTHER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
         git.assertCommitsInLocalBranch(repositorySet, OTHER_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
 
@@ -1176,13 +1162,7 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteOnEpicBranch() throws Exception {
         // set up
-        final String EPIC_ISSUE = TestProjects.BASIC.jiraProject + "-4711";
-        final String EPIC_NAME = EPIC_ISSUE + "-someEpicDescription";
-        final String EPIC_BRANCH = "epic/" + EPIC_NAME;
-        final String EPIC_VERSION = TestProjects.BASIC.releaseVersion + "-" + EPIC_ISSUE + "-SNAPSHOT";
-        final String COMMIT_MESSAGE_EPIC_SET_VERSION = EPIC_ISSUE + ": updating versions for epic branch";
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
-        assertVersionsInPom(repositorySet.getWorkingDirectory(), EPIC_VERSION);
+        git.switchToBranch(repositorySet, BasicConstants.EXISTING_EPIC_BRANCH);
         when(promptControllerMock.prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME))
                 .thenReturn(FEATURE_NAME);
         // test
@@ -1194,15 +1174,15 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION,
-                COMMIT_MESSAGE_EPIC_SET_VERSION);
+                BasicConstants.EXISTING_EPIC_VERSION_COMMIT_MESSAGE);
 
         final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
         Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
         assertEquals("feature", branchConfig.getProperty("branchType"));
-        assertEquals(EPIC_BRANCH, branchConfig.getProperty("baseBranch"));
+        assertEquals(BasicConstants.EXISTING_EPIC_BRANCH, branchConfig.getProperty("baseBranch"));
         assertEquals(FEATURE_ISSUE, branchConfig.getProperty("issueNumber"));
         assertEquals(TestProjects.BASIC.version, branchConfig.getProperty("baseVersion"));
         assertEquals(COMMIT_MESSAGE_SET_VERSION, branchConfig.getProperty("startCommitMessage"));
@@ -1212,13 +1192,7 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteOnEpicBranchWithoutEpicVersion() throws Exception {
         // set up
-        final String EPIC_ISSUE = TestProjects.BASIC.jiraProject + "-4711";
-        final String EPIC_NAME = EPIC_ISSUE + "-someEpicDescription";
-        final String EPIC_BRANCH = "epic/" + EPIC_NAME;
-        Properties userProperties = new Properties();
-        userProperties.setProperty("flow.tychoBuild", "true");
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME, userProperties);
-        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+        git.switchToBranch(repositorySet, BasicConstants.EPIC_WITHOUT_VERSION_BRANCH);
         when(promptControllerMock.prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME))
                 .thenReturn(FEATURE_NAME);
         // test
@@ -1230,14 +1204,15 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION,
+                BasicConstants.EPIC_WITHOUT_VERSION_COMMIT_MESSAGE_TESTFILE);
 
         final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
         Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
         assertEquals("feature", branchConfig.getProperty("branchType"));
-        assertEquals(EPIC_BRANCH, branchConfig.getProperty("baseBranch"));
+        assertEquals(BasicConstants.EPIC_WITHOUT_VERSION_BRANCH, branchConfig.getProperty("baseBranch"));
         assertEquals(FEATURE_ISSUE, branchConfig.getProperty("issueNumber"));
         assertEquals(TestProjects.BASIC.version, branchConfig.getProperty("baseVersion"));
         assertEquals(COMMIT_MESSAGE_SET_VERSION, branchConfig.getProperty("startCommitMessage"));
@@ -1260,8 +1235,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
 
         final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
@@ -1288,8 +1263,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION,
                 COMMIT_MESSAGE_INVALID_JAVA_FILE);
 
@@ -1325,8 +1300,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, FEATURE_BRANCH, FEATURE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION,
                 COMMIT_MESSAGE_INVALID_JAVA_FILE_REMOVED, COMMIT_MESSAGE_INVALID_JAVA_FILE);
@@ -1360,8 +1335,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, FEATURE_BRANCH, FEATURE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION,
                 COMMIT_MESSAGE_INVALID_JAVA_FILE);

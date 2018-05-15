@@ -26,6 +26,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import de.gebit.build.maven.plugin.gitflow.TestProjects.BasicConstants;
 import de.gebit.build.maven.plugin.gitflow.jgit.GitExecution;
 import de.gebit.build.maven.plugin.gitflow.jgit.RepositorySet;
 
@@ -36,31 +37,23 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
 
     private static final String GOAL = "epic-finish";
 
-    private static final String EPIC_ISSUE = TestProjects.BASIC.jiraProject + "-42";
+    private static final String EPIC_ISSUE = BasicConstants.EXISTING_EPIC_ISSUE;
 
-    private static final String EPIC_NAME = EPIC_ISSUE + "-someDescription";
+    private static final String EPIC_BRANCH = BasicConstants.EXISTING_EPIC_BRANCH;
 
-    private static final String EPIC_BRANCH = "epic/" + EPIC_NAME;
+    private static final String EPIC_VERSION = BasicConstants.EXISTING_EPIC_VERSION;
 
-    private static final String EPIC_VERSION = TestProjects.BASIC.releaseVersion + "-" + EPIC_ISSUE + "-SNAPSHOT";
+    private static final String MAINTENANCE_FIRST_VERSION = BasicConstants.EXISTING_MAINTENANCE_FIRST_VERSION;
 
-    private static final String EPIC_NUMBER_2 = TestProjects.BASIC.jiraProject + "-4711";
-
-    private static final String EPIC_BRANCH_2 = "epic/" + EPIC_NUMBER_2;
-
-    private static final String MAINTENANCE_VERSION = "1.42";
-
-    private static final String MAINTENANCE_FIRST_VERSION = "1.42.0-SNAPSHOT";
-
-    private static final String MAINTENANCE_BRANCH = "maintenance/gitflow-tests-" + MAINTENANCE_VERSION;
+    private static final String MAINTENANCE_BRANCH = BasicConstants.EXISTING_MAINTENANCE_BRANCH;
 
     private static final String COMMIT_MESSAGE_MERGE = TestProjects.BASIC.jiraProject + "-NONE: Merge branch "
             + EPIC_BRANCH;
 
     private static final String COMMIT_MESSAGE_MERGE_INTO_MAINTENANCE = TestProjects.BASIC.jiraProject
-            + "-NONE: Merge branch epic/" + EPIC_NAME + " into " + MAINTENANCE_BRANCH;
+            + "-NONE: Merge branch " + BasicConstants.EPIC_ON_MAINTENANCE_BRANCH + " into " + MAINTENANCE_BRANCH;
 
-    private static final String COMMIT_MESSAGE_SET_VERSION = EPIC_ISSUE + ": updating versions for epic branch";
+    private static final String COMMIT_MESSAGE_SET_VERSION = BasicConstants.EXISTING_EPIC_VERSION_COMMIT_MESSAGE;
 
     private static final String COMMIT_MESSAGE_REVERT_VERSION = EPIC_ISSUE
             + ": reverting versions for development branch";
@@ -79,7 +72,7 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
             + " 'mvn flow:epic-finish' again. Are you sure you want to continue?";
 
     private static final String PROMPT_MAINTENANCE_MERGE_WITHOUT_UPDATE = "Base branch '" + MAINTENANCE_BRANCH
-            + "' has changes that are not yet included in epic branch '" + EPIC_BRANCH
+            + "' has changes that are not yet included in epic branch '" + BasicConstants.EPIC_ON_MAINTENANCE_BRANCH
             + "'. If you continue it will be tryed to merge the changes."
             + " But it is strongly recomended to run 'mvn flow:epic-update' first and then run"
             + " 'mvn flow:epic-finish' again. Are you sure you want to continue?";
@@ -99,7 +92,7 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
 
     @Before
     public void setUp() throws Exception {
-        repositorySet = git.createGitRepositorySet(TestProjects.BASIC.basedir);
+        repositorySet = git.useGitRepositorySet(TestProjects.BASIC, EPIC_BRANCH);
     }
 
     @After
@@ -120,7 +113,6 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteOnEpicBranchOneEpicBranch() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
         // test
@@ -136,8 +128,8 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     private void assertEpicFinishedCorrectly() throws ComponentLookupException, GitAPIException, IOException {
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, EPIC_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, EPIC_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE,
                 COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE);
@@ -147,22 +139,24 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteOnEpicBranchStartedOnMaintenanceBranch() throws Exception {
         // set up
-        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION);
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
+        final String USED_EPIC_BRANCH = BasicConstants.EPIC_ON_MAINTENANCE_BRANCH;
+        final String USED_COMMIT_MESSAGE_REVERT_VERSION = BasicConstants.EPIC_ON_MAINTENANCE_ISSUE
+                + ": reverting versions for development branch";
+        git.switchToBranch(repositorySet, USED_EPIC_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, USED_EPIC_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, USED_EPIC_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_MERGE_INTO_MAINTENANCE,
-                COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE,
-                COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
+                USED_COMMIT_MESSAGE_REVERT_VERSION, BasicConstants.EPIC_ON_MAINTENANCE_VERSION_COMMIT_MESSAGE,
+                COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
 
         verifyZeroInteractions(promptControllerMock);
@@ -171,6 +165,7 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteWithStagedButUncommitedChanges() throws Exception {
         // set up
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createAndAddToIndexTestfile(repositorySet);
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
@@ -189,16 +184,16 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
 
     private void assertNoChangesInRepositories() throws ComponentLookupException, GitAPIException, IOException {
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, EPIC_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, EPIC_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
     }
 
     private void assertNoChangesInRepositoriesExceptCommitedTestfile()
             throws ComponentLookupException, GitAPIException, IOException {
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, EPIC_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, EPIC_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
     }
 
@@ -211,6 +206,7 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteWithUnstagedChanges() throws Exception {
         // set up
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.modifyTestfile(repositorySet);
         // test
@@ -230,8 +226,12 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
 
     @Test
     public void testExecuteNoEpicBranches() throws Exception {
+        // set up
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.epicBranchPrefix", "no-epics/");
         // test
-        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
         assertGitFlowFailureException(result, "There are no epic branches in your repository.",
                 "Please start an epic first.", "'mvn flow:epic-start'");
@@ -241,75 +241,100 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteOnMasterBranchOneEpicBranch() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
+        final String USED_EPIC_BRANCH = BasicConstants.SINGLE_EPIC_BRANCH;
+        final String USED_COMMIT_MESSAGE_MERGE = TestProjects.BASIC.jiraProject + "-NONE: Merge branch "
+                + USED_EPIC_BRANCH;
+        final String USED_COMMIT_MESSAGE_REVERT_VERSION = BasicConstants.SINGLE_EPIC_ISSUE
+                + ": reverting versions for development branch";
+        final String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + USED_EPIC_BRANCH + LS
+                + "Choose epic branch to finish";
+        git.switchToBranch(repositorySet, USED_EPIC_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
-        String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + EPIC_BRANCH + LS + "Choose epic branch to finish";
         when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1"))).thenReturn("1");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.epicBranchPrefix", BasicConstants.SINGLE_EPIC_BRANCH_PREFIX);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1"));
         verifyNoMoreInteractions(promptControllerMock);
 
-        assertEpicFinishedCorrectly();
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, USED_EPIC_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, USED_EPIC_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, USED_COMMIT_MESSAGE_MERGE,
+                USED_COMMIT_MESSAGE_REVERT_VERSION, BasicConstants.SINGLE_EPIC_VERSION_COMMIT_MESSAGE,
+                COMMIT_MESSAGE_FOR_TESTFILE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
     }
 
     @Test
-    public void testExecuteOnEpicBranchTwoEpicBranchesAndOtherBranch() throws Exception {
+    public void testExecuteOnEpicBranchTwoEpicBranches() throws Exception {
         // set up
-        final String OTHER_BRANCH = "otherBranch";
-        git.createBranchWithoutSwitch(repositorySet, OTHER_BRANCH);
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NUMBER_2);
-        git.switchToBranch(repositorySet, MASTER_BRANCH);
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
+        final String USED_COMMIT_MESSAGE_MARGE = TestProjects.BASIC.jiraProject + "-NONE: Merge branch "
+                + BasicConstants.FIRST_EPIC_BRANCH;
+        final String USED_COMMIT_MESSAGE_REVERT_VERSION = BasicConstants.FIRST_EPIC_ISSUE
+                + ": reverting versions for development branch";
+        git.switchToBranch(repositorySet, BasicConstants.FIRST_EPIC_BRANCH);
         git.createAndCommitTestfile(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.epicBranchPrefix", BasicConstants.TWO_EPIC_BRANCHES_PREFIX);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
         verifyZeroInteractions(promptControllerMock);
 
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH_2, OTHER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH_2, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, BasicConstants.FIRST_EPIC_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, BasicConstants.SECOND_EPIC_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, BasicConstants.FIRST_EPIC_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, BasicConstants.SECOND_EPIC_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE,
-                COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, USED_COMMIT_MESSAGE_MARGE,
+                USED_COMMIT_MESSAGE_REVERT_VERSION, BasicConstants.FIRST_EPIC_VERSION_COMMIT_MESSAGE,
+                COMMIT_MESSAGE_FOR_TESTFILE);
     }
 
     @Test
-    public void testExecuteOnMasterBranchTwoEpicBranchesAndOtherBranch() throws Exception {
+    public void testExecuteOnMasterBranchTwoEpicBranches() throws Exception {
         // set up
-        final String OTHER_BRANCH = "otherBranch";
-        git.createBranchWithoutSwitch(repositorySet, OTHER_BRANCH);
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
+        final String USED_COMMIT_MESSAGE_MARGE = TestProjects.BASIC.jiraProject + "-NONE: Merge branch "
+                + BasicConstants.FIRST_EPIC_BRANCH;
+        final String USED_COMMIT_MESSAGE_REVERT_VERSION = BasicConstants.FIRST_EPIC_ISSUE
+                + ": reverting versions for development branch";
+        final String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + BasicConstants.FIRST_EPIC_BRANCH + LS + "2. "
+                + BasicConstants.SECOND_EPIC_BRANCH + LS + "Choose epic branch to finish";
+        git.switchToBranch(repositorySet, BasicConstants.FIRST_EPIC_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NUMBER_2);
-        git.switchToBranch(repositorySet, MASTER_BRANCH);
-        String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + EPIC_BRANCH + LS + "2. " + EPIC_BRANCH_2 + LS
-                + "Choose epic branch to finish";
         when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1", "2"))).thenReturn("1");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.epicBranchPrefix", BasicConstants.TWO_EPIC_BRANCHES_PREFIX);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1", "2"));
         verifyNoMoreInteractions(promptControllerMock);
 
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH_2, OTHER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH_2, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, BasicConstants.FIRST_EPIC_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, BasicConstants.SECOND_EPIC_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, BasicConstants.FIRST_EPIC_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, BasicConstants.SECOND_EPIC_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE,
-                COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, USED_COMMIT_MESSAGE_MARGE,
+                USED_COMMIT_MESSAGE_REVERT_VERSION, BasicConstants.FIRST_EPIC_VERSION_COMMIT_MESSAGE,
+                COMMIT_MESSAGE_FOR_TESTFILE);
     }
 
     @Test
     public void testExecuteWithBatchModeOnEpicBranch() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
         git.createAndCommitTestfile(repositorySet);
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL);
@@ -319,7 +344,6 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteWithBatchModeOnMasterBranch() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
         git.createAndCommitTestfile(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         // test
@@ -333,15 +357,14 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
 
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, EPIC_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, EPIC_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
     }
 
     @Test
     public void testExecuteSkipTestProjectFalse() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.skipTestProject", "false");
@@ -357,10 +380,10 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteTychoBuildAndSkipTestProjectFalse() throws Exception {
         // set up
-        Properties userPropertiesForEpicStart = new Properties();
-        userPropertiesForEpicStart.setProperty("flow.tychoBuild", "true");
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME, userPropertiesForEpicStart);
-        git.createAndCommitTestfile(repositorySet);
+        final String USED_EPIC_BRANCH = BasicConstants.EPIC_WITHOUT_VERSION_BRANCH;
+        final String USED_COMMIT_MESSAGE_MERGE = TestProjects.BASIC.jiraProject + "-NONE: Merge branch "
+                + USED_EPIC_BRANCH;
+        git.switchToBranch(repositorySet, USED_EPIC_BRANCH);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.skipTestProject", "false");
         userProperties.setProperty("flow.tychoBuild", "true");
@@ -370,10 +393,11 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, USED_EPIC_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, USED_EPIC_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE, COMMIT_MESSAGE_FOR_TESTFILE);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, USED_COMMIT_MESSAGE_MERGE,
+                BasicConstants.EPIC_WITHOUT_VERSION_COMMIT_MESSAGE_TESTFILE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         assertMavenCommandExecuted("clean verify");
         assertMavenCommandNotExecuted("clean test");
@@ -382,7 +406,6 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteInstallProjectTrue() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.installProject", "true");
@@ -397,7 +420,6 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteKeepEpicBranchTrue() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
         Properties userProperties = new Properties();
@@ -408,8 +430,8 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, EPIC_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, EPIC_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE,
                 COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
@@ -418,7 +440,6 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecutePushRemoteFalse() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
         Properties userProperties = new Properties();
@@ -429,8 +450,8 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, EPIC_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, EPIC_BRANCH);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE,
                 COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE);
@@ -440,176 +461,187 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteOnMaintenanceBranchEpicStartedOnMaintenanceBranch() throws Exception {
         // set up
-        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION);
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
+        final String USED_EPIC_BRANCH = BasicConstants.SINGLE_EPIC_ON_MAINTENANCE_BRANCH;
+        final String USED_COMMIT_MESSAGE_MERGE_INTO_MAINTENANCE = TestProjects.BASIC.jiraProject
+                + "-NONE: Merge branch " + USED_EPIC_BRANCH + " into " + MAINTENANCE_BRANCH;
+        final String USED_COMMIT_MESSAGE_REVERT_VERSION = BasicConstants.SINGLE_EPIC_ON_MAINTENANCE_ISSUE
+                + ": reverting versions for development branch";
+        final String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + USED_EPIC_BRANCH + LS
+                + "Choose epic branch to finish";
+        git.switchToBranch(repositorySet, USED_EPIC_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.switchToBranch(repositorySet, MAINTENANCE_BRANCH);
-        String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + EPIC_BRANCH + LS + "Choose epic branch to finish";
         when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1"))).thenReturn("1");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.epicBranchPrefix", BasicConstants.SINGLE_EPIC_ON_MAINTENANCE_BRANCH_PREFIX);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1"));
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, USED_EPIC_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, USED_EPIC_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_MERGE_INTO_MAINTENANCE,
-                COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE,
-                COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
+        git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, USED_COMMIT_MESSAGE_MERGE_INTO_MAINTENANCE,
+                USED_COMMIT_MESSAGE_REVERT_VERSION, BasicConstants.SINGLE_EPIC_ON_MAINTENANCE_VERSION_COMMIT_MESSAGE,
+                COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
     }
 
     @Test
     public void testExecuteOnMasterBranchEpicStartedOnMaintenanceBranch() throws Exception {
         // set up
-        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION);
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
+        final String USED_EPIC_BRANCH = BasicConstants.SINGLE_EPIC_ON_MAINTENANCE_BRANCH;
+        final String USED_COMMIT_MESSAGE_MERGE_INTO_MAINTENANCE = TestProjects.BASIC.jiraProject
+                + "-NONE: Merge branch " + USED_EPIC_BRANCH + " into " + MAINTENANCE_BRANCH;
+        final String USED_COMMIT_MESSAGE_REVERT_VERSION = BasicConstants.SINGLE_EPIC_ON_MAINTENANCE_ISSUE
+                + ": reverting versions for development branch";
+        final String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + USED_EPIC_BRANCH + LS
+                + "Choose epic branch to finish";
+        git.switchToBranch(repositorySet, USED_EPIC_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
-        String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + EPIC_BRANCH + LS + "Choose epic branch to finish";
         when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1"))).thenReturn("1");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.epicBranchPrefix", BasicConstants.SINGLE_EPIC_ON_MAINTENANCE_BRANCH_PREFIX);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1"));
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, USED_EPIC_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, USED_EPIC_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_MERGE_INTO_MAINTENANCE,
-                COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE,
-                COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
+        git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, USED_COMMIT_MESSAGE_MERGE_INTO_MAINTENANCE,
+                USED_COMMIT_MESSAGE_REVERT_VERSION, BasicConstants.SINGLE_EPIC_ON_MAINTENANCE_VERSION_COMMIT_MESSAGE,
+                COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
     }
 
     @Test
     public void testExecuteOnMaintenanceBranchEpicStartedOnMasterBranch() throws Exception {
         // set up
-        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION);
-        git.switchToBranch(repositorySet, MASTER_BRANCH);
-        final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
-        git.createAndCommitTestfile(repositorySet, "master_testfile.txt", COMMIT_MESSAGE_MASTER_TESTFILE);
-        git.push(repositorySet);
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
+        final String USED_EPIC_BRANCH = BasicConstants.SINGLE_EPIC_BRANCH;
+        final String USED_COMMIT_MESSAGE_MERGE = TestProjects.BASIC.jiraProject + "-NONE: Merge branch "
+                + USED_EPIC_BRANCH;
+        final String USED_COMMIT_MESSAGE_REVERT_VERSION = BasicConstants.SINGLE_EPIC_ISSUE
+                + ": reverting versions for development branch";
+        final String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + USED_EPIC_BRANCH + LS
+                + "Choose epic branch to finish";
+        git.switchToBranch(repositorySet, USED_EPIC_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.switchToBranch(repositorySet, MAINTENANCE_BRANCH);
-        String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + EPIC_BRANCH + LS + "Choose epic branch to finish";
         when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1"))).thenReturn("1");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.epicBranchPrefix", BasicConstants.SINGLE_EPIC_BRANCH_PREFIX);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1"));
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, USED_EPIC_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, USED_EPIC_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, USED_COMMIT_MESSAGE_MERGE,
+                USED_COMMIT_MESSAGE_REVERT_VERSION, BasicConstants.SINGLE_EPIC_VERSION_COMMIT_MESSAGE,
+                COMMIT_MESSAGE_FOR_TESTFILE);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE,
-                COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE,
-                COMMIT_MESSAGE_MASTER_TESTFILE);
-        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
-    }
-
-    @Test
-    public void testExecuteOnMaintenanceBranchEpicStartedOnMasterBranchOnSameCommitAsMaitenanceBranch()
-            throws Exception {
-        // set up
-        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION);
-        git.switchToBranch(repositorySet, MASTER_BRANCH);
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
-        git.createAndCommitTestfile(repositorySet);
-        git.switchToBranch(repositorySet, MAINTENANCE_BRANCH);
-        String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + EPIC_BRANCH + LS + "Choose epic branch to finish";
-        when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1"))).thenReturn("1");
-        // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
-        // verify
-        verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1"));
-        verifyNoMoreInteractions(promptControllerMock);
-        git.assertClean(repositorySet);
-        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE,
-                COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
     }
 
     @Test
     public void testExecuteOnMasterBranchEpicStartedOnMasterBranchOnSameCommitAsMaitenanceBranch() throws Exception {
         // set up
-        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION);
-        git.switchToBranch(repositorySet, MASTER_BRANCH);
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
+        final String USED_EPIC_BRANCH = BasicConstants.SINGLE_EPIC_BRANCH;
+        final String USED_COMMIT_MESSAGE_MERGE = TestProjects.BASIC.jiraProject + "-NONE: Merge branch "
+                + USED_EPIC_BRANCH;
+        final String USED_COMMIT_MESSAGE_REVERT_VERSION = BasicConstants.SINGLE_EPIC_ISSUE
+                + ": reverting versions for development branch";
+        final String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + USED_EPIC_BRANCH + LS
+                + "Choose epic branch to finish";
+        git.switchToBranch(repositorySet, USED_EPIC_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
-        String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + EPIC_BRANCH + LS + "Choose epic branch to finish";
         when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1"))).thenReturn("1");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.epicBranchPrefix", BasicConstants.SINGLE_EPIC_BRANCH_PREFIX);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1"));
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, USED_EPIC_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, USED_EPIC_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, USED_COMMIT_MESSAGE_MERGE,
+                USED_COMMIT_MESSAGE_REVERT_VERSION, BasicConstants.SINGLE_EPIC_VERSION_COMMIT_MESSAGE,
+                COMMIT_MESSAGE_FOR_TESTFILE);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE,
-                COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE);
+        git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
     }
 
     @Test
     public void testExecuteOnMasterBranchEpicStartedOnMaintenanceBranchOnSameCommitAsMasterBranch() throws Exception {
         // set up
-        String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + EPIC_BRANCH + LS + "Choose epic branch to finish";
+        final String USED_MAINTENANCE_BRANCH = BasicConstants.MAINTENANCE_WITHOUT_VERSION_BRANCH;
+        final String USED_EPIC_BRANCH = BasicConstants.EPIC_ON_MAINTENANCE_WITHOUT_VERSION_BRANCH;
+        final String USED_COMMIT_MESSAGE_MERGE_INTO_MAINTENANCE = TestProjects.BASIC.jiraProject
+                + "-NONE: Merge branch " + USED_EPIC_BRANCH + " into " + USED_MAINTENANCE_BRANCH;
+        final String USED_COMMIT_MESSAGE_REVERT_VERSION = BasicConstants.EPIC_ON_MAINTENANCE_WITHOUT_VERSION_ISSUE
+                + ": reverting versions for development branch";
         final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
         final String COMMIT_MESSAGE_MAINTENANCE_TESTFILE = "MAINTENANCE: Unit test dummy file commit";
-        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION, TestProjects.BASIC.version);
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
+        final String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + USED_EPIC_BRANCH + LS
+                + "Choose epic branch to finish";
+        final String USED_PROMPT_MAINTENANCE_MERGE_WITHOUT_UPDATE = "Base branch '" + USED_MAINTENANCE_BRANCH
+                + "' has changes that are not yet included in epic branch '" + USED_EPIC_BRANCH
+                + "'. If you continue it will be tryed to merge the changes."
+                + " But it is strongly recomended to run 'mvn flow:epic-update' first and then run"
+                + " 'mvn flow:epic-finish' again. Are you sure you want to continue?";
+        git.switchToBranch(repositorySet, USED_EPIC_BRANCH);
         git.createAndCommitTestfile(repositorySet);
-        git.switchToBranch(repositorySet, MAINTENANCE_BRANCH);
+        git.switchToBranch(repositorySet, USED_MAINTENANCE_BRANCH);
         git.createAndCommitTestfile(repositorySet, "maintenance_testfile.txt", COMMIT_MESSAGE_MAINTENANCE_TESTFILE);
         git.push(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createAndCommitTestfile(repositorySet, "master_testfile.txt", COMMIT_MESSAGE_MASTER_TESTFILE);
         git.push(repositorySet);
         when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1"))).thenReturn("1");
-        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_MERGE_WITHOUT_UPDATE, Arrays.asList("y", "n"), "n"))
+        when(promptControllerMock.prompt(USED_PROMPT_MAINTENANCE_MERGE_WITHOUT_UPDATE, Arrays.asList("y", "n"), "n"))
                 .thenReturn("y");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.epicBranchPrefix",
+                BasicConstants.EPIC_ON_MAINTENANCE_WITHOUT_VERSION_BRANCH_PREFIX);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1"));
-        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_MERGE_WITHOUT_UPDATE, Arrays.asList("y", "n"), "n");
+        verify(promptControllerMock).prompt(USED_PROMPT_MAINTENANCE_MERGE_WITHOUT_UPDATE, Arrays.asList("y", "n"), "n");
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
-        git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
+        git.assertCurrentBranch(repositorySet, USED_MAINTENANCE_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, USED_EPIC_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, USED_EPIC_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE);
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_MERGE_INTO_MAINTENANCE,
-                COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE,
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, USED_MAINTENANCE_BRANCH, USED_MAINTENANCE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, USED_MAINTENANCE_BRANCH,
+                USED_COMMIT_MESSAGE_MERGE_INTO_MAINTENANCE, USED_COMMIT_MESSAGE_REVERT_VERSION,
+                BasicConstants.EPIC_ON_MAINTENANCE_WITHOUT_VERSION_VERSION_COMMIT_MESSAGE, COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_MAINTENANCE_TESTFILE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
     }
@@ -617,29 +649,34 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteOnOtherBranchEpicStartedOnMasterBranch() throws Exception {
         // set up
+        final String USED_EPIC_BRANCH = BasicConstants.SINGLE_EPIC_BRANCH;
+        final String USED_COMMIT_MESSAGE_MERGE = TestProjects.BASIC.jiraProject + "-NONE: Merge branch "
+                + USED_EPIC_BRANCH;
+        final String USED_COMMIT_MESSAGE_REVERT_VERSION = BasicConstants.SINGLE_EPIC_ISSUE
+                + ": reverting versions for development branch";
         final String OTHER_BRANCH = "otherBranch";
-        git.createBranchWithoutSwitch(repositorySet, OTHER_BRANCH);
-        final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
-        git.createAndCommitTestfile(repositorySet, "master_testfile.txt", COMMIT_MESSAGE_MASTER_TESTFILE);
-        git.push(repositorySet);
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
+        final String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + USED_EPIC_BRANCH + LS
+                + "Choose epic branch to finish";
+        git.switchToBranch(repositorySet, USED_EPIC_BRANCH);
         git.createAndCommitTestfile(repositorySet);
-        git.switchToBranch(repositorySet, OTHER_BRANCH);
-        String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + EPIC_BRANCH + LS + "Choose epic branch to finish";
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        git.createBranch(repositorySet, OTHER_BRANCH);
         when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1"))).thenReturn("1");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.epicBranchPrefix", BasicConstants.SINGLE_EPIC_BRANCH_PREFIX);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1"));
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, OTHER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, USED_EPIC_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, USED_EPIC_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE,
-                COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE,
-                COMMIT_MESSAGE_MASTER_TESTFILE);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, USED_COMMIT_MESSAGE_MERGE,
+                USED_COMMIT_MESSAGE_REVERT_VERSION, BasicConstants.SINGLE_EPIC_VERSION_COMMIT_MESSAGE,
+                COMMIT_MESSAGE_FOR_TESTFILE);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, OTHER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, OTHER_BRANCH);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
@@ -648,30 +685,35 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteOnOtherBranchEpicStartedOnMainteanceBranch() throws Exception {
         // set up
+        final String USED_EPIC_BRANCH = BasicConstants.SINGLE_EPIC_ON_MAINTENANCE_BRANCH;
+        final String USED_COMMIT_MESSAGE_MERGE_INTO_MAINTENANCE = TestProjects.BASIC.jiraProject
+                + "-NONE: Merge branch " + USED_EPIC_BRANCH + " into " + MAINTENANCE_BRANCH;
+        final String USED_COMMIT_MESSAGE_REVERT_VERSION = BasicConstants.SINGLE_EPIC_ON_MAINTENANCE_ISSUE
+                + ": reverting versions for development branch";
         final String OTHER_BRANCH = "otherBranch";
-        git.createBranchWithoutSwitch(repositorySet, OTHER_BRANCH);
-        final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
-        git.createAndCommitTestfile(repositorySet, "master_testfile.txt", COMMIT_MESSAGE_MASTER_TESTFILE);
-        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION);
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
+        final String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + USED_EPIC_BRANCH + LS
+                + "Choose epic branch to finish";
+        git.switchToBranch(repositorySet, USED_EPIC_BRANCH);
         git.createAndCommitTestfile(repositorySet);
-        git.switchToBranch(repositorySet, OTHER_BRANCH);
-        String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + EPIC_BRANCH + LS + "Choose epic branch to finish";
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        git.createBranch(repositorySet, OTHER_BRANCH);
         when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1"))).thenReturn("1");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.epicBranchPrefix", BasicConstants.SINGLE_EPIC_ON_MAINTENANCE_BRANCH_PREFIX);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1"));
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, OTHER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE);
+        git.assertMissingLocalBranches(repositorySet, USED_EPIC_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, USED_EPIC_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_MERGE_INTO_MAINTENANCE,
-                COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE,
-                COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE, COMMIT_MESSAGE_MASTER_TESTFILE);
+        git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, USED_COMMIT_MESSAGE_MERGE_INTO_MAINTENANCE,
+                USED_COMMIT_MESSAGE_REVERT_VERSION, BasicConstants.SINGLE_EPIC_ON_MAINTENANCE_VERSION_COMMIT_MESSAGE,
+                COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
         git.assertCommitsInLocalBranch(repositorySet, OTHER_BRANCH);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
     }
@@ -679,8 +721,10 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteEpicStartedOnMaintenanceBranchThatIsNotAvailableLocally() throws Exception {
         // set up
-        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION);
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
+        final String USED_EPIC_BRANCH = BasicConstants.EPIC_ON_MAINTENANCE_BRANCH;
+        final String USED_COMMIT_MESSAGE_REVERT_VERSION = BasicConstants.EPIC_ON_MAINTENANCE_ISSUE
+                + ": reverting versions for development branch";
+        git.switchToBranch(repositorySet, USED_EPIC_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.deleteLocalBranch(repositorySet, MAINTENANCE_BRANCH);
         // test
@@ -689,26 +733,27 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, USED_EPIC_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, USED_EPIC_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_MERGE_INTO_MAINTENANCE,
-                COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE,
-                COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
+                USED_COMMIT_MESSAGE_REVERT_VERSION, BasicConstants.EPIC_ON_MAINTENANCE_VERSION_COMMIT_MESSAGE,
+                COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
     }
 
     @Test
     public void testExecuteOnEpicBranchEpicStartedOnMasterIntegrationBranch() throws Exception {
         // set up
-        ExecutorHelper.executeIntegerated(this, repositorySet, INTEGRATION_MASTER_BRANCH);
         final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
+        git.createAndCommitTestfile(repositorySet);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_MASTER_BRANCH);
         git.createAndCommitTestfile(repositorySet, "master_testfile.txt", COMMIT_MESSAGE_MASTER_TESTFILE);
         git.push(repositorySet);
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
-        git.createAndCommitTestfile(repositorySet);
+        git.switchToBranch(repositorySet, EPIC_BRANCH);
         when(promptControllerMock.prompt(PROMPT_MERGE_WITHOUT_UPDATE, Arrays.asList("y", "n"), "n")).thenReturn("y");
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
@@ -717,8 +762,8 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, INTEGRATION_MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, INTEGRATION_MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, EPIC_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, EPIC_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE,
                 COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE,
@@ -729,18 +774,21 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteOnEpicBranchEpicStartedOnMaintenanceIntegrationBranch() throws Exception {
         // set up
-        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION);
-        ExecutorHelper.executeIntegerated(this, repositorySet, INTEGRATION_MAINTENANCE_BRANCH);
+        final String USED_EPIC_BRANCH = BasicConstants.EPIC_ON_MAINTENANCE_BRANCH;
+        final String USED_COMMIT_MESSAGE_REVERT_VERSION = BasicConstants.EPIC_ON_MAINTENANCE_ISSUE
+                + ": reverting versions for development branch";
         final String COMMIT_MESSAGE_MAINTENACE_TESTFILE = "MAINTEANCE: Unit test dummy file commit";
-        git.createAndCommitTestfile(repositorySet, "maintenance_testfile.txt", COMMIT_MESSAGE_MAINTENACE_TESTFILE);
-        git.switchToBranch(repositorySet, MASTER_BRANCH);
         final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
+        git.switchToBranch(repositorySet, USED_EPIC_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
+        git.switchToBranch(repositorySet, MAINTENANCE_BRANCH);
+        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_MAINTENANCE_BRANCH);
+        git.createAndCommitTestfile(repositorySet, "maintenance_testfile.txt", COMMIT_MESSAGE_MAINTENACE_TESTFILE);
+        git.push(repositorySet);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createAndCommitTestfile(repositorySet, "master_testfile.txt", COMMIT_MESSAGE_MASTER_TESTFILE);
         git.push(repositorySet);
-        git.switchToBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.push(repositorySet);
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
-        git.createAndCommitTestfile(repositorySet);
+        git.switchToBranch(repositorySet, USED_EPIC_BRANCH);
         when(promptControllerMock.prompt(PROMPT_MAINTENANCE_MERGE_WITHOUT_UPDATE, Arrays.asList("y", "n"), "n"))
                 .thenReturn("y");
         // test
@@ -750,21 +798,18 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, INTEGRATION_MAINTENANCE_BRANCH, MAINTENANCE_BRANCH,
-                CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, INTEGRATION_MAINTENANCE_BRANCH, MAINTENANCE_BRANCH,
-                CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, USED_EPIC_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, USED_EPIC_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_MERGE_INTO_MAINTENANCE,
-                COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE,
-                COMMIT_MESSAGE_MAINTENACE_TESTFILE, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
+                USED_COMMIT_MESSAGE_REVERT_VERSION, BasicConstants.EPIC_ON_MAINTENANCE_VERSION_COMMIT_MESSAGE,
+                COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_MAINTENACE_TESTFILE,
+                COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
     }
 
     @Test
     public void testExecuteEpicWithoutChanges() throws Exception {
-        // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
                 promptControllerMock);
@@ -778,8 +823,8 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
 
         assertVersionsInPom(repositorySet.getWorkingDirectory(), EPIC_VERSION);
         git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, EPIC_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, EPIC_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_SET_VERSION);
     }
@@ -787,69 +832,103 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteSelectedLocalEpicBranchAheadOfRemote() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
+        final String USED_EPIC_BRANCH = BasicConstants.SINGLE_EPIC_BRANCH;
+        final String USED_COMMIT_MESSAGE_MERGE = TestProjects.BASIC.jiraProject + "-NONE: Merge branch "
+                + USED_EPIC_BRANCH;
+        final String USED_COMMIT_MESSAGE_REVERT_VERSION = BasicConstants.SINGLE_EPIC_ISSUE
+                + ": reverting versions for development branch";
+        final String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + USED_EPIC_BRANCH + LS
+                + "Choose epic branch to finish";
+        git.switchToBranch(repositorySet, USED_EPIC_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
-        String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + EPIC_BRANCH + LS + "Choose epic branch to finish";
         when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1"))).thenReturn("1");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.epicBranchPrefix", BasicConstants.SINGLE_EPIC_BRANCH_PREFIX);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1"));
         verifyNoMoreInteractions(promptControllerMock);
-        assertEpicFinishedCorrectly();
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, USED_EPIC_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, USED_EPIC_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, USED_COMMIT_MESSAGE_MERGE,
+                USED_COMMIT_MESSAGE_REVERT_VERSION, BasicConstants.SINGLE_EPIC_VERSION_COMMIT_MESSAGE,
+                COMMIT_MESSAGE_FOR_TESTFILE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
     }
 
     @Test
     public void testExecuteSelectedRemoteEpicBranchAheadOfLocal() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
-        git.remoteCreateTestfileInBranch(repositorySet, EPIC_BRANCH);
+        final String USED_EPIC_BRANCH = BasicConstants.SINGLE_EPIC_BRANCH;
+        final String USED_COMMIT_MESSAGE_MERGE = TestProjects.BASIC.jiraProject + "-NONE: Merge branch "
+                + USED_EPIC_BRANCH;
+        final String USED_COMMIT_MESSAGE_REVERT_VERSION = BasicConstants.SINGLE_EPIC_ISSUE
+                + ": reverting versions for development branch";
+        final String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + USED_EPIC_BRANCH + LS
+                + "Choose epic branch to finish";
+        git.remoteCreateTestfileInBranch(repositorySet, USED_EPIC_BRANCH);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
-        String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + EPIC_BRANCH + LS + "Choose epic branch to finish";
         when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1"))).thenReturn("1");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.epicBranchPrefix", BasicConstants.SINGLE_EPIC_BRANCH_PREFIX);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1"));
         verifyNoMoreInteractions(promptControllerMock);
-        assertEpicFinishedCorrectly();
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, USED_EPIC_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, USED_EPIC_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, USED_COMMIT_MESSAGE_MERGE,
+                USED_COMMIT_MESSAGE_REVERT_VERSION, BasicConstants.SINGLE_EPIC_VERSION_COMMIT_MESSAGE,
+                COMMIT_MESSAGE_FOR_TESTFILE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
     }
 
     @Test
     public void testExecuteSelectedEpicBranchHasChangesLocallyAndRemote() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
+        final String USED_EPIC_BRANCH = BasicConstants.SINGLE_EPIC_BRANCH;
+        final String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + USED_EPIC_BRANCH + LS
+                + "Choose epic branch to finish";
         final String COMMIT_MESSAGE_LOCAL_TESTFILE = "LOCAL: Unit test dummy file commit";
-        git.createAndCommitTestfile(repositorySet, "local_testfile.txt", COMMIT_MESSAGE_LOCAL_TESTFILE);
         final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
-        git.remoteCreateTestfileInBranch(repositorySet, EPIC_BRANCH, "remote_testfile.txt",
+        git.switchToBranch(repositorySet, USED_EPIC_BRANCH);
+        git.createAndCommitTestfile(repositorySet, "local_testfile.txt", COMMIT_MESSAGE_LOCAL_TESTFILE);
+        git.remoteCreateTestfileInBranch(repositorySet, USED_EPIC_BRANCH, "remote_testfile.txt",
                 COMMIT_MESSAGE_REMOTE_TESTFILE);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
-        String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + EPIC_BRANCH + LS + "Choose epic branch to finish";
         when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1"))).thenReturn("1");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.epicBranchPrefix", BasicConstants.SINGLE_EPIC_BRANCH_PREFIX);
         // test
-        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
                 promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1"));
         verifyNoMoreInteractions(promptControllerMock);
-        assertGitFlowFailureException(result, "Remote and local epic branches '" + EPIC_BRANCH + "' diverge.",
-                "Rebase or merge the changes in local epic branch '" + EPIC_BRANCH + "' first.", "'git rebase'");
+        assertGitFlowFailureException(result, "Remote and local epic branches '" + USED_EPIC_BRANCH + "' diverge.",
+                "Rebase or merge the changes in local epic branch '" + USED_EPIC_BRANCH + "' first.", "'git rebase'");
 
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, USED_EPIC_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, USED_EPIC_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_LOCAL_TESTFILE,
-                COMMIT_MESSAGE_SET_VERSION);
+        git.assertCommitsInLocalBranch(repositorySet, USED_EPIC_BRANCH, COMMIT_MESSAGE_LOCAL_TESTFILE,
+                BasicConstants.SINGLE_EPIC_VERSION_COMMIT_MESSAGE);
     }
 
     @Test
     public void testExecuteCurrentLocalEpicBranchAheadOfRemote() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
         git.createAndCommitTestfile(repositorySet);
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
@@ -861,7 +940,6 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteCurrentRemoteEpicBranchAheadOfLocal() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
         git.remoteCreateTestfileInBranch(repositorySet, EPIC_BRANCH);
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
@@ -873,12 +951,11 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteCurrentRemoteEpicBranchAheadOfLocalWithMergeConflict() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
+        final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
         git.remoteCreateTestfileInBranch(repositorySet, EPIC_BRANCH);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createTestfile(repositorySet);
         git.modifyTestfile(repositorySet);
-        String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
         git.commitAll(repositorySet, COMMIT_MESSAGE_MASTER_TESTFILE);
         git.switchToBranch(repositorySet, EPIC_BRANCH);
         when(promptControllerMock.prompt(PROMPT_MERGE_WITHOUT_UPDATE, Arrays.asList("y", "n"), "n")).thenReturn("y");
@@ -896,10 +973,9 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteCurrentEpicBranchHasChangesLocallyAndRemote() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
         final String COMMIT_MESSAGE_LOCAL_TESTFILE = "LOCAL: Unit test dummy file commit";
-        git.createAndCommitTestfile(repositorySet, "local_testfile.txt", COMMIT_MESSAGE_LOCAL_TESTFILE);
         final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
+        git.createAndCommitTestfile(repositorySet, "local_testfile.txt", COMMIT_MESSAGE_LOCAL_TESTFILE);
         git.remoteCreateTestfileInBranch(repositorySet, EPIC_BRANCH, "remote_testfile.txt",
                 COMMIT_MESSAGE_REMOTE_TESTFILE);
         // test
@@ -912,8 +988,8 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
 
         git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), EPIC_VERSION);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, EPIC_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, EPIC_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_LOCAL_TESTFILE,
                 COMMIT_MESSAGE_SET_VERSION);
@@ -922,10 +998,9 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteLocalBaseBranchAheadOfRemote() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
+        final String COMMIT_MESSAGE_LOCAL_TESTFILE = "LOCAL: Unit test dummy file commit";
         git.createAndCommitTestfile(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
-        final String COMMIT_MESSAGE_LOCAL_TESTFILE = "LOCAL: Unit test dummy file commit";
         git.createAndCommitTestfile(repositorySet, "local_testfile.txt", COMMIT_MESSAGE_LOCAL_TESTFILE);
         git.switchToBranch(repositorySet, EPIC_BRANCH);
         when(promptControllerMock.prompt(PROMPT_MERGE_WITHOUT_UPDATE, Arrays.asList("y", "n"), "n")).thenReturn("y");
@@ -936,8 +1011,8 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, EPIC_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, EPIC_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE,
                 COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE,
@@ -948,10 +1023,9 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteRemoteBaseBranchAheadOfLocal() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
+        final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
         git.createAndCommitTestfile(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
-        final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
         git.remoteCreateTestfileInBranch(repositorySet, MASTER_BRANCH, "remote_testfile.txt",
                 COMMIT_MESSAGE_REMOTE_TESTFILE);
         git.switchToBranch(repositorySet, EPIC_BRANCH);
@@ -963,8 +1037,8 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, EPIC_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, EPIC_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE,
                 COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE,
@@ -975,12 +1049,11 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteBaseBranchHasChangesLocallyAndRemote() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
+        final String COMMIT_MESSAGE_LOCAL_TESTFILE = "LOCAL: Unit test dummy file commit";
+        final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
         git.createAndCommitTestfile(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
-        final String COMMIT_MESSAGE_LOCAL_TESTFILE = "LOCAL: Unit test dummy file commit";
         git.createAndCommitTestfile(repositorySet, "local_testfile.txt", COMMIT_MESSAGE_LOCAL_TESTFILE);
-        final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
         git.remoteCreateTestfileInBranch(repositorySet, MASTER_BRANCH, "remote_testfile.txt",
                 COMMIT_MESSAGE_REMOTE_TESTFILE);
         git.switchToBranch(repositorySet, EPIC_BRANCH);
@@ -999,8 +1072,8 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
 
         git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), EPIC_VERSION);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, EPIC_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, EPIC_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_LOCAL_TESTFILE);
         git.assertCommitsInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_SET_VERSION);
@@ -1009,12 +1082,19 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteSelectedLocalEpicBranchAheadOfRemoteAndFetchRemoteFalse() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
+        final String USED_EPIC_BRANCH = BasicConstants.SINGLE_EPIC_BRANCH;
+        final String USED_COMMIT_MESSAGE_MERGE = TestProjects.BASIC.jiraProject + "-NONE: Merge branch "
+                + USED_EPIC_BRANCH;
+        final String USED_COMMIT_MESSAGE_REVERT_VERSION = BasicConstants.SINGLE_EPIC_ISSUE
+                + ": reverting versions for development branch";
+        final String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + USED_EPIC_BRANCH + LS
+                + "Choose epic branch to finish";
+        git.switchToBranch(repositorySet, USED_EPIC_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
-        String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + EPIC_BRANCH + LS + "Choose epic branch to finish";
         when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1"))).thenReturn("1");
         Properties userProperties = new Properties();
+        userProperties.setProperty("flow.epicBranchPrefix", BasicConstants.SINGLE_EPIC_BRANCH_PREFIX);
         userProperties.setProperty("flow.fetchRemote", "false");
         userProperties.setProperty("flow.push", "false");
         git.setOffline(repositorySet);
@@ -1024,22 +1104,37 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.setOnline(repositorySet);
         verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1"));
         verifyNoMoreInteractions(promptControllerMock);
-        assertEpicFinishedCorrectlyOffline();
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, USED_EPIC_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, USED_EPIC_BRANCH);
+        git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, USED_COMMIT_MESSAGE_MERGE,
+                USED_COMMIT_MESSAGE_REVERT_VERSION, BasicConstants.SINGLE_EPIC_VERSION_COMMIT_MESSAGE,
+                COMMIT_MESSAGE_FOR_TESTFILE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
     }
 
     @Test
     public void testExecuteSelectedRemoteEpicBranchAheadOfLocalFetchRemoteFalse() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
+        final String USED_EPIC_BRANCH = BasicConstants.SINGLE_EPIC_BRANCH;
+        final String USED_COMMIT_MESSAGE_MERGE = TestProjects.BASIC.jiraProject + "-NONE: Merge branch "
+                + USED_EPIC_BRANCH;
+        final String USED_COMMIT_MESSAGE_REVERT_VERSION = BasicConstants.SINGLE_EPIC_ISSUE
+                + ": reverting versions for development branch";
+        final String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + USED_EPIC_BRANCH + LS
+                + "Choose epic branch to finish";
+        final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
+        git.switchToBranch(repositorySet, USED_EPIC_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
-        final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
-        git.remoteCreateTestfileInBranch(repositorySet, EPIC_BRANCH, "remote_testfile.txt",
+        git.remoteCreateTestfileInBranch(repositorySet, USED_EPIC_BRANCH, "remote_testfile.txt",
                 COMMIT_MESSAGE_REMOTE_TESTFILE);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
-        String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + EPIC_BRANCH + LS + "Choose epic branch to finish";
         when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1"))).thenReturn("1");
         Properties userProperties = new Properties();
+        userProperties.setProperty("flow.epicBranchPrefix", BasicConstants.SINGLE_EPIC_BRANCH_PREFIX);
         userProperties.setProperty("flow.fetchRemote", "false");
         userProperties.setProperty("flow.push", "false");
         git.setOffline(repositorySet);
@@ -1049,21 +1144,36 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.setOnline(repositorySet);
         verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1"));
         verifyNoMoreInteractions(promptControllerMock);
-        assertEpicFinishedCorrectlyOffline();
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, USED_EPIC_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, USED_EPIC_BRANCH);
+        git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, USED_COMMIT_MESSAGE_MERGE,
+                USED_COMMIT_MESSAGE_REVERT_VERSION, BasicConstants.SINGLE_EPIC_VERSION_COMMIT_MESSAGE,
+                COMMIT_MESSAGE_FOR_TESTFILE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
     }
 
     @Test
     public void testExecuteSelectedEpicBranchHasChangesLocallyAndRemoteFetchRemoteFalse() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
-        git.createAndCommitTestfile(repositorySet);
+        final String USED_EPIC_BRANCH = BasicConstants.SINGLE_EPIC_BRANCH;
+        final String USED_COMMIT_MESSAGE_MERGE = TestProjects.BASIC.jiraProject + "-NONE: Merge branch "
+                + USED_EPIC_BRANCH;
+        final String USED_COMMIT_MESSAGE_REVERT_VERSION = BasicConstants.SINGLE_EPIC_ISSUE
+                + ": reverting versions for development branch";
+        final String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + USED_EPIC_BRANCH + LS
+                + "Choose epic branch to finish";
         final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
-        git.remoteCreateTestfileInBranch(repositorySet, EPIC_BRANCH, "remote_testfile.txt",
+        git.switchToBranch(repositorySet, USED_EPIC_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
+        git.remoteCreateTestfileInBranch(repositorySet, USED_EPIC_BRANCH, "remote_testfile.txt",
                 COMMIT_MESSAGE_REMOTE_TESTFILE);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
-        String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + EPIC_BRANCH + LS + "Choose epic branch to finish";
         when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1"))).thenReturn("1");
         Properties userProperties = new Properties();
+        userProperties.setProperty("flow.epicBranchPrefix", BasicConstants.SINGLE_EPIC_BRANCH_PREFIX);
         userProperties.setProperty("flow.fetchRemote", "false");
         userProperties.setProperty("flow.push", "false");
         git.setOffline(repositorySet);
@@ -1073,34 +1183,37 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.setOnline(repositorySet);
         verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1"));
         verifyNoMoreInteractions(promptControllerMock);
-        assertEpicFinishedCorrectlyOffline();
-    }
-
-    private void assertEpicFinishedCorrectlyOffline() throws Exception {
-        git.setOnline(repositorySet);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, USED_EPIC_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, USED_EPIC_BRANCH);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE,
-                COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, USED_COMMIT_MESSAGE_MERGE,
+                USED_COMMIT_MESSAGE_REVERT_VERSION, BasicConstants.SINGLE_EPIC_VERSION_COMMIT_MESSAGE,
+                COMMIT_MESSAGE_FOR_TESTFILE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
     }
 
     @Test
     public void testExecuteSelectedRemoteEpicBranchAheadOfLocalFetchRemoteFalseWithPrefetch() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
+        final String USED_EPIC_BRANCH = BasicConstants.SINGLE_EPIC_BRANCH;
+        final String USED_COMMIT_MESSAGE_MERGE = TestProjects.BASIC.jiraProject + "-NONE: Merge branch "
+                + USED_EPIC_BRANCH;
+        final String USED_COMMIT_MESSAGE_REVERT_VERSION = BasicConstants.SINGLE_EPIC_ISSUE
+                + ": reverting versions for development branch";
+        final String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + USED_EPIC_BRANCH + LS
+                + "Choose epic branch to finish";
+        final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
+        git.switchToBranch(repositorySet, USED_EPIC_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
-        final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
-        git.remoteCreateTestfileInBranch(repositorySet, EPIC_BRANCH, "remote_testfile.txt",
+        git.remoteCreateTestfileInBranch(repositorySet, USED_EPIC_BRANCH, "remote_testfile.txt",
                 COMMIT_MESSAGE_REMOTE_TESTFILE);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
-        String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + EPIC_BRANCH + LS + "Choose epic branch to finish";
         when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1"))).thenReturn("1");
         Properties userProperties = new Properties();
+        userProperties.setProperty("flow.epicBranchPrefix", BasicConstants.SINGLE_EPIC_BRANCH_PREFIX);
         userProperties.setProperty("flow.fetchRemote", "false");
         userProperties.setProperty("flow.push", "false");
         git.fetch(repositorySet);
@@ -1114,27 +1227,30 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.setOnline(repositorySet);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, USED_EPIC_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, USED_EPIC_BRANCH);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE,
-                COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_REMOTE_TESTFILE,
-                COMMIT_MESSAGE_FOR_TESTFILE);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, USED_COMMIT_MESSAGE_MERGE,
+                USED_COMMIT_MESSAGE_REVERT_VERSION, BasicConstants.SINGLE_EPIC_VERSION_COMMIT_MESSAGE,
+                COMMIT_MESSAGE_REMOTE_TESTFILE, COMMIT_MESSAGE_FOR_TESTFILE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
     }
 
     @Test
     public void testExecuteSelectedEpicBranchHasChangesLocallyAndRemoteFetchRemoteFalseWithPrefetch() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
-        git.createAndCommitTestfile(repositorySet);
+        final String USED_EPIC_BRANCH = BasicConstants.SINGLE_EPIC_BRANCH;
+        final String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + USED_EPIC_BRANCH + LS
+                + "Choose epic branch to finish";
         final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
-        git.remoteCreateTestfileInBranch(repositorySet, EPIC_BRANCH, "remote_testfile.txt",
+        git.switchToBranch(repositorySet, USED_EPIC_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
+        git.remoteCreateTestfileInBranch(repositorySet, USED_EPIC_BRANCH, "remote_testfile.txt",
                 COMMIT_MESSAGE_REMOTE_TESTFILE);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
-        String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + EPIC_BRANCH + LS + "Choose epic branch to finish";
         when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1"))).thenReturn("1");
         Properties userProperties = new Properties();
+        userProperties.setProperty("flow.epicBranchPrefix", BasicConstants.SINGLE_EPIC_BRANCH_PREFIX);
         userProperties.setProperty("flow.fetchRemote", "false");
         userProperties.setProperty("flow.push", "false");
         git.fetch(repositorySet);
@@ -1146,27 +1262,26 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.setOnline(repositorySet);
         verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1"));
         verifyNoMoreInteractions(promptControllerMock);
-        assertGitFlowFailureException(result, "Remote and local epic branches '" + EPIC_BRANCH + "' diverge.",
-                "Rebase or merge the changes in local epic branch '" + EPIC_BRANCH + "' first.", "'git rebase'");
+        assertGitFlowFailureException(result, "Remote and local epic branches '" + USED_EPIC_BRANCH + "' diverge.",
+                "Rebase or merge the changes in local epic branch '" + USED_EPIC_BRANCH + "' first.", "'git rebase'");
 
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, USED_EPIC_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, USED_EPIC_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_FOR_TESTFILE,
-                COMMIT_MESSAGE_SET_VERSION);
+        git.assertCommitsInLocalBranch(repositorySet, USED_EPIC_BRANCH, COMMIT_MESSAGE_FOR_TESTFILE,
+                BasicConstants.SINGLE_EPIC_VERSION_COMMIT_MESSAGE);
     }
 
     @Test
     public void testExecuteNotUpdatedEpicBranchInBatchMode() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
-        git.createAndCommitTestfile(repositorySet);
-        git.switchToBranch(repositorySet, MASTER_BRANCH);
         final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createAndCommitTestfile(repositorySet, "master_testfile.txt", COMMIT_MESSAGE_MASTER_TESTFILE);
         git.switchToBranch(repositorySet, EPIC_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
         // verify
@@ -1178,8 +1293,8 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 "'mvn flow:epic-update' to merge the changes into epic branch");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, EPIC_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, EPIC_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE);
         git.assertCommitsInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_SET_VERSION);
@@ -1189,12 +1304,11 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteNotUpdatedEpicBranchInInteractiveModeWithAnswerNo() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
-        git.createAndCommitTestfile(repositorySet);
-        git.switchToBranch(repositorySet, MASTER_BRANCH);
         final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createAndCommitTestfile(repositorySet, "master_testfile.txt", COMMIT_MESSAGE_MASTER_TESTFILE);
         git.switchToBranch(repositorySet, EPIC_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
         when(promptControllerMock.prompt(PROMPT_MERGE_WITHOUT_UPDATE, Arrays.asList("y", "n"), "n")).thenReturn("n");
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
@@ -1209,8 +1323,8 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 "'mvn flow:epic-update' to merge the changes into epic branch");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, EPIC_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, EPIC_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE);
         git.assertCommitsInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_SET_VERSION);
@@ -1220,12 +1334,11 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteNotUpdatedEpicBranchInInteractiveModeWithAnswerYes() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
-        git.createAndCommitTestfile(repositorySet);
-        git.switchToBranch(repositorySet, MASTER_BRANCH);
         final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createAndCommitTestfile(repositorySet, "master_testfile.txt", COMMIT_MESSAGE_MASTER_TESTFILE);
         git.switchToBranch(repositorySet, EPIC_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
         when(promptControllerMock.prompt(PROMPT_MERGE_WITHOUT_UPDATE, Arrays.asList("y", "n"), "n")).thenReturn("y");
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
@@ -1234,8 +1347,8 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, EPIC_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, EPIC_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE,
                 COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_MASTER_TESTFILE);
@@ -1245,14 +1358,13 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteNotUpdatedEpicBranchInInteractiveModeWithAnswerYesAndConflicts() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
-        git.createAndCommitTestfile(repositorySet);
+        final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createTestfile(repositorySet);
         git.modifyTestfile(repositorySet);
-        final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
         git.commitAll(repositorySet, COMMIT_MESSAGE_MASTER_TESTFILE);
         git.switchToBranch(repositorySet, EPIC_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
         when(promptControllerMock.prompt(PROMPT_MERGE_WITHOUT_UPDATE, Arrays.asList("y", "n"), "n")).thenReturn("y");
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
@@ -1268,14 +1380,13 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteContinueAfterResolvedMergeConflict() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
-        git.createAndCommitTestfile(repositorySet);
+        final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createTestfile(repositorySet);
         git.modifyTestfile(repositorySet);
-        final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
         git.commitAll(repositorySet, COMMIT_MESSAGE_MASTER_TESTFILE);
         git.switchToBranch(repositorySet, EPIC_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
         when(promptControllerMock.prompt(PROMPT_MERGE_WITHOUT_UPDATE, Arrays.asList("y", "n"), "n")).thenReturn("y");
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
                 promptControllerMock);
@@ -1294,8 +1405,8 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, EPIC_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, EPIC_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE,
                 COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE,
@@ -1306,14 +1417,13 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteContinueAfterMergeConflictAndPromptAnswerNo() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
-        git.createAndCommitTestfile(repositorySet);
+        final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createTestfile(repositorySet);
         git.modifyTestfile(repositorySet);
-        final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
         git.commitAll(repositorySet, COMMIT_MESSAGE_MASTER_TESTFILE);
         git.switchToBranch(repositorySet, EPIC_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
         when(promptControllerMock.prompt(PROMPT_MERGE_WITHOUT_UPDATE, Arrays.asList("y", "n"), "n")).thenReturn("y");
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
                 promptControllerMock);
@@ -1336,14 +1446,13 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteContinueAfterNotResolvedMergeConflict() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
-        git.createAndCommitTestfile(repositorySet);
+        final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createTestfile(repositorySet);
         git.modifyTestfile(repositorySet);
-        final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
         git.commitAll(repositorySet, COMMIT_MESSAGE_MASTER_TESTFILE);
         git.switchToBranch(repositorySet, EPIC_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
         when(promptControllerMock.prompt(PROMPT_MERGE_WITHOUT_UPDATE, Arrays.asList("y", "n"), "n")).thenReturn("y");
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
                 promptControllerMock);
@@ -1360,9 +1469,10 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         verifyNoMoreInteractions(promptControllerMock);
         assertGitFlowFailureExceptionRegEx(result,
                 new GitFlowFailureInfo("\\QThere are unresolved conflicts after merge.\nGit error message:\n\\E.*",
-                        "\\QFix the merge conflicts and mark them as resolved. After that, run 'mvn flow:epic-finish' again. "
-                                + "Do NOT run 'git merge --continue'.\\E",
-                        "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved\\E",
+                        "\\QFix the merge conflicts and mark them as resolved. After that, run 'mvn flow:epic-finish' "
+                                + "again. Do NOT run 'git merge --continue'.\\E",
+                        "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts "
+                                + "as resolved\\E",
                         "\\Q'mvn flow:epic-finish' to continue epic finish process\\E"));
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertMergeInProcess(repositorySet, GitExecution.TESTFILE_NAME);
@@ -1371,55 +1481,77 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteOnMasterBranchOneEpicBranchStartedRemotely() throws Exception {
         // set up
-        git.useClonedRemoteRepository(repositorySet);
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
+        final String USED_EPIC_BRANCH = BasicConstants.SINGLE_EPIC_BRANCH;
+        final String USED_COMMIT_MESSAGE_MERGE = TestProjects.BASIC.jiraProject + "-NONE: Merge branch "
+                + USED_EPIC_BRANCH;
+        final String USED_COMMIT_MESSAGE_REVERT_VERSION = BasicConstants.SINGLE_EPIC_ISSUE
+                + ": reverting versions for development branch";
+        final String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + USED_EPIC_BRANCH + LS
+                + "Choose epic branch to finish";
+        git.switchToBranch(repositorySet, USED_EPIC_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
-        git.useLocalRepository(repositorySet);
-        String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + EPIC_BRANCH + LS + "Choose epic branch to finish";
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        git.deleteLocalAndRemoteTrackingBranches(repositorySet, USED_EPIC_BRANCH);
         when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1"))).thenReturn("1");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.epicBranchPrefix", BasicConstants.SINGLE_EPIC_BRANCH_PREFIX);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1"));
         verifyNoMoreInteractions(promptControllerMock);
 
-        assertEpicFinishedCorrectly();
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, USED_EPIC_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, USED_EPIC_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, USED_COMMIT_MESSAGE_MERGE,
+                USED_COMMIT_MESSAGE_REVERT_VERSION, BasicConstants.SINGLE_EPIC_VERSION_COMMIT_MESSAGE,
+                COMMIT_MESSAGE_FOR_TESTFILE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
     }
 
     @Test
     public void testExecuteOnMasterBranchEpicStartedRemotelyOnMaintenanceBranch() throws Exception {
         // set up
-        git.useClonedRemoteRepository(repositorySet);
-        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION);
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
+        final String USED_EPIC_BRANCH = BasicConstants.SINGLE_EPIC_ON_MAINTENANCE_BRANCH;
+        final String USED_COMMIT_MESSAGE_MERGE_INTO_MAINTENANCE = TestProjects.BASIC.jiraProject
+                + "-NONE: Merge branch " + USED_EPIC_BRANCH + " into " + MAINTENANCE_BRANCH;
+        final String USED_COMMIT_MESSAGE_REVERT_VERSION = BasicConstants.SINGLE_EPIC_ON_MAINTENANCE_ISSUE
+                + ": reverting versions for development branch";
+        final String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + USED_EPIC_BRANCH + LS
+                + "Choose epic branch to finish";
+        git.switchToBranch(repositorySet, USED_EPIC_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
-        git.useLocalRepository(repositorySet);
-        String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + EPIC_BRANCH + LS + "Choose epic branch to finish";
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        git.deleteLocalAndRemoteTrackingBranches(repositorySet, USED_EPIC_BRANCH);
         when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1"))).thenReturn("1");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.epicBranchPrefix", BasicConstants.SINGLE_EPIC_ON_MAINTENANCE_BRANCH_PREFIX);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1"));
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, USED_EPIC_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, USED_EPIC_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_MERGE_INTO_MAINTENANCE,
-                COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE,
-                COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
+        git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, USED_COMMIT_MESSAGE_MERGE_INTO_MAINTENANCE,
+                USED_COMMIT_MESSAGE_REVERT_VERSION, BasicConstants.SINGLE_EPIC_ON_MAINTENANCE_VERSION_COMMIT_MESSAGE,
+                COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
     }
 
     @Test
     public void testExecuteStartedOnMasterBranchAndLocalMasterBranchMissing() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
         git.createAndCommitTestfile(repositorySet);
         git.deleteLocalAndRemoteTrackingBranches(repositorySet, MASTER_BRANCH);
         // test
@@ -1432,7 +1564,6 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteStartedOnMasterBranchAndRemoteMasterBranchMissing() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
         git.createAndCommitTestfile(repositorySet);
         git.deleteRemoteBranch(repositorySet, MASTER_BRANCH);
         // test
@@ -1445,7 +1576,6 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteStartedOnMasterBranchAndMasterBranchMissingLocallyAndRemotely() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
         git.createAndCommitTestfile(repositorySet);
         git.deleteLocalAndRemoteTrackingBranches(repositorySet, MASTER_BRANCH);
         git.deleteRemoteBranch(repositorySet, MASTER_BRANCH);
@@ -1463,7 +1593,6 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteStartedOnMasterBranchAndLocalMasterBranchMissingAndFetchRemoteFalse() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
         git.createAndCommitTestfile(repositorySet);
         git.deleteLocalAndRemoteTrackingBranches(repositorySet, MASTER_BRANCH);
         Properties userProperties = new Properties();
@@ -1484,8 +1613,10 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteStartedOnMaintenanceBranchAndLocalMasterBranchMissing() throws Exception {
         // set up
-        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION);
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
+        final String USED_EPIC_BRANCH = BasicConstants.EPIC_ON_MAINTENANCE_BRANCH;
+        final String USED_COMMIT_MESSAGE_REVERT_VERSION = BasicConstants.EPIC_ON_MAINTENANCE_ISSUE
+                + ": reverting versions for development branch";
+        git.switchToBranch(repositorySet, USED_EPIC_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.deleteLocalAndRemoteTrackingBranches(repositorySet, MASTER_BRANCH);
         // test
@@ -1494,20 +1625,22 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MAINTENANCE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, USED_EPIC_BRANCH, MASTER_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, USED_EPIC_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_MERGE_INTO_MAINTENANCE,
-                COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE,
-                COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
+                USED_COMMIT_MESSAGE_REVERT_VERSION, BasicConstants.EPIC_ON_MAINTENANCE_VERSION_COMMIT_MESSAGE,
+                COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
     }
 
     @Test
     public void testExecuteStartedOnMaintenanceBranchAndRemoteMasterBranchMissing() throws Exception {
         // set up
-        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION);
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
+        final String USED_EPIC_BRANCH = BasicConstants.EPIC_ON_MAINTENANCE_BRANCH;
+        final String USED_COMMIT_MESSAGE_REVERT_VERSION = BasicConstants.EPIC_ON_MAINTENANCE_ISSUE
+                + ": reverting versions for development branch";
+        git.switchToBranch(repositorySet, USED_EPIC_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.deleteRemoteBranch(repositorySet, MASTER_BRANCH);
         // test
@@ -1516,20 +1649,22 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MAINTENANCE_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, USED_EPIC_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, USED_EPIC_BRANCH, MASTER_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_MERGE_INTO_MAINTENANCE,
-                COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE,
-                COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
+                USED_COMMIT_MESSAGE_REVERT_VERSION, BasicConstants.EPIC_ON_MAINTENANCE_VERSION_COMMIT_MESSAGE,
+                COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
     }
 
     @Test
     public void testExecuteStartedOnMaintenanceBranchAndMasterBranchMissingLocallyAndRemotely() throws Exception {
         // set up
-        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION);
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
+        final String USED_EPIC_BRANCH = BasicConstants.EPIC_ON_MAINTENANCE_BRANCH;
+        final String USED_COMMIT_MESSAGE_REVERT_VERSION = BasicConstants.EPIC_ON_MAINTENANCE_ISSUE
+                + ": reverting versions for development branch";
+        git.switchToBranch(repositorySet, USED_EPIC_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.deleteLocalAndRemoteTrackingBranches(repositorySet, MASTER_BRANCH);
         git.deleteRemoteBranch(repositorySet, MASTER_BRANCH);
@@ -1539,20 +1674,22 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MAINTENANCE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MAINTENANCE_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, USED_EPIC_BRANCH, MASTER_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, USED_EPIC_BRANCH, MASTER_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_MERGE_INTO_MAINTENANCE,
-                COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE,
-                COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
+                USED_COMMIT_MESSAGE_REVERT_VERSION, BasicConstants.EPIC_ON_MAINTENANCE_VERSION_COMMIT_MESSAGE,
+                COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
     }
 
     @Test
     public void testExecuteStartedOnMaintenanceBranchAndLocalMasterBranchMissingAndFetchRemoteFalse() throws Exception {
         // set up
-        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION);
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
+        final String USED_EPIC_BRANCH = BasicConstants.EPIC_ON_MAINTENANCE_BRANCH;
+        final String USED_COMMIT_MESSAGE_REVERT_VERSION = BasicConstants.EPIC_ON_MAINTENANCE_ISSUE
+                + ": reverting versions for development branch";
+        git.switchToBranch(repositorySet, USED_EPIC_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.deleteLocalAndRemoteTrackingBranches(repositorySet, MASTER_BRANCH);
         Properties userProperties = new Properties();
@@ -1566,12 +1703,12 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MAINTENANCE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, USED_EPIC_BRANCH, MASTER_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, USED_EPIC_BRANCH, MASTER_BRANCH);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_MERGE_INTO_MAINTENANCE,
-                COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE,
-                COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
+                USED_COMMIT_MESSAGE_REVERT_VERSION, BasicConstants.EPIC_ON_MAINTENANCE_VERSION_COMMIT_MESSAGE,
+                COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
         git.assertCommitsInRemoteBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
     }
@@ -1579,8 +1716,10 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteStartedOnMaintenanceBranchAndLocalMaintenanceBranchMissing() throws Exception {
         // set up
-        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION);
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
+        final String USED_EPIC_BRANCH = BasicConstants.EPIC_ON_MAINTENANCE_BRANCH;
+        final String USED_COMMIT_MESSAGE_REVERT_VERSION = BasicConstants.EPIC_ON_MAINTENANCE_ISSUE
+                + ": reverting versions for development branch";
+        git.switchToBranch(repositorySet, USED_EPIC_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.deleteLocalAndRemoteTrackingBranches(repositorySet, MAINTENANCE_BRANCH);
         // test
@@ -1589,22 +1728,25 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, USED_EPIC_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, MAINTENANCE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, USED_EPIC_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_MERGE_INTO_MAINTENANCE,
-                COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE,
-                COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
+                USED_COMMIT_MESSAGE_REVERT_VERSION, BasicConstants.EPIC_ON_MAINTENANCE_VERSION_COMMIT_MESSAGE,
+                COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
     }
 
     @Test
     public void testExecuteStartedOnMaintenanceBranchAndRemoteMaintenanceBranchMissing() throws Exception {
         // set up
-        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION);
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
+        final String USED_EPIC_BRANCH = BasicConstants.EPIC_ON_MAINTENANCE_BRANCH;
+        final String USED_COMMIT_MESSAGE_REVERT_VERSION = BasicConstants.EPIC_ON_MAINTENANCE_ISSUE
+                + ": reverting versions for development branch";
+        git.switchToBranch(repositorySet, USED_EPIC_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.deleteRemoteBranch(repositorySet, MAINTENANCE_BRANCH);
         // test
@@ -1613,22 +1755,23 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, USED_EPIC_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, USED_EPIC_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, MAINTENANCE_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_MERGE_INTO_MAINTENANCE,
-                COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE,
-                COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
+                USED_COMMIT_MESSAGE_REVERT_VERSION, BasicConstants.EPIC_ON_MAINTENANCE_VERSION_COMMIT_MESSAGE,
+                COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
     }
 
     @Test
     public void testExecuteStartedOnMaintenanceBranchAndMaintenanceBranchMissingLocallyAndRemotely() throws Exception {
         // set up
-        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION);
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
+        final String USED_EPIC_BRANCH = BasicConstants.EPIC_ON_MAINTENANCE_BRANCH;
+        git.switchToBranch(repositorySet, USED_EPIC_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.deleteLocalAndRemoteTrackingBranches(repositorySet, MAINTENANCE_BRANCH);
         git.deleteRemoteBranch(repositorySet, MAINTENANCE_BRANCH);
@@ -1638,7 +1781,7 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         verifyZeroInteractions(promptControllerMock);
         assertGitFlowFailureException(result,
-                "Base branch '" + MAINTENANCE_BRANCH + "' for epic branch '" + EPIC_BRANCH
+                "Base branch '" + MAINTENANCE_BRANCH + "' for epic branch '" + USED_EPIC_BRANCH
                         + "' doesn't exist.\nThis indicates a severe error condition on your branches.",
                 "Please consult a gitflow expert on how to fix this!");
     }
@@ -1647,8 +1790,8 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteStartedOnMaintenanceBranchAndLocalMaintenanceBranchMissingAndFetchRemoteFalse()
             throws Exception {
         // set up
-        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION);
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
+        final String USED_EPIC_BRANCH = BasicConstants.EPIC_ON_MAINTENANCE_BRANCH;
+        git.switchToBranch(repositorySet, USED_EPIC_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.deleteLocalAndRemoteTrackingBranches(repositorySet, MAINTENANCE_BRANCH);
         Properties userProperties = new Properties();
@@ -1662,51 +1805,14 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.setOnline(repositorySet);
         verifyZeroInteractions(promptControllerMock);
         assertGitFlowFailureException(result,
-                "Base branch '" + MAINTENANCE_BRANCH + "' for epic branch '" + EPIC_BRANCH + "' doesn't exist locally.",
+                "Base branch '" + MAINTENANCE_BRANCH + "' for epic branch '" + USED_EPIC_BRANCH
+                        + "' doesn't exist locally.",
                 "Set 'fetchRemote' parameter to true in order to try to fetch branch from remote repository.");
-    }
-
-    @Test
-    public void testExecuteWithMaintenanceBranchStartedAfterEpicStartedOnMasterBranch() throws Exception {
-        // set up
-        final String COMMIT_MESSAGE_MASTER_TESTFILE_0 = "MASTER 0: Unit test dummy file commit";
-        final String COMMIT_MESSAGE_MASTER_TESTFILE_1 = "MASTER 1: Unit test dummy file commit";
-        final String COMMIT_MESSAGE_MASTER_TESTFILE_2 = "MASTER 2: Unit test dummy file commit";
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
-        git.createAndCommitTestfile(repositorySet);
-        git.switchToBranch(repositorySet, MASTER_BRANCH);
-        git.createAndCommitTestfile(repositorySet, "master_testfile0.txt", COMMIT_MESSAGE_MASTER_TESTFILE_0);
-        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION);
-        git.switchToBranch(repositorySet, MASTER_BRANCH);
-        git.createAndCommitTestfile(repositorySet, "master_testfile1.txt", COMMIT_MESSAGE_MASTER_TESTFILE_1);
-        git.createAndCommitTestfile(repositorySet, "master_testfile2.txt", COMMIT_MESSAGE_MASTER_TESTFILE_2);
-        String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + EPIC_BRANCH + LS + "Choose epic branch to finish";
-        when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1"))).thenReturn("1");
-        when(promptControllerMock.prompt(PROMPT_MERGE_WITHOUT_UPDATE, Arrays.asList("y", "n"), "n")).thenReturn("y");
-        // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
-        // verify
-        verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1"));
-        verify(promptControllerMock).prompt(PROMPT_MERGE_WITHOUT_UPDATE, Arrays.asList("y", "n"), "n");
-        verifyNoMoreInteractions(promptControllerMock);
-        git.assertClean(repositorySet);
-        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE_0,
-                COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE,
-                COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE,
-                COMMIT_MESSAGE_MASTER_TESTFILE_2, COMMIT_MESSAGE_MASTER_TESTFILE_1, COMMIT_MESSAGE_MASTER_TESTFILE_0);
-        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
     }
 
     @Test
     public void testExecuteAllowFFTrue() throws Exception {
         // set up
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
         Properties userProperties = new Properties();
@@ -1717,8 +1823,8 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, EPIC_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, EPIC_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_REVERT_VERSION,
                 COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE);
@@ -1729,7 +1835,6 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteFailureOnCleanInstall() throws Exception {
         // set up
         final String COMMIT_MESSAGE_INVALID_JAVA_FILE = "Invalid java file";
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
         git.createAndCommitTestfile(repositorySet);
         git.createAndCommitTestfile(repositorySet, "src/main/java/InvalidJavaFile.java",
                 COMMIT_MESSAGE_INVALID_JAVA_FILE);
@@ -1747,8 +1852,8 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
                         + "'mvn flow:epic-finish' again in order to continue.");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, EPIC_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, EPIC_BRANCH);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE,
                 COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE,
@@ -1765,7 +1870,6 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // set up
         final String COMMIT_MESSAGE_INVALID_JAVA_FILE = "Invalid java file";
         final String COMMIT_MESSAGE_INVALID_JAVA_FILE_REMOVED = "Invalid java file removed";
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
         git.createAndCommitTestfile(repositorySet);
         git.createAndCommitTestfile(repositorySet, "src/main/java/InvalidJavaFile.java",
                 COMMIT_MESSAGE_INVALID_JAVA_FILE);
@@ -1776,7 +1880,7 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         verifyZeroInteractions(promptControllerMock);
         assertGitFlowFailureException(result,
                 "Failed to execute 'mvn clean install' on the project on base branch '" + MASTER_BRANCH
-                + "' after epic finish.",
+                        + "' after epic finish.",
                 "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
                         + "'mvn flow:epic-finish' again in order to continue.");
         git.assertBranchLocalConfigValue(repositorySet, MASTER_BRANCH, "breakpoint", "epicFinish.cleanInstall");
@@ -1789,8 +1893,8 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, EPIC_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, EPIC_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE,
                 COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE,
@@ -1805,7 +1909,6 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteContinueWithInstallProjectFalseAfterFailureOnCleanInstall() throws Exception {
         // set up
         final String COMMIT_MESSAGE_INVALID_JAVA_FILE = "Invalid java file";
-        ExecutorHelper.executeEpicStart(this, repositorySet, EPIC_NAME);
         git.createAndCommitTestfile(repositorySet);
         git.createAndCommitTestfile(repositorySet, "src/main/java/InvalidJavaFile.java",
                 COMMIT_MESSAGE_INVALID_JAVA_FILE);
@@ -1816,7 +1919,7 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         verifyZeroInteractions(promptControllerMock);
         assertGitFlowFailureException(result,
                 "Failed to execute 'mvn clean install' on the project on base branch '" + MASTER_BRANCH
-                + "' after epic finish.",
+                        + "' after epic finish.",
                 "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
                         + "'mvn flow:epic-finish' again in order to continue.");
         git.assertBranchLocalConfigValue(repositorySet, MASTER_BRANCH, "breakpoint", "epicFinish.cleanInstall");
@@ -1828,8 +1931,8 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, EPIC_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, EPIC_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE,
                 COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE,

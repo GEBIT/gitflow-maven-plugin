@@ -26,6 +26,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import de.gebit.build.maven.plugin.gitflow.TestProjects.BasicConstants;
 import de.gebit.build.maven.plugin.gitflow.jgit.GitExecution;
 import de.gebit.build.maven.plugin.gitflow.jgit.RepositorySet;
 
@@ -44,13 +45,12 @@ public class GitFlowEpicStartMojoOnMaintenanceTest extends AbstractGitFlowMojoTe
 
     private static final String COMMIT_MESSAGE_SET_VERSION = EPIC_ISSUE + ": updating versions for epic branch";
 
-    private static final String MAINTENANCE_VERSION = "1.42";
+    private static final String MAINTENANCE_FIRST_VERSION = BasicConstants.EXISTING_MAINTENANCE_FIRST_VERSION;
 
-    private static final String MAINTENANCE_FIRST_VERSION = "1.42.0-SNAPSHOT";
+    private static final String EXPECTED_BRANCH_VERSION = BasicConstants.EXISTING_MAINTENANCE_RELEASE_VERSION + "-"
+            + EPIC_ISSUE + "-SNAPSHOT";
 
-    private static final String EXPECTED_BRANCH_VERSION = "1.42.0-" + EPIC_ISSUE + "-SNAPSHOT";
-
-    private static final String MAINTENANCE_BRANCH = "maintenance/gitflow-tests-" + MAINTENANCE_VERSION;
+    private static final String MAINTENANCE_BRANCH = BasicConstants.EXISTING_MAINTENANCE_BRANCH;
 
     private static final String COMMIT_MESSAGE_MAINTENANCE_SET_VERSION = "NO-ISSUE: updating versions for maintenance branch";
 
@@ -65,8 +65,7 @@ public class GitFlowEpicStartMojoOnMaintenanceTest extends AbstractGitFlowMojoTe
 
     @Before
     public void setUp() throws Exception {
-        repositorySet = git.createGitRepositorySet(TestProjects.BASIC.basedir);
-        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION);
+        repositorySet = git.useGitRepositorySet(TestProjects.BASIC, BasicConstants.EXISTING_MAINTENANCE_BRANCH);
     }
 
     @After
@@ -109,8 +108,8 @@ public class GitFlowEpicStartMojoOnMaintenanceTest extends AbstractGitFlowMojoTe
         assertVersionsInPom(repositorySet.getWorkingDirectory(), EXPECTED_BRANCH_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, EPIC_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, EPIC_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_SET_VERSION,
                 COMMIT_MESSAGE_MAINTENANCE_SET_VERSION);
     }
@@ -120,8 +119,8 @@ public class GitFlowEpicStartMojoOnMaintenanceTest extends AbstractGitFlowMojoTe
         assertVersionsInPom(repositorySet.getWorkingDirectory(), EXPECTED_BRANCH_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, EPIC_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, EPIC_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_SET_VERSION,
                 COMMIT_MESSAGE_MAINTENANCE_SET_VERSION);
     }
@@ -166,16 +165,16 @@ public class GitFlowEpicStartMojoOnMaintenanceTest extends AbstractGitFlowMojoTe
 
     private void assertNoChangesInRepositories() throws ComponentLookupException, GitAPIException, IOException {
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, EPIC_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, EPIC_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_MAINTENANCE_SET_VERSION);
     }
 
     private void assertNoChangesInRepositoriesExceptCommitedTestfile()
             throws ComponentLookupException, GitAPIException, IOException {
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, EPIC_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, EPIC_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_MAINTENANCE_SET_VERSION);
     }
@@ -247,7 +246,7 @@ public class GitFlowEpicStartMojoOnMaintenanceTest extends AbstractGitFlowMojoTe
     @Test
     public void testExecuteWithIntegrationBranchSameAsMaintenanceBranch() throws Exception {
         // set up
-        ExecutorHelper.executeIntegerated(this, repositorySet, INTEGRATION_BRANCH);
+        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_BRANCH);
         Properties userProperties = new Properties();
         userProperties.setProperty("epicName", EPIC_NAME);
         // test
@@ -257,10 +256,8 @@ public class GitFlowEpicStartMojoOnMaintenanceTest extends AbstractGitFlowMojoTe
         assertVersionsInPom(repositorySet.getWorkingDirectory(), EXPECTED_BRANCH_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, INTEGRATION_BRANCH, EPIC_BRANCH,
-                CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, INTEGRATION_BRANCH, EPIC_BRANCH,
-                CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, EPIC_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, EPIC_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, INTEGRATION_BRANCH, MAINTENANCE_BRANCH);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, EPIC_BRANCH, MAINTENANCE_BRANCH);
@@ -274,7 +271,7 @@ public class GitFlowEpicStartMojoOnMaintenanceTest extends AbstractGitFlowMojoTe
     @Test
     public void testExecuteWithIntegrationBranchDifferentFromMaintenanceBranch() throws Exception {
         // set up
-        ExecutorHelper.executeIntegerated(this, repositorySet, INTEGRATION_BRANCH);
+        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
         Properties userProperties = new Properties();
@@ -285,10 +282,8 @@ public class GitFlowEpicStartMojoOnMaintenanceTest extends AbstractGitFlowMojoTe
         assertVersionsInPom(repositorySet.getWorkingDirectory(), EXPECTED_BRANCH_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, INTEGRATION_BRANCH, EPIC_BRANCH,
-                CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, INTEGRATION_BRANCH, EPIC_BRANCH,
-                CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, EPIC_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, EPIC_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_SET_VERSION,
                 COMMIT_MESSAGE_MAINTENANCE_SET_VERSION);
         git.assertTestfileMissing(repositorySet);
@@ -300,7 +295,7 @@ public class GitFlowEpicStartMojoOnMaintenanceTest extends AbstractGitFlowMojoTe
     @Test
     public void testExecuteWithIntegrationBranchDifferentFromMaintenanceBranchInInteractiveMode() throws Exception {
         // set up
-        ExecutorHelper.executeIntegerated(this, repositorySet, INTEGRATION_BRANCH);
+        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
         when(promptControllerMock.prompt(PROMPT_EPIC_BRANCH_NAME)).thenReturn(EPIC_NAME);
@@ -315,10 +310,8 @@ public class GitFlowEpicStartMojoOnMaintenanceTest extends AbstractGitFlowMojoTe
         assertVersionsInPom(repositorySet.getWorkingDirectory(), EXPECTED_BRANCH_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, INTEGRATION_BRANCH, EPIC_BRANCH,
-                CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, INTEGRATION_BRANCH, EPIC_BRANCH,
-                CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, EPIC_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, EPIC_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_SET_VERSION,
                 COMMIT_MESSAGE_MAINTENANCE_SET_VERSION);
         git.assertTestfileMissing(repositorySet);
@@ -331,7 +324,7 @@ public class GitFlowEpicStartMojoOnMaintenanceTest extends AbstractGitFlowMojoTe
     public void testExecuteWithIntegrationBranchDifferentFromMaintenanceBranchInInteractiveModeAnswerNo()
             throws Exception {
         // set up
-        ExecutorHelper.executeIntegerated(this, repositorySet, INTEGRATION_BRANCH);
+        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
         when(promptControllerMock.prompt(PROMPT_EPIC_BRANCH_NAME)).thenReturn(EPIC_NAME);
@@ -346,10 +339,8 @@ public class GitFlowEpicStartMojoOnMaintenanceTest extends AbstractGitFlowMojoTe
         assertVersionsInPom(repositorySet.getWorkingDirectory(), EXPECTED_BRANCH_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, INTEGRATION_BRANCH, EPIC_BRANCH,
-                CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, INTEGRATION_BRANCH, EPIC_BRANCH,
-                CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, EPIC_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, EPIC_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_SET_VERSION,
                 GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_MAINTENANCE_SET_VERSION);
         git.assertTestfileContent(repositorySet);
@@ -361,7 +352,7 @@ public class GitFlowEpicStartMojoOnMaintenanceTest extends AbstractGitFlowMojoTe
     @Test
     public void testExecuteWithIntegrationBranchAndNewerRemoteIntegartionBranch() throws Exception {
         // set up
-        ExecutorHelper.executeIntegerated(this, repositorySet, INTEGRATION_BRANCH);
+        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_BRANCH);
         git.remoteCreateTestfileInBranch(repositorySet, INTEGRATION_BRANCH);
         when(promptControllerMock.prompt(PROMPT_BRANCH_OF_LAST_INTEGRATED, Arrays.asList("y", "n"), "y"))
                 .thenReturn("y");
@@ -378,8 +369,8 @@ public class GitFlowEpicStartMojoOnMaintenanceTest extends AbstractGitFlowMojoTe
         assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, INTEGRATION_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, INTEGRATION_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, EPIC_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, EPIC_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, INTEGRATION_BRANCH, MAINTENANCE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_MAINTENANCE_SET_VERSION);

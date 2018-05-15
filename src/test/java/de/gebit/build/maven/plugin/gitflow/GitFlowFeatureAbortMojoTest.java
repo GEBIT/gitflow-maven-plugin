@@ -25,6 +25,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import de.gebit.build.maven.plugin.gitflow.TestProjects.BasicConstants;
 import de.gebit.build.maven.plugin.gitflow.jgit.GitExecution;
 import de.gebit.build.maven.plugin.gitflow.jgit.RepositorySet;
 
@@ -35,29 +36,24 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
 
     private static final String GOAL = "feature-abort";
 
-    private static final String FEATURE_NAME = TestProjects.BASIC.jiraProject + "-42";
+    private static final String FEATURE_BRANCH = BasicConstants.EXISTING_FEATURE_BRANCH;
 
-    private static final String FEATURE_BRANCH = "feature/" + FEATURE_NAME;
+    private static final String FEATURE_VERSION = BasicConstants.EXISTING_FEATURE_VERSION;
 
-    private static final String FEATURE_VERSION = TestProjects.BASIC.releaseVersion + "-" + FEATURE_NAME + "-SNAPSHOT";
+    private static final String MAINTENANCE_FIRST_VERSION = BasicConstants.EXISTING_MAINTENANCE_FIRST_VERSION;
 
-    private static final String FEATURE_NAME_2 = TestProjects.BASIC.jiraProject + "-4711";
+    private static final String MAINTENANCE_BRANCH = BasicConstants.EXISTING_MAINTENANCE_BRANCH;
 
-    private static final String FEATURE_BRANCH_2 = "feature/" + FEATURE_NAME_2;
+    private static final String PROMPT_MESSAGE_ONE_FEATURE_SELECT = "Feature branches:" + LS + "1. "
+            + BasicConstants.SINGLE_FEATURE_BRANCH + LS + "Choose feature branch to abort";
 
-    private static final String MAINTENANCE_VERSION = "1.42";
-
-    private static final String MAINTENANCE_FIRST_VERSION = "1.42.0-SNAPSHOT";
-
-    private static final String MAINTENANCE_BRANCH = "maintenance/gitflow-tests-" + MAINTENANCE_VERSION;
-
-    private static final String PROMPT_MESSAGE_ONE_FEATURE_SELECT = "Feature branches:" + LS + "1. " + FEATURE_BRANCH
-            + LS + "Choose feature branch to abort";
+    private static final String PROMPT_MESSAGE_ONE_FEATURE_ON_MAINTENANCE_SELECT = "Feature branches:" + LS + "1. "
+            + BasicConstants.SINGLE_FEATURE_ON_MAINTENANCE_BRANCH + LS + "Choose feature branch to abort";
 
     private static final String PROMPT_MESSAGE_UNCOMMITED_CHANGES_CONFIRMATION = "You have some uncommitted files. "
             + "If you continue any changes will be discarded. Continue?";
 
-    private static final String COMMIT_MESSAGE_SET_VERSION = FEATURE_NAME + ": updating versions for feature branch";
+    private static final String COMMIT_MESSAGE_SET_VERSION = BasicConstants.EXISTING_FEATURE_VERSION_COMMIT_MESSAGE;
 
     private static final String COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE = "NO-ISSUE: updating versions for"
             + " maintenance branch";
@@ -66,7 +62,7 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
 
     @Before
     public void setUp() throws Exception {
-        repositorySet = git.createGitRepositorySet(TestProjects.BASIC.basedir);
+        repositorySet = git.useGitRepositorySet(TestProjects.BASIC, FEATURE_BRANCH);
     }
 
     @After
@@ -87,7 +83,6 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteOnFeatureBranch() throws Exception {
         // set up
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
         git.createAndCommitTestfile(repositorySet);
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
@@ -99,8 +94,8 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     private void assertFeatureAbortedCorrectly() throws ComponentLookupException, GitAPIException, IOException {
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
@@ -109,7 +104,6 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteWithStagedButUncommitedChangesOnFeatureBranch() throws Exception {
         // set up
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
         git.createAndAddToIndexTestfile(repositorySet);
         when(promptControllerMock.prompt(PROMPT_MESSAGE_UNCOMMITED_CHANGES_CONFIRMATION, Arrays.asList("y", "n"), "n"))
                 .thenReturn("y");
@@ -126,7 +120,6 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteWithStagedButUncommitedChangesOnFeatureBranchConfirmationNo() throws Exception {
         // set up
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
         git.createAndAddToIndexTestfile(repositorySet);
         when(promptControllerMock.prompt(PROMPT_MESSAGE_UNCOMMITED_CHANGES_CONFIRMATION, Arrays.asList("y", "n"), "n"))
                 .thenReturn("n");
@@ -141,8 +134,8 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
                 "Commit or discard local changes in order to proceed.",
                 "'git add' and 'git commit' to commit your changes", "'git reset --hard' to throw away your changes");
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
@@ -155,7 +148,6 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteWithStagedButUncommitedChangesOnFeatureBranchInBatchMode() throws Exception {
         // set up
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
         git.createAndAddToIndexTestfile(repositorySet);
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
@@ -165,8 +157,8 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
                 "'git add' and 'git commit' to commit your changes", "'git reset --hard' to throw away your changes",
                 "'mvn flow:feature-abort' to run in interactive mode");
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
@@ -179,18 +171,19 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteWithStagedButUncommitedChangesOnBaseBranch() throws Exception {
         // set up
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createAndAddToIndexTestfile(repositorySet);
         when(promptControllerMock.prompt(PROMPT_MESSAGE_ONE_FEATURE_SELECT, Arrays.asList("1"))).thenReturn("1");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.featureBranchPrefix", BasicConstants.SINGLE_FEATURE_BRANCH_PREFIX);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_MESSAGE_ONE_FEATURE_SELECT, Arrays.asList("1"));
         verifyNoMoreInteractions(promptControllerMock);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, BasicConstants.SINGLE_FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, BasicConstants.SINGLE_FEATURE_BRANCH);
 
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
@@ -204,19 +197,20 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteWithStagedButUncommitedChangesOnOtherBranch() throws Exception {
         // set up
         final String OTHER_BRANCH = "otherBranch";
-        git.createBranchWithoutSwitch(repositorySet, OTHER_BRANCH);
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
-        git.switchToBranch(repositorySet, OTHER_BRANCH);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        git.createBranch(repositorySet, OTHER_BRANCH);
         git.createAndAddToIndexTestfile(repositorySet);
         when(promptControllerMock.prompt(PROMPT_MESSAGE_ONE_FEATURE_SELECT, Arrays.asList("1"))).thenReturn("1");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.featureBranchPrefix", BasicConstants.SINGLE_FEATURE_BRANCH_PREFIX);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_MESSAGE_ONE_FEATURE_SELECT, Arrays.asList("1"));
         verifyNoMoreInteractions(promptControllerMock);
         git.assertCurrentBranch(repositorySet, OTHER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, OTHER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, BasicConstants.SINGLE_FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, BasicConstants.SINGLE_FEATURE_BRANCH);
 
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
@@ -230,7 +224,6 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteWithUnstagedChangesOnFeatureBranch() throws Exception {
         // set up
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
         git.createAndCommitTestfile(repositorySet);
         git.modifyTestfile(repositorySet);
         when(promptControllerMock.prompt(PROMPT_MESSAGE_UNCOMMITED_CHANGES_CONFIRMATION, Arrays.asList("y", "n"), "n"))
@@ -248,7 +241,6 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteWithUnstagedChangesOnFeatureBranchInBatchMode() throws Exception {
         // set up
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
         git.createAndCommitTestfile(repositorySet);
         git.modifyTestfile(repositorySet);
         // test
@@ -259,8 +251,8 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
                 "'git add' and 'git commit' to commit your changes", "'git reset --hard' to throw away your changes",
                 "'mvn flow:feature-abort' to run in interactive mode");
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE,
@@ -274,19 +266,20 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteWithUnstagedChangesOnBaseBranch() throws Exception {
         // set up
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.modifyTestfile(repositorySet);
         when(promptControllerMock.prompt(PROMPT_MESSAGE_ONE_FEATURE_SELECT, Arrays.asList("1"))).thenReturn("1");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.featureBranchPrefix", BasicConstants.SINGLE_FEATURE_BRANCH_PREFIX);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_MESSAGE_ONE_FEATURE_SELECT, Arrays.asList("1"));
         verifyNoMoreInteractions(promptControllerMock);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, BasicConstants.SINGLE_FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, BasicConstants.SINGLE_FEATURE_BRANCH);
 
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
@@ -300,20 +293,21 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteWithUnstagedChangesOnOtherBranch() throws Exception {
         // set up
         final String OTHER_BRANCH = "otherBranch";
-        git.createBranchWithoutSwitch(repositorySet, OTHER_BRANCH);
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
-        git.switchToBranch(repositorySet, OTHER_BRANCH);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        git.createBranch(repositorySet, OTHER_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.modifyTestfile(repositorySet);
         when(promptControllerMock.prompt(PROMPT_MESSAGE_ONE_FEATURE_SELECT, Arrays.asList("1"))).thenReturn("1");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.featureBranchPrefix", BasicConstants.SINGLE_FEATURE_BRANCH_PREFIX);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_MESSAGE_ONE_FEATURE_SELECT, Arrays.asList("1"));
         verifyNoMoreInteractions(promptControllerMock);
         git.assertCurrentBranch(repositorySet, OTHER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, OTHER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, BasicConstants.SINGLE_FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, BasicConstants.SINGLE_FEATURE_BRANCH);
 
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
@@ -326,50 +320,59 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
 
     @Test
     public void testExecuteNoFeatureBranches() throws Exception {
+        // set up
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.featureBranchPrefix", "no-features/");
         // test
-        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
         assertGitFlowFailureException(result, "There are no feature branches in your repository.", null);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
     }
 
     @Test
     public void testExecuteOnMasterBranchOneFeatureBranch() throws Exception {
         // set up
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         when(promptControllerMock.prompt(PROMPT_MESSAGE_ONE_FEATURE_SELECT, Arrays.asList("1"))).thenReturn("1");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.featureBranchPrefix", BasicConstants.SINGLE_FEATURE_BRANCH_PREFIX);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_MESSAGE_ONE_FEATURE_SELECT, Arrays.asList("1"));
         verifyNoMoreInteractions(promptControllerMock);
-        assertFeatureAbortedCorrectly();
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, BasicConstants.SINGLE_FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, BasicConstants.SINGLE_FEATURE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
     }
 
     @Test
     public void testExecuteOnFeatureBranchTwoFeatureBranchesAndOtherBranch() throws Exception {
         // set up
         final String OTHER_BRANCH = "otherBranch";
-        git.createBranchWithoutSwitch(repositorySet, OTHER_BRANCH);
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME_2);
-        git.switchToBranch(repositorySet, MASTER_BRANCH);
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
+        git.switchToBranch(repositorySet, BasicConstants.FIRST_FEATURE_BRANCH);
         git.createAndCommitTestfile(repositorySet);
+        git.createBranchWithoutSwitch(repositorySet, OTHER_BRANCH);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.featureBranchPrefix", BasicConstants.TWO_FEATURE_BRANCHES_PREFIX);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
         verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH_2, OTHER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH_2, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, BasicConstants.FIRST_FEATURE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, BasicConstants.SECOND_FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, BasicConstants.FIRST_FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, BasicConstants.SECOND_FEATURE_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
@@ -379,24 +382,26 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteOnMasterBranchTwoFeatureBranchesAndOtherBranch() throws Exception {
         // set up
         final String OTHER_BRANCH = "otherBranch";
-        git.createBranchWithoutSwitch(repositorySet, OTHER_BRANCH);
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
+        git.switchToBranch(repositorySet, BasicConstants.FIRST_FEATURE_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME_2);
-        git.switchToBranch(repositorySet, MASTER_BRANCH);
-        String PROMPT_MESSAGE = "Feature branches:" + LS + "1. " + FEATURE_BRANCH + LS + "2. " + FEATURE_BRANCH_2 + LS
-                + "Choose feature branch to abort";
+        git.createBranchWithoutSwitch(repositorySet, OTHER_BRANCH);
+        String PROMPT_MESSAGE = "Feature branches:" + LS + "1. " + BasicConstants.FIRST_FEATURE_BRANCH + LS + "2. "
+                + BasicConstants.SECOND_FEATURE_BRANCH + LS + "Choose feature branch to abort";
         when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1", "2"))).thenReturn("1");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.featureBranchPrefix", BasicConstants.TWO_FEATURE_BRANCHES_PREFIX);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1", "2"));
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH_2, OTHER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH_2, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, BasicConstants.FIRST_FEATURE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, BasicConstants.SECOND_FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, BasicConstants.FIRST_FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, BasicConstants.SECOND_FEATURE_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
@@ -406,24 +411,26 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteOnOtherBranchTwoFeatureBranchesAndOtherBranch() throws Exception {
         // set up
         final String OTHER_BRANCH = "otherBranch";
-        git.createBranchWithoutSwitch(repositorySet, OTHER_BRANCH);
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
+        git.switchToBranch(repositorySet, BasicConstants.FIRST_FEATURE_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME_2);
-        git.switchToBranch(repositorySet, OTHER_BRANCH);
-        String PROMPT_MESSAGE = "Feature branches:" + LS + "1. " + FEATURE_BRANCH + LS + "2. " + FEATURE_BRANCH_2 + LS
-                + "Choose feature branch to abort";
+        git.createBranch(repositorySet, OTHER_BRANCH);
+        String PROMPT_MESSAGE = "Feature branches:" + LS + "1. " + BasicConstants.FIRST_FEATURE_BRANCH + LS + "2. "
+                + BasicConstants.SECOND_FEATURE_BRANCH + LS + "Choose feature branch to abort";
         when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1", "2"))).thenReturn("1");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.featureBranchPrefix", BasicConstants.TWO_FEATURE_BRANCHES_PREFIX);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1", "2"));
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, OTHER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH_2, OTHER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH_2, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, BasicConstants.FIRST_FEATURE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, BasicConstants.SECOND_FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, BasicConstants.FIRST_FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, BasicConstants.SECOND_FEATURE_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, OTHER_BRANCH);
@@ -432,8 +439,6 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
 
     @Test
     public void testExecuteWithBatchModeOnFeatureBranch() throws Exception {
-        // set up
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL);
         // verify
@@ -443,7 +448,6 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteWithBatchModeOnMasterBranch() throws Exception {
         // set up
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
         git.createAndCommitTestfile(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         // test
@@ -456,27 +460,29 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
                 "'mvn flow:feature-abort' to run in interactive mode");
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
     }
 
     @Test
     public void testExecuteOnMaintenanceBranchFeatureStartedOnMaintenanceBranch() throws Exception {
         // set up
-        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION);
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
         git.switchToBranch(repositorySet, MAINTENANCE_BRANCH);
-        when(promptControllerMock.prompt(PROMPT_MESSAGE_ONE_FEATURE_SELECT, Arrays.asList("1"))).thenReturn("1");
+        when(promptControllerMock.prompt(PROMPT_MESSAGE_ONE_FEATURE_ON_MAINTENANCE_SELECT, Arrays.asList("1")))
+                .thenReturn("1");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.featureBranchPrefix",
+                BasicConstants.SINGLE_FEATURE_ON_MAINTENANCE_BRANCH_PREFIX);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
-        verify(promptControllerMock).prompt(PROMPT_MESSAGE_ONE_FEATURE_SELECT, Arrays.asList("1"));
+        verify(promptControllerMock).prompt(PROMPT_MESSAGE_ONE_FEATURE_ON_MAINTENANCE_SELECT, Arrays.asList("1"));
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, BasicConstants.SINGLE_FEATURE_ON_MAINTENANCE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, BasicConstants.SINGLE_FEATURE_ON_MAINTENANCE_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
@@ -487,20 +493,19 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteOnMaintenanceBranchFeatureStartedOnMasterBranch() throws Exception {
         // set up
-        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION);
-        git.switchToBranch(repositorySet, MASTER_BRANCH);
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
         git.switchToBranch(repositorySet, MAINTENANCE_BRANCH);
         when(promptControllerMock.prompt(PROMPT_MESSAGE_ONE_FEATURE_SELECT, Arrays.asList("1"))).thenReturn("1");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.featureBranchPrefix", BasicConstants.SINGLE_FEATURE_BRANCH_PREFIX);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_MESSAGE_ONE_FEATURE_SELECT, Arrays.asList("1"));
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, BasicConstants.SINGLE_FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, BasicConstants.SINGLE_FEATURE_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
@@ -511,16 +516,18 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteOnFeatureBranchFeatureStartedOnMaintenanceBranch() throws Exception {
         // set up
-        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION);
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
+        git.switchToBranch(repositorySet, BasicConstants.SINGLE_FEATURE_ON_MAINTENANCE_BRANCH);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.featureBranchPrefix",
+                BasicConstants.SINGLE_FEATURE_ON_MAINTENANCE_BRANCH_PREFIX);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
         verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, BasicConstants.SINGLE_FEATURE_ON_MAINTENANCE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, BasicConstants.SINGLE_FEATURE_ON_MAINTENANCE_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
@@ -531,7 +538,6 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteLocalBaseBranchAheadOfRemote() throws Exception {
         // set up
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         final String COMMIT_MESSAGE_LOCAL_TESTFILE = "LOCAL: Unit test dummy file commit";
         git.createAndCommitTestfile(repositorySet, "local_testfile.txt", COMMIT_MESSAGE_LOCAL_TESTFILE);
@@ -542,8 +548,8 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
         verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_LOCAL_TESTFILE);
         git.assertCommitsInRemoteBranch(repositorySet, MASTER_BRANCH);
@@ -553,7 +559,6 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteRemoteBaseBranchAheadOfLocal() throws Exception {
         // set up
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
         git.remoteCreateTestfileInBranch(repositorySet, MASTER_BRANCH, "remote_testfile.txt",
@@ -565,8 +570,8 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
         verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         git.assertCommitsInRemoteBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_REMOTE_TESTFILE);
@@ -576,7 +581,6 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteBaseBranchHasChangesLocallyAndRemote() throws Exception {
         // set up
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         final String COMMIT_MESSAGE_LOCAL_TESTFILE = "LOCAL: Unit test dummy file commit";
         git.createAndCommitTestfile(repositorySet, "local_testfile.txt", COMMIT_MESSAGE_LOCAL_TESTFILE);
@@ -590,8 +594,8 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
         verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_LOCAL_TESTFILE);
         git.assertCommitsInRemoteBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_REMOTE_TESTFILE);
@@ -601,20 +605,20 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteOnMasterBranchOneFeatureBranchStartedRemotely() throws Exception {
         // set up
-        git.useClonedRemoteRepository(repositorySet);
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
-        git.push(repositorySet);
-        git.useLocalRepository(repositorySet);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        git.deleteLocalAndRemoteTrackingBranches(repositorySet, BasicConstants.SINGLE_FEATURE_BRANCH);
         when(promptControllerMock.prompt(PROMPT_MESSAGE_ONE_FEATURE_SELECT, Arrays.asList("1"))).thenReturn("1");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.featureBranchPrefix", BasicConstants.SINGLE_FEATURE_BRANCH_PREFIX);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_MESSAGE_ONE_FEATURE_SELECT, Arrays.asList("1"));
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, BasicConstants.SINGLE_FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, BasicConstants.SINGLE_FEATURE_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
@@ -623,22 +627,24 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteOnMasterBranchFeatureStartedRemotelyOnMaintenanceBranch() throws Exception {
         // set up
-        git.useClonedRemoteRepository(repositorySet);
-        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION);
-        git.push(repositorySet);
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
-        git.push(repositorySet);
-        git.useLocalRepository(repositorySet);
-        when(promptControllerMock.prompt(PROMPT_MESSAGE_ONE_FEATURE_SELECT, Arrays.asList("1"))).thenReturn("1");
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        git.deleteLocalAndRemoteTrackingBranches(repositorySet, BasicConstants.SINGLE_FEATURE_ON_MAINTENANCE_BRANCH);
+        git.deleteLocalAndRemoteTrackingBranches(repositorySet, MAINTENANCE_BRANCH);
+        when(promptControllerMock.prompt(PROMPT_MESSAGE_ONE_FEATURE_ON_MAINTENANCE_SELECT, Arrays.asList("1")))
+                .thenReturn("1");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.featureBranchPrefix",
+                BasicConstants.SINGLE_FEATURE_ON_MAINTENANCE_BRANCH_PREFIX);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
-        verify(promptControllerMock).prompt(PROMPT_MESSAGE_ONE_FEATURE_SELECT, Arrays.asList("1"));
+        verify(promptControllerMock).prompt(PROMPT_MESSAGE_ONE_FEATURE_ON_MAINTENANCE_SELECT, Arrays.asList("1"));
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, BasicConstants.SINGLE_FEATURE_ON_MAINTENANCE_BRANCH,
+                MAINTENANCE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, BasicConstants.SINGLE_FEATURE_ON_MAINTENANCE_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         git.assertCommitsInRemoteBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
@@ -648,7 +654,6 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteStartedOnMasterBranchAndLocalMasterBranchMissing() throws Exception {
         // set up
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
         git.deleteLocalAndRemoteTrackingBranches(repositorySet, MASTER_BRANCH);
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
@@ -660,7 +665,6 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteStartedOnMasterBranchAndRemoteMasterBranchMissing() throws Exception {
         // set up
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
         git.deleteRemoteBranch(repositorySet, MASTER_BRANCH);
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
@@ -668,8 +672,8 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
         verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, FEATURE_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
     }
@@ -677,7 +681,6 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteStartedOnMasterBranchAndMasterBranchMissingLocallyAndRemotely() throws Exception {
         // set up
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
         git.deleteLocalAndRemoteTrackingBranches(repositorySet, MASTER_BRANCH);
         git.deleteRemoteBranch(repositorySet, MASTER_BRANCH);
         // test
@@ -694,9 +697,7 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteStartedOnMasterBranchAndLocalMasterBranchMissingAndFetchRemoteFalse() throws Exception {
         // set up
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
         git.deleteLocalAndRemoteTrackingBranches(repositorySet, MASTER_BRANCH);
-        git.deleteRemoteBranch(repositorySet, MASTER_BRANCH);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.fetchRemote", "false");
         userProperties.setProperty("flow.push", "false");
@@ -716,7 +717,6 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteBaseBranchConfigMissing() throws Exception {
         // set up
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
         git.deleteLocalAndRemoteTrackingBranches(repositorySet, CONFIG_BRANCH);
         git.deleteRemoteBranch(repositorySet, CONFIG_BRANCH);
         // test
@@ -733,7 +733,6 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteBaseBranchConfigMissingAndFetchRemoteFalse() throws Exception {
         // set up
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
         git.deleteLocalAndRemoteTrackingBranches(repositorySet, CONFIG_BRANCH);
         git.deleteRemoteBranch(repositorySet, CONFIG_BRANCH);
         Properties userProperties = new Properties();
@@ -755,8 +754,7 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteStartedOnMaintenanceBranchAndLocalMaintenanceBranchMissing() throws Exception {
         // set up
-        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION);
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
+        git.switchToBranch(repositorySet, BasicConstants.FEATURE_ON_MAINTENANCE_BRANCH);
         git.deleteLocalAndRemoteTrackingBranches(repositorySet, MAINTENANCE_BRANCH);
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
@@ -764,8 +762,8 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
         verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, BasicConstants.FEATURE_ON_MAINTENANCE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, BasicConstants.FEATURE_ON_MAINTENANCE_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
@@ -776,8 +774,7 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteStartedOnMaintenanceBranchAndRemoteMaintenanceBranchMissing() throws Exception {
         // set up
-        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION);
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
+        git.switchToBranch(repositorySet, BasicConstants.FEATURE_ON_MAINTENANCE_BRANCH);
         git.deleteRemoteBranch(repositorySet, MAINTENANCE_BRANCH);
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
@@ -785,8 +782,9 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
         verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, BasicConstants.FEATURE_ON_MAINTENANCE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, BasicConstants.FEATURE_ON_MAINTENANCE_BRANCH,
+                MAINTENANCE_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
@@ -796,8 +794,7 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteStartedOnMaintenanceBranchAndMaintenanceBranchMissingLocallyAndRemotely() throws Exception {
         // set up
-        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION);
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
+        git.switchToBranch(repositorySet, BasicConstants.FEATURE_ON_MAINTENANCE_BRANCH);
         git.deleteLocalAndRemoteTrackingBranches(repositorySet, MAINTENANCE_BRANCH);
         git.deleteRemoteBranch(repositorySet, MAINTENANCE_BRANCH);
         // test
@@ -806,7 +803,8 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         verifyZeroInteractions(promptControllerMock);
         assertGitFlowFailureException(result,
-                "Base branch '" + MAINTENANCE_BRANCH + "' for feature branch '" + FEATURE_BRANCH
+                "Base branch '" + MAINTENANCE_BRANCH + "' for feature branch '"
+                        + BasicConstants.FEATURE_ON_MAINTENANCE_BRANCH
                         + "' doesn't exist.\nThis indicates a severe error condition on your branches.",
                 "Please consult a gitflow expert on how to fix this!");
     }
@@ -815,10 +813,8 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteStartedOnMaintenanceBranchAndLocalMaintenanceBranchMissingAndFetchRemoteFalse()
             throws Exception {
         // set up
-        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION);
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
+        git.switchToBranch(repositorySet, BasicConstants.FEATURE_ON_MAINTENANCE_BRANCH);
         git.deleteLocalAndRemoteTrackingBranches(repositorySet, MAINTENANCE_BRANCH);
-        git.deleteRemoteBranch(repositorySet, MAINTENANCE_BRANCH);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.fetchRemote", "false");
         userProperties.setProperty("flow.push", "false");
@@ -830,8 +826,8 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.setOnline(repositorySet);
         verifyZeroInteractions(promptControllerMock);
         assertGitFlowFailureException(result,
-                "Base branch '" + MAINTENANCE_BRANCH + "' for feature branch '" + FEATURE_BRANCH
-                        + "' doesn't exist locally.",
+                "Base branch '" + MAINTENANCE_BRANCH + "' for feature branch '"
+                        + BasicConstants.FEATURE_ON_MAINTENANCE_BRANCH + "' doesn't exist locally.",
                 "Set 'fetchRemote' parameter to true in order to try to fetch branch from remote repository.");
     }
 
@@ -840,7 +836,6 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
         // set up
         final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
         final String COMMIT_MESSAGE_FEATURE_TESTFILE = "FEATURE: Unit test dummy file commit";
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         final String TESTFILE_NAME = "testfile.txt";
         git.createAndCommitTestfile(repositorySet, TESTFILE_NAME, COMMIT_MESSAGE_MASTER_TESTFILE);
@@ -865,7 +860,6 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
         // set up
         final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
         final String COMMIT_MESSAGE_FEATURE_TESTFILE = "FEATURE: Unit test dummy file commit";
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         final String TESTFILE_NAME = "testfile.txt";
         git.createAndCommitTestfile(repositorySet, TESTFILE_NAME, COMMIT_MESSAGE_MASTER_TESTFILE);
@@ -892,8 +886,6 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecutePushRemoteTrue() throws Exception {
         // set up
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
-        git.push(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.push", "true");
         // test
@@ -906,8 +898,6 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecutePushRemoteFalse() throws Exception {
         // set up
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME);
-        git.push(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.push", "false");
         // test
@@ -916,40 +906,8 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
         verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
-        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
-    }
-
-    @Test
-    public void testExecuteWithSpecialFeatureBranchPrefix() throws Exception {
-        // set up
-        final String OTHER_BRANCH = "feature/" + FEATURE_NAME;
-        final String FEATURE_BRANCH_PREFIX = "features/PREFIX-";
-        final String FEATURE_BRANCH1 = FEATURE_BRANCH_PREFIX + FEATURE_NAME;
-        final String FEATURE_BRANCH2 = FEATURE_BRANCH_PREFIX + FEATURE_NAME_2;
-        Properties userProperties = new Properties();
-        userProperties.setProperty("flow.featureBranchPrefix", FEATURE_BRANCH_PREFIX);
-        git.createBranchWithoutSwitch(repositorySet, OTHER_BRANCH);
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME, userProperties);
-        git.createAndCommitTestfile(repositorySet);
-        git.switchToBranch(repositorySet, MASTER_BRANCH);
-        ExecutorHelper.executeFeatureStart(this, repositorySet, FEATURE_NAME_2, userProperties);
-        git.switchToBranch(repositorySet, MASTER_BRANCH);
-        String PROMPT_MESSAGE = "Feature branches:" + LS + "1. " + FEATURE_BRANCH1 + LS + "2. " + FEATURE_BRANCH2 + LS
-                + "Choose feature branch to abort";
-        when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1", "2"))).thenReturn("1");
-        // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
-        // verify
-        verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1", "2"));
-        verifyNoMoreInteractions(promptControllerMock);
-        git.assertClean(repositorySet);
-        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH2, OTHER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH2, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);

@@ -63,6 +63,8 @@ import org.eclipse.jgit.treewalk.filter.PathFilter;
 
 import com.google.common.base.Objects;
 
+import de.gebit.build.maven.plugin.gitflow.TestProjects;
+import de.gebit.build.maven.plugin.gitflow.TestProjects.TestProjectData;
 import de.gebit.build.maven.plugin.gitflow.WorkspaceUtils;
 import de.gebit.build.maven.plugin.gitflow.jgit.GitRebaseTodo.GitRebaseTodoEntry;
 
@@ -97,14 +99,19 @@ public class GitExecution {
 
     private String gitBaseDir;
 
+    private String gitRepoBaseDir;
+
     /**
      * Creates an instance of git execution.
      *
      * @param aGitBasedir
-     *            the base directory where git repository set will be created.
+     *            the base directory where git repository set will be created
+     * @param aGitRepoBasedir
+     *            the base directory where existing git repositories are located
      */
-    public GitExecution(String aGitBasedir) {
+    public GitExecution(String aGitBasedir, String aGitRepoBasedir) {
         this.gitBaseDir = aGitBasedir;
+        this.gitRepoBaseDir = aGitRepoBasedir;
     }
 
     /**
@@ -176,6 +183,56 @@ public class GitExecution {
             }
             throw tempExc;
         }
+    }
+
+    /**
+     * Use an existing set of git repositories by copying files from the passed
+     * sourceRepoDir to the repo base directory.<br>
+     * Initial branch checked out in working directory is 'master'.
+     *
+     * @param project
+     *            the project that will be used
+     * @return a repository set that contains references to the remote and local
+     *         repositories
+     */
+    public RepositorySet useGitRepositorySet(TestProjectData project) throws Exception {
+        return useGitRepositorySet(project, "master");
+    }
+
+    /**
+     * Use an existing set of git repositories by copying files from the passed
+     * sourceRepoDir to the repo base directory.
+     *
+     * @param project
+     *            the project that will be used
+     * @param initialBranch
+     *            the initial branch checked out in working directory
+     * @return a repository set that contains references to the remote and local
+     *         repositories
+     */
+    public RepositorySet useGitRepositorySet(TestProjectData project, String initialBranch) throws Exception {
+        String projectName = project.artifactId;
+        File repoBasedir = new File(gitBaseDir, projectName);
+        File gitRepoDir = new File(gitRepoBaseDir);
+        TestProjects.prepareRepositoryIfNotExisting(gitRepoDir);
+//        File sourceRepoFile = new File(gitRepoDir, projectName + ".zip");
+//        new ZipUtils().unzip(sourceRepoFile, new File(gitBaseDir));
+        FileUtils.copyDirectory(new File(gitRepoDir, projectName), repoBasedir);
+        Git remoteGit = Git.open(new File(repoBasedir, GIT_BASEDIR_REMOTE_SUFFIX));
+        Git localGit = Git.open(new File(repoBasedir, GIT_BASEDIR_LOCAL_SUFFIX));
+        setGitDummyEditorToConfig(localGit);
+        RemoteSetUrlCommand remoteSetUrlCommand = localGit.remoteSetUrl();
+        remoteSetUrlCommand.setName("origin");
+        remoteSetUrlCommand.setUri(new URIish(remoteGit.getRepository().getDirectory().getAbsolutePath()));
+        remoteSetUrlCommand.call();
+        localGit.checkout().setName(initialBranch).call();
+        Git clonedRemoteGit = Git.open(new File(repoBasedir, GIT_BASEDIR_REMOTE_CLONE_SUFFIX));
+        remoteSetUrlCommand = clonedRemoteGit.remoteSetUrl();
+        remoteSetUrlCommand.setName("origin");
+        remoteSetUrlCommand.setUri(new URIish(remoteGit.getRepository().getDirectory().getAbsolutePath()));
+        remoteSetUrlCommand.call();
+        clonedRemoteGit.checkout().setName("master").call();
+        return new RepositorySet(remoteGit, localGit, clonedRemoteGit);
     }
 
     /**
@@ -548,6 +605,7 @@ public class GitExecution {
      * @throws GitAPIException
      *             if an error occurs on git command execution
      */
+    @Deprecated
     public List<String> localBranches(RepositorySet repositorySet) throws GitAPIException {
         return branches(repositorySet.getLocalRepoGit());
     }
@@ -561,16 +619,25 @@ public class GitExecution {
      * @throws GitAPIException
      *             if an error occurs on git command execution
      */
+    @Deprecated
     public List<String> remoteBranches(RepositorySet repositorySet) throws GitAPIException {
         return branches(repositorySet.getRemoteRepoGit());
     }
 
+    @Deprecated
     public List<String> branches(Git git) throws GitAPIException {
+        return branches(git, null);
+    }
+
+    public List<String> branches(Git git, List<String> includes) throws GitAPIException {
         List<String> branches = new ArrayList<String>();
         List<Ref> branchRefs = git.branchList().call();
         for (Ref branchRef : branchRefs) {
             if (branchRef.getName().startsWith(REFS_HEADS_PATH)) {
-                branches.add(branchNameByRef(branchRef));
+                String branch = branchNameByRef(branchRef);
+                if (includes == null || includes.contains(branch)) {
+                    branches.add(branch);
+                }
             }
         }
         return branches;
@@ -601,7 +668,23 @@ public class GitExecution {
     }
 
     /**
-     * Creates passed branch in local erpository without switching to it.
+     * Creates passed branch in local rpository and switch to it.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param aBranch
+     *            the branch to be created
+     * @throws GitAPIException
+     *             if an error occurs on git command execution
+     * @throws IOException
+     *             in case of an I/O error
+     */
+    public void createBranch(RepositorySet repositorySet, String aBranch) throws GitAPIException, IOException {
+        switchToBranch(repositorySet, aBranch, true);
+    }
+
+    /**
+     * Creates passed branch in local rpository without switching to it.
      *
      * @param repositorySet
      *            the repository to be used
@@ -1174,6 +1257,7 @@ public class GitExecution {
      * @throws GitAPIException
      *             if an error occurs on git command execution
      */
+    @Deprecated
     public void assertLocalBranches(RepositorySet repositorySet, String... expectedBranches) throws GitAPIException {
         List<String> branches = localBranches(repositorySet);
         assertBranches(expectedBranches, branches, "local");
@@ -1189,11 +1273,13 @@ public class GitExecution {
      * @throws GitAPIException
      *             if an error occurs on git command execution
      */
+    @Deprecated
     public void assertRemoteBranches(RepositorySet repositorySet, String... expectedBranches) throws GitAPIException {
         List<String> branches = remoteBranches(repositorySet);
         assertBranches(expectedBranches, branches, "remote");
     }
 
+    @Deprecated
     private void assertBranches(String[] expectedBranches, List<String> branches, String repoName) {
         List<String> expectedBranchesList = Arrays.asList(expectedBranches);
         List<String> expected = new LinkedList<>(expectedBranchesList);
@@ -1203,6 +1289,95 @@ public class GitExecution {
         assertEquals("Branches in " + repoName + " repository are different from expected.",
                 Arrays.toString(expected.toArray(new String[expected.size()])),
                 Arrays.toString(actual.toArray(new String[actual.size()])));
+    }
+
+    /**
+     * Assert that passed expected branches exist locally.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param expectedBranches
+     *            the expected branches
+     * @throws GitAPIException
+     *             if an error occurs on git command execution
+     */
+    public void assertExistingLocalBranches(RepositorySet repositorySet, String... expectedBranches)
+            throws GitAPIException {
+        List<String> branches = branches(repositorySet.getLocalRepoGit(), Arrays.asList(expectedBranches));
+        assertExistingBranches(expectedBranches, branches, "local");
+    }
+
+    /**
+     * Assert that passed expected branches exist remotely.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param expectedBranches
+     *            the expected branches
+     * @throws GitAPIException
+     *             if an error occurs on git command execution
+     */
+    public void assertExistingRemoteBranches(RepositorySet repositorySet, String... expectedBranches)
+            throws GitAPIException {
+        List<String> branches = branches(repositorySet.getRemoteRepoGit(), Arrays.asList(expectedBranches));
+        assertExistingBranches(expectedBranches, branches, "remote");
+    }
+
+    private void assertExistingBranches(String[] expectedBranches, List<String> branches, String repoName) {
+        List<String> expectedBranchesList = Arrays.asList(expectedBranches);
+        List<String> expected = new LinkedList<>(expectedBranchesList);
+        List<String> actual = new LinkedList<>(branches);
+        Collections.sort(expected);
+        Collections.sort(actual);
+        assertEquals("Not all expected branches exist in " + repoName + " repository.",
+                Arrays.toString(expected.toArray(new String[expected.size()])),
+                Arrays.toString(actual.toArray(new String[actual.size()])));
+    }
+
+    /**
+     * Assert that passed expected branches doesn't exist locally.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param expectedBranches
+     *            the expected branches
+     * @throws GitAPIException
+     *             if an error occurs on git command execution
+     */
+    public void assertMissingLocalBranches(RepositorySet repositorySet, String... expectedBranches)
+            throws GitAPIException {
+        List<String> branches = branches(repositorySet.getLocalRepoGit(), Arrays.asList(expectedBranches));
+        assertMissingBranches(expectedBranches, branches, "local");
+    }
+
+    /**
+     * Assert that passed expected branches doesn't exist remotely.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param expectedBranches
+     *            the expected branches
+     * @throws GitAPIException
+     *             if an error occurs on git command execution
+     */
+    public void assertMissingRemoteBranches(RepositorySet repositorySet, String... expectedBranches)
+            throws GitAPIException {
+        List<String> branches = branches(repositorySet.getRemoteRepoGit(), Arrays.asList(expectedBranches));
+        assertMissingBranches(expectedBranches, branches, "remote");
+    }
+
+    private void assertMissingBranches(String[] expectedBranches, List<String> branches, String repoName) {
+        if (branches.size() > 0) {
+            List<String> expectedBranchesList = Arrays.asList(expectedBranches);
+            List<String> expected = new LinkedList<>(expectedBranchesList);
+            List<String> actual = new LinkedList<>(expectedBranchesList);
+            actual.removeAll(branches);
+            Collections.sort(expected);
+            Collections.sort(actual);
+            assertEquals("Not all expected branches are missing in " + repoName + " repository.",
+                    Arrays.toString(expected.toArray(new String[expected.size()])),
+                    Arrays.toString(actual.toArray(new String[actual.size()])));
+        }
     }
 
     /**
@@ -1730,8 +1905,8 @@ public class GitExecution {
     public void assertTrackingBranch(RepositorySet repositorySet, String expectedTrackingBranch, String branch) {
         String shortTrackingName = Repository.shortenRefName(expectedTrackingBranch);
         String fullTrackingName = Constants.R_REMOTES + shortTrackingName;
-        assertEquals("tracking branch of the branch '" + branch + "' is different from expected",
-                fullTrackingName, getUpstreamBranch(repositorySet, branch));
+        assertEquals("tracking branch of the branch '" + branch + "' is different from expected", fullTrackingName,
+                getUpstreamBranch(repositorySet, branch));
     }
 
     public String getUpstreamBranch(RepositorySet repositorySet, String branchName) {

@@ -160,11 +160,17 @@ public class ExecutorHelper {
         verifyNoMoreInteractions(promptControllerMock);
     }
 
+    @Deprecated
     public static void executeIntegerated(AbstractGitFlowMojoTestCase testCase, RepositorySet repositorySet,
             String integrationBranch) throws Exception {
         Properties userProperties = new Properties();
         userProperties.setProperty("integrationBranch", integrationBranch);
         testCase.executeMojo(repositorySet.getWorkingDirectory(), "integrated", userProperties);
+    }
+
+    public static void executeIntegerated(RepositorySet repositorySet, String integrationBranch) throws Exception {
+        repositorySet.getLocalRepoGit().branchCreate().setName(integrationBranch).setStartPoint("HEAD").call();
+        repositorySet.getLocalRepoGit().push().setRemote("origin").add(integrationBranch).call();
     }
 
     public static void execute(AbstractGitFlowMojoTestCase testCase, RepositorySet repositorySet, String goal)

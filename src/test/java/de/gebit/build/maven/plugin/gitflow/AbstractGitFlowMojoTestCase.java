@@ -92,6 +92,8 @@ public abstract class AbstractGitFlowMojoTestCase {
 
     public static final String GIT_BASEDIR = "target/git";
 
+    public static final String GIT_REPO_BASEDIR = "target/git-repos";
+
     private static final String NOT_EXISTING_DIR = "notExistingDir";
 
     public static final String MASTER_BRANCH = "master";
@@ -118,7 +120,7 @@ public abstract class AbstractGitFlowMojoTestCase {
     @Before
     public void setUpAbstractGitFlowMojoTestCase() throws Exception {
         startPlexusContainer();
-        git = new GitExecution(GIT_BASEDIR);
+        git = new GitExecution(GIT_BASEDIR, GIT_REPO_BASEDIR);
         git.cleanupGitBasedir();
     }
 
