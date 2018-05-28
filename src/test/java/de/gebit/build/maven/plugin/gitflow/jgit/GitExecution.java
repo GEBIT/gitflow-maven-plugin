@@ -680,7 +680,7 @@ public class GitExecution {
      *             in case of an I/O error
      */
     public void createBranch(RepositorySet repositorySet, String aBranch) throws GitAPIException, IOException {
-        switchToBranch(repositorySet, aBranch, true);
+        switchToBranch(repositorySet.getLocalRepoGit(), aBranch, true);
     }
 
     /**
@@ -698,7 +698,7 @@ public class GitExecution {
     public void createBranchWithoutSwitch(RepositorySet repositorySet, String aBranch)
             throws GitAPIException, IOException {
         String currentBranch = currentBranch(repositorySet);
-        switchToBranch(repositorySet, aBranch, true);
+        createBranch(repositorySet, aBranch);
         switchToBranch(repositorySet, currentBranch);
     }
 
@@ -833,24 +833,7 @@ public class GitExecution {
      *             if an error occurs on git command execution
      */
     public void switchToBranch(RepositorySet repositorySet, String aBranch) throws GitAPIException {
-        switchToBranch(repositorySet, aBranch, false);
-    }
-
-    /**
-     * Swiches to the passed branch.
-     *
-     * @param repositorySet
-     *            the repository to be used
-     * @param aBranch
-     *            the branch to switch to
-     * @param createBranch
-     *            <code>true</code> if branch should be created before switch
-     * @throws GitAPIException
-     *             if an error occurs on git command execution
-     */
-    public void switchToBranch(RepositorySet repositorySet, String aBranch, boolean createBranch)
-            throws GitAPIException {
-        switchToBranch(repositorySet.getLocalRepoGit(), aBranch, createBranch);
+        switchToBranch(repositorySet.getLocalRepoGit(), aBranch, false);
     }
 
     private void switchToBranch(Git git, String aBranch, boolean createBranch) throws GitAPIException {
@@ -1245,50 +1228,6 @@ public class GitExecution {
      */
     public void deleteTag(RepositorySet repositorySet, String tag) throws GitAPIException {
         repositorySet.getLocalRepoGit().tagDelete().setTags(tag).call();
-    }
-
-    /**
-     * Asserts that local repository consists of passed expected branches.
-     *
-     * @param repositorySet
-     *            the repository to be used
-     * @param expectedBranches
-     *            the expected branches
-     * @throws GitAPIException
-     *             if an error occurs on git command execution
-     */
-    @Deprecated
-    public void assertLocalBranches(RepositorySet repositorySet, String... expectedBranches) throws GitAPIException {
-        List<String> branches = localBranches(repositorySet);
-        assertBranches(expectedBranches, branches, "local");
-    }
-
-    /**
-     * Asserts that remote repository consists of passed expected branches.
-     *
-     * @param repositorySet
-     *            the repository to be used
-     * @param expectedBranches
-     *            the expected branches
-     * @throws GitAPIException
-     *             if an error occurs on git command execution
-     */
-    @Deprecated
-    public void assertRemoteBranches(RepositorySet repositorySet, String... expectedBranches) throws GitAPIException {
-        List<String> branches = remoteBranches(repositorySet);
-        assertBranches(expectedBranches, branches, "remote");
-    }
-
-    @Deprecated
-    private void assertBranches(String[] expectedBranches, List<String> branches, String repoName) {
-        List<String> expectedBranchesList = Arrays.asList(expectedBranches);
-        List<String> expected = new LinkedList<>(expectedBranchesList);
-        List<String> actual = new LinkedList<>(branches);
-        Collections.sort(expected);
-        Collections.sort(actual);
-        assertEquals("Branches in " + repoName + " repository are different from expected.",
-                Arrays.toString(expected.toArray(new String[expected.size()])),
-                Arrays.toString(actual.toArray(new String[actual.size()])));
     }
 
     /**
@@ -1830,6 +1769,11 @@ public class GitExecution {
         Collections.sort(actual);
         assertEquals(message, Arrays.toString(expected.toArray(new String[expected.size()])),
                 Arrays.toString(actual.toArray(new String[actual.size()])));
+    }
+
+    public void createIntegeratedBranch(RepositorySet repositorySet, String integrationBranch) throws Exception {
+        repositorySet.getLocalRepoGit().branchCreate().setName(integrationBranch).setStartPoint("HEAD").call();
+        repositorySet.getLocalRepoGit().push().setRemote("origin").add(integrationBranch).call();
     }
 
     /**

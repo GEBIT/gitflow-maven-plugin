@@ -29,6 +29,8 @@ public class GitFlowHotfixFinishMojoTest extends AbstractGitFlowMojoTestCase {
 
     private static final String HOTFIX_VERSION = "1.42.0";
 
+    private static final String HOTFIX_BRANCH = "hotfix/" + HOTFIX_VERSION;
+
     private static final String HOTFIX_TAG = "gitflow-tests-" + HOTFIX_VERSION;
 
     private static final String NEXT_DEVELPMENT_VERSION = "1.42.1-SNAPSHOT";
@@ -58,8 +60,8 @@ public class GitFlowHotfixFinishMojoTest extends AbstractGitFlowMojoTestCase {
 
             git.assertClean(repositorySet);
             git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-            git.assertLocalBranches(repositorySet, MASTER_BRANCH);
-            git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+            git.assertMissingLocalBranches(repositorySet, HOTFIX_BRANCH);
+            git.assertMissingRemoteBranches(repositorySet, HOTFIX_BRANCH);
 
             git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
             git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_HOTFIX_FINISH_SET_VERSION,

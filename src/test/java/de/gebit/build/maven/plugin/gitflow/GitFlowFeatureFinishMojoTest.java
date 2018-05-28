@@ -788,7 +788,7 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // set up
         final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
         git.switchToBranch(repositorySet, MASTER_BRANCH);
-        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_MASTER_BRANCH);
+        git.createIntegeratedBranch(repositorySet, INTEGRATION_MASTER_BRANCH);
         git.createAndCommitTestfile(repositorySet, "master_testfile.txt", COMMIT_MESSAGE_MASTER_TESTFILE);
         git.push(repositorySet);
         git.switchToBranch(repositorySet, FEATURE_BRANCH);
@@ -823,7 +823,7 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 + " But it is strongly recomended to run 'mvn flow:feature-rebase' first and then run"
                 + " 'mvn flow:feature-finish' again. Are you sure you want to continue?";
         git.switchToBranch(repositorySet, MAINTENANCE_BRANCH);
-        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_MAINTENANCE_BRANCH);
+        git.createIntegeratedBranch(repositorySet, INTEGRATION_MAINTENANCE_BRANCH);
         git.createAndCommitTestfile(repositorySet, "maintenance_testfile.txt", COMMIT_MESSAGE_MAINTENACE_TESTFILE);
         git.push(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);

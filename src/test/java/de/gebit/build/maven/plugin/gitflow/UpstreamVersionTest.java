@@ -25,6 +25,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import de.gebit.build.maven.plugin.gitflow.TestProjects.WithUpstreamConstants;
 import de.gebit.build.maven.plugin.gitflow.jgit.RepositorySet;
 
 /**
@@ -38,22 +39,19 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
 
     private static final String PROJECT_VERSION = TestProjects.WITH_UPSTREAM.version;
 
-    private static final String FEATURE_ISSUE = TestProjects.BASIC.jiraProject + "-42";
+    private static final String FEATURE_BRANCH = WithUpstreamConstants.FEATURE_BRANCH;
 
-    private static final String FEATURE_NAME = FEATURE_ISSUE + "-someDescription";
+    private static final String FEATURE_VERSION = WithUpstreamConstants.FEATURE_VERSION;
 
-    private static final String FEATURE_BRANCH = "feature/" + FEATURE_NAME;
+    private static final String FEATURE_WITHOUT_VERSION_BRANCH = WithUpstreamConstants.FEATURE_WITHOUT_VERSION_BRANCH;
 
-    private static final String FEATURE_VERSION = TestProjects.WITH_MODULES.releaseVersion + "-" + FEATURE_ISSUE
-            + "-SNAPSHOT";
+    private static final String EXPECTED_UPSTREAM_VERSION = WithUpstreamConstants.EXPECTED_UPSTREAM_VERSION;
 
-    private static final String EXPECTED_UPSTREAM_VERSION = "1.0.0";
-
-    private static final String NEW_UPSTREAM_VERSION = "2.0.0";
+    private static final String NEW_UPSTREAM_VERSION = WithUpstreamConstants.NEW_UPSTREAM_VERSION;
 
     private static final String OTHER_PROJECT_VERSION = "1.3.5-SNAPSHOT";
 
-    private static final String OTHER_FEATURE_VERSION = "1.3.5-" + FEATURE_ISSUE + "-SNAPSHOT";
+    private static final String OTHER_FEATURE_VERSION = "1.3.5-" + WithUpstreamConstants.FEATURE_ISSUE + "-SNAPSHOT";
 
     private static final String OTHER_UPSTREAM_VERSION = "2.1.0";
 
@@ -62,7 +60,10 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
     private static final String PROMPT_UPSTREAM_VERSION_ON_FEATURE_BRANCH = "On feature branch: "
             + PROMPT_UPSTREAM_VERSION;
 
-    private static final String COMMIT_MESSAGE_SET_VERSION = FEATURE_ISSUE + ": updating versions for feature branch";
+    private static final String COMMIT_MESSAGE_SET_VERSION = WithUpstreamConstants.FEATURE_VERSION_COMMIT_MESSAGE;
+
+    private static final String COMMIT_MESSAGE_FEATURE_WITHOUT_VERSION_SET_VERSION = WithUpstreamConstants.FEATURE_WITHOUT_VERSION_ISSUE
+            + ": updating versions for feature branch";
 
     private static final String COMMIT_MESSAGE_FEATURE_TESTFILE = "FEATURE: Unit test dummy file commit";
 
@@ -70,7 +71,7 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
 
     @Before
     public void setUp() throws Exception {
-        repositorySet = git.createGitRepositorySet(TestProjects.WITH_UPSTREAM.basedir);
+        repositorySet = git.useGitRepositorySet(TestProjects.WITH_UPSTREAM);
     }
 
     @After
@@ -104,8 +105,13 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteFeatureStart() throws Exception {
         // set up
+        final String USED_FEATURE_ISSUE = TestProjects.BASIC.jiraProject + "-42";
+        final String USED_FEATURE_NAME = USED_FEATURE_ISSUE + "-someDescription";
+        final String USED_FEATURE_BRANCH = "feature/" + USED_FEATURE_NAME;
+        final String EXPECTED_FEATURE_VERSION = TestProjects.WITH_MODULES.releaseVersion + "-" + USED_FEATURE_ISSUE
+                + "-SNAPSHOT";
         when(promptControllerMock.prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME))
-                .thenReturn(FEATURE_NAME);
+                .thenReturn(USED_FEATURE_NAME);
         when(promptControllerMock.prompt(PROMPT_UPSTREAM_VERSION_ON_FEATURE_BRANCH, EXPECTED_UPSTREAM_VERSION))
                 .thenReturn(NEW_UPSTREAM_VERSION);
         // test
@@ -115,39 +121,16 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
         verify(promptControllerMock).prompt(PROMPT_UPSTREAM_VERSION_ON_FEATURE_BRANCH, EXPECTED_UPSTREAM_VERSION);
         verifyNoMoreInteractions(promptControllerMock);
 
-        assertVersions(FEATURE_VERSION, NEW_UPSTREAM_VERSION);
+        assertVersions(EXPECTED_FEATURE_VERSION, NEW_UPSTREAM_VERSION);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH,
+                USED_FEATURE_BRANCH);
         assertEquals(NEW_UPSTREAM_VERSION, branchConfig.getProperty("additionalVersionParameter0"));
-    }
-
-    private void executeFeatureStartWithoutVersionChange(String featureName) throws Exception {
-        Properties userProperties = new Properties();
-        userProperties.setProperty("flow.skipFeatureVersion", "true");
-        when(promptControllerMock.prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME))
-                .thenReturn(featureName);
-        executeMojoInteractive(GOAL_FEATURE_START, userProperties);
-        verify(promptControllerMock).prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME);
-        verifyNoMoreInteractionsAndReset(promptControllerMock);
-    }
-
-    private void executeFeatureStart(String featureName, String expectedUpstreamDefaultVersion,
-            String newUpstreamVersion) throws Exception {
-        when(promptControllerMock.prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME))
-                .thenReturn(featureName);
-        when(promptControllerMock.prompt(PROMPT_UPSTREAM_VERSION_ON_FEATURE_BRANCH, expectedUpstreamDefaultVersion))
-                .thenReturn(newUpstreamVersion);
-        executeMojoInteractive(GOAL_FEATURE_START);
-        verify(promptControllerMock).prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME);
-        verify(promptControllerMock).prompt(PROMPT_UPSTREAM_VERSION_ON_FEATURE_BRANCH, expectedUpstreamDefaultVersion);
-        verifyNoMoreInteractionsAndReset(promptControllerMock);
     }
 
     @Test
     public void testExecuteFeatureRebaseSameVersionAndFeatureWithoutCommits() throws Exception {
         // set up
-        executeFeatureStart(FEATURE_NAME, EXPECTED_UPSTREAM_VERSION, NEW_UPSTREAM_VERSION);
-        git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
         git.switchToBranch(repositorySet, FEATURE_BRANCH);
@@ -170,13 +153,11 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteFeatureRebaseSameVersion() throws Exception {
         // set up
-        executeFeatureStart(FEATURE_NAME, EXPECTED_UPSTREAM_VERSION, NEW_UPSTREAM_VERSION);
-        git.createAndCommitTestfile(repositorySet, "feature-testfile.txt", COMMIT_MESSAGE_FEATURE_TESTFILE);
-        git.push(repositorySet);
-        git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
         git.switchToBranch(repositorySet, FEATURE_BRANCH);
+        git.createAndCommitTestfile(repositorySet, "feature-testfile.txt", COMMIT_MESSAGE_FEATURE_TESTFILE);
+        git.push(repositorySet);
         // test
         executeMojoInteractive(GOAL_FEATURE_REBASE);
         // verify
@@ -196,14 +177,12 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteFeatureRebaseChangedVersion() throws Exception {
         // set up
-        executeFeatureStart(FEATURE_NAME, EXPECTED_UPSTREAM_VERSION, NEW_UPSTREAM_VERSION);
-        git.createAndCommitTestfile(repositorySet, "feature-testfile.txt", COMMIT_MESSAGE_FEATURE_TESTFILE);
-        git.push(repositorySet);
-        git.switchToBranch(repositorySet, MASTER_BRANCH);
         setVersion(OTHER_PROJECT_VERSION);
         git.commitAll(repositorySet, "update project version");
         git.push(repositorySet);
         git.switchToBranch(repositorySet, FEATURE_BRANCH);
+        git.createAndCommitTestfile(repositorySet, "feature-testfile.txt", COMMIT_MESSAGE_FEATURE_TESTFILE);
+        git.push(repositorySet);
         when(promptControllerMock.prompt(PROMPT_UPSTREAM_VERSION_ON_FEATURE_BRANCH, NEW_UPSTREAM_VERSION))
                 .thenReturn(OTHER_UPSTREAM_VERSION);
         // test
@@ -246,14 +225,13 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteFeatureRebaseChangedUpstreamVersion() throws Exception {
         // set up
-        executeFeatureStart(FEATURE_NAME, EXPECTED_UPSTREAM_VERSION, NEW_UPSTREAM_VERSION);
-        git.createAndCommitTestfile(repositorySet, "feature-testfile.txt", COMMIT_MESSAGE_FEATURE_TESTFILE);
-        git.push(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         setUpstreamVersion(OTHER_UPSTREAM_VERSION);
         git.commitAll(repositorySet, "update upstream version");
         git.push(repositorySet);
         git.switchToBranch(repositorySet, FEATURE_BRANCH);
+        git.createAndCommitTestfile(repositorySet, "feature-testfile.txt", COMMIT_MESSAGE_FEATURE_TESTFILE);
+        git.push(repositorySet);
         // test
         executeMojoInteractive(GOAL_FEATURE_REBASE);
         // verify
@@ -273,14 +251,13 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteFeatureRebaseNewModule() throws Exception {
         // set up
-        executeFeatureStart(FEATURE_NAME, EXPECTED_UPSTREAM_VERSION, NEW_UPSTREAM_VERSION);
-        git.createAndCommitTestfile(repositorySet, "feature-testfile.txt", COMMIT_MESSAGE_FEATURE_TESTFILE);
-        git.push(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         addNewModule("module3", "module1");
         git.commitAll(repositorySet, "added module3");
         git.push(repositorySet);
         git.switchToBranch(repositorySet, FEATURE_BRANCH);
+        git.createAndCommitTestfile(repositorySet, "feature-testfile.txt", COMMIT_MESSAGE_FEATURE_TESTFILE);
+        git.push(repositorySet);
         // test
         executeMojoInteractive(GOAL_FEATURE_REBASE);
         // verify
@@ -313,14 +290,13 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteFeatureRebaseNewModuleTwiceAndChangedVersion() throws Exception {
         // set up
-        executeFeatureStart(FEATURE_NAME, EXPECTED_UPSTREAM_VERSION, NEW_UPSTREAM_VERSION);
-        git.createAndCommitTestfile(repositorySet, "feature-testfile.txt", COMMIT_MESSAGE_FEATURE_TESTFILE);
-        git.push(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         addNewModule("module3", "module1");
         git.commitAll(repositorySet, "added module3");
         git.push(repositorySet);
         git.switchToBranch(repositorySet, FEATURE_BRANCH);
+        git.createAndCommitTestfile(repositorySet, "feature-testfile.txt", COMMIT_MESSAGE_FEATURE_TESTFILE);
+        git.push(repositorySet);
         executeMojoInteractive(GOAL_FEATURE_REBASE);
 
         git.createAndCommitTestfile(repositorySet, "feature-testfile2.txt", COMMIT_MESSAGE_FEATURE_TESTFILE);
@@ -353,13 +329,12 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteFeatureRebaseSameVersionStartedWithoutFeatureVersion() throws Exception {
         // set up
-        executeFeatureStartWithoutVersionChange(FEATURE_NAME);
-        git.createAndCommitTestfile(repositorySet, "feature-testfile.txt", COMMIT_MESSAGE_FEATURE_TESTFILE);
-        git.push(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
-        git.switchToBranch(repositorySet, FEATURE_BRANCH);
+        git.switchToBranch(repositorySet, FEATURE_WITHOUT_VERSION_BRANCH);
+        git.createAndCommitTestfile(repositorySet, "feature-testfile.txt", COMMIT_MESSAGE_FEATURE_TESTFILE);
+        git.push(repositorySet);
         // test
         executeMojoInteractive(GOAL_FEATURE_REBASE);
         // verify
@@ -367,26 +342,27 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
 
         assertVersions(PROJECT_VERSION, EXPECTED_UPSTREAM_VERSION);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH,
+                FEATURE_WITHOUT_VERSION_BRANCH);
         assertEquals(null, branchConfig.getProperty("additionalVersionParameter0"));
 
         assertEquals(PROJECT_VERSION, branchConfig.getProperty("baseVersion"));
-        assertEquals(COMMIT_MESSAGE_SET_VERSION, branchConfig.getProperty("startCommitMessage"));
+        assertEquals(COMMIT_MESSAGE_FEATURE_WITHOUT_VERSION_SET_VERSION,
+                branchConfig.getProperty("startCommitMessage"));
         assertEquals(null, branchConfig.getProperty("versionChangeCommit"));
     }
 
     @Test
     public void testExecuteFeatureRebaseChangedVersionStartedWithoutFeatureVersion() throws Exception {
         // set up
-        executeFeatureStartWithoutVersionChange(FEATURE_NAME);
-        git.createAndCommitTestfile(repositorySet, "feature-testfile.txt", COMMIT_MESSAGE_FEATURE_TESTFILE);
-        git.push(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         setVersion(OTHER_PROJECT_VERSION);
         setUpstreamVersion(OTHER_UPSTREAM_VERSION);
         git.commitAll(repositorySet, "update project and upstream versions");
         git.push(repositorySet);
-        git.switchToBranch(repositorySet, FEATURE_BRANCH);
+        git.switchToBranch(repositorySet, FEATURE_WITHOUT_VERSION_BRANCH);
+        git.createAndCommitTestfile(repositorySet, "feature-testfile.txt", COMMIT_MESSAGE_FEATURE_TESTFILE);
+        git.push(repositorySet);
         // test
         executeMojoInteractive(GOAL_FEATURE_REBASE);
         // verify
@@ -394,11 +370,13 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
 
         assertVersions(OTHER_PROJECT_VERSION, OTHER_UPSTREAM_VERSION);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH,
+                FEATURE_WITHOUT_VERSION_BRANCH);
         assertEquals(null, branchConfig.getProperty("additionalVersionParameter0"));
 
         assertEquals(PROJECT_VERSION, branchConfig.getProperty("baseVersion"));
-        assertEquals(COMMIT_MESSAGE_SET_VERSION, branchConfig.getProperty("startCommitMessage"));
+        assertEquals(COMMIT_MESSAGE_FEATURE_WITHOUT_VERSION_SET_VERSION,
+                branchConfig.getProperty("startCommitMessage"));
         assertEquals(null, branchConfig.getProperty("versionChangeCommit"));
     }
 

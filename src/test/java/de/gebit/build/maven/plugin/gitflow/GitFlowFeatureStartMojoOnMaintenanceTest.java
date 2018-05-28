@@ -260,7 +260,7 @@ public class GitFlowFeatureStartMojoOnMaintenanceTest extends AbstractGitFlowMoj
     @Test
     public void testExecuteWithIntegrationBranchSameAsMaintenanceBranch() throws Exception {
         // set up
-        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_BRANCH);
+        git.createIntegeratedBranch(repositorySet, INTEGRATION_BRANCH);
         Properties userProperties = new Properties();
         userProperties.setProperty("featureName", FEATURE_NAME);
         // test
@@ -285,7 +285,7 @@ public class GitFlowFeatureStartMojoOnMaintenanceTest extends AbstractGitFlowMoj
     @Test
     public void testExecuteWithIntegrationBranchDifferentFromMaintenanceBranch() throws Exception {
         // set up
-        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_BRANCH);
+        git.createIntegeratedBranch(repositorySet, INTEGRATION_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
         Properties userProperties = new Properties();
@@ -309,7 +309,7 @@ public class GitFlowFeatureStartMojoOnMaintenanceTest extends AbstractGitFlowMoj
     @Test
     public void testExecuteWithIntegrationBranchDifferentFromMaintenanceBranchInInteractiveMode() throws Exception {
         // set up
-        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_BRANCH);
+        git.createIntegeratedBranch(repositorySet, INTEGRATION_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
         when(promptControllerMock.prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME))
@@ -339,7 +339,7 @@ public class GitFlowFeatureStartMojoOnMaintenanceTest extends AbstractGitFlowMoj
     public void testExecuteWithIntegrationBranchDifferentFromMaintenanceBranchInInteractiveModeAnswerNo()
             throws Exception {
         // set up
-        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_BRANCH);
+        git.createIntegeratedBranch(repositorySet, INTEGRATION_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
         when(promptControllerMock.prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME))
@@ -368,7 +368,7 @@ public class GitFlowFeatureStartMojoOnMaintenanceTest extends AbstractGitFlowMoj
     @Test
     public void testExecuteWithIntegrationBranchAndNewerRemoteIntegartionBranch() throws Exception {
         // set up
-        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_BRANCH);
+        git.createIntegeratedBranch(repositorySet, INTEGRATION_BRANCH);
         git.remoteCreateTestfileInBranch(repositorySet, INTEGRATION_BRANCH);
         when(promptControllerMock.prompt(PROMPT_BRANCH_OF_LAST_INTEGRATED, Arrays.asList("y", "n"), "y"))
                 .thenReturn("y");

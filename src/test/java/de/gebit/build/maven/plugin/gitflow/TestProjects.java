@@ -8,12 +8,16 @@
 //
 package de.gebit.build.maven.plugin.gitflow;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
+
 import java.io.File;
-import java.io.IOException;
 import java.util.Properties;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.codehaus.plexus.components.interactivity.Prompter;
 import org.eclipse.jgit.api.CreateBranchCommand.SetupUpstreamMode;
 import org.eclipse.jgit.api.RmCommand;
 import org.mockito.MockitoAnnotations;
@@ -128,35 +132,45 @@ public class TestProjects {
     public static void prepareRepositoryIfNotExisting(File gitRepoDir) throws Exception {
         if (!gitRepoDir.exists()) {
             gitRepoDir.mkdirs();
-            prepareBasicRepository(gitRepoDir);
+            prepareRepository(gitRepoDir, BASIC);
+            prepareRepository(gitRepoDir, WITH_UPSTREAM);
         }
     }
 
-    private static void prepareBasicRepository(File repoDir) throws Exception {
-        String projectName = BASIC.artifactId;
+    private static void prepareRepository(File repoDir, TestProjectData project) throws Exception {
+        String projectName = project.artifactId;
         System.out.println("Creating repositories for project '" + projectName + "'.");
-        // File tmpRepoDir = new File(repoDir, projectName);
         long ms = System.currentTimeMillis();
         GitExecution git = new GitExecution(repoDir.getAbsolutePath(), null);
-        try (RepositorySet repositorySet = git.createGitRepositorySet(BASIC.basedir)) {
+        try (RepositorySet repositorySet = git.createGitRepositorySet(project.basedir)) {
             MyTestCase tc = new MyTestCase();
             MockitoAnnotations.initMocks(tc);
             try {
                 tc.setUpAbstractGitFlowMojoTestCase();
-                initBasicRepository(git, repositorySet, tc);
+                initRepository(project, git, repositorySet, tc);
             } finally {
                 tc.tearDownAbstractGitFlowMojoTestCase();
             }
         }
         System.out.println("Repositories for project '" + projectName + "' created. ["
                 + ((System.currentTimeMillis() - ms) / 1000) + "s]");
-        // File repoZipFile = new File(repoDir, projectName + ".zip");
-        // new ZipUtils().zip(tmpRepoDir, repoZipFile);
-        // forceDelete(tmpRepoDir);
+    }
+
+    private static void initRepository(TestProjectData project, GitExecution git, RepositorySet repositorySet,
+            MyTestCase testCase) throws Exception {
+        if (project == BASIC) {
+            initBasicRepository(git, repositorySet, testCase);
+        } else if (project == WITH_UPSTREAM) {
+            initUpstreamVersionRepository(git, repositorySet, testCase);
+        }
     }
 
     private static void initBasicRepository(GitExecution git, RepositorySet repositorySet, MyTestCase testCase)
             throws Exception {
+        git.createBranch(repositorySet, BasicConstants.PRODUCTION_BRANCH);
+        git.push(repositorySet);
+        git.switchToBranch(repositorySet, "master");
+
         // feature branches
         ExecutorHelper.executeFeatureStart(testCase, repositorySet, BasicConstants.EXISTING_FEATURE_NAME);
         git.switchToBranch(repositorySet, "master");
@@ -225,6 +239,9 @@ public class TestProjects {
         // maintenance branch with feature and epic branches
         ExecutorHelper.executeMaintenanceStart(testCase, repositorySet, BasicConstants.EXISTING_MAINTENANCE_VERSION,
                 BasicConstants.EXISTING_MAINTENANCE_FIRST_VERSION);
+        git.createBranch(repositorySet, BasicConstants.MAINTENANCE_PRODUCTION_BRANCH);
+        git.push(repositorySet);
+        git.switchToBranch(repositorySet, BasicConstants.EXISTING_MAINTENANCE_BRANCH);
         // epic on maintenance
         ExecutorHelper.executeEpicStart(testCase, repositorySet, BasicConstants.EPIC_ON_MAINTENANCE_NAME);
         git.switchToBranch(repositorySet, BasicConstants.EXISTING_MAINTENANCE_BRANCH);
@@ -239,6 +256,20 @@ public class TestProjects {
         git.switchToBranch(repositorySet, BasicConstants.EXISTING_MAINTENANCE_BRANCH);
         ExecutorHelper.executeFeatureStart(testCase, repositorySet, BasicConstants.SINGLE_FEATURE_ON_MAINTENANCE_NAME,
                 props("flow.featureBranchPrefix", BasicConstants.SINGLE_FEATURE_ON_MAINTENANCE_BRANCH_PREFIX));
+        git.switchToBranch(repositorySet, BasicConstants.EXISTING_MAINTENANCE_BRANCH);
+        // release on maintenance
+        ExecutorHelper.executeReleaseStart(testCase, repositorySet, BasicConstants.RELEASE_ON_MAINTENANCE_VERSION,
+                BasicConstants.EXISTING_MAINTENANCE_RELEASE_VERSION);
+        git.switchToBranch(repositorySet, BasicConstants.EXISTING_MAINTENANCE_BRANCH);
+        ExecutorHelper.executeReleaseStart(testCase, repositorySet,
+                BasicConstants.SINGLE_RELEASE_ON_MAINTENANCE_VERSION,
+                BasicConstants.EXISTING_MAINTENANCE_RELEASE_VERSION,
+                props("flow.releaseBranchPrefix", BasicConstants.SINGLE_RELEASE_ON_MAINTENANCE_BRANCH_PREFIX));
+        git.switchToBranch(repositorySet, BasicConstants.EXISTING_MAINTENANCE_BRANCH);
+        ExecutorHelper.executeReleaseStart(testCase, repositorySet,
+                BasicConstants.RELEASE_WITH_PRODUCTION_ON_MAINTENANCE_VERSION,
+                BasicConstants.EXISTING_MAINTENANCE_RELEASE_VERSION,
+                props("flow.noProduction", "false", "flow.productionBranch", BasicConstants.PRODUCTION_BRANCH));
         git.switchToBranch(repositorySet, "master");
 
         // maintenance without version
@@ -284,6 +315,22 @@ public class TestProjects {
         git.push(repositorySet);
         git.switchToBranch(repositorySet, "master");
 
+        // release branch
+        ExecutorHelper.executeReleaseStart(testCase, repositorySet, BasicConstants.EXISTING_RELEASE_VERSION,
+                BASIC.releaseVersion);
+        git.switchToBranch(repositorySet, "master");
+        ExecutorHelper.executeReleaseStart(testCase, repositorySet, BasicConstants.SINGLE_RELEASE_VERSION,
+                BASIC.releaseVersion, props("flow.releaseBranchPrefix", BasicConstants.SINGLE_RELEASE_BRANCH_PREFIX));
+        git.switchToBranch(repositorySet, "master");
+        ExecutorHelper.executeReleaseStart(testCase, repositorySet, BasicConstants.RELEASE_WITH_PRODUCTION_VERSION,
+                BASIC.releaseVersion,
+                props("flow.noProduction", "false", "flow.productionBranch", BasicConstants.PRODUCTION_BRANCH));
+        git.switchToBranch(repositorySet, "master");
+        ExecutorHelper.executeReleaseStart(testCase, repositorySet,
+                BasicConstants.RELEASE_WITH_MISSING_PRODUCTION_VERSION, BASIC.releaseVersion,
+                props("flow.noProduction", "false", "flow.productionBranch", BasicConstants.MISSING_PRODUCTION_BRANCH));
+        git.switchToBranch(repositorySet, "master");
+
         // finalize: empty dummy branch for initail checkout (to avoid CR-LF
         // conflicts)
         git.createOrphanBranch(repositorySet, "dummy", "dummy branch for parking working directory");
@@ -306,31 +353,62 @@ public class TestProjects {
         git.deleteLocalAndRemoteTrackingBranches(repositorySet, BasicConstants.REMOTE_FEATURE_BRANCH);
     }
 
+    private static void initUpstreamVersionRepository(GitExecution git, RepositorySet repositorySet,
+            MyTestCase testCase) throws Exception {
+        executeFeatureStart(testCase, repositorySet, WithUpstreamConstants.FEATURE_NAME,
+                WithUpstreamConstants.EXPECTED_UPSTREAM_VERSION, WithUpstreamConstants.NEW_UPSTREAM_VERSION);
+        git.switchToBranch(repositorySet, "master");
+        executeFeatureStartWithoutVersionChange(testCase, repositorySet,
+                WithUpstreamConstants.FEATURE_WITHOUT_VERSION_NAME);
+
+        // finalize: empty dummy branch for initail checkout (to avoid CR-LF
+        // conflicts)
+        git.createOrphanBranch(repositorySet, "dummy", "dummy branch for parking working directory");
+        git.switchToBranch(repositorySet, "dummy");
+        RmCommand rm = repositorySet.getLocalRepoGit().rm();
+        for (File file : repositorySet.getWorkingDirectory().listFiles()) {
+            if (!file.getName().equalsIgnoreCase(".git")) {
+                rm.addFilepattern(file.getName());
+            }
+        }
+        rm.call();
+        git.commitAll(repositorySet, "delete all files in dummy branch");
+        git.push(repositorySet);
+
+        repositorySet.getClonedRemoteRepoGit().fetch().call();
+        repositorySet.getClonedRemoteRepoGit().checkout().setCreateBranch(true).setName("dummy")
+                .setUpstreamMode(SetupUpstreamMode.SET_UPSTREAM).setStartPoint("origin/dummy").call();
+    }
+
+    private static void executeFeatureStart(AbstractGitFlowMojoTestCase testCase, RepositorySet repositorySet,
+            String featureName, String expectedUpstreamDefaultVersion, String newUpstreamVersion) throws Exception {
+        final String PROMPT_UPSTREAM_VERSION_ON_FEATURE_BRANCH = "On feature branch: Enter the version of the Test "
+                + "Parent Pom project to reference";
+        Properties userProperties = new Properties();
+        userProperties.setProperty("featureName", featureName);
+        Prompter promptControllerMock = mock(Prompter.class);
+        when(promptControllerMock.prompt(PROMPT_UPSTREAM_VERSION_ON_FEATURE_BRANCH, expectedUpstreamDefaultVersion))
+                .thenReturn(newUpstreamVersion);
+        testCase.executeMojo(repositorySet.getWorkingDirectory(), "feature-start", userProperties,
+                promptControllerMock);
+        verify(promptControllerMock).prompt(PROMPT_UPSTREAM_VERSION_ON_FEATURE_BRANCH, expectedUpstreamDefaultVersion);
+        verifyNoMoreInteractions(promptControllerMock);
+    }
+
+    private static void executeFeatureStartWithoutVersionChange(AbstractGitFlowMojoTestCase testCase,
+            RepositorySet repositorySet, String featureName) throws Exception {
+        Properties userProperties = new Properties();
+        userProperties.setProperty("featureName", featureName);
+        userProperties.setProperty("flow.skipFeatureVersion", "true");
+        testCase.executeMojo(repositorySet.getWorkingDirectory(), "feature-start", userProperties);
+    }
+
     private static Properties props(String... props) {
         Properties properties = new Properties();
         for (int i = 0; i < props.length; i += 2) {
             properties.setProperty(props[i], props[i + 1]);
         }
         return properties;
-    }
-
-    private static void forceDelete(File fileOrDir) throws IOException {
-        int maxTries = 10;
-        while (fileOrDir.exists()) {
-            try {
-                FileUtils.forceDelete(fileOrDir);
-            } catch (IOException ex) {
-                // wait some time
-                try {
-                    Thread.sleep(500);
-                } catch (InterruptedException exc) {
-                    Thread.currentThread().interrupt();
-                }
-                if (maxTries-- <= 0) {
-                    throw ex;
-                }
-            }
-        }
     }
 
     private static class MyTestCase extends AbstractGitFlowMojoTestCase {
@@ -352,6 +430,11 @@ public class TestProjects {
     // ----- FEATURE_ON_MAINTENANCE_BRANCH
     // ----- SINGLE_FEATURE_ON_MAINTENANCE_BRANCH
     // (single-feature-on-maintenance/)
+    // ----- RELEASE_ON_MAINTENANCE_BRANCH
+    // ----- SINGLE_RELEASE_ON_MAINTENANCE_BRANCH
+    // (single-release-on-maintenance/)
+    // ----- RELEASE_WITH_PRODUCTION_ON_MAINTENANCE_BRANCH
+    // -- MAINTENANCE_PRODUCTION_BRANCH
     // -- EPIC_WITHOUT_VERSION_ON_MAINTENANCE_BRANCH
     // -- EXISTING_FEATURE_BRANCH
     // -- REMOTE_FEATURE_BRANCH
@@ -366,6 +449,12 @@ public class TestProjects {
     // -- SINGLE_EPIC_BRANCH (single-epic/)
     // -- FIRST_EPIC_BRANCH (epics/two-)
     // -- SECOND_EPIC_BRANCH (epics/two-)
+    // -- EXISTING_RELEASE_BRANCH
+    // -- SINGLE_RELEASE_BRANCH (single-release/)
+    // -- RELEASE_WITH_PRODUCTION_BRANCH
+    // -- RELEASE_WITH_MISSING_PRODUCTION_BRANCH
+    // (single-release-with-production/)
+    // PRODUCTION_BRANCH
     // FEATURE_WITHOUT_VERSION_BRANCH
     // EPIC_WITHOUT_VERSION_BRANCH
     // -- FEATURE_ON_EPIC_WITHOUT_VERSION_BRANCH
@@ -403,6 +492,47 @@ public class TestProjects {
         public static final String MAINTENANCE_WITHOUT_VERSION_VERSION = "32.3";
         public static final String MAINTENANCE_WITHOUT_VERSION_BRANCH = "maintenance/gitflow-tests-"
                 + MAINTENANCE_WITHOUT_VERSION_VERSION;
+
+        // production
+        public static final String PRODUCTION_BRANCH = "existing-production";
+        public static final String MISSING_PRODUCTION_BRANCH = "missing-production";
+        public static final String MAINTENANCE_PRODUCTION_BRANCH = PRODUCTION_BRANCH + "-"
+                + EXISTING_MAINTENANCE_BRANCH;
+
+        // release
+        public static final String EXISTING_RELEASE_VERSION = "50.1.0";
+        public static final String EXISTING_RELEASE_NEW_DEVELOPMENT_VERSION = "50.1.1-SNAPSHOT";
+        public static final String EXISTING_RELEASE_BRANCH = "release/gitflow-tests-" + EXISTING_RELEASE_VERSION;
+
+        public static final String RELEASE_ON_MAINTENANCE_VERSION = "51.2.0";
+        public static final String RELEASE_ON_MAINTENANCE_NEW_DEVELOPMENT_VERSION = "51.2.1-SNAPSHOT";
+        public static final String RELEASE_ON_MAINTENANCE_BRANCH = "release/gitflow-tests-"
+                + RELEASE_ON_MAINTENANCE_VERSION;
+
+        public static final String SINGLE_RELEASE_BRANCH_PREFIX = "single-release/";
+
+        public static final String SINGLE_RELEASE_VERSION = "52.3.0";
+        public static final String SINGLE_RELEASE_BRANCH = SINGLE_RELEASE_BRANCH_PREFIX + SINGLE_RELEASE_VERSION;
+
+        public static final String SINGLE_RELEASE_ON_MAINTENANCE_BRANCH_PREFIX = "single-release-on-maintenance/";
+
+        public static final String SINGLE_RELEASE_ON_MAINTENANCE_VERSION = "53.4.0";
+        public static final String SINGLE_RELEASE_ON_MAINTENANCE_BRANCH = SINGLE_RELEASE_ON_MAINTENANCE_BRANCH_PREFIX
+                + SINGLE_RELEASE_ON_MAINTENANCE_VERSION;
+
+        public static final String RELEASE_WITH_PRODUCTION_VERSION = "54.5.0";
+        public static final String RELEASE_WITH_PRODUCTION_NEW_DEVELOPMENT_VERSION = "54.5.1-SNAPSHOT";
+        public static final String RELEASE_WITH_PRODUCTION_BRANCH = "release/gitflow-tests-"
+                + RELEASE_WITH_PRODUCTION_VERSION;
+
+        public static final String RELEASE_WITH_MISSING_PRODUCTION_VERSION = "55.6.0";
+        public static final String RELEASE_WITH_MISSING_PRODUCTION_BRANCH = "release/gitflow-tests-"
+                + RELEASE_WITH_MISSING_PRODUCTION_VERSION;
+
+        public static final String RELEASE_WITH_PRODUCTION_ON_MAINTENANCE_VERSION = "56.7.0";
+        public static final String RELEASE_WITH_PRODUCTION_ON_MAINTENANCE_NEW_DEVELOPMENT_VERSION = "56.7.1-SNAPSHOT";
+        public static final String RELEASE_WITH_PRODUCTION_ON_MAINTENANCE_BRANCH = "release/gitflow-tests-"
+                + RELEASE_WITH_PRODUCTION_ON_MAINTENANCE_VERSION;
 
         // epic
         public static final String EXISTING_EPIC_ISSUE = BASIC.jiraProject + "-201";
@@ -659,6 +789,24 @@ public class TestProjects {
                 + "-" + FEATURE_WITHOUT_VERSION_ON_EPIC_WITHOUT_VERSION_ISSUE + "-SNAPSHOT";
         public static final String FEATURE_WITHOUT_VERSION_ON_EPIC_WITHOUT_VERSION_VERSION_COMMIT_MESSAGE = FEATURE_WITHOUT_VERSION_ON_EPIC_WITHOUT_VERSION_ISSUE
                 + ": updating versions for feature branch";
+    }
+
+    public interface WithUpstreamConstants {
+        // feature
+        public static final String FEATURE_ISSUE = BASIC.jiraProject + "-101";
+        public static final String FEATURE_NAME = FEATURE_ISSUE;
+        public static final String FEATURE_BRANCH = "feature/" + FEATURE_NAME;
+        public static final String FEATURE_VERSION = TestProjects.BASIC.releaseVersion + "-" + FEATURE_ISSUE
+                + "-SNAPSHOT";
+        public static final String FEATURE_VERSION_COMMIT_MESSAGE = FEATURE_ISSUE
+                + ": updating versions for feature branch";
+
+        public static final String FEATURE_WITHOUT_VERSION_ISSUE = BASIC.jiraProject + "-102";
+        public static final String FEATURE_WITHOUT_VERSION_NAME = FEATURE_WITHOUT_VERSION_ISSUE + "-without-version";
+        public static final String FEATURE_WITHOUT_VERSION_BRANCH = "feature/" + FEATURE_WITHOUT_VERSION_NAME;
+
+        public static final String EXPECTED_UPSTREAM_VERSION = "1.0.0";
+        public static final String NEW_UPSTREAM_VERSION = "2.0.0";
     }
 
 }

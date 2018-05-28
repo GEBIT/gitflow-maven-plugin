@@ -246,7 +246,7 @@ public class GitFlowEpicStartMojoOnMaintenanceTest extends AbstractGitFlowMojoTe
     @Test
     public void testExecuteWithIntegrationBranchSameAsMaintenanceBranch() throws Exception {
         // set up
-        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_BRANCH);
+        git.createIntegeratedBranch(repositorySet, INTEGRATION_BRANCH);
         Properties userProperties = new Properties();
         userProperties.setProperty("epicName", EPIC_NAME);
         // test
@@ -271,7 +271,7 @@ public class GitFlowEpicStartMojoOnMaintenanceTest extends AbstractGitFlowMojoTe
     @Test
     public void testExecuteWithIntegrationBranchDifferentFromMaintenanceBranch() throws Exception {
         // set up
-        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_BRANCH);
+        git.createIntegeratedBranch(repositorySet, INTEGRATION_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
         Properties userProperties = new Properties();
@@ -295,7 +295,7 @@ public class GitFlowEpicStartMojoOnMaintenanceTest extends AbstractGitFlowMojoTe
     @Test
     public void testExecuteWithIntegrationBranchDifferentFromMaintenanceBranchInInteractiveMode() throws Exception {
         // set up
-        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_BRANCH);
+        git.createIntegeratedBranch(repositorySet, INTEGRATION_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
         when(promptControllerMock.prompt(PROMPT_EPIC_BRANCH_NAME)).thenReturn(EPIC_NAME);
@@ -324,7 +324,7 @@ public class GitFlowEpicStartMojoOnMaintenanceTest extends AbstractGitFlowMojoTe
     public void testExecuteWithIntegrationBranchDifferentFromMaintenanceBranchInInteractiveModeAnswerNo()
             throws Exception {
         // set up
-        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_BRANCH);
+        git.createIntegeratedBranch(repositorySet, INTEGRATION_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
         when(promptControllerMock.prompt(PROMPT_EPIC_BRANCH_NAME)).thenReturn(EPIC_NAME);
@@ -352,7 +352,7 @@ public class GitFlowEpicStartMojoOnMaintenanceTest extends AbstractGitFlowMojoTe
     @Test
     public void testExecuteWithIntegrationBranchAndNewerRemoteIntegartionBranch() throws Exception {
         // set up
-        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_BRANCH);
+        git.createIntegeratedBranch(repositorySet, INTEGRATION_BRANCH);
         git.remoteCreateTestfileInBranch(repositorySet, INTEGRATION_BRANCH);
         when(promptControllerMock.prompt(PROMPT_BRANCH_OF_LAST_INTEGRATED, Arrays.asList("y", "n"), "y"))
                 .thenReturn("y");

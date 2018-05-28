@@ -441,7 +441,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteOnFeatureBranchFeatureStartedOnMasterIntegrationBranch() throws Exception {
         // set up
         git.switchToBranch(repositorySet, MASTER_BRANCH);
-        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_MASTER_BRANCH);
+        git.createIntegeratedBranch(repositorySet, INTEGRATION_MASTER_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
         prepareFeatureBranchDivergentFromMaster();
@@ -472,7 +472,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
             throws Exception {
         // set up
         git.switchToBranch(repositorySet, MASTER_BRANCH);
-        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_MASTER_BRANCH);
+        git.createIntegeratedBranch(repositorySet, INTEGRATION_MASTER_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
         prepareFeatureBranchDivergentFromMaster();
@@ -503,7 +503,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         // set up
         final String USED_FEATURE_BRANCH = BasicConstants.FEATURE_ON_MAINTENANCE_BRANCH;
         git.switchToBranch(repositorySet, MAINTENANCE_BRANCH);
-        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_MAINTENANCE_BRANCH);
+        git.createIntegeratedBranch(repositorySet, INTEGRATION_MAINTENANCE_BRANCH);
         git.createAndCommitTestfile(repositorySet, "maintenance_testfile.txt", COMMIT_MESSAGE_MAINTENANCE_TESTFILE);
         git.push(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
@@ -543,7 +543,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         // set up
         final String USED_FEATURE_BRANCH = BasicConstants.FEATURE_ON_MAINTENANCE_BRANCH;
         git.switchToBranch(repositorySet, MAINTENANCE_BRANCH);
-        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_MAINTENANCE_BRANCH);
+        git.createIntegeratedBranch(repositorySet, INTEGRATION_MAINTENANCE_BRANCH);
         git.createAndCommitTestfile(repositorySet, "maintenance_testfile.txt", COMMIT_MESSAGE_MAINTENANCE_TESTFILE);
         git.push(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);

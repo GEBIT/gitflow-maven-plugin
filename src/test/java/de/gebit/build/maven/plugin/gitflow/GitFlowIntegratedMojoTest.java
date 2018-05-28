@@ -72,8 +72,8 @@ public class GitFlowIntegratedMojoTest extends AbstractGitFlowMojoTestCase {
 
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, INTEGRATION_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, INTEGRATION_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, INTEGRATION_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, INTEGRATION_BRANCH);
 
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, INTEGRATION_BRANCH, INTEGRATION_BRANCH);
@@ -85,7 +85,7 @@ public class GitFlowIntegratedMojoTest extends AbstractGitFlowMojoTestCase {
         // set up
         final String OTHER_BRANCH = "otherBranch";
         final String OTHER_INTEGRATION_BRANCH = INTEGRATION_BRANCH_PREFIX + OTHER_BRANCH;
-        git.switchToBranch(repositorySet, OTHER_BRANCH, true);
+        git.createBranch(repositorySet, OTHER_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
         when(promptControllerMock.prompt(PROMPT_INTEGRATION_BRANCH_NAME, OTHER_INTEGRATION_BRANCH)).thenReturn("");
@@ -97,8 +97,8 @@ public class GitFlowIntegratedMojoTest extends AbstractGitFlowMojoTestCase {
 
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, OTHER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, OTHER_BRANCH, OTHER_INTEGRATION_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, OTHER_BRANCH, OTHER_INTEGRATION_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, OTHER_INTEGRATION_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, OTHER_INTEGRATION_BRANCH);
 
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, OTHER_BRANCH, OTHER_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, OTHER_INTEGRATION_BRANCH, OTHER_INTEGRATION_BRANCH);
@@ -121,8 +121,8 @@ public class GitFlowIntegratedMojoTest extends AbstractGitFlowMojoTestCase {
 
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, SOME_INTEGRATION_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, SOME_INTEGRATION_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, SOME_INTEGRATION_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, SOME_INTEGRATION_BRANCH);
 
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, SOME_INTEGRATION_BRANCH, SOME_INTEGRATION_BRANCH);
@@ -144,8 +144,8 @@ public class GitFlowIntegratedMojoTest extends AbstractGitFlowMojoTestCase {
 
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, SOME_INTEGRATION_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, SOME_INTEGRATION_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, SOME_INTEGRATION_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, SOME_INTEGRATION_BRANCH);
 
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, SOME_INTEGRATION_BRANCH, SOME_INTEGRATION_BRANCH);
@@ -165,8 +165,8 @@ public class GitFlowIntegratedMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, SOME_INTEGRATION_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, SOME_INTEGRATION_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, SOME_INTEGRATION_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, SOME_INTEGRATION_BRANCH);
 
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, SOME_INTEGRATION_BRANCH, SOME_INTEGRATION_BRANCH);
@@ -183,8 +183,8 @@ public class GitFlowIntegratedMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, INTEGRATION_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, INTEGRATION_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, INTEGRATION_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, INTEGRATION_BRANCH);
 
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, INTEGRATION_BRANCH, INTEGRATION_BRANCH);
@@ -207,8 +207,8 @@ public class GitFlowIntegratedMojoTest extends AbstractGitFlowMojoTestCase {
 
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, SOME_INTEGRATION_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, SOME_INTEGRATION_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, SOME_INTEGRATION_BRANCH);
 
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, SOME_INTEGRATION_BRANCH, MASTER_BRANCH);
@@ -227,8 +227,8 @@ public class GitFlowIntegratedMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, INTEGRATION_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, INTEGRATION_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, INTEGRATION_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, INTEGRATION_BRANCH);
 
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, INTEGRATION_BRANCH, INTEGRATION_BRANCH);
@@ -239,7 +239,7 @@ public class GitFlowIntegratedMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteMissingRemoteBranch() throws Exception {
         // set up
         final String OTHER_BRANCH = "otherBranch";
-        git.switchToBranch(repositorySet, OTHER_BRANCH, true);
+        git.createBranch(repositorySet, OTHER_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
@@ -253,8 +253,6 @@ public class GitFlowIntegratedMojoTest extends AbstractGitFlowMojoTestCase {
                         + "false in order to avoid inconsistent state in remote repository.");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, OTHER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, OTHER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
     }
 
     @Test
@@ -262,7 +260,7 @@ public class GitFlowIntegratedMojoTest extends AbstractGitFlowMojoTestCase {
         // set up
         final String OTHER_BRANCH = "otherBranch";
         final String OTHER_INTEGRATION_BRANCH = INTEGRATION_BRANCH_PREFIX + OTHER_BRANCH;
-        git.switchToBranch(repositorySet, OTHER_BRANCH, true);
+        git.createBranch(repositorySet, OTHER_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("integrationBranch", OTHER_INTEGRATION_BRANCH);
@@ -274,8 +272,8 @@ public class GitFlowIntegratedMojoTest extends AbstractGitFlowMojoTestCase {
 
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, OTHER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, OTHER_BRANCH, OTHER_INTEGRATION_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, OTHER_INTEGRATION_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, OTHER_INTEGRATION_BRANCH);
 
         git.assertCommitsInLocalBranch(repositorySet, OTHER_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
         git.assertCommitsInLocalBranch(repositorySet, OTHER_INTEGRATION_BRANCH,
@@ -286,7 +284,7 @@ public class GitFlowIntegratedMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteCurrentLocalAheadOfRemote() throws Exception {
         // set up
         final String OTHER_BRANCH = "otherBranch";
-        git.switchToBranch(repositorySet, OTHER_BRANCH, true);
+        git.createBranch(repositorySet, OTHER_BRANCH);
         git.push(repositorySet);
         git.createAndCommitTestfile(repositorySet);
         // test
@@ -301,8 +299,6 @@ public class GitFlowIntegratedMojoTest extends AbstractGitFlowMojoTestCase {
                         + "order to avoid inconsistent state in remote repository.");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, OTHER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, OTHER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, OTHER_BRANCH, CONFIG_BRANCH);
     }
 
     @Test
@@ -310,7 +306,7 @@ public class GitFlowIntegratedMojoTest extends AbstractGitFlowMojoTestCase {
         // set up
         final String OTHER_BRANCH = "otherBranch";
         final String OTHER_INTEGRATION_BRANCH = INTEGRATION_BRANCH_PREFIX + OTHER_BRANCH;
-        git.switchToBranch(repositorySet, OTHER_BRANCH, true);
+        git.createBranch(repositorySet, OTHER_BRANCH);
         git.push(repositorySet);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
@@ -323,8 +319,8 @@ public class GitFlowIntegratedMojoTest extends AbstractGitFlowMojoTestCase {
 
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, OTHER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, OTHER_BRANCH, OTHER_INTEGRATION_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, OTHER_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, OTHER_INTEGRATION_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, OTHER_INTEGRATION_BRANCH);
 
         git.assertCommitsInLocalBranch(repositorySet, OTHER_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
         git.assertCommitsInLocalBranch(repositorySet, OTHER_INTEGRATION_BRANCH,
@@ -336,7 +332,7 @@ public class GitFlowIntegratedMojoTest extends AbstractGitFlowMojoTestCase {
         // set up
         final String OTHER_BRANCH = "otherBranch";
         final String OTHER_INTEGRATION_BRANCH = INTEGRATION_BRANCH_PREFIX + OTHER_BRANCH;
-        git.switchToBranch(repositorySet, OTHER_BRANCH, true);
+        git.createBranch(repositorySet, OTHER_BRANCH);
         git.push(repositorySet);
         git.remoteCreateTestfileInBranch(repositorySet, OTHER_BRANCH);
         Properties userProperties = new Properties();
@@ -348,8 +344,8 @@ public class GitFlowIntegratedMojoTest extends AbstractGitFlowMojoTestCase {
 
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, OTHER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, OTHER_BRANCH, OTHER_INTEGRATION_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, OTHER_BRANCH, OTHER_INTEGRATION_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, OTHER_INTEGRATION_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, OTHER_INTEGRATION_BRANCH);
 
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, OTHER_BRANCH, OTHER_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, OTHER_INTEGRATION_BRANCH, OTHER_INTEGRATION_BRANCH);
@@ -360,7 +356,7 @@ public class GitFlowIntegratedMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteCurrentLocalAndRemoteBranchesDiverge() throws Exception {
         // set up
         final String OTHER_BRANCH = "otherBranch";
-        git.switchToBranch(repositorySet, OTHER_BRANCH, true);
+        git.createBranch(repositorySet, OTHER_BRANCH);
         git.push(repositorySet);
         git.createAndCommitTestfile(repositorySet, "local-testfile.txt", "LOCAL: Unit test dummy file commit");
         git.remoteCreateTestfileInBranch(repositorySet, OTHER_BRANCH, "remote-testfile.txt",
@@ -377,8 +373,6 @@ public class GitFlowIntegratedMojoTest extends AbstractGitFlowMojoTestCase {
                         + "false in order to avoid inconsistent state in remote repository.");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, OTHER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, OTHER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, OTHER_BRANCH, CONFIG_BRANCH);
     }
 
     @Test
@@ -388,7 +382,7 @@ public class GitFlowIntegratedMojoTest extends AbstractGitFlowMojoTestCase {
         final String OTHER_INTEGRATION_BRANCH = INTEGRATION_BRANCH_PREFIX + OTHER_BRANCH;
         final String COMMIT_MESSAGE_LOCAL = "LOCAL: Unit test dummy file commit";
         final String COMMIT_MESSAGE_REMOTE = "REMOTE: Unit test dummy file commit";
-        git.switchToBranch(repositorySet, OTHER_BRANCH, true);
+        git.createBranch(repositorySet, OTHER_BRANCH);
         git.push(repositorySet);
         git.createAndCommitTestfile(repositorySet, "local-testfile.txt", COMMIT_MESSAGE_LOCAL);
         git.remoteCreateTestfileInBranch(repositorySet, OTHER_BRANCH, "remote-testfile.txt", COMMIT_MESSAGE_REMOTE);
@@ -402,8 +396,8 @@ public class GitFlowIntegratedMojoTest extends AbstractGitFlowMojoTestCase {
 
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, OTHER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, OTHER_BRANCH, OTHER_INTEGRATION_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, OTHER_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, OTHER_INTEGRATION_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, OTHER_INTEGRATION_BRANCH);
 
         git.assertCommitsInLocalBranch(repositorySet, OTHER_BRANCH, COMMIT_MESSAGE_LOCAL);
         git.assertCommitsInRemoteBranch(repositorySet, OTHER_BRANCH, COMMIT_MESSAGE_REMOTE);

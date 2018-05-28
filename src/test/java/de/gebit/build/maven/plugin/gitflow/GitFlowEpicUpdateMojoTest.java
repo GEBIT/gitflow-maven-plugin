@@ -637,7 +637,7 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteOnEpicBranchEpicStartedOnMasterIntegrationBranch() throws Exception {
         // set up
         git.switchToBranch(repositorySet, MASTER_BRANCH);
-        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_MASTER_BRANCH);
+        git.createIntegeratedBranch(repositorySet, INTEGRATION_MASTER_BRANCH);
         prepareEpicBranchDivergentFromMaster();
         when(promptControllerMock.prompt(PROMPT_REBASE_ON_LAST_INTEGRATED_MASTER, Arrays.asList("y", "n"), "y"))
                 .thenReturn("n");
@@ -664,7 +664,7 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteOnEpicBranchEpicStartedOnMasterIntegrationBranchAndRebaseOnIntegrated() throws Exception {
         // set up
         git.switchToBranch(repositorySet, MASTER_BRANCH);
-        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_MASTER_BRANCH);
+        git.createIntegeratedBranch(repositorySet, INTEGRATION_MASTER_BRANCH);
         prepareEpicBranchDivergentFromMaster();
         when(promptControllerMock.prompt(PROMPT_REBASE_ON_LAST_INTEGRATED_MASTER, Arrays.asList("y", "n"), "y"))
                 .thenReturn("y");
@@ -692,7 +692,7 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
         // set up
         final String USED_EPIC_BRANCH = BasicConstants.EPIC_ON_MAINTENANCE_BRANCH;
         git.switchToBranch(repositorySet, MAINTENANCE_BRANCH);
-        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_MAINTENANCE_BRANCH);
+        git.createIntegeratedBranch(repositorySet, INTEGRATION_MAINTENANCE_BRANCH);
         git.createAndCommitTestfile(repositorySet, "maintenance_testfile.txt", COMMIT_MESSAGE_MAINTENANCE_TESTFILE);
         git.push(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
@@ -732,7 +732,7 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
         // set up
         final String USED_EPIC_BRANCH = BasicConstants.EPIC_ON_MAINTENANCE_BRANCH;
         git.switchToBranch(repositorySet, MAINTENANCE_BRANCH);
-        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_MAINTENANCE_BRANCH);
+        git.createIntegeratedBranch(repositorySet, INTEGRATION_MAINTENANCE_BRANCH);
         git.createAndCommitTestfile(repositorySet, "maintenance_testfile.txt", COMMIT_MESSAGE_MAINTENANCE_TESTFILE);
         git.push(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);

@@ -24,7 +24,7 @@ import de.gebit.build.maven.plugin.gitflow.jgit.RepositorySet;
 /**
  * The helper class to execute some goals of the plugin.
  *
- * @author VMedvid
+ * @author Volodymyr Medvid
  */
 public class ExecutorHelper {
 
@@ -107,11 +107,6 @@ public class ExecutorHelper {
     }
 
     public static void executeReleaseStart(AbstractGitFlowMojoTestCase testCase, RepositorySet repositorySet,
-            String releaseVersion, Properties properties) throws Exception {
-        executeReleaseStart(testCase, repositorySet, releaseVersion, RELEASE_START_POM_RELEASE_VERSION, properties);
-    }
-
-    public static void executeReleaseStart(AbstractGitFlowMojoTestCase testCase, RepositorySet repositorySet,
             String releaseVersion, String calculatedReleaseVersion) throws Exception {
         executeReleaseStart(testCase, repositorySet, releaseVersion, calculatedReleaseVersion, null);
     }
@@ -160,33 +155,10 @@ public class ExecutorHelper {
         verifyNoMoreInteractions(promptControllerMock);
     }
 
-    @Deprecated
-    public static void executeIntegerated(AbstractGitFlowMojoTestCase testCase, RepositorySet repositorySet,
-            String integrationBranch) throws Exception {
-        Properties userProperties = new Properties();
-        userProperties.setProperty("integrationBranch", integrationBranch);
-        testCase.executeMojo(repositorySet.getWorkingDirectory(), "integrated", userProperties);
-    }
-
-    public static void executeIntegerated(RepositorySet repositorySet, String integrationBranch) throws Exception {
-        repositorySet.getLocalRepoGit().branchCreate().setName(integrationBranch).setStartPoint("HEAD").call();
-        repositorySet.getLocalRepoGit().push().setRemote("origin").add(integrationBranch).call();
-    }
-
-    public static void execute(AbstractGitFlowMojoTestCase testCase, RepositorySet repositorySet, String goal)
-            throws Exception {
-        testCase.executeMojo(repositorySet.getWorkingDirectory(), goal);
-    }
-
     public static void executeSetVersion(AbstractGitFlowMojoTestCase testCase, RepositorySet repositorySet,
             String newVersion) throws Exception {
         Properties properties = new Properties();
         properties.setProperty("newVersion", newVersion);
         testCase.executeMojo(repositorySet.getWorkingDirectory(), "set-version", properties);
-    }
-
-    public static void executeUpgrade(AbstractGitFlowMojoTestCase testCase, RepositorySet repositorySet)
-            throws Exception {
-        testCase.executeMojo(repositorySet.getWorkingDirectory(), "upgrade");
     }
 }

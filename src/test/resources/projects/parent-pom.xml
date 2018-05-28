@@ -99,6 +99,7 @@
 				<flow.skipTag>false</flow.skipTag>
 
 				<flow.noProduction>true</flow.noProduction>
+				<flow.productionBranch>latest</flow.productionBranch>
 				<flow.push>true</flow.push>
 				<flow.fetchRemote>true</flow.fetchRemote>
 				<flow.skipTestProject>true</flow.skipTestProject>
@@ -156,7 +157,7 @@
 								<deleteRemoteBranchOnRebase>${flow.deleteRemoteBranchOnRebase}</deleteRemoteBranchOnRebase>
 								<gitFlowConfig>
 									<noProduction>${flow.noProduction}</noProduction>
-									<productionBranch>latest</productionBranch>
+									<productionBranch>${flow.productionBranch}</productionBranch>
 									<developmentBranch>${flow.developmentBranch}</developmentBranch>
 									<maintenanceBranchPrefix>maintenance/${project.build-name}-</maintenanceBranchPrefix>
 									<versionTagPrefix>${project.build-name}-</versionTagPrefix>

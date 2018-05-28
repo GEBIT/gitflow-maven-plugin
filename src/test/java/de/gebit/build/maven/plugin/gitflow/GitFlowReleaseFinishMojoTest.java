@@ -24,6 +24,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import de.gebit.build.maven.plugin.gitflow.TestProjects.BasicConstants;
 import de.gebit.build.maven.plugin.gitflow.jgit.GitExecution;
 import de.gebit.build.maven.plugin.gitflow.jgit.RepositorySet;
 
@@ -34,23 +35,24 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
 
     private static final String GOAL = "release-finish";
 
-    private static final String RELEASE_VERSION = "1.42.0";
+    private static final String RELEASE_VERSION = BasicConstants.EXISTING_RELEASE_VERSION;
 
     private static final String RELEASE_PREFIX = "release/gitflow-tests-";
 
-    private static final String RELEASE_BRANCH = RELEASE_PREFIX + RELEASE_VERSION;
+    private static final String RELEASE_BRANCH = BasicConstants.EXISTING_RELEASE_BRANCH;
 
-    private static final String NEW_DEVELOPMENT_VERSION = "1.42.1-SNAPSHOT";
+    private static final String NEW_DEVELOPMENT_VERSION = BasicConstants.EXISTING_RELEASE_NEW_DEVELOPMENT_VERSION;
 
-    private static final String MAINTENANCE_VERSION = "2.0";
+    private static final String RELEASE_ON_MAINTENANCE_BRANCH = BasicConstants.RELEASE_ON_MAINTENANCE_BRANCH;
 
-    private static final String MAINTENANCE_BRANCH = "maintenance/gitflow-tests-" + MAINTENANCE_VERSION;
+    private static final String NEW_DEVELOPMENT_ON_MAINTENANCE_VERSION = BasicConstants.RELEASE_ON_MAINTENANCE_NEW_DEVELOPMENT_VERSION;
 
-    private static final String MAINTENANCE_FIRST_VERSION = "2.0.0-SNAPSHOT";
-
-    private static final String MAINTENANCE_RELEASE_VERSION = "2.0.0";
+    private static final String MAINTENANCE_BRANCH = BasicConstants.EXISTING_MAINTENANCE_BRANCH;
 
     private static final String RELEASE_TAG = "gitflow-tests-" + RELEASE_VERSION;
+
+    private static final String RELEASE_MAINTENANCE_TAG = "gitflow-tests-"
+            + BasicConstants.RELEASE_ON_MAINTENANCE_VERSION;
 
     private static final String COMMIT_MESSAGE_RELEASE_START_SET_VERSION = "NO-ISSUE: updating versions for release";
 
@@ -64,7 +66,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
             + RELEASE_BRANCH;
 
     private static final String COMMIT_MESSAGE_MERGE_RELEASE_INTO_MAINTENANCE = TestProjects.BASIC.jiraProject
-            + "-NONE: Merge branch " + RELEASE_BRANCH + " into " + MAINTENANCE_BRANCH;
+            + "-NONE: Merge branch " + RELEASE_ON_MAINTENANCE_BRANCH + " into " + MAINTENANCE_BRANCH;
 
     private static final String COMMIT_MESSAGE_MERGE_REMOTE_MASTER = TestProjects.BASIC.jiraProject
             + "-NONE: Merge branch origin/" + MASTER_BRANCH;
@@ -88,7 +90,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
             "\\Q'mvn flow:release-finish' to continue release process\\E");
 
     private static final GitFlowFailureInfo EXPECTED_RELEASE_MERGE_INTO_MAINTENANCE_CONFLICT_MESSAGE_PATTERN = new GitFlowFailureInfo(
-            "\\QAutomatic merge of release branch '" + RELEASE_BRANCH + "' into development branch '"
+            "\\QAutomatic merge of release branch '" + RELEASE_ON_MAINTENANCE_BRANCH + "' into development branch '"
                     + MAINTENANCE_BRANCH + "' failed.\nGit error message:\n\\E.*",
             "\\QEither abort the release process or fix the merge conflicts, mark them as resolved and run "
                     + "'mvn flow:release-finish' again.\nDo NOT run 'git merge --continue'!\\E",
@@ -127,7 +129,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
 
     @Before
     public void setUp() throws Exception {
-        repositorySet = git.createGitRepositorySet(TestProjects.BASIC.basedir);
+        repositorySet = git.useGitRepositorySet(TestProjects.BASIC, RELEASE_BRANCH);
     }
 
     @After
@@ -148,15 +150,14 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecute() throws Exception {
         // set up
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL);
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -166,13 +167,21 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertDefaultDeployGoalExecuted();
         assertMavenCommandNotExecuted("clean verify");
         assertMavenCommandNotExecuted("clean test");
-        assertConfigCleanedUp(MASTER_BRANCH);
+        assertConfigCleanedUpForMaster();
     }
 
-    private void assertConfigCleanedUp(String developmentBranch) {
-        git.assertBranchLocalConfigValueMissing(repositorySet, RELEASE_BRANCH, "releaseTag");
-        git.assertBranchLocalConfigValueMissing(repositorySet, RELEASE_BRANCH, "releaseCommit");
-        git.assertBranchLocalConfigValueMissing(repositorySet, RELEASE_BRANCH, "nextSnapshotVersion");
+    private void assertConfigCleanedUpForMaster() {
+        assertConfigCleanedUp(MASTER_BRANCH, RELEASE_BRANCH);
+    }
+
+    private void assertConfigCleanedUpForMaintenance() {
+        assertConfigCleanedUp(MAINTENANCE_BRANCH, RELEASE_ON_MAINTENANCE_BRANCH);
+    }
+
+    private void assertConfigCleanedUp(String developmentBranch, String releaseBranch) {
+        git.assertBranchLocalConfigValueMissing(repositorySet, releaseBranch, "releaseTag");
+        git.assertBranchLocalConfigValueMissing(repositorySet, releaseBranch, "releaseCommit");
+        git.assertBranchLocalConfigValueMissing(repositorySet, releaseBranch, "nextSnapshotVersion");
         git.assertBranchLocalConfigValueMissing(repositorySet, developmentBranch, "releaseBranch");
     }
 
@@ -187,7 +196,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteWithDeployAndSiteDeploy() throws Exception {
         // set up
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.releaseGoals", "deploy site site:deploy");
@@ -196,8 +204,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -212,6 +220,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteWithStagedButUncommitedChanges() throws Exception {
         // set up
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createAndAddToIndexTestfile(repositorySet);
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
@@ -221,8 +230,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 "'git add' and 'git commit' to commit your changes", "'git reset --hard' to throw away your changes");
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
 
         git.assertAddedFiles(repositorySet, GitExecution.TESTFILE_NAME);
@@ -232,6 +239,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteWithUnstagedChanges() throws Exception {
         // set up
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.modifyTestfile(repositorySet);
         // test
@@ -242,8 +250,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 "'git add' and 'git commit' to commit your changes", "'git reset --hard' to throw away your changes");
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
 
         git.assertModifiedFiles(repositorySet, GitExecution.TESTFILE_NAME);
@@ -252,6 +258,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
 
     @Test
     public void testExecuteOnMasterBranch() throws Exception {
+        // set up
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
         // verify
@@ -260,14 +268,12 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 "'git checkout BRANCH' to switch to the release branch");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
     }
 
     @Test
     public void testExecuteOnMaintenanceBranch() throws Exception {
         // set up
-        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION, MAINTENANCE_FIRST_VERSION);
+        git.switchToBranch(repositorySet, MAINTENANCE_BRANCH);
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
         // verify
@@ -276,15 +282,13 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 "'git checkout BRANCH' to switch to the release branch");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
     }
 
     @Test
     public void testExecuteOnOtherBranch() throws Exception {
         // set up
         final String OTHER_BRANCH = "otherBranch";
-        git.switchToBranch(repositorySet, OTHER_BRANCH, true);
+        git.createBranch(repositorySet, OTHER_BRANCH);
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
         // verify
@@ -293,15 +297,12 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 "'git checkout BRANCH' to switch to the release branch");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, OTHER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, OTHER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
     }
 
     @Test
     public void testExecuteWithoutDevelopmentBranchConfig() throws Exception {
         // set up
-        git.switchToBranch(repositorySet, RELEASE_BRANCH, true);
-        ExecutorHelper.executeUpgrade(this, repositorySet);
+        git.removeBranchCentralConfigValue(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH, "baseBranch");
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
         // verify
@@ -313,14 +314,13 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
                         + "development branch");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, RELEASE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, RELEASE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
     }
 
     @Test
     public void testExecuteSkipTestProjectFalse() throws Exception {
         // set up
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.skipTestProject", "false");
@@ -329,8 +329,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -345,7 +345,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteTychoBuildAndSkipTestProjectFalse() throws Exception {
         // set up
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.skipTestProject", "false");
@@ -355,8 +354,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -371,7 +370,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteWithoutReleaseGoals() throws Exception {
         // set up
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.releaseGoals", "");
@@ -380,8 +378,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -394,7 +392,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteMultipleReleaseGoals() throws Exception {
         // set up
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.releaseGoals", "validate,clean");
@@ -403,8 +400,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -420,7 +417,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteSkipDeployProjectTrueAndNotDeployGoal() throws Exception {
         // set up
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.releaseGoals", "clean");
@@ -430,8 +426,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -444,7 +440,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteSkipDeployProjectTrueAndOnlyDeployGoal() throws Exception {
         // set up
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.releaseGoals", "deploy");
@@ -454,8 +449,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -468,7 +463,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteSkipDeployProjectFalseAndOnlyDeployGoal() throws Exception {
         // set up
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.releaseGoals", "deploy");
@@ -478,8 +472,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -493,7 +487,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteSkipDeployProjectTrueAndDeployReplacementAndOnlyDeployGoal() throws Exception {
         // set up
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.releaseGoals", "deploy");
@@ -504,8 +497,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -519,7 +512,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteSkipDeployProjectFalseAndDeployReplacementAndOnlyDeployGoal() throws Exception {
         // set up
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.releaseGoals", "deploy");
@@ -530,8 +522,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -545,7 +537,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteSkipDeployProjectTrueWithDeployFirstGoal() throws Exception {
         // set up
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.releaseGoals", "deploy clean");
@@ -555,8 +546,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -571,7 +562,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteSkipDeployProjectTrueWithDeployLastGoal() throws Exception {
         // set up
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.releaseGoals", "clean deploy");
@@ -581,8 +571,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -597,7 +587,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteSkipDeployProjectTrueWithDeployGoalInTheMiddle() throws Exception {
         // set up
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.releaseGoals", "validate deploy clean");
@@ -607,8 +596,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -623,7 +612,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteSkipDeployProjectTrueWithDeployAsPartOfGoal() throws Exception {
         // set up
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.releaseGoals", "site-deploy");
@@ -633,8 +621,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -647,7 +635,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteSkipDeployProjectTrueAndDeployReplacementWithDeployFirstGoal() throws Exception {
         // set up
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.releaseGoals", "deploy clean");
@@ -658,8 +645,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -674,7 +661,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteSkipDeployProjectTrueAndDeployReplacementWithDeployLastGoal() throws Exception {
         // set up
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.releaseGoals", "clean deploy");
@@ -685,8 +671,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -701,7 +687,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteSkipDeployProjectTrueAndDeployReplacementWithDeployGoalInTheMiddle() throws Exception {
         // set up
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.releaseGoals", "validate deploy clean");
@@ -712,8 +697,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -728,7 +713,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteSkipDeployProjectTrueAndDeployReplacementWithDeployAsPartOfGoal() throws Exception {
         // set up
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.releaseGoals", "site-deploy");
@@ -739,8 +723,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -754,42 +738,31 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteDevelopmentBranchNotExistingLocally() throws Exception {
         // set up
-        final String DEVELOPMENT_BRANCH = "development";
-        Properties userProperties = new Properties();
-        userProperties.setProperty("flow.developmentBranch", DEVELOPMENT_BRANCH);
-        git.switchToBranch(repositorySet, DEVELOPMENT_BRANCH, true);
-        git.push(repositorySet);
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userProperties);
         git.createAndCommitTestfile(repositorySet);
-        git.deleteLocalAndRemoteTrackingBranches(repositorySet, DEVELOPMENT_BRANCH);
+        git.deleteLocalAndRemoteTrackingBranches(repositorySet, MASTER_BRANCH);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL);
         // verify
         git.assertClean(repositorySet);
-        git.assertCurrentBranch(repositorySet, DEVELOPMENT_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, DEVELOPMENT_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, DEVELOPMENT_BRANCH, CONFIG_BRANCH);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, DEVELOPMENT_BRANCH, DEVELOPMENT_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, DEVELOPMENT_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
                 GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
-        assertConfigCleanedUp(DEVELOPMENT_BRANCH);
+        assertConfigCleanedUpForMaster();
     }
 
     @Test
     public void testExecuteDevelopmentBranchNotExistingLocallyAndFetchRemoteFalse() throws Exception {
         // set up
-        final String DEVELOPMENT_BRANCH = "development";
-        Properties userProperties = new Properties();
-        userProperties.setProperty("flow.developmentBranch", DEVELOPMENT_BRANCH);
-        git.switchToBranch(repositorySet, DEVELOPMENT_BRANCH, true);
-        git.push(repositorySet);
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userProperties);
         git.createAndCommitTestfile(repositorySet);
-        git.deleteLocalAndRemoteTrackingBranches(repositorySet, DEVELOPMENT_BRANCH);
+        git.deleteLocalAndRemoteTrackingBranches(repositorySet, MASTER_BRANCH);
+        Properties userProperties = new Properties();
         userProperties.setProperty("flow.fetchRemote", "false");
         userProperties.setProperty("flow.push", "false");
         userProperties.setProperty("flow.pushReleaseBranch", "false");
@@ -799,7 +772,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.setOnline(repositorySet);
         assertGitFlowFailureException(result,
-                "The development branch '" + DEVELOPMENT_BRANCH + "' configured for the current release branch '"
+                "The development branch '" + MASTER_BRANCH + "' configured for the current release branch '"
                         + RELEASE_BRANCH + "' doesn't exist.\nThis indicates either a wrong configuration for the "
                         + "release branch or a severe error condition on your branches.",
                 "Please configure correct development branch for the current release branch or consult a gitflow expert"
@@ -809,22 +782,17 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
                         + "development branch");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, RELEASE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, RELEASE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, DEVELOPMENT_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         assertDefaultDeployGoalNotExecuted();
     }
 
     @Test
     public void testExecuteDevelopmentBranchNotExistingLocallyAndFetchRemoteFalseWithPrefetch() throws Exception {
         // set up
-        final String DEVELOPMENT_BRANCH = "development";
-        Properties userProperties = new Properties();
-        userProperties.setProperty("flow.developmentBranch", DEVELOPMENT_BRANCH);
-        git.switchToBranch(repositorySet, DEVELOPMENT_BRANCH, true);
-        git.push(repositorySet);
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userProperties);
         git.createAndCommitTestfile(repositorySet);
-        git.deleteLocalAndRemoteTrackingBranches(repositorySet, DEVELOPMENT_BRANCH);
+        git.deleteLocalAndRemoteTrackingBranches(repositorySet, MASTER_BRANCH);
+        Properties userProperties = new Properties();
         userProperties.setProperty("flow.fetchRemote", "false");
         userProperties.setProperty("flow.push", "false");
         userProperties.setProperty("flow.pushReleaseBranch", "false");
@@ -835,65 +803,53 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.setOnline(repositorySet);
         git.assertClean(repositorySet);
-        git.assertCurrentBranch(repositorySet, DEVELOPMENT_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, DEVELOPMENT_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, DEVELOPMENT_BRANCH, CONFIG_BRANCH);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet);
-        git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, DEVELOPMENT_BRANCH, DEVELOPMENT_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, DEVELOPMENT_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
+        git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
                 GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
-        git.assertCommitsInRemoteBranch(repositorySet, DEVELOPMENT_BRANCH);
+        git.assertCommitsInRemoteBranch(repositorySet, MASTER_BRANCH);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
-        assertConfigCleanedUp(DEVELOPMENT_BRANCH);
+        assertConfigCleanedUpForMaster();
     }
 
     @Test
     public void testExecuteDevelopmentBranchNotExistingRemotely() throws Exception {
         // set up
-        final String DEVELOPMENT_BRANCH = "development";
-        Properties userProperties = new Properties();
-        userProperties.setProperty("flow.developmentBranch", DEVELOPMENT_BRANCH);
-        git.switchToBranch(repositorySet, DEVELOPMENT_BRANCH, true);
-        git.push(repositorySet);
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userProperties);
         git.createAndCommitTestfile(repositorySet);
-        git.deleteRemoteBranch(repositorySet, DEVELOPMENT_BRANCH);
+        git.deleteRemoteBranch(repositorySet, MASTER_BRANCH);
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL);
         // verify
         git.assertClean(repositorySet);
-        git.assertCurrentBranch(repositorySet, DEVELOPMENT_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, DEVELOPMENT_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, DEVELOPMENT_BRANCH, CONFIG_BRANCH);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, DEVELOPMENT_BRANCH, DEVELOPMENT_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, DEVELOPMENT_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
                 GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
-        assertConfigCleanedUp(DEVELOPMENT_BRANCH);
+        assertConfigCleanedUpForMaster();
     }
 
     @Test
     public void testExecuteDevelopmentBranchNotExistingLocallyAndRemotely() throws Exception {
         // set up
-        final String DEVELOPMENT_BRANCH = "development";
-        Properties userProperties = new Properties();
-        userProperties.setProperty("flow.developmentBranch", DEVELOPMENT_BRANCH);
-        git.switchToBranch(repositorySet, DEVELOPMENT_BRANCH, true);
-        git.push(repositorySet);
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userProperties);
         git.createAndCommitTestfile(repositorySet);
-        git.deleteLocalAndRemoteTrackingBranches(repositorySet, DEVELOPMENT_BRANCH);
-        git.deleteRemoteBranch(repositorySet, DEVELOPMENT_BRANCH);
+        git.deleteLocalAndRemoteTrackingBranches(repositorySet, MASTER_BRANCH);
+        git.deleteRemoteBranch(repositorySet, MASTER_BRANCH);
         // test
-        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
         // verify
         assertGitFlowFailureException(result,
-                "The development branch '" + DEVELOPMENT_BRANCH + "' configured for the current release branch '"
+                "The development branch '" + MASTER_BRANCH + "' configured for the current release branch '"
                         + RELEASE_BRANCH + "' doesn't exist.\nThis indicates either a wrong configuration for the "
                         + "release branch or a severe error condition on your branches.",
                 "Please configure correct development branch for the current release branch or consult a gitflow expert"
@@ -903,15 +859,14 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
                         + "development branch");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, RELEASE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, RELEASE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         assertDefaultDeployGoalNotExecuted();
     }
 
     @Test
     public void testExecuteSkipTagTrue() throws Exception {
         // set up
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.skipTag", "true");
@@ -920,8 +875,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet);
         git.assertRemoteTags(repositorySet);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -929,14 +884,13 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
-        assertConfigCleanedUp(MASTER_BRANCH);
+        assertConfigCleanedUpForMaster();
     }
 
     @Test
     public void testExecuteWithDevelopmentVersionInBatchMode() throws Exception {
         // set up
         final String OTHER_DEVELOPMENT_VERSION = "3.0.0-SNAPSHOT";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("developmentVersion", OTHER_DEVELOPMENT_VERSION);
@@ -945,8 +899,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -960,7 +914,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteWithDevelopmentVersionInInteractiveMode() throws Exception {
         // set up
         final String OTHER_DEVELOPMENT_VERSION = "3.0.0-SNAPSHOT";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("developmentVersion", OTHER_DEVELOPMENT_VERSION);
@@ -970,8 +923,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         verifyZeroInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -984,15 +937,14 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteWithoutDevelopmentVersionInBatchMode() throws Exception {
         // set up
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL);
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -1006,7 +958,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteWithoutDevelopmentVersionInInteractiveMode() throws Exception {
         // set up
         final String OTHER_DEVELOPMENT_VERSION = "3.0.0-SNAPSHOT";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         when(promptControllerMock.prompt(PROMPT_NEXT_DEVELOPMENT_VERSION, NEW_DEVELOPMENT_VERSION))
                 .thenReturn(OTHER_DEVELOPMENT_VERSION);
@@ -1017,8 +968,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -1033,6 +984,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // set up
         final String INVALID_RELEASE_VERSION = "invalidReleaseVersion";
         final String EXPECTED_RELEASE_BRANCH = RELEASE_PREFIX + INVALID_RELEASE_VERSION;
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
         ExecutorHelper.executeReleaseStart(this, repositorySet, INVALID_RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         // test
@@ -1046,8 +998,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 "'mvn flow:release-finish' to run in interactive mode");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, EXPECTED_RELEASE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, EXPECTED_RELEASE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, EXPECTED_RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, EXPECTED_RELEASE_BRANCH);
         assertDefaultDeployGoalNotExecuted();
     }
 
@@ -1055,8 +1007,10 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteWithIvalidProjectVersionInInteractiveMode() throws Exception {
         // set up
         final String INVALID_RELEASE_VERSION = "invalidReleaseVersion";
+        final String EXPECTED_RELEASE_BRANCH = RELEASE_PREFIX + INVALID_RELEASE_VERSION;
         final String EXPECTED_RELEASE_TAG = "gitflow-tests-" + INVALID_RELEASE_VERSION;
         final String OTHER_DEVELOPMENT_VERSION = "3.0.0-SNAPSHOT";
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
         ExecutorHelper.executeReleaseStart(this, repositorySet, INVALID_RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         when(promptControllerMock.prompt(PROMPT_NEXT_DEVELOPMENT_VERSION)).thenReturn(OTHER_DEVELOPMENT_VERSION);
@@ -1067,8 +1021,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, EXPECTED_RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, EXPECTED_RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, EXPECTED_RELEASE_TAG);
         git.assertRemoteTags(repositorySet, EXPECTED_RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -1081,9 +1035,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteKeepBranchTrue() throws Exception {
         // set up
-        Properties userPropertiesForReleaseStart = new Properties();
-        userPropertiesForReleaseStart.setProperty("flow.pushReleaseBranch", "true");
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userPropertiesForReleaseStart);
+        git.push(repositorySet);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("keepBranch", "true");
@@ -1092,8 +1044,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, RELEASE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, RELEASE_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -1101,15 +1053,13 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
-        assertConfigCleanedUp(MASTER_BRANCH);
+        assertConfigCleanedUpForMaster();
     }
 
     @Test
     public void testExecuteKeepBranchFalseAndPushReleaseBranchFalse() throws Exception {
         // set up
-        Properties userPropertiesForReleaseStart = new Properties();
-        userPropertiesForReleaseStart.setProperty("flow.pushReleaseBranch", "true");
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userPropertiesForReleaseStart);
+        git.push(repositorySet);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("keepBranch", "false");
@@ -1119,8 +1069,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, RELEASE_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -1128,15 +1078,13 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
-        assertConfigCleanedUp(MASTER_BRANCH);
+        assertConfigCleanedUpForMaster();
     }
 
     @Test
     public void testExecuteKeepBranchFalseAndPushReleaseBranchTrue() throws Exception {
         // set up
-        Properties userPropertiesForReleaseStart = new Properties();
-        userPropertiesForReleaseStart.setProperty("flow.pushReleaseBranch", "true");
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userPropertiesForReleaseStart);
+        git.push(repositorySet);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("keepBranch", "false");
@@ -1146,8 +1094,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -1155,15 +1103,13 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
-        assertConfigCleanedUp(MASTER_BRANCH);
+        assertConfigCleanedUpForMaster();
     }
 
     @Test
     public void testExecuteKeepBranchFalseAndPushReleaseBranchTrueAndPushRemoteFalse() throws Exception {
         // set up
-        Properties userPropertiesForReleaseStart = new Properties();
-        userPropertiesForReleaseStart.setProperty("flow.pushReleaseBranch", "true");
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, userPropertiesForReleaseStart);
+        git.push(repositorySet);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("keepBranch", "false");
@@ -1174,8 +1120,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, RELEASE_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -1184,14 +1130,13 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInRemoteBranch(repositorySet, MASTER_BRANCH);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
-        assertConfigCleanedUp(MASTER_BRANCH);
+        assertConfigCleanedUpForMaster();
     }
 
     @Test
     public void testExecuteReleaseRebaseTrue_releaseRebaseNotSupportedAnymore() throws Exception {
         // set up
         final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createAndCommitTestfile(repositorySet, "master-testfile.txt", COMMIT_MESSAGE_MASTER_TESTFILE);
@@ -1203,8 +1148,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -1218,7 +1163,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteReleaseMergeNoFFFalse() throws Exception {
         // set up
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.releaseMergeNoFF", "false");
@@ -1227,8 +1171,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -1241,7 +1185,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteReleaseMergeNoFFTrue() throws Exception {
         // set up
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.releaseMergeNoFF", "true");
@@ -1250,8 +1193,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -1266,7 +1209,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteTagCorrectCommit() throws Exception {
         // set up
         final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         final String EXPECTED_TAG_COMMIT = git.currentCommit(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
@@ -1277,8 +1219,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE_RELEASE,
                 COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION, COMMIT_MESSAGE_MASTER_TESTFILE,
@@ -1294,7 +1236,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteDetachReleaseCommitTrueAndInstallProjectFalse() throws Exception {
         // set up
         final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         final String EXPECTED_DETACHED_RELEASE_COMMIT = git.currentCommit(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
@@ -1308,8 +1249,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, EXPECTED_DETACHED_RELEASE_COMMIT);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -1321,14 +1262,13 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCurrentCommit(repositorySet, EXPECTED_DETACHED_RELEASE_COMMIT);
         git.assertTestfileMissing(repositorySet, "master-testfile.txt");
         assertArtifactNotInstalled();
-        assertConfigCleanedUp(MASTER_BRANCH);
+        assertConfigCleanedUpForMaster();
     }
 
     @Test
     public void testExecuteDetachReleaseCommitTrueAndInstallProjectTrue() throws Exception {
         // set up
         final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         final String EXPECTED_DETACHED_RELEASE_COMMIT = git.currentCommit(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
@@ -1342,8 +1282,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, EXPECTED_DETACHED_RELEASE_COMMIT);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -1361,7 +1301,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteDetachReleaseCommitFalseAndInstallProjectFalse() throws Exception {
         // set up
         final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createAndCommitTestfile(repositorySet, "master-testfile.txt", COMMIT_MESSAGE_MASTER_TESTFILE);
@@ -1374,8 +1313,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -1391,7 +1330,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteDetachReleaseCommitFalseAndInstallProjectTrue() throws Exception {
         // set up
         final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createAndCommitTestfile(repositorySet, "master-testfile.txt", COMMIT_MESSAGE_MASTER_TESTFILE);
@@ -1404,8 +1342,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -1421,7 +1359,10 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteTychoBuildFalseAndSnapshotVersion() throws Exception {
         // set up
         final String RELEASE_SNAPSHOT_VERSION = "1.42.0-SNAPSHOT";
+        final String EXPECTED_RELEASE_BRANCH = RELEASE_PREFIX + RELEASE_SNAPSHOT_VERSION;
+        final String EXPECTED_NEW_DEVELOPMENT_VERSION = "1.42.1-SNAPSHOT";
         final String RELEASE_SNAPSHOT_TAG = "gitflow-tests-" + RELEASE_SNAPSHOT_VERSION;
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
         ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_SNAPSHOT_VERSION);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
@@ -1431,14 +1372,14 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, EXPECTED_RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, EXPECTED_RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_SNAPSHOT_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_SNAPSHOT_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
                 GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
-        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), EXPECTED_NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
     }
 
@@ -1446,7 +1387,10 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteTychoBuildTrueAndSnapshotVersion() throws Exception {
         // set up
         final String RELEASE_SNAPSHOT_VERSION = "1.42.0-SNAPSHOT";
+        final String EXPECTED_RELEASE_BRANCH = RELEASE_PREFIX + RELEASE_SNAPSHOT_VERSION;
+        final String EXPECTED_NEW_DEVELOPMENT_VERSION = "1.42.1-SNAPSHOT";
         final String RELEASE_TAG_WITHOUT_SNAPSHOT = "gitflow-tests-1.42.0";
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
         ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_SNAPSHOT_VERSION);
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
@@ -1456,14 +1400,14 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, EXPECTED_RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, EXPECTED_RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG_WITHOUT_SNAPSHOT);
         git.assertRemoteTags(repositorySet, RELEASE_TAG_WITHOUT_SNAPSHOT);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
                 GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
-        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), EXPECTED_NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
     }
 
@@ -1471,7 +1415,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteRemoteReleaseBranchAheadOfLocal() throws Exception {
         // set up
         final String COMMIT_MESSAGE_REMOTE = "REMOTE: Unit test dummy file commit";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.push(repositorySet);
         git.remoteCreateTestfileInBranch(repositorySet, RELEASE_BRANCH, "remote-testfile.txt", COMMIT_MESSAGE_REMOTE);
         // test
@@ -1483,8 +1426,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 "Please consult a gitflow expert on how to fix this!");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, RELEASE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, RELEASE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, RELEASE_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, RELEASE_BRANCH, RELEASE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, RELEASE_BRANCH, COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
         assertDefaultDeployGoalNotExecuted();
@@ -1494,7 +1437,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteRemoteReleaseBranchAheadOfLocalAndFetchRemoteFalse() throws Exception {
         // set up
         final String COMMIT_MESSAGE_REMOTE = "REMOTE: Unit test dummy file commit";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.push(repositorySet);
         git.remoteCreateTestfileInBranch(repositorySet, RELEASE_BRANCH, "remote-testfile.txt", COMMIT_MESSAGE_REMOTE);
         Properties userProperties = new Properties();
@@ -1508,8 +1450,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.setOnline(repositorySet);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, RELEASE_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -1524,7 +1466,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteRemoteReleaseBranchAheadOfLocalAndFetchRemoteFalseWithPrefetch() throws Exception {
         // set up
         final String COMMIT_MESSAGE_REMOTE = "REMOTE: Unit test dummy file commit";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.push(repositorySet);
         git.remoteCreateTestfileInBranch(repositorySet, RELEASE_BRANCH, "remote-testfile.txt", COMMIT_MESSAGE_REMOTE);
         Properties userProperties = new Properties();
@@ -1543,8 +1484,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 "Please consult a gitflow expert on how to fix this!");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, RELEASE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, RELEASE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, RELEASE_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, RELEASE_BRANCH, RELEASE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, RELEASE_BRANCH, COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
         assertDefaultDeployGoalNotExecuted();
@@ -1555,7 +1496,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // set up
         final String COMMIT_MESSAGE_LOCAL = "LOCAL: Unit test dummy file commit";
         final String COMMIT_MESSAGE_REMOTE = "REMOTE: Unit test dummy file commit";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.push(repositorySet);
         git.createAndCommitTestfile(repositorySet, "local-testfile.txt", COMMIT_MESSAGE_LOCAL);
         git.remoteCreateTestfileInBranch(repositorySet, RELEASE_BRANCH, "remote-testfile.txt", COMMIT_MESSAGE_REMOTE);
@@ -1568,8 +1508,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 "Please consult a gitflow expert on how to fix this!");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, RELEASE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, RELEASE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, RELEASE_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, RELEASE_BRANCH, RELEASE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, RELEASE_BRANCH, COMMIT_MESSAGE_LOCAL,
                 COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
@@ -1581,7 +1521,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // set up
         final String COMMIT_MESSAGE_LOCAL = "LOCAL: Unit test dummy file commit";
         final String COMMIT_MESSAGE_REMOTE = "REMOTE: Unit test dummy file commit";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.push(repositorySet);
         git.createAndCommitTestfile(repositorySet, "local-testfile.txt", COMMIT_MESSAGE_LOCAL);
         git.remoteCreateTestfileInBranch(repositorySet, RELEASE_BRANCH, "remote-testfile.txt", COMMIT_MESSAGE_REMOTE);
@@ -1596,8 +1535,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.setOnline(repositorySet);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, RELEASE_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -1613,7 +1552,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // set up
         final String COMMIT_MESSAGE_LOCAL = "LOCAL: Unit test dummy file commit";
         final String COMMIT_MESSAGE_REMOTE = "REMOTE: Unit test dummy file commit";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.push(repositorySet);
         git.createAndCommitTestfile(repositorySet, "local-testfile.txt", COMMIT_MESSAGE_LOCAL);
         git.remoteCreateTestfileInBranch(repositorySet, RELEASE_BRANCH, "remote-testfile.txt", COMMIT_MESSAGE_REMOTE);
@@ -1633,8 +1571,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 "Please consult a gitflow expert on how to fix this!");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, RELEASE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, RELEASE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, RELEASE_BRANCH, CONFIG_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, RELEASE_BRANCH, RELEASE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, RELEASE_BRANCH, COMMIT_MESSAGE_LOCAL,
                 COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
@@ -1646,7 +1584,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // set up
         final String COMMIT_MESSAGE_LOCAL = "LOCAL: Unit test dummy file commit";
         final String COMMIT_MESSAGE_REMOTE = "REMOTE: Unit test dummy file commit";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createAndCommitTestfile(repositorySet, "local-testfile.txt", COMMIT_MESSAGE_LOCAL);
         git.remoteCreateTestfileInBranch(repositorySet, MASTER_BRANCH, "remote-testfile.txt", COMMIT_MESSAGE_REMOTE);
@@ -1656,8 +1593,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -1666,7 +1603,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 COMMIT_MESSAGE_LOCAL, COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
-        assertConfigCleanedUp(MASTER_BRANCH);
+        assertConfigCleanedUpForMaster();
     }
 
     @Test
@@ -1674,7 +1611,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // set up
         final String COMMIT_MESSAGE_LOCAL = "LOCAL: Unit test dummy file commit";
         final String COMMIT_MESSAGE_REMOTE = "REMOTE: Unit test dummy file commit";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createAndCommitTestfile(repositorySet, "local-testfile.txt", COMMIT_MESSAGE_LOCAL);
         git.remoteCreateTestfileInBranch(repositorySet, MASTER_BRANCH, "remote-testfile.txt", COMMIT_MESSAGE_REMOTE);
@@ -1690,8 +1626,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.setOnline(repositorySet);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -1707,7 +1643,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // set up
         final String COMMIT_MESSAGE_LOCAL = "LOCAL: Unit test dummy file commit";
         final String COMMIT_MESSAGE_REMOTE = "REMOTE: Unit test dummy file commit";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createAndCommitTestfile(repositorySet, "local-testfile.txt", COMMIT_MESSAGE_LOCAL);
         git.remoteCreateTestfileInBranch(repositorySet, MASTER_BRANCH, "remote-testfile.txt", COMMIT_MESSAGE_REMOTE);
@@ -1724,8 +1659,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.setOnline(repositorySet);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -1740,39 +1675,37 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteReleaseStartedOnMaintenanceBranch() throws Exception {
         // set up
-        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION, MAINTENANCE_FIRST_VERSION);
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, MAINTENANCE_RELEASE_VERSION);
+        git.switchToBranch(repositorySet, RELEASE_ON_MAINTENANCE_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL);
         // verify
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
-        git.assertLocalTags(repositorySet, RELEASE_TAG);
-        git.assertRemoteTags(repositorySet, RELEASE_TAG);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_ON_MAINTENANCE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_ON_MAINTENANCE_BRANCH);
+        git.assertLocalTags(repositorySet, RELEASE_MAINTENANCE_TAG);
+        git.assertRemoteTags(repositorySet, RELEASE_MAINTENANCE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
                 GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_RELEASE_START_SET_VERSION,
                 COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
-        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_ON_MAINTENANCE_VERSION);
         assertDefaultDeployGoalExecuted();
-        assertConfigCleanedUp(MAINTENANCE_BRANCH);
+        assertConfigCleanedUpForMaintenance();
     }
 
     @Test
     public void testExecuteWithConflictOnReleaseMerge() throws Exception {
         // set up
-        final String EXPECTED_DEVELOPMENT_COMMIT = git.currentCommit(repositorySet);
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
-        git.createAndCommitTestfile(repositorySet);
-        final String EXPECTED_RELEASE_COMMIT = git.currentCommit(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
+        final String EXPECTED_DEVELOPMENT_COMMIT = git.currentCommit(repositorySet);
         git.createTestfile(repositorySet);
         git.modifyTestfile(repositorySet);
         git.commitAll(repositorySet, "MASTER: Modified test dummy file commit");
         git.switchToBranch(repositorySet, RELEASE_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
+        final String EXPECTED_RELEASE_COMMIT = git.currentCommit(repositorySet);
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
         // verify
@@ -1795,15 +1728,14 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteWithConflictOnRemoteMasterMerge() throws Exception {
         // set up
-        final String EXPECTED_DEVELOPMENT_COMMIT = git.currentCommit(repositorySet);
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
-        final String EXPECTED_RELEASE_COMMIT = git.currentCommit(repositorySet);
-        git.remoteCreateTestfileInBranch(repositorySet, MASTER_BRANCH);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
+        final String EXPECTED_DEVELOPMENT_COMMIT = git.currentCommit(repositorySet);
+        git.remoteCreateTestfileInBranch(repositorySet, MASTER_BRANCH);
         git.createTestfile(repositorySet);
         git.modifyTestfile(repositorySet);
         git.commitAll(repositorySet, "LOCAL: Modified test dummy file commit");
         git.switchToBranch(repositorySet, RELEASE_BRANCH);
+        final String EXPECTED_RELEASE_COMMIT = git.currentCommit(repositorySet);
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
         // verify
@@ -1827,7 +1759,6 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteWithResolvedConflictOnReleaseMerge() throws Exception {
         // set up
         final String COMMIT_MESSAGE_MASTER = "MASTER: Modified test dummy file commit";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.createAndCommitTestfile(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createTestfile(repositorySet);
@@ -1848,8 +1779,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -1858,22 +1789,21 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
-        assertConfigCleanedUp(MASTER_BRANCH);
+        assertConfigCleanedUpForMaster();
     }
 
     @Test
     public void testExecuteWithNotResolvedConflictOnReleaseMerge() throws Exception {
         // set up
         final String COMMIT_MESSAGE_MASTER = "MASTER: Modified test dummy file commit";
-        final String EXPECTED_DEVELOPMENT_COMMIT = git.currentCommit(repositorySet);
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
-        git.createAndCommitTestfile(repositorySet);
-        final String EXPECTED_RELEASE_COMMIT = git.currentCommit(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
+        final String EXPECTED_DEVELOPMENT_COMMIT = git.currentCommit(repositorySet);
         git.createTestfile(repositorySet);
         git.modifyTestfile(repositorySet);
         git.commitAll(repositorySet, COMMIT_MESSAGE_MASTER);
         git.switchToBranch(repositorySet, RELEASE_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
+        final String EXPECTED_RELEASE_COMMIT = git.currentCommit(repositorySet);
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
         assertGitFlowFailureExceptionRegEx(result, EXPECTED_RELEASE_MERGE_CONFLICT_MESSAGE_PATTERN);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
@@ -1904,18 +1834,17 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteWithResolvedConflictOnReleaseIntoMaintenanceMerge() throws Exception {
         // set up
         final String COMMIT_MESSAGE_MAINTENANCE = "MAINTENANCE: Modified test dummy file commit";
-        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION, MAINTENANCE_FIRST_VERSION);
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, MAINTENANCE_RELEASE_VERSION);
+        git.switchToBranch(repositorySet, RELEASE_ON_MAINTENANCE_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.switchToBranch(repositorySet, MAINTENANCE_BRANCH);
         git.createTestfile(repositorySet);
         git.modifyTestfile(repositorySet);
         git.commitAll(repositorySet, COMMIT_MESSAGE_MAINTENANCE);
-        git.switchToBranch(repositorySet, RELEASE_BRANCH);
+        git.switchToBranch(repositorySet, RELEASE_ON_MAINTENANCE_BRANCH);
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
         assertGitFlowFailureExceptionRegEx(result, EXPECTED_RELEASE_MERGE_INTO_MAINTENANCE_CONFLICT_MESSAGE_PATTERN);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertMergeInProcessFromBranch(repositorySet, RELEASE_BRANCH, GitExecution.TESTFILE_NAME);
+        git.assertMergeInProcessFromBranch(repositorySet, RELEASE_ON_MAINTENANCE_BRANCH, GitExecution.TESTFILE_NAME);
         repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath(GitExecution.TESTFILE_NAME).call();
         repositorySet.getLocalRepoGit().add().addFilepattern(GitExecution.TESTFILE_NAME).call();
         when(promptControllerMock.prompt(PROMPT_MERGE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("y");
@@ -1926,25 +1855,24 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
-        git.assertLocalTags(repositorySet, RELEASE_TAG);
-        git.assertRemoteTags(repositorySet, RELEASE_TAG);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_ON_MAINTENANCE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_ON_MAINTENANCE_BRANCH);
+        git.assertLocalTags(repositorySet, RELEASE_MAINTENANCE_TAG);
+        git.assertRemoteTags(repositorySet, RELEASE_MAINTENANCE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
                 COMMIT_MESSAGE_MERGE_RELEASE_INTO_MAINTENANCE, COMMIT_MESSAGE_MAINTENANCE,
                 GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_RELEASE_START_SET_VERSION,
                 COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
-        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_ON_MAINTENANCE_VERSION);
         assertDefaultDeployGoalExecuted();
-        assertConfigCleanedUp(MASTER_BRANCH);
+        assertConfigCleanedUpForMaster();
     }
 
     @Test
     public void testExecuteWithReslovedConflictOnRemoteMasterMerge() throws Exception {
         // set up
         final String COMMIT_MESSAGE_LOCAL = "LOCAL: Modified test dummy file commit";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
         git.remoteCreateTestfileInBranch(repositorySet, MASTER_BRANCH);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createTestfile(repositorySet);
@@ -1965,8 +1893,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         git.assertLocalTags(repositorySet, RELEASE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -1975,21 +1903,20 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
-        assertConfigCleanedUp(MASTER_BRANCH);
+        assertConfigCleanedUpForMaster();
     }
 
     @Test
     public void testExecuteWithReslovedConflictOnRemoteMaintenanceMerge() throws Exception {
         // set up
         final String COMMIT_MESSAGE_LOCAL = "LOCAL: Modified test dummy file commit";
-        ExecutorHelper.executeMaintenanceStart(this, repositorySet, MAINTENANCE_VERSION, MAINTENANCE_FIRST_VERSION);
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION, MAINTENANCE_RELEASE_VERSION);
+        git.switchToBranch(repositorySet, RELEASE_ON_MAINTENANCE_BRANCH);
         git.remoteCreateTestfileInBranch(repositorySet, MAINTENANCE_BRANCH);
         git.switchToBranch(repositorySet, MAINTENANCE_BRANCH);
         git.createTestfile(repositorySet);
         git.modifyTestfile(repositorySet);
         git.commitAll(repositorySet, COMMIT_MESSAGE_LOCAL);
-        git.switchToBranch(repositorySet, RELEASE_BRANCH);
+        git.switchToBranch(repositorySet, RELEASE_ON_MAINTENANCE_BRANCH);
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
         assertGitFlowFailureExceptionRegEx(result, EXPECTED_MAINTENANCE_UPSTREAM_MERGE_CONFLICT_MESSAGE_PATTERN);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
@@ -2004,18 +1931,18 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, MAINTENANCE_BRANCH, CONFIG_BRANCH);
-        git.assertLocalTags(repositorySet, RELEASE_TAG);
-        git.assertRemoteTags(repositorySet, RELEASE_TAG);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_ON_MAINTENANCE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_ON_MAINTENANCE_BRANCH);
+        git.assertLocalTags(repositorySet, RELEASE_MAINTENANCE_TAG);
+        git.assertRemoteTags(repositorySet, RELEASE_MAINTENANCE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
                 COMMIT_MESSAGE_MERGE_RELEASE_INTO_MAINTENANCE, COMMIT_MESSAGE_MERGE_REMOTE_MAINTENANCE,
                 COMMIT_MESSAGE_LOCAL, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_RELEASE_START_SET_VERSION, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
-        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_ON_MAINTENANCE_VERSION);
         assertDefaultDeployGoalExecuted();
-        assertConfigCleanedUp(MAINTENANCE_BRANCH);
+        assertConfigCleanedUpForMaintenance();
     }
 
     @Test
@@ -2023,8 +1950,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // set up
         final String OTHER_BRANCH = "otherBranch";
         final String COMMIT_MESSAGE_OTHER_RELEASE = "OTHER: Modified test dummy file commit";
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
-        git.switchToBranch(repositorySet, OTHER_BRANCH, true);
+        git.createBranch(repositorySet, OTHER_BRANCH);
         git.createTestfile(repositorySet);
         git.modifyTestfile(repositorySet);
         git.commitAll(repositorySet, COMMIT_MESSAGE_OTHER_RELEASE);
@@ -2050,7 +1976,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // set up
         final String OTHER_BRANCH = "otherBranch";
         final String COMMIT_MESSAGE_OTHER_RELEASE = "OTHER: Modified test dummy file commit";
-        git.switchToBranch(repositorySet, OTHER_BRANCH, true);
+        git.createBranch(repositorySet, OTHER_BRANCH);
         git.createTestfile(repositorySet);
         git.modifyTestfile(repositorySet);
         git.commitAll(repositorySet, COMMIT_MESSAGE_OTHER_RELEASE);
@@ -2075,7 +2001,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // set up
         final String OTHER_BRANCH = "otherBranch";
         final String COMMIT_MESSAGE_OTHER_RELEASE = "OTHER: Modified test dummy file commit";
-        git.switchToBranch(repositorySet, OTHER_BRANCH, true);
+        git.createBranch(repositorySet, OTHER_BRANCH);
         git.createTestfile(repositorySet);
         git.modifyTestfile(repositorySet);
         git.commitAll(repositorySet, COMMIT_MESSAGE_OTHER_RELEASE);
@@ -2100,15 +2026,14 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteWithResolvedConflictOnReleaseMergeAndPromptAnswerNo() throws Exception {
         // set up
         final String COMMIT_MESSAGE_MASTER = "MASTER: Modified test dummy file commit";
-        final String EXPECTED_DEVELOPMENT_COMMIT = git.currentCommit(repositorySet);
-        ExecutorHelper.executeReleaseStart(this, repositorySet, RELEASE_VERSION);
-        git.createAndCommitTestfile(repositorySet);
-        final String EXPECTED_RELEASE_COMMIT = git.currentCommit(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
+        final String EXPECTED_DEVELOPMENT_COMMIT = git.currentCommit(repositorySet);
         git.createTestfile(repositorySet);
         git.modifyTestfile(repositorySet);
         git.commitAll(repositorySet, COMMIT_MESSAGE_MASTER);
         git.switchToBranch(repositorySet, RELEASE_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
+        final String EXPECTED_RELEASE_COMMIT = git.currentCommit(repositorySet);
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
         assertGitFlowFailureExceptionRegEx(result, EXPECTED_RELEASE_MERGE_CONFLICT_MESSAGE_PATTERN);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);

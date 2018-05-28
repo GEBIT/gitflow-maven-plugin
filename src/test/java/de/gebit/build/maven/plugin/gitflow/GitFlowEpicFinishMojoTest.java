@@ -750,7 +750,7 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
         git.createAndCommitTestfile(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
-        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_MASTER_BRANCH);
+        git.createIntegeratedBranch(repositorySet, INTEGRATION_MASTER_BRANCH);
         git.createAndCommitTestfile(repositorySet, "master_testfile.txt", COMMIT_MESSAGE_MASTER_TESTFILE);
         git.push(repositorySet);
         git.switchToBranch(repositorySet, EPIC_BRANCH);
@@ -782,7 +782,7 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.switchToBranch(repositorySet, USED_EPIC_BRANCH);
         git.createAndCommitTestfile(repositorySet);
         git.switchToBranch(repositorySet, MAINTENANCE_BRANCH);
-        ExecutorHelper.executeIntegerated(repositorySet, INTEGRATION_MAINTENANCE_BRANCH);
+        git.createIntegeratedBranch(repositorySet, INTEGRATION_MAINTENANCE_BRANCH);
         git.createAndCommitTestfile(repositorySet, "maintenance_testfile.txt", COMMIT_MESSAGE_MAINTENACE_TESTFILE);
         git.push(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);

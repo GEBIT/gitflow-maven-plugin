@@ -77,8 +77,9 @@ public class GitFlowUpgradeMojoTest extends AbstractGitFlowMojoTestCase {
         final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
 
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH, MAINTENANCE_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, MAINTENANCE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, CONFIG_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, CONFIG_BRANCH);
 
         Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
         assertEquals("feature", branchConfig.getProperty("branchType"));
@@ -103,8 +104,9 @@ public class GitFlowUpgradeMojoTest extends AbstractGitFlowMojoTestCase {
         final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
 
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertLocalBranches(repositorySet, FEATURE_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, FEATURE_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, MASTER_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, CONFIG_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, CONFIG_BRANCH);
 
         Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
         assertEquals("feature", branchConfig.getProperty("branchType"));
@@ -130,8 +132,9 @@ public class GitFlowUpgradeMojoTest extends AbstractGitFlowMojoTestCase {
         final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
 
         git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
-        git.assertLocalBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH, MAINTENANCE_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, MAINTENANCE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, CONFIG_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, CONFIG_BRANCH);
 
         Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, EPIC_BRANCH);
         assertEquals("epic", branchConfig.getProperty("branchType"));
@@ -156,8 +159,9 @@ public class GitFlowUpgradeMojoTest extends AbstractGitFlowMojoTestCase {
         final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
 
         git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
-        git.assertLocalBranches(repositorySet, EPIC_BRANCH, CONFIG_BRANCH);
-        git.assertRemoteBranches(repositorySet, MASTER_BRANCH, EPIC_BRANCH, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, MASTER_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, CONFIG_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, CONFIG_BRANCH);
 
         Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, EPIC_BRANCH);
         assertEquals("epic", branchConfig.getProperty("branchType"));
