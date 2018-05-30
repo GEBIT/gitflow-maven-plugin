@@ -19,6 +19,7 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -60,9 +61,8 @@ import org.eclipse.aether.repository.WorkspaceReader;
 import org.eclipse.aether.repository.WorkspaceRepository;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.runner.RunWith;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.MockitoAnnotations;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Module;
@@ -73,16 +73,17 @@ import de.gebit.build.maven.plugin.gitflow.jgit.RepositorySet;
 /**
  * The abstract test case for all GitFlowMojo test cases.
  *
- * @author VMedvid
+ * @author Volodymyr Medvid
  */
-@RunWith(MockitoJUnitRunner.class)
 public abstract class AbstractGitFlowMojoTestCase {
 
     protected static final String LS = System.getProperty("line.separator");
 
-    protected static final boolean WITHOUT_DEFAULTS = false;
+    protected static final String MASTER_BRANCH = "master";
 
-    protected static final boolean WITH_DEFAULTS = true;
+    protected static final String CONFIG_BRANCH = "branch-config";
+
+    private static final boolean WITH_DEFAULTS = true;
 
     private static final String PLEXUS_CORE_REALM_ID = "plexus.core";
 
@@ -90,17 +91,13 @@ public abstract class AbstractGitFlowMojoTestCase {
 
     private static final String GOAL_PREFIX = "flow";
 
-    public static final String GIT_BASEDIR = "target/git";
+    private static final String GIT_ROOT_DIR = "target/git";
 
-    public static final String GIT_REPO_BASEDIR = "target/git-repos";
+    private static final String GIT_REPO_BASEDIR = "target/git-repos";
 
     private static final String NOT_EXISTING_DIR = "notExistingDir";
 
-    public static final String MASTER_BRANCH = "master";
-
-    public static final String CONFIG_BRANCH = "branch-config";
-
-    public static final String COMMAND_LINE_EXCEPTION_MESSAGE_PATTERN = "Working directory \"{0}\" does not exist!";
+    private static final String COMMAND_LINE_EXCEPTION_MESSAGE_PATTERN = "Working directory \"{0}\" does not exist!";
 
     private PlexusContainer container;
 
@@ -114,18 +111,33 @@ public abstract class AbstractGitFlowMojoTestCase {
      */
     protected GitExecution git;
 
+    private File testBasedir;
+
     @Mock
     protected Prompter promptControllerMock;
 
+
     @Before
     public void setUpAbstractGitFlowMojoTestCase() throws Exception {
+        MockitoAnnotations.initMocks(this);
         startPlexusContainer();
-        git = new GitExecution(GIT_BASEDIR, GIT_REPO_BASEDIR);
-        git.cleanupGitBasedir();
+        File gitBaseDir = new File(GIT_ROOT_DIR);
+        if (!gitBaseDir.exists()) {
+            gitBaseDir.mkdirs();
+        }
+        testBasedir = Files.createTempDirectory(gitBaseDir.toPath(), "tmp").toFile();
+        git = new GitExecution(testBasedir, GIT_REPO_BASEDIR);
     }
 
     @After
     public void tearDownAbstractGitFlowMojoTestCase() throws Exception {
+        if (git != null) {
+            try {
+                git.cleanupGitBasedir();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
         stopPlexusContainer();
     }
 
@@ -591,6 +603,7 @@ public abstract class AbstractGitFlowMojoTestCase {
         String classPath = System.getProperty("java.class.path");
         String mainClass = ExtMavenCli.class.getName();
         List<String> javaArgs = new ArrayList<>();
+        javaArgs.add("-D" + ExtMavenCli.PROPERTY_KEY_OUTPUT_DIR + "=" + testBasedir.getAbsolutePath());
         javaArgs.add("-D" + ExtMavenCli.PROPERTY_KEY_PLUGIN_BASEDIR + "=" + new File("").getAbsolutePath());
         javaArgs.add("-D" + ExtMavenCli.PROPERTY_KEY_PLUGIN_VERSION + "=" + pluginVersion);
         javaArgs.add("-D" + MavenCli.MULTIMODULE_PROJECT_DIRECTORY + "=" + basedir.getAbsolutePath());
@@ -901,7 +914,7 @@ public abstract class AbstractGitFlowMojoTestCase {
      * @return
      */
     private List<String> loadExecutedMavenCommands() throws IOException {
-        File mvnCommandsFile = new File(GIT_BASEDIR, ExtMavenCli.MVN_CMDS_LOG_FILENAME);
+        File mvnCommandsFile = new File(testBasedir, ExtMavenCli.MVN_CMDS_LOG_FILENAME);
         if (!mvnCommandsFile.exists()) {
             return Collections.EMPTY_LIST;
         }

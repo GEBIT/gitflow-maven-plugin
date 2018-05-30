@@ -50,6 +50,11 @@ public class ExtMavenCli extends MavenCli {
      */
     public static final String PROPERTY_KEY_PLUGIN_BASEDIR = "test.gitflow-maven-plugin.basedir";
 
+    /**
+     * The system property key for the directory where outputs should be stored.
+     */
+    public static final String PROPERTY_KEY_OUTPUT_DIR = "test.gitflow-maven-plugin.outputDir";
+
     public static void main(String[] args) {
         int result = main(args, null);
         System.exit(result);
@@ -67,11 +72,15 @@ public class ExtMavenCli extends MavenCli {
 
     private static void prepareRequest(ExtCliRequest aCliRequest) {
         MavenExecutionRequest request = aCliRequest.getRequest();
+        final String outputDir = System.getProperty(PROPERTY_KEY_OUTPUT_DIR);
+        if (outputDir == null) {
+            throw new IllegalArgumentException("Missing system property '" + PROPERTY_KEY_OUTPUT_DIR + "'");
+        }
+        logMavenCall(outputDir, aCliRequest.getArgs());
         final String pluginBasedir = System.getProperty(PROPERTY_KEY_PLUGIN_BASEDIR);
         if (pluginBasedir == null) {
             throw new IllegalArgumentException("Missing system property '" + PROPERTY_KEY_PLUGIN_BASEDIR + "'");
         }
-        logMavenCall(pluginBasedir, aCliRequest.getArgs());
         final String pluginVersion = System.getProperty(PROPERTY_KEY_PLUGIN_VERSION);
         if (pluginVersion == null) {
             throw new IllegalArgumentException("Missing system property '" + PROPERTY_KEY_PLUGIN_VERSION + "'");
@@ -151,7 +160,7 @@ public class ExtMavenCli extends MavenCli {
         request.setWorkspaceReader(workspaceReader);
     }
 
-    private static void logMavenCall(String pluginBasedir, String[] args) {
+    private static void logMavenCall(String outputDir, String[] args) {
         StringBuilder content = new StringBuilder();
         boolean first = true;
         boolean skip = false;
@@ -161,8 +170,8 @@ public class ExtMavenCli extends MavenCli {
                 continue;
             }
             if ("-P".equals(arg) || "-s".equals(arg) || "-f".equals(arg)) {
-                 skip = true;
-                 continue;
+                skip = true;
+                continue;
             }
             if (arg.startsWith("-Dversion.gitflow-maven-plugin=")) {
                 continue;
@@ -176,9 +185,7 @@ public class ExtMavenCli extends MavenCli {
         }
         content.append("\n");
         try {
-            FileUtils.write(
-                    new File(new File(pluginBasedir, AbstractGitFlowMojoTestCase.GIT_BASEDIR), MVN_CMDS_LOG_FILENAME),
-                    content, "UTF-8", true);
+            FileUtils.write(new File(new File(outputDir), MVN_CMDS_LOG_FILENAME), content, "UTF-8", true);
         } catch (IOException exc) {
             exc.printStackTrace();
         }

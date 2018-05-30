@@ -14,13 +14,16 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Properties;
 
 import org.apache.commons.lang3.StringUtils;
 import org.codehaus.plexus.components.interactivity.Prompter;
 import org.eclipse.jgit.api.CreateBranchCommand.SetupUpstreamMode;
 import org.eclipse.jgit.api.RmCommand;
-import org.mockito.MockitoAnnotations;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import de.gebit.build.maven.plugin.gitflow.jgit.GitExecution;
 import de.gebit.build.maven.plugin.gitflow.jgit.RepositorySet;
@@ -28,9 +31,11 @@ import de.gebit.build.maven.plugin.gitflow.jgit.RepositorySet;
 /**
  * Class with constants for test project directories.
  *
- * @author VMedvid
+ * @author Volodymyr Medvid
  */
 public class TestProjects {
+
+    private static final Logger LOG = LoggerFactory.getLogger(TestProjects.class);
 
     /**
      * The base directory for all projects.
@@ -129,22 +134,26 @@ public class TestProjects {
 
     }
 
-    public static void prepareRepositoryIfNotExisting(File gitRepoDir) throws Exception {
+    public static synchronized void prepareRepositoryIfNotExisting(File gitRepoDir) throws Exception {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+        LOG.info("create shared repositories if not exist - (" + dateFormat.format(new Date()) + ")");
         if (!gitRepoDir.exists()) {
             gitRepoDir.mkdirs();
             prepareRepository(gitRepoDir, BASIC);
             prepareRepository(gitRepoDir, WITH_UPSTREAM);
+            LOG.info("shared repositories created - (" + dateFormat.format(new Date()) + ")");
+        } else {
+            LOG.info("shared repositories already exist - (" + dateFormat.format(new Date()) + ")");
         }
     }
 
     private static void prepareRepository(File repoDir, TestProjectData project) throws Exception {
         String projectName = project.artifactId;
-        System.out.println("Creating repositories for project '" + projectName + "'.");
+        LOG.info("Creating repositories for project '" + projectName + "'.");
         long ms = System.currentTimeMillis();
-        GitExecution git = new GitExecution(repoDir.getAbsolutePath(), null);
+        GitExecution git = new GitExecution(repoDir.getAbsoluteFile(), null);
         try (RepositorySet repositorySet = git.createGitRepositorySet(project.basedir)) {
             MyTestCase tc = new MyTestCase();
-            MockitoAnnotations.initMocks(tc);
             try {
                 tc.setUpAbstractGitFlowMojoTestCase();
                 initRepository(project, git, repositorySet, tc);
@@ -152,7 +161,7 @@ public class TestProjects {
                 tc.tearDownAbstractGitFlowMojoTestCase();
             }
         }
-        System.out.println("Repositories for project '" + projectName + "' created. ["
+        LOG.info("Repositories for project '" + projectName + "' created. ["
                 + ((System.currentTimeMillis() - ms) / 1000) + "s]");
     }
 

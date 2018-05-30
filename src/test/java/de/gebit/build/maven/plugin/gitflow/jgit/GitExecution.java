@@ -71,7 +71,7 @@ import de.gebit.build.maven.plugin.gitflow.jgit.GitRebaseTodo.GitRebaseTodoEntry
 /**
  * Git execution provides methods to execute different git operation using jGit.
  *
- * @author VMedvid
+ * @author Volodymyr Medvid
  */
 public class GitExecution {
 
@@ -97,7 +97,7 @@ public class GitExecution {
 
     private static final String REFS_TAGS_PATH = "refs/tags/";
 
-    private String gitBaseDir;
+    private File gitBaseDir;
 
     private String gitRepoBaseDir;
 
@@ -109,7 +109,7 @@ public class GitExecution {
      * @param aGitRepoBasedir
      *            the base directory where existing git repositories are located
      */
-    public GitExecution(String aGitBasedir, String aGitRepoBasedir) {
+    public GitExecution(File aGitBasedir, String aGitRepoBasedir) {
         this.gitBaseDir = aGitBasedir;
         this.gitRepoBaseDir = aGitRepoBasedir;
     }
@@ -120,11 +120,10 @@ public class GitExecution {
      * @throws IOException
      */
     public void cleanupGitBasedir() throws IOException {
-        File gitBasedir = new File(gitBaseDir);
         int maxTries = 10;
-        while (gitBasedir.exists()) {
+        while (gitBaseDir.exists()) {
             try {
-                FileUtils.deleteDirectory(gitBasedir);
+                FileUtils.deleteDirectory(gitBaseDir);
             } catch (IOException ex) {
                 // wait some time
                 try {
@@ -215,8 +214,6 @@ public class GitExecution {
         File repoBasedir = new File(gitBaseDir, projectName);
         File gitRepoDir = new File(gitRepoBaseDir);
         TestProjects.prepareRepositoryIfNotExisting(gitRepoDir);
-//        File sourceRepoFile = new File(gitRepoDir, projectName + ".zip");
-//        new ZipUtils().unzip(sourceRepoFile, new File(gitBaseDir));
         FileUtils.copyDirectory(new File(gitRepoDir, projectName), repoBasedir);
         Git remoteGit = Git.open(new File(repoBasedir, GIT_BASEDIR_REMOTE_SUFFIX));
         Git localGit = Git.open(new File(repoBasedir, GIT_BASEDIR_LOCAL_SUFFIX));
@@ -1624,7 +1621,7 @@ public class GitExecution {
         cmdBuilder.append(WorkspaceUtils.getWorkspaceTestClasspath().getAbsolutePath());
         cmdBuilder.append("' ");
         String editorTargetPropertyKey = GitDummyEditor.PROPERTY_KEY_TARGET_BASEDIR;
-        String editorTargetPropertyValue = new File(gitBaseDir).getAbsolutePath();
+        String editorTargetPropertyValue = gitBaseDir.getAbsolutePath();
         cmdBuilder.append("-D");
         cmdBuilder.append(editorTargetPropertyKey);
         cmdBuilder.append("='");
