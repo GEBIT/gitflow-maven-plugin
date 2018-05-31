@@ -114,6 +114,7 @@
 				<flow.releaseMergeNoFF>false</flow.releaseMergeNoFF>
 				<flow.releaseMergeProductionNoFF>true</flow.releaseMergeProductionNoFF>
 				<flow.releaseGoals>validate</flow.releaseGoals>
+				<flow.processAdditionalVersionCommands>false</flow.processAdditionalVersionCommands>
 				<flow.pushReleaseBranch>false</flow.pushReleaseBranch>
 				<flow.deleteRemoteBranchOnRebase>false</flow.deleteRemoteBranchOnRebase>
 			</properties>
@@ -139,6 +140,7 @@
 								<skipDeployProject>${flow.skipDeployProject}</skipDeployProject>
 								<installProject>${flow.installProject}</installProject>
 								<releaseGoals>${flow.releaseGoals}</releaseGoals>
+								<processAdditionalVersionCommands>${flow.processAdditionalVersionCommands}</processAdditionalVersionCommands>
 								<rebaseWithoutVersionChange>${flow.rebaseWithoutVersionChange}</rebaseWithoutVersionChange>
 								<releaseMergeNoFF>${flow.releaseMergeNoFF}</releaseMergeNoFF>
 								<releaseMergeProductionNoFF>${flow.releaseMergeProductionNoFF}</releaseMergeProductionNoFF>

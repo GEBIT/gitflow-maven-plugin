@@ -9,6 +9,8 @@
 package de.gebit.build.maven.plugin.gitflow;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
@@ -26,6 +28,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import de.gebit.build.maven.plugin.gitflow.TestProjects.WithUpstreamConstants;
+import de.gebit.build.maven.plugin.gitflow.jgit.GitExecution;
 import de.gebit.build.maven.plugin.gitflow.jgit.RepositorySet;
 
 /**
@@ -37,7 +40,27 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
 
     private static final String GOAL_FEATURE_REBASE = "feature-rebase";
 
+    private static final String GOAL_RELEASE_START = "release-start";
+
+    private static final String GOAL_RELEASE_FINISH = "release-finish";
+
+    private static final String GOAL_RELEASE = "release";
+
     private static final String PROJECT_VERSION = TestProjects.WITH_UPSTREAM.version;
+
+    private static final String RELEASE_VERSION = "1.42.0";
+
+    private static final String RELEASE_PREFIX = "release/gitflow-tests-";
+
+    private static final String RELEASE_BRANCH = RELEASE_PREFIX + RELEASE_VERSION;
+
+    private static final String RELEASE_TAG = "gitflow-tests-" + RELEASE_VERSION;
+
+    private static final String CALCULATED_RELEASE_VERSION = TestProjects.WITH_UPSTREAM.releaseVersion;
+
+    private static final String CALCULATED_NEW_DEVELOPMENT_VERSION = "1.42.1-SNAPSHOT";
+
+    private static final String OTHER_DEVELOPMENT_VERSION = "3.0.0-SNAPSHOT";
 
     private static final String FEATURE_BRANCH = WithUpstreamConstants.FEATURE_BRANCH;
 
@@ -60,12 +83,27 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
     private static final String PROMPT_UPSTREAM_VERSION_ON_FEATURE_BRANCH = "On feature branch: "
             + PROMPT_UPSTREAM_VERSION;
 
+    private static final String PROMPT_UPSTREAM_VERSION_ON_RELEASE_START_BRANCH = "On release branch: "
+            + PROMPT_UPSTREAM_VERSION;
+
+    private static final String PROMPT_UPSTREAM_VERSION_ON_RELEASE_FINISH_BRANCH = "Next development version: "
+            + PROMPT_UPSTREAM_VERSION;
+
+    private static final String PROMPT_RELEASE_VERSION = ExecutorHelper.RELEASE_START_PROMPT_RELEASE_VERSION;
+
+    private static final String PROMPT_NEXT_DEVELOPMENT_VERSION = "What is the next development version?";
+
     private static final String COMMIT_MESSAGE_SET_VERSION = WithUpstreamConstants.FEATURE_VERSION_COMMIT_MESSAGE;
+
+    private static final String COMMIT_MESSAGE_SET_VERSION_FOR_RELEASE = "NO-ISSUE: updating versions for release";
 
     private static final String COMMIT_MESSAGE_FEATURE_WITHOUT_VERSION_SET_VERSION = WithUpstreamConstants.FEATURE_WITHOUT_VERSION_ISSUE
             + ": updating versions for feature branch";
 
     private static final String COMMIT_MESSAGE_FEATURE_TESTFILE = "FEATURE: Unit test dummy file commit";
+
+    private static final String COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION = "NO-ISSUE: updating for next development "
+            + "version";
 
     private RepositorySet repositorySet;
 
@@ -87,6 +125,14 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
 
     private void executeMojoInteractive(String goal, Properties userProperties) throws Exception {
         executeMojo(repositorySet.getWorkingDirectory(), goal, userProperties, promptControllerMock);
+    }
+
+    private void executeMojoInBatchMode(String goal) throws Exception {
+        executeMojoInBatchMode(goal, null);
+    }
+
+    private void executeMojoInBatchMode(String goal, Properties userProperties) throws Exception {
+        executeMojo(repositorySet.getWorkingDirectory(), goal, userProperties);
     }
 
     private void assertVersions(String projectVersion, String parentVersion)
@@ -378,6 +424,511 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
         assertEquals(COMMIT_MESSAGE_FEATURE_WITHOUT_VERSION_SET_VERSION,
                 branchConfig.getProperty("startCommitMessage"));
         assertEquals(null, branchConfig.getProperty("versionChangeCommit"));
+    }
+
+    @Test
+    public void testExecuteReleaseStartWithUpstreamProperty() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        final String EXPECTED_DEVELOPMENT_COMMIT = git.currentCommit(repositorySet);
+        when(promptControllerMock.prompt(PROMPT_RELEASE_VERSION, CALCULATED_RELEASE_VERSION))
+                .thenReturn(RELEASE_VERSION);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("version.upstream", NEW_UPSTREAM_VERSION);
+        // test
+        executeMojoInteractive(GOAL_RELEASE_START, userProperties);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_RELEASE_VERSION, CALCULATED_RELEASE_VERSION);
+        verifyNoMoreInteractions(promptControllerMock);
+
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, RELEASE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
+        git.assertCommitsInLocalBranch(repositorySet, RELEASE_BRANCH, COMMIT_MESSAGE_SET_VERSION_FOR_RELEASE,
+                GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
+        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
+        assertEquals("release", branchConfig.getProperty("branchType"));
+        assertEquals(MASTER_BRANCH, branchConfig.getProperty("baseBranch"));
+        assertEquals(EXPECTED_DEVELOPMENT_COMMIT, branchConfig.getProperty("developmentSavepointCommitRef"));
+        assertEquals(null, branchConfig.getProperty("productionSavepointCommitRef"));
+
+        assertVersions(RELEASE_VERSION, EXPECTED_UPSTREAM_VERSION);
+    }
+
+    @Test
+    public void testExecuteReleaseStartWithUpstreamPropertyAndProcessAdditionalVersionCommandsTrue() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        final String EXPECTED_DEVELOPMENT_COMMIT = git.currentCommit(repositorySet);
+        when(promptControllerMock.prompt(PROMPT_RELEASE_VERSION, CALCULATED_RELEASE_VERSION))
+                .thenReturn(RELEASE_VERSION);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("version.upstream", NEW_UPSTREAM_VERSION);
+        userProperties.setProperty("flow.processAdditionalVersionCommands", "true");
+        // test
+        executeMojoInteractive(GOAL_RELEASE_START, userProperties);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_RELEASE_VERSION, CALCULATED_RELEASE_VERSION);
+        verifyNoMoreInteractions(promptControllerMock);
+
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, RELEASE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
+        git.assertCommitsInLocalBranch(repositorySet, RELEASE_BRANCH, COMMIT_MESSAGE_SET_VERSION_FOR_RELEASE,
+                GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
+        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
+        assertEquals("release", branchConfig.getProperty("branchType"));
+        assertEquals(MASTER_BRANCH, branchConfig.getProperty("baseBranch"));
+        assertEquals(EXPECTED_DEVELOPMENT_COMMIT, branchConfig.getProperty("developmentSavepointCommitRef"));
+        assertEquals(null, branchConfig.getProperty("productionSavepointCommitRef"));
+
+        assertVersions(RELEASE_VERSION, NEW_UPSTREAM_VERSION);
+    }
+
+    @Test
+    public void testExecuteReleaseStartWithoutUpstreamPropertyAndProcessAdditionalVersionCommandsTrue()
+            throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        final String EXPECTED_DEVELOPMENT_COMMIT = git.currentCommit(repositorySet);
+        when(promptControllerMock.prompt(PROMPT_RELEASE_VERSION, CALCULATED_RELEASE_VERSION))
+                .thenReturn(RELEASE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_UPSTREAM_VERSION_ON_RELEASE_START_BRANCH, EXPECTED_UPSTREAM_VERSION))
+                .thenReturn(NEW_UPSTREAM_VERSION);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.processAdditionalVersionCommands", "true");
+        // test
+        executeMojoInteractive(GOAL_RELEASE_START, userProperties);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_RELEASE_VERSION, CALCULATED_RELEASE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_UPSTREAM_VERSION_ON_RELEASE_START_BRANCH, EXPECTED_UPSTREAM_VERSION);
+        verifyNoMoreInteractions(promptControllerMock);
+
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, RELEASE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
+        git.assertCommitsInLocalBranch(repositorySet, RELEASE_BRANCH, COMMIT_MESSAGE_SET_VERSION_FOR_RELEASE,
+                GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
+        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
+        assertEquals("release", branchConfig.getProperty("branchType"));
+        assertEquals(MASTER_BRANCH, branchConfig.getProperty("baseBranch"));
+        assertEquals(EXPECTED_DEVELOPMENT_COMMIT, branchConfig.getProperty("developmentSavepointCommitRef"));
+        assertEquals(null, branchConfig.getProperty("productionSavepointCommitRef"));
+
+        assertVersions(RELEASE_VERSION, NEW_UPSTREAM_VERSION);
+    }
+
+    @Test
+    public void testExecuteReleaseStartWithUpstreamPropertyAndProcessAdditionalVersionCommandsTrueInBatchMode()
+            throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        final String EXPECTED_DEVELOPMENT_COMMIT = git.currentCommit(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("releaseVersion", RELEASE_VERSION);
+        userProperties.setProperty("version.upstream", NEW_UPSTREAM_VERSION);
+        userProperties.setProperty("flow.processAdditionalVersionCommands", "true");
+        // test
+        executeMojoInBatchMode(GOAL_RELEASE_START, userProperties);
+        // verify
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, RELEASE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
+        git.assertCommitsInLocalBranch(repositorySet, RELEASE_BRANCH, COMMIT_MESSAGE_SET_VERSION_FOR_RELEASE,
+                GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
+        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
+        assertEquals("release", branchConfig.getProperty("branchType"));
+        assertEquals(MASTER_BRANCH, branchConfig.getProperty("baseBranch"));
+        assertEquals(EXPECTED_DEVELOPMENT_COMMIT, branchConfig.getProperty("developmentSavepointCommitRef"));
+        assertEquals(null, branchConfig.getProperty("productionSavepointCommitRef"));
+
+        assertVersions(RELEASE_VERSION, NEW_UPSTREAM_VERSION);
+    }
+
+    @Test
+    public void testExecuteReleaseStartWithoutUpstreamPropertyAndProcessAdditionalVersionCommandsTrueInBatchMode()
+            throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        final String EXPECTED_DEVELOPMENT_COMMIT = git.currentCommit(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("releaseVersion", RELEASE_VERSION);
+        userProperties.setProperty("flow.processAdditionalVersionCommands", "true");
+        // test
+        executeMojoInBatchMode(GOAL_RELEASE_START, userProperties);
+        // verify
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, RELEASE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
+        git.assertCommitsInLocalBranch(repositorySet, RELEASE_BRANCH, COMMIT_MESSAGE_SET_VERSION_FOR_RELEASE,
+                GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
+        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
+        assertEquals("release", branchConfig.getProperty("branchType"));
+        assertEquals(MASTER_BRANCH, branchConfig.getProperty("baseBranch"));
+        assertEquals(EXPECTED_DEVELOPMENT_COMMIT, branchConfig.getProperty("developmentSavepointCommitRef"));
+        assertEquals(null, branchConfig.getProperty("productionSavepointCommitRef"));
+
+        assertVersions(RELEASE_VERSION, EXPECTED_UPSTREAM_VERSION);
+    }
+
+    @Test
+    public void testExecuteReleaseFinishWithUpstreamProperty() throws Exception {
+        // set up
+        final String USED_RELEASE_BRANCH = WithUpstreamConstants.EXISTING_RELEASE_BRANCH;
+        final String USED_RELEASE_TAG = "gitflow-tests-" + WithUpstreamConstants.EXISTING_RELEASE_VERSION;
+        git.switchToBranch(repositorySet, USED_RELEASE_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("version.upstream", NEW_UPSTREAM_VERSION);
+        when(promptControllerMock.prompt(PROMPT_NEXT_DEVELOPMENT_VERSION,
+                WithUpstreamConstants.EXISTING_RELEASE_NEW_DEVELOPMENT_VERSION)).thenReturn(OTHER_DEVELOPMENT_VERSION);
+        // test
+        executeMojoInteractive(GOAL_RELEASE_FINISH, userProperties);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_NEXT_DEVELOPMENT_VERSION,
+                WithUpstreamConstants.EXISTING_RELEASE_NEW_DEVELOPMENT_VERSION);
+        verifyNoMoreInteractions(promptControllerMock);
+
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, USED_RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, USED_RELEASE_BRANCH);
+        git.assertLocalTags(repositorySet, USED_RELEASE_TAG);
+        git.assertRemoteTags(repositorySet, USED_RELEASE_TAG);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
+                GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_SET_VERSION_FOR_RELEASE);
+
+        assertVersions(OTHER_DEVELOPMENT_VERSION, NEW_UPSTREAM_VERSION);
+
+        git.assertBranchLocalConfigValueMissing(repositorySet, USED_RELEASE_BRANCH, "releaseTag");
+        git.assertBranchLocalConfigValueMissing(repositorySet, USED_RELEASE_BRANCH, "releaseCommit");
+        git.assertBranchLocalConfigValueMissing(repositorySet, USED_RELEASE_BRANCH, "nextSnapshotVersion");
+        git.assertBranchLocalConfigValueMissing(repositorySet, USED_RELEASE_BRANCH, "releaseBranch");
+    }
+
+    @Test
+    public void testExecuteReleaseFinishWithoutUpstreamProperty() throws Exception {
+        // set up
+        final String USED_RELEASE_BRANCH = WithUpstreamConstants.EXISTING_RELEASE_BRANCH;
+        final String USED_RELEASE_TAG = "gitflow-tests-" + WithUpstreamConstants.EXISTING_RELEASE_VERSION;
+        git.switchToBranch(repositorySet, USED_RELEASE_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
+        when(promptControllerMock.prompt(PROMPT_NEXT_DEVELOPMENT_VERSION,
+                WithUpstreamConstants.EXISTING_RELEASE_NEW_DEVELOPMENT_VERSION)).thenReturn(OTHER_DEVELOPMENT_VERSION);
+        when(promptControllerMock.prompt(PROMPT_UPSTREAM_VERSION_ON_RELEASE_FINISH_BRANCH, EXPECTED_UPSTREAM_VERSION))
+                .thenReturn(NEW_UPSTREAM_VERSION);
+        // test
+        executeMojoInteractive(GOAL_RELEASE_FINISH);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_NEXT_DEVELOPMENT_VERSION,
+                WithUpstreamConstants.EXISTING_RELEASE_NEW_DEVELOPMENT_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_UPSTREAM_VERSION_ON_RELEASE_FINISH_BRANCH,
+                EXPECTED_UPSTREAM_VERSION);
+        verifyNoMoreInteractions(promptControllerMock);
+
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, USED_RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, USED_RELEASE_BRANCH);
+        git.assertLocalTags(repositorySet, USED_RELEASE_TAG);
+        git.assertRemoteTags(repositorySet, USED_RELEASE_TAG);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
+                GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_SET_VERSION_FOR_RELEASE);
+
+        assertVersions(OTHER_DEVELOPMENT_VERSION, NEW_UPSTREAM_VERSION);
+
+        git.assertBranchLocalConfigValueMissing(repositorySet, USED_RELEASE_BRANCH, "releaseTag");
+        git.assertBranchLocalConfigValueMissing(repositorySet, USED_RELEASE_BRANCH, "releaseCommit");
+        git.assertBranchLocalConfigValueMissing(repositorySet, USED_RELEASE_BRANCH, "nextSnapshotVersion");
+        git.assertBranchLocalConfigValueMissing(repositorySet, USED_RELEASE_BRANCH, "releaseBranch");
+    }
+
+    @Test
+    public void testExecuteReleaseFinishWithUpstreamPropertyInBatchMode() throws Exception {
+        // set up
+        final String USED_RELEASE_BRANCH = WithUpstreamConstants.EXISTING_RELEASE_BRANCH;
+        final String USED_RELEASE_TAG = "gitflow-tests-" + WithUpstreamConstants.EXISTING_RELEASE_VERSION;
+        git.switchToBranch(repositorySet, USED_RELEASE_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("version.upstream", NEW_UPSTREAM_VERSION);
+        // test
+        executeMojoInBatchMode(GOAL_RELEASE_FINISH, userProperties);
+        // verify
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, USED_RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, USED_RELEASE_BRANCH);
+        git.assertLocalTags(repositorySet, USED_RELEASE_TAG);
+        git.assertRemoteTags(repositorySet, USED_RELEASE_TAG);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
+                GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_SET_VERSION_FOR_RELEASE);
+
+        assertVersions(WithUpstreamConstants.EXISTING_RELEASE_NEW_DEVELOPMENT_VERSION, NEW_UPSTREAM_VERSION);
+
+        git.assertBranchLocalConfigValueMissing(repositorySet, USED_RELEASE_BRANCH, "releaseTag");
+        git.assertBranchLocalConfigValueMissing(repositorySet, USED_RELEASE_BRANCH, "releaseCommit");
+        git.assertBranchLocalConfigValueMissing(repositorySet, USED_RELEASE_BRANCH, "nextSnapshotVersion");
+        git.assertBranchLocalConfigValueMissing(repositorySet, USED_RELEASE_BRANCH, "releaseBranch");
+    }
+
+    @Test
+    public void testExecuteReleaseFinishWithoutUpstreamPropertyInBatchMode() throws Exception {
+        // set up
+        final String USED_RELEASE_BRANCH = WithUpstreamConstants.EXISTING_RELEASE_BRANCH;
+        final String USED_RELEASE_TAG = "gitflow-tests-" + WithUpstreamConstants.EXISTING_RELEASE_VERSION;
+        git.switchToBranch(repositorySet, USED_RELEASE_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
+        // test
+        executeMojoInBatchMode(GOAL_RELEASE_FINISH);
+        // verify
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, USED_RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, USED_RELEASE_BRANCH);
+        git.assertLocalTags(repositorySet, USED_RELEASE_TAG);
+        git.assertRemoteTags(repositorySet, USED_RELEASE_TAG);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
+                GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_SET_VERSION_FOR_RELEASE);
+
+        assertVersions(WithUpstreamConstants.EXISTING_RELEASE_NEW_DEVELOPMENT_VERSION, EXPECTED_UPSTREAM_VERSION);
+
+        git.assertBranchLocalConfigValueMissing(repositorySet, USED_RELEASE_BRANCH, "releaseTag");
+        git.assertBranchLocalConfigValueMissing(repositorySet, USED_RELEASE_BRANCH, "releaseCommit");
+        git.assertBranchLocalConfigValueMissing(repositorySet, USED_RELEASE_BRANCH, "nextSnapshotVersion");
+        git.assertBranchLocalConfigValueMissing(repositorySet, USED_RELEASE_BRANCH, "releaseBranch");
+    }
+
+    @Test
+    public void testExecuteReleaseWithUpstreamProperty() throws Exception {
+        // set up
+        when(promptControllerMock.prompt(PROMPT_RELEASE_VERSION, CALCULATED_RELEASE_VERSION))
+                .thenReturn(RELEASE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_NEXT_DEVELOPMENT_VERSION, CALCULATED_NEW_DEVELOPMENT_VERSION))
+                .thenReturn(OTHER_DEVELOPMENT_VERSION);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("keepBranch", "true");
+        userProperties.setProperty("version.upstream", NEW_UPSTREAM_VERSION);
+        // test
+        executeMojoInteractive(GOAL_RELEASE, userProperties);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_RELEASE_VERSION, CALCULATED_RELEASE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_NEXT_DEVELOPMENT_VERSION, CALCULATED_NEW_DEVELOPMENT_VERSION);
+        verifyNoMoreInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
+        git.assertLocalTags(repositorySet, RELEASE_TAG);
+        git.assertRemoteTags(repositorySet, RELEASE_TAG);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
+                COMMIT_MESSAGE_SET_VERSION_FOR_RELEASE);
+
+        git.assertBranchLocalConfigValueMissing(repositorySet, RELEASE_BRANCH, "releaseTag");
+        git.assertBranchLocalConfigValueMissing(repositorySet, RELEASE_BRANCH, "releaseCommit");
+        git.assertBranchLocalConfigValueMissing(repositorySet, RELEASE_BRANCH, "nextSnapshotVersion");
+        git.assertBranchLocalConfigValueMissing(repositorySet, RELEASE_BRANCH, "releaseBranch");
+
+        assertVersions(OTHER_DEVELOPMENT_VERSION, NEW_UPSTREAM_VERSION);
+        git.switchToBranch(repositorySet, RELEASE_BRANCH);
+        assertVersions(RELEASE_VERSION, EXPECTED_UPSTREAM_VERSION);
+    }
+
+    @Test
+    public void testExecuteReleaseWithUpstreamPropertyAndProcessAdditionalVersionCommandsTrue() throws Exception {
+        // set up
+        when(promptControllerMock.prompt(PROMPT_RELEASE_VERSION, CALCULATED_RELEASE_VERSION))
+                .thenReturn(RELEASE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_NEXT_DEVELOPMENT_VERSION, CALCULATED_NEW_DEVELOPMENT_VERSION))
+                .thenReturn(OTHER_DEVELOPMENT_VERSION);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("keepBranch", "true");
+        userProperties.setProperty("version.upstream", NEW_UPSTREAM_VERSION);
+        userProperties.setProperty("flow.processAdditionalVersionCommands", "true");
+        // test
+        executeMojoInteractive(GOAL_RELEASE, userProperties);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_RELEASE_VERSION, CALCULATED_RELEASE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_NEXT_DEVELOPMENT_VERSION, CALCULATED_NEW_DEVELOPMENT_VERSION);
+        verifyNoMoreInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
+        git.assertLocalTags(repositorySet, RELEASE_TAG);
+        git.assertRemoteTags(repositorySet, RELEASE_TAG);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
+                COMMIT_MESSAGE_SET_VERSION_FOR_RELEASE);
+
+        git.assertBranchLocalConfigValueMissing(repositorySet, RELEASE_BRANCH, "releaseTag");
+        git.assertBranchLocalConfigValueMissing(repositorySet, RELEASE_BRANCH, "releaseCommit");
+        git.assertBranchLocalConfigValueMissing(repositorySet, RELEASE_BRANCH, "nextSnapshotVersion");
+        git.assertBranchLocalConfigValueMissing(repositorySet, RELEASE_BRANCH, "releaseBranch");
+
+        assertVersions(OTHER_DEVELOPMENT_VERSION, NEW_UPSTREAM_VERSION);
+        git.switchToBranch(repositorySet, RELEASE_BRANCH);
+        assertVersions(RELEASE_VERSION, NEW_UPSTREAM_VERSION);
+    }
+
+    @Test
+    public void testExecuteReleaseWithoutUpstreamPropertyAndProcessAdditionalVersionCommandsTrue() throws Exception {
+        // set up
+        when(promptControllerMock.prompt(PROMPT_RELEASE_VERSION, CALCULATED_RELEASE_VERSION))
+                .thenReturn(RELEASE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_UPSTREAM_VERSION_ON_RELEASE_START_BRANCH, EXPECTED_UPSTREAM_VERSION))
+                .thenReturn(NEW_UPSTREAM_VERSION);
+        when(promptControllerMock.prompt(PROMPT_NEXT_DEVELOPMENT_VERSION, CALCULATED_NEW_DEVELOPMENT_VERSION))
+                .thenReturn(OTHER_DEVELOPMENT_VERSION);
+        when(promptControllerMock.prompt(eq(PROMPT_UPSTREAM_VERSION_ON_RELEASE_FINISH_BRANCH), anyString()))
+                .thenReturn(OTHER_UPSTREAM_VERSION);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("keepBranch", "true");
+        userProperties.setProperty("flow.processAdditionalVersionCommands", "true");
+        // test
+        executeMojoInteractive(GOAL_RELEASE, userProperties);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_RELEASE_VERSION, CALCULATED_RELEASE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_UPSTREAM_VERSION_ON_RELEASE_START_BRANCH, EXPECTED_UPSTREAM_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_NEXT_DEVELOPMENT_VERSION, CALCULATED_NEW_DEVELOPMENT_VERSION);
+        verify(promptControllerMock).prompt(eq(PROMPT_UPSTREAM_VERSION_ON_RELEASE_FINISH_BRANCH), anyString());
+        verifyNoMoreInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
+        git.assertLocalTags(repositorySet, RELEASE_TAG);
+        git.assertRemoteTags(repositorySet, RELEASE_TAG);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
+                COMMIT_MESSAGE_SET_VERSION_FOR_RELEASE);
+
+        git.assertBranchLocalConfigValueMissing(repositorySet, RELEASE_BRANCH, "releaseTag");
+        git.assertBranchLocalConfigValueMissing(repositorySet, RELEASE_BRANCH, "releaseCommit");
+        git.assertBranchLocalConfigValueMissing(repositorySet, RELEASE_BRANCH, "nextSnapshotVersion");
+        git.assertBranchLocalConfigValueMissing(repositorySet, RELEASE_BRANCH, "releaseBranch");
+
+        assertVersions(OTHER_DEVELOPMENT_VERSION, OTHER_UPSTREAM_VERSION);
+        git.switchToBranch(repositorySet, RELEASE_BRANCH);
+        assertVersions(RELEASE_VERSION, NEW_UPSTREAM_VERSION);
+    }
+
+    @Test
+    public void testExecuteReleaseWithUpstreamPropertyInBatchMode() throws Exception {
+        // set up
+        Properties userProperties = new Properties();
+        userProperties.setProperty("keepBranch", "true");
+        userProperties.setProperty("releaseVersion", RELEASE_VERSION);
+        userProperties.setProperty("version.upstream", NEW_UPSTREAM_VERSION);
+        // test
+        executeMojoInBatchMode(GOAL_RELEASE, userProperties);
+        // verify
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
+        git.assertLocalTags(repositorySet, RELEASE_TAG);
+        git.assertRemoteTags(repositorySet, RELEASE_TAG);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
+                COMMIT_MESSAGE_SET_VERSION_FOR_RELEASE);
+
+        git.assertBranchLocalConfigValueMissing(repositorySet, RELEASE_BRANCH, "releaseTag");
+        git.assertBranchLocalConfigValueMissing(repositorySet, RELEASE_BRANCH, "releaseCommit");
+        git.assertBranchLocalConfigValueMissing(repositorySet, RELEASE_BRANCH, "nextSnapshotVersion");
+        git.assertBranchLocalConfigValueMissing(repositorySet, RELEASE_BRANCH, "releaseBranch");
+
+        assertVersions(CALCULATED_NEW_DEVELOPMENT_VERSION, NEW_UPSTREAM_VERSION);
+        git.switchToBranch(repositorySet, RELEASE_BRANCH);
+        assertVersions(RELEASE_VERSION, EXPECTED_UPSTREAM_VERSION);
+    }
+
+    @Test
+    public void testExecuteReleaseWithUpstreamPropertyAndProcessAdditionalVersionCommandsTrueInBatchMode()
+            throws Exception {
+        // set up
+        Properties userProperties = new Properties();
+        userProperties.setProperty("keepBranch", "true");
+        userProperties.setProperty("releaseVersion", RELEASE_VERSION);
+        userProperties.setProperty("version.upstream", NEW_UPSTREAM_VERSION);
+        userProperties.setProperty("flow.processAdditionalVersionCommands", "true");
+        // test
+        executeMojoInBatchMode(GOAL_RELEASE, userProperties);
+        // verify
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
+        git.assertLocalTags(repositorySet, RELEASE_TAG);
+        git.assertRemoteTags(repositorySet, RELEASE_TAG);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
+                COMMIT_MESSAGE_SET_VERSION_FOR_RELEASE);
+
+        git.assertBranchLocalConfigValueMissing(repositorySet, RELEASE_BRANCH, "releaseTag");
+        git.assertBranchLocalConfigValueMissing(repositorySet, RELEASE_BRANCH, "releaseCommit");
+        git.assertBranchLocalConfigValueMissing(repositorySet, RELEASE_BRANCH, "nextSnapshotVersion");
+        git.assertBranchLocalConfigValueMissing(repositorySet, RELEASE_BRANCH, "releaseBranch");
+
+        assertVersions(CALCULATED_NEW_DEVELOPMENT_VERSION, NEW_UPSTREAM_VERSION);
+        git.switchToBranch(repositorySet, RELEASE_BRANCH);
+        assertVersions(RELEASE_VERSION, NEW_UPSTREAM_VERSION);
+    }
+
+    @Test
+    public void testExecuteReleaseWithoutUpstreamPropertyAndProcessAdditionalVersionCommandsTrueInBatchMode()
+            throws Exception {
+        // set up
+        Properties userProperties = new Properties();
+        userProperties.setProperty("keepBranch", "true");
+        userProperties.setProperty("releaseVersion", RELEASE_VERSION);
+        userProperties.setProperty("flow.processAdditionalVersionCommands", "true");
+        // test
+        executeMojoInBatchMode(GOAL_RELEASE, userProperties);
+        // verify
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
+        git.assertLocalTags(repositorySet, RELEASE_TAG);
+        git.assertRemoteTags(repositorySet, RELEASE_TAG);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
+                COMMIT_MESSAGE_SET_VERSION_FOR_RELEASE);
+
+        git.assertBranchLocalConfigValueMissing(repositorySet, RELEASE_BRANCH, "releaseTag");
+        git.assertBranchLocalConfigValueMissing(repositorySet, RELEASE_BRANCH, "releaseCommit");
+        git.assertBranchLocalConfigValueMissing(repositorySet, RELEASE_BRANCH, "nextSnapshotVersion");
+        git.assertBranchLocalConfigValueMissing(repositorySet, RELEASE_BRANCH, "releaseBranch");
+
+        assertVersions(CALCULATED_NEW_DEVELOPMENT_VERSION, EXPECTED_UPSTREAM_VERSION);
+        git.switchToBranch(repositorySet, RELEASE_BRANCH);
+        assertVersions(RELEASE_VERSION, EXPECTED_UPSTREAM_VERSION);
     }
 
 }

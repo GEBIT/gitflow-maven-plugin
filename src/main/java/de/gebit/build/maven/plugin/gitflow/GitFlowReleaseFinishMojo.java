@@ -196,6 +196,12 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
     }
 
     @Override
+    protected boolean isProcessAdditionalVersionCommands() {
+        throw new IllegalStateException(
+                "release-finish does not process additional version commands for release version.");
+    }
+
+    @Override
     protected String getCurrentGoal() {
         return "release-finish";
     }

@@ -149,6 +149,17 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
     @Parameter(property = "sameBranchName", defaultValue = "false")
     private boolean sameBranchName = false;
 
+    /**
+     * Wheahter to process additional version commands after setting version for
+     * release. After setting of next development version additional version
+     * commands will be processed always independent of this property. The
+     * default is <code>false</code>.
+     *
+     * @since 2.0.1
+     */
+    @Parameter(property = "processAdditionalVersionCommands", required = false)
+    private boolean processAdditionalVersionCommands;
+
     @Override
     protected boolean isSkipTestProject() {
         return skipTestProject;
@@ -223,6 +234,11 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
     @Override
     protected boolean isInstallProject() {
         return false;
+    }
+
+    @Override
+    protected boolean isProcessAdditionalVersionCommands() {
+        return processAdditionalVersionCommands;
     }
 
     @Override

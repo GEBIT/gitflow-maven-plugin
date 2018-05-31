@@ -93,6 +93,11 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
     protected abstract String getDevelopmentVersion();
 
     /**
+     * The mojo provides this flag from a configuration property.
+     */
+    protected abstract boolean isProcessAdditionalVersionCommands();
+
+    /**
      * The name of maven goal that is being executed currently.
      */
     protected abstract String getCurrentGoal();
@@ -229,7 +234,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         }
 
         if (!version.equals(currentVersion)) {
-            mvnSetVersions(version);
+            mvnSetVersions(version, isProcessAdditionalVersionCommands() ? "On release branch: " : null);
             gitCommit(commitMessages.getReleaseStartMessage());
         }
 

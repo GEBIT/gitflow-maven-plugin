@@ -14,8 +14,6 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.Properties;
 
 import org.apache.commons.lang3.StringUtils;
@@ -135,15 +133,10 @@ public class TestProjects {
     }
 
     public static synchronized void prepareRepositoryIfNotExisting(File gitRepoDir) throws Exception {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
-        LOG.info("create shared repositories if not exist - (" + dateFormat.format(new Date()) + ")");
         if (!gitRepoDir.exists()) {
             gitRepoDir.mkdirs();
             prepareRepository(gitRepoDir, BASIC);
             prepareRepository(gitRepoDir, WITH_UPSTREAM);
-            LOG.info("shared repositories created - (" + dateFormat.format(new Date()) + ")");
-        } else {
-            LOG.info("shared repositories already exist - (" + dateFormat.format(new Date()) + ")");
         }
     }
 
@@ -364,11 +357,17 @@ public class TestProjects {
 
     private static void initUpstreamVersionRepository(GitExecution git, RepositorySet repositorySet,
             MyTestCase testCase) throws Exception {
+        // features
         executeFeatureStart(testCase, repositorySet, WithUpstreamConstants.FEATURE_NAME,
                 WithUpstreamConstants.EXPECTED_UPSTREAM_VERSION, WithUpstreamConstants.NEW_UPSTREAM_VERSION);
         git.switchToBranch(repositorySet, "master");
         executeFeatureStartWithoutVersionChange(testCase, repositorySet,
                 WithUpstreamConstants.FEATURE_WITHOUT_VERSION_NAME);
+        git.switchToBranch(repositorySet, "master");
+        // release
+        ExecutorHelper.executeReleaseStart(testCase, repositorySet, WithUpstreamConstants.EXISTING_RELEASE_VERSION,
+                WITH_UPSTREAM.releaseVersion);
+        git.switchToBranch(repositorySet, "master");
 
         // finalize: empty dummy branch for initail checkout (to avoid CR-LF
         // conflicts)
@@ -816,6 +815,11 @@ public class TestProjects {
 
         public static final String EXPECTED_UPSTREAM_VERSION = "1.0.0";
         public static final String NEW_UPSTREAM_VERSION = "2.0.0";
+
+        // release
+        public static final String EXISTING_RELEASE_VERSION = "50.1.0";
+        public static final String EXISTING_RELEASE_NEW_DEVELOPMENT_VERSION = "50.1.1-SNAPSHOT";
+        public static final String EXISTING_RELEASE_BRANCH = "release/gitflow-tests-" + EXISTING_RELEASE_VERSION;
     }
 
 }
