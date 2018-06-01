@@ -3,5 +3,5 @@ baseVersion = 2.0.1-SNAPSHOT
 branchType = feature
 issueNumber = GBLD-367
 baseBranch = master
-versionChangeCommit = f45e6cb665a8ee328dee1905af929615b9cb73a7
+versionChangeCommit = 6b1afc2ccf3d0515958aa36c927ae761f46dff6a
 JOB_BUILD = true
