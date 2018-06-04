@@ -46,7 +46,6 @@ import org.apache.maven.model.building.ModelProcessor;
 import org.apache.maven.model.io.ModelParseException;
 import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugin.MojoFailureException;
 import org.codehaus.plexus.ContainerConfiguration;
 import org.codehaus.plexus.DefaultContainerConfiguration;
 import org.codehaus.plexus.DefaultPlexusContainer;
@@ -99,6 +98,10 @@ public abstract class AbstractGitFlowMojoTestCase {
 
     private static final String COMMAND_LINE_EXCEPTION_MESSAGE_PATTERN = "Working directory \"{0}\" does not exist!";
 
+    private static final String GITFLOW_FAULURE_EXCEPTION_HEADER = "\n\n############################ Gitflow problem ###########################\n";
+
+    private static final String GITFLOW_FAULURE_EXCEPTION_FOOTER = "\n########################################################################\n";
+
     private PlexusContainer container;
 
     private ControllablePrompter prompter;
@@ -115,7 +118,6 @@ public abstract class AbstractGitFlowMojoTestCase {
 
     @Mock
     protected Prompter promptControllerMock;
-
 
     @Before
     public void setUpAbstractGitFlowMojoTestCase() throws Exception {
@@ -974,46 +976,33 @@ public abstract class AbstractGitFlowMojoTestCase {
 
     private void assertExceptionMessage(Throwable exception, String expectedExceptionMessage, boolean regex) {
         if (expectedExceptionMessage != null) {
+            String exceptionMessage = trimGitFlowFailureExceptionMessage(exception.getMessage());
             if (regex) {
                 assertTrue(
                         "maven execution exception message doesn't matches expected pattern.\nPattern: "
-                                + expectedExceptionMessage + "\nMessage: " + exception.getMessage(),
+                                + expectedExceptionMessage + "\nMessage: " + exceptionMessage,
                         Pattern.compile(expectedExceptionMessage, Pattern.MULTILINE | Pattern.DOTALL)
-                                .matcher(exception.getMessage()).matches());
+                                .matcher(exceptionMessage).matches());
             } else {
                 assertEquals("unexpected maven execution exception message", expectedExceptionMessage,
-                        exception.getMessage());
+                        exceptionMessage);
             }
         }
     }
 
-    /**
-     * Asserts that the passed maven execution result consists of failure
-     * exception with passed message.
-     *
-     * @param mavenExecutionResult
-     *            the maven execution result to be tested
-     * @param expectedMessage
-     *            the expected message of failure exception or <code>null</code>
-     *            if exception message shouldn't be checked
-     */
-    protected void assertMavenFailureException(MavenExecutionResult mavenExecutionResult, String expectedMessage) {
-        assertExceptionOnMavenExecution(mavenExecutionResult, MojoFailureException.class, expectedMessage, false);
-    }
-
-    /**
-     * Asserts that the passed maven execution result consists of failure
-     * exception with message that matches the passed pattern.
-     *
-     * @param mavenExecutionResult
-     *            the maven execution result to be tested
-     * @param expectedMessagePattern
-     *            the pattern of expected message of failure exception or
-     *            <code>null</code> if exception message shouldn't be checked
-     */
-    protected void assertMavenFailureExceptionRegEx(MavenExecutionResult mavenExecutionResult,
-            String expectedMessagePattern) {
-        assertExceptionOnMavenExecution(mavenExecutionResult, MojoFailureException.class, expectedMessagePattern, true);
+    private String trimGitFlowFailureExceptionMessage(String aMessage) {
+        String message = aMessage;
+        if (message != null) {
+            if (message.startsWith(GITFLOW_FAULURE_EXCEPTION_HEADER)) {
+                message = message.substring(GITFLOW_FAULURE_EXCEPTION_HEADER.length());
+            }
+            if (message.endsWith(GITFLOW_FAULURE_EXCEPTION_FOOTER)) {
+                int pos = message.lastIndexOf("\n", message.length() - GITFLOW_FAULURE_EXCEPTION_FOOTER.length() - 1)
+                        - 1;
+                message = message.substring(0, pos);
+            }
+        }
+        return message;
     }
 
     /**
@@ -1028,21 +1017,6 @@ public abstract class AbstractGitFlowMojoTestCase {
      */
     protected void assertMavenExecutionException(MavenExecutionResult mavenExecutionResult, String expectedMessage) {
         assertExceptionOnMavenExecution(mavenExecutionResult, MojoExecutionException.class, expectedMessage, false);
-    }
-
-    /**
-     * Asserts that the passed maven execution result consists of failure
-     * exception with message that matches the passed pattern.
-     *
-     * @param mavenExecutionResult
-     *            the maven execution result to be tested
-     * @param expectedMessage
-     *            the pattern of expected message of failure exception or
-     *            <code>null</code> if exception message shouldn't be checked
-     */
-    protected void assertMavenExecutionExceptionRegEx(MavenExecutionResult mavenExecutionResult,
-            String expectedMessage) {
-        assertExceptionOnMavenExecution(mavenExecutionResult, MojoExecutionException.class, expectedMessage, true);
     }
 
     protected void assertGitFlowFailureException(MavenExecutionResult mavenExecutionResult, String expectedProblem,
@@ -1075,8 +1049,6 @@ public abstract class AbstractGitFlowMojoTestCase {
                 message.append(stepsToContinue[i]);
             }
         }
-        message.insert(0, "\n\n############################ Gitflow problem ###########################\n");
-        message.append("\n########################################################################\n");
         return message.toString();
     }
 

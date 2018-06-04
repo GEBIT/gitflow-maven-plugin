@@ -75,7 +75,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
     protected String featureName;
 
     /**
-     * Whether to configure automatical Jenkins job creation.
+     * Whether to configure automatic Jenkins job creation.
      *
      * @since 2.0.1
      */
@@ -85,7 +85,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
-        getLog().info("Starting feature start process.");
+        getMavenLog().info("Starting feature start process");
         initGitFlowConfig();
 
         checkCentralBranchConfig();
@@ -118,8 +118,10 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
                     }
                 }
             }
-            getLog().info("Base branch for new feature: " + baseBranch);
+            getMavenLog().info("Base branch for new feature is '" + baseBranch + "'");
             String originalBaseBranch = baseBranch;
+
+            getMavenLog().info("Checking if base branch is up to date");
 
             // use integration branch?
             String integrationBranch = gitFlowConfig.getIntegrationBranchPrefix() + baseBranch;
@@ -144,7 +146,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
                                 " Please consult a gitflow expert on how to fix this!");
                     }
 
-                    getLog().info(
+                    getMavenLog().info(
                             "Using integration branch '" + integrationBranch + "' as start point for new feature.");
                     baseBranch = integrationBranch;
                 }
@@ -202,13 +204,14 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
             String featureStartMessage = substituteWithIssueNumber(commitMessages.getFeatureStartMessage(),
                     featureIssue);
 
+            getMavenLog().info("Creating feature branch '" + featureBranchName + "'");
             gitCreateAndCheckout(featureBranchName, baseBranch);
 
             String currentVersion = getCurrentProjectVersion();
             String baseVersion = currentVersion;
             String versionChangeCommit = null;
             if (!skipFeatureVersion && !tychoBuild) {
-                getLog().info("Creating project version for feature.");
+                getMavenLog().info("Setting new version for project on feature branch");
                 String version = currentVersion;
                 getLog().info("Base project version: " + version);
                 if (isEpicBranch(baseBranch)) {
@@ -222,9 +225,10 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
                     mvnSetVersions(version, "On feature branch: ");
                     gitCommit(featureStartMessage);
                     versionChangeCommit = getCurrentCommit();
+                    getMavenLog().info("New project version on feature branch is '" + version + "'");
                 } else {
-                    getLog().info(
-                            "Project version for feature is same as base project version. Version update not needed.");
+                    getMavenLog().info(
+                            "Project version for feature is same as base project version. Version update not needed");
                 }
             }
 
@@ -244,6 +248,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
         }
 
         if (installProject) {
+            getMavenLog().info("Cleaning and installing feature project...");
             try {
                 mvnCleanInstall();
             } catch (MojoFailureException e) {
@@ -257,10 +262,12 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
         gitRemoveBranchLocalConfig(featureBranchName, "breakpoint");
 
         if (pushRemote) {
+            getMavenLog().info("Pushing feature branch to remote repository");
             gitPush(featureBranchName, false, false, true);
         }
 
         if (jobBuild) {
+            getMavenLog().info("Configuring automatic Jenkins job creation");
             try {
                 gitSetBranchCentralConfig(featureBranchName, "JOB_BUILD", "true");
             } catch (Exception exc) {
@@ -268,8 +275,8 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
             }
         }
 
-        getLog().info("Feature for issue '" + featureIssue + "' started on branch '" + featureBranchName + "'.");
-        getLog().info("Feature start process finished.");
+        getMavenLog().info("Feature for issue '" + featureIssue + "' started on branch '" + featureBranchName + "'");
+        getMavenLog().info("Feature start process finished");
     }
 
     private String removeEpicIssueFromVersion(String version, String epicBranch)

@@ -11,6 +11,8 @@ package de.gebit.build.maven.plugin.gitflow;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.text.MessageFormat;
@@ -18,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -26,6 +29,13 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.Callable;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.FileHandler;
+import java.util.logging.Formatter;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -50,6 +60,7 @@ import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.AbstractMojoExecutionException;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
@@ -305,6 +316,14 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
     private boolean alreadyFetched = false;
 
+    private LogWrapper logWrapper;
+
+    private LogWrapper mavenLog;
+
+    private Logger extLog;
+
+    private File tempLogFile;
+
     /**
      * Initializes command line executables.
      */
@@ -333,14 +352,39 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     public final void execute() throws MojoExecutionException, MojoFailureException {
         try {
             executeGoal();
+            copyLogFile();
         } catch (CommandLineException e) {
             String message = "External command execution failed with error:\n" + e.getMessage()
                     + "\n\nPlease report the error in the GBLD JIRA.";
-            throw new MojoExecutionException(getExceptionMessagePrefix() + message + getExceptionMessageSuffix(), e);
+            getLog().info(getExceptionMessagePrefix(false) + message + getExceptionMessageSuffix(false, null));
+            throw new MojoExecutionException(getExceptionMessagePrefix(isTerminalColorEnabled()) + message
+                    + getExceptionMessageSuffix(isTerminalColorEnabled(), copyLogFile()), e);
         } catch (MojoExecutionException | MojoFailureException e) {
-            decorateExceptionMessage(e);
+            String message = e.getMessage();
+            if (message == null) {
+                message = e.getLongMessage();
+            }
+            getLog().info(getExceptionMessagePrefix(false) + message + getExceptionMessageSuffix(false, null));
+            decorateExceptionMessage(e, isTerminalColorEnabled(), copyLogFile());
             throw e;
         }
+    }
+
+    private File copyLogFile() {
+        if (tempLogFile != null && tempLogFile.exists()) {
+            String targetDir = project.getModel().getBuild().getDirectory();
+            File logFile = new File(targetDir, "gitflow.log");
+            if (!logFile.getParentFile().exists()) {
+                logFile.getParentFile().mkdirs();
+            }
+            try {
+                FileUtils.copyFile(tempLogFile, logFile);
+                return logFile;
+            } catch (IOException exc) {
+                exc.printStackTrace();
+            }
+        }
+        return null;
     }
 
     /**
@@ -441,18 +485,19 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         return false;
     }
 
-    protected void decorateExceptionMessage(AbstractMojoExecutionException e) {
+    protected void decorateExceptionMessage(AbstractMojoExecutionException e, boolean isTerminalColorEnabled,
+            File logFile) {
         String message = e.getMessage();
         String longMessage = e.getLongMessage();
         if (message != null) {
-            message = getExceptionMessagePrefix() + message;
+            message = getExceptionMessagePrefix(isTerminalColorEnabled) + message;
         } else if (longMessage != null) {
-            longMessage = getExceptionMessagePrefix() + longMessage;
+            longMessage = getExceptionMessagePrefix(isTerminalColorEnabled) + longMessage;
         }
         if (longMessage != null) {
-            longMessage += getExceptionMessageSuffix();
+            longMessage += getExceptionMessageSuffix(isTerminalColorEnabled, logFile);
         } else if (message != null) {
-            message += getExceptionMessageSuffix();
+            message += getExceptionMessageSuffix(isTerminalColorEnabled, logFile);
         }
         try {
             if (message != null) {
@@ -469,20 +514,25 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         }
     }
 
-    private String getExceptionMessagePrefix() {
-        if (isTerminalColorEnabled()) {
+    private String getExceptionMessagePrefix(boolean isTerminalColorEnabled) {
+        if (isTerminalColorEnabled) {
             return "\n\n\u001B[33m############################ Gitflow problem ###########################\u001B\u005Bm\n";
         } else {
             return "\n\n############################ Gitflow problem ###########################\n";
         }
     }
 
-    private String getExceptionMessageSuffix() {
-        if (isTerminalColorEnabled()) {
-            return "\n\u001B[33m########################################################################\u001B\u005Bm\n";
-        } else {
-            return "\n########################################################################\n";
+    private String getExceptionMessageSuffix(boolean isTerminalColorEnabled, File logFile) {
+        String output = "";
+        if (logFile != null) {
+            output += "\n\nFor more information see the gitflow log file: " + logFile.getAbsolutePath();
         }
+        if (isTerminalColorEnabled) {
+            output += "\n\u001B[33m########################################################################\u001B\u005Bm\n";
+        } else {
+            output += "\n########################################################################\n";
+        }
+        return output;
     }
 
     /**
@@ -2553,7 +2603,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Continue rebase using <code>git rebase --continue</code> or <code>git rebase --skip</code>.
+     * Continue rebase using <code>git rebase --continue</code> or
+     * <code>git rebase --skip</code>.
      *
      * @throws MojoFailureException
      * @throws CommandLineException
@@ -2578,7 +2629,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Continue rebase by skipping the current patch using <code>git rebase --skip</code>.
+     * Continue rebase by skipping the current patch using
+     * <code>git rebase --skip</code>.
      *
      * @throws MojoFailureException
      * @throws CommandLineException
@@ -3224,14 +3276,14 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             @Override
             public void consumeLine(String line) {
                 out.consumeLine(line);
-                System.out.println(line);
+                getLog().info(line);
             }
         }, new StreamConsumer() {
 
             @Override
             public void consumeLine(String line) {
                 err.consumeLine(line);
-                System.err.println(line);
+                getLog().info(line);
             }
         });
 
@@ -3532,6 +3584,58 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         return !gitFlowConfig.isNoProduction() && !developmentBranch.equals(productionBranch);
     }
 
+    @Override
+    public Log getLog() {
+        if (logWrapper == null) {
+            logWrapper = new LogWrapper(false);
+        }
+        return logWrapper;
+    }
+
+    public Log getMavenLog() {
+        if (mavenLog == null) {
+            mavenLog = new LogWrapper(true);
+        }
+        return mavenLog;
+    }
+
+    private Logger getExternalLog() {
+        if (extLog == null) {
+            extLog = Logger.getLogger(getClass().getName());
+            final Date date = new Date();
+            Handler logHandler;
+            try {
+                tempLogFile = File.createTempFile("gfl", null);
+                tempLogFile.deleteOnExit();
+                logHandler = new FileHandler(tempLogFile.getPath());
+            } catch (IOException exc) {
+                exc.printStackTrace();
+                logHandler = new ConsoleHandler();
+            }
+            logHandler.setFormatter(new Formatter() {
+
+                @Override
+                public String format(LogRecord record) {
+                    date.setTime(record.getMillis());
+                    String throwable = "";
+                    if (record.getThrown() != null) {
+                        StringWriter sw = new StringWriter();
+                        PrintWriter pw = new PrintWriter(sw);
+                        pw.println();
+                        record.getThrown().printStackTrace(pw);
+                        pw.close();
+                        throwable = sw.toString();
+                    }
+                    return String.format("%1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS.%1$tL - %2$-7s %3$s %4$s%n", date,
+                            record.getLevel().getName(), formatMessage(record), throwable);
+                }
+            });
+            extLog.addHandler(logHandler);
+            extLog.setUseParentHandlers(false);
+        }
+        return extLog;
+    }
+
     private static class CommandResult {
 
         private final int exitCode;
@@ -3566,5 +3670,119 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         public String getError() {
             return error;
         }
+    }
+
+    private class LogWrapper implements Log {
+
+        private boolean isMavenLog = false;
+
+        public LogWrapper(boolean aIsMavenLog) {
+            isMavenLog = aIsMavenLog;
+        }
+
+        @Override
+        public boolean isDebugEnabled() {
+            return AbstractGitFlowMojo.super.getLog().isDebugEnabled();
+        }
+
+        @Override
+        public void debug(CharSequence content) {
+            getExternalLog().log(Level.FINE, (String) content);
+            if (isMavenLog) {
+                AbstractGitFlowMojo.super.getLog().debug(content);
+            }
+        }
+
+        @Override
+        public void debug(CharSequence content, Throwable error) {
+            getExternalLog().log(Level.FINE, (String) content, error);
+            if (isMavenLog) {
+                AbstractGitFlowMojo.super.getLog().debug(content, error);
+            }
+        }
+
+        @Override
+        public void debug(Throwable error) {
+            getExternalLog().log(Level.FINE, "", error);
+            if (isMavenLog) {
+                AbstractGitFlowMojo.super.getLog().debug(error);
+            }
+        }
+
+        @Override
+        public boolean isInfoEnabled() {
+            return AbstractGitFlowMojo.super.getLog().isInfoEnabled();
+        }
+
+        @Override
+        public void info(CharSequence content) {
+            getExternalLog().log(Level.INFO, (String) content);
+            if (isMavenLog) {
+                AbstractGitFlowMojo.super.getLog().info(content);
+            }
+        }
+
+        @Override
+        public void info(CharSequence content, Throwable error) {
+            getExternalLog().log(Level.INFO, (String) content, error);
+            if (isMavenLog) {
+                AbstractGitFlowMojo.super.getLog().info(content, error);
+            }
+        }
+
+        @Override
+        public void info(Throwable error) {
+            getExternalLog().log(Level.INFO, "", error);
+            if (isMavenLog) {
+                AbstractGitFlowMojo.super.getLog().info(error);
+            }
+        }
+
+        @Override
+        public boolean isWarnEnabled() {
+            return AbstractGitFlowMojo.super.getLog().isWarnEnabled();
+        }
+
+        @Override
+        public void warn(CharSequence content) {
+            getExternalLog().log(Level.WARNING, (String) content);
+            AbstractGitFlowMojo.super.getLog().warn(content);
+        }
+
+        @Override
+        public void warn(CharSequence content, Throwable error) {
+            getExternalLog().log(Level.WARNING, (String) content, error);
+            AbstractGitFlowMojo.super.getLog().warn(content, error);
+        }
+
+        @Override
+        public void warn(Throwable error) {
+            getExternalLog().log(Level.WARNING, "", error);
+            AbstractGitFlowMojo.super.getLog().warn(error);
+        }
+
+        @Override
+        public boolean isErrorEnabled() {
+            return AbstractGitFlowMojo.super.getLog().isErrorEnabled();
+        }
+
+        @Override
+        public void error(CharSequence content) {
+            getExternalLog().log(Level.SEVERE, (String) content);
+            AbstractGitFlowMojo.super.getLog().error(content);
+        }
+
+        @Override
+        public void error(CharSequence content, Throwable error) {
+            getExternalLog().log(Level.SEVERE, (String) content, error);
+            AbstractGitFlowMojo.super.getLog().error(content, error);
+        }
+
+        @Override
+        public void error(Throwable error) {
+            getExternalLog().log(Level.SEVERE, "", error);
+            AbstractGitFlowMojo.super.getLog().error(error);
+        }
+
     }
 }
