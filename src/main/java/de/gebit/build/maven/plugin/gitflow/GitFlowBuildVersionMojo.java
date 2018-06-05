@@ -37,6 +37,7 @@ public class GitFlowBuildVersionMojo extends AbstractGitFlowMojo {
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
+        getMavenLog().info("Starting build version process");
         // set git flow configuration
         initGitFlowConfig();
 
@@ -78,7 +79,10 @@ public class GitFlowBuildVersionMojo extends AbstractGitFlowMojo {
                         "'mvn flow:build-version -DbuildVersion=XXX -B' to predefine build version",
                         "'mvn flow:build-version' to run in interactive mode"));
 
+        String version = buildVersionPrefix + buildVersion;
+        getMavenLog().info("Setting version '" + version + "' for project on current branch...");
         // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
-        mvnSetVersions(buildVersionPrefix + buildVersion, "");
+        mvnSetVersions(version, "");
+        getMavenLog().info("Build version process finished");
     }
 }

@@ -21,7 +21,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * Finish epic branch. Merge it into base branch and remove it.
  *
  * @author Volodymyr Medvid
- * @since 1.5.15
+ * @since 2.0.0
  */
 @Mojo(name = "epic-finish", aggregator = true)
 public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
@@ -45,7 +45,7 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
 
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
-        getLog().info("Starting feature finish process.");
+        getMavenLog().info("Starting epic finish process");
         checkCentralBranchConfig();
         String baseBranch;
         String epicBranchName = gitMergeFromEpicBranchInProcess();
@@ -94,6 +94,7 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
                                     "Rebase or merge the changes in local epic branch '{0}' first.", "'git rebase'"));
                 }
                 baseBranch = gitEpicBranchBaseBranch(epicBranchName);
+                getMavenLog().info("Base branch of epic branch is '" + baseBranch + "'");
                 gitEnsureLocalBranchIsUpToDateIfExists(baseBranch,
                         new GitFlowFailureInfo("Remote and local base branches '" + baseBranch + "' diverge.",
                                 "Rebase the changes in local branch '"
@@ -128,10 +129,12 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
                     }
                 }
                 if (!isOnEpicBranch) {
+                    getMavenLog().info("Switching to epic branch '" + epicBranchName + "'");
                     gitCheckout(epicBranchName);
                 }
 
                 if (!skipTestProject) {
+                    getMavenLog().info("Cleaning and verifying epic project before performing epic finish...");
                     mvnCleanVerify();
                 }
 
@@ -150,6 +153,7 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
                         String issueNumber = getEpicIssueNumber(epicBranchName);
                         String epicFinishMessage = substituteWithIssueNumber(commitMessages.getEpicFinishMessage(),
                                 issueNumber);
+                        getMavenLog().info("Setting base version '" + baseVersion + "' for project on epic branch...");
                         mvnSetVersions(baseVersion);
                         gitCommit(epicFinishMessage);
 
@@ -160,9 +164,12 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
                     }
                 }
 
+                getMavenLog().info("Merging (" + (allowFF ? "--ff" : "--no-ff") + ") epic branch '" + epicBranchName
+                        + "' into base branch '" + baseBranch + "'...");
                 try {
                     gitMerge(epicBranchName, !allowFF);
                 } catch (MojoFailureException ex) {
+                    getMavenLog().info("Epic finish process paused to resolve merge conflicts");
                     throw new GitFlowFailureException(ex,
                             "Automatic merge failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage()),
                             "Fix the merge conflicts and mark them as resolved. After that, run "
@@ -179,9 +186,11 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
                         true, true)) {
                     throw new GitFlowFailureException("Continuation of epic finish aborted by user.", null);
                 }
+                getMavenLog().info("Continue merging epic branch into base branch...");
                 try {
                     gitCommitMerge();
                 } catch (MojoFailureException exc) {
+                    getMavenLog().info("Epic finish process paused to resolve merge conflicts");
                     throw new GitFlowFailureException(exc,
                             "There are unresolved conflicts after merge.\nGit error message:\n"
                                     + StringUtils.trim(exc.getMessage()),
@@ -193,14 +202,17 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
                 baseBranch = gitCurrentBranch();
             }
         } else {
+            getMavenLog().info("Restart after failed clean and install of project on base branch detected");
             baseBranch = tmpBaseBranch;
             checkUncommittedChanges();
         }
 
         if (installProject) {
+            getMavenLog().info("Cleaning and installing project on base branch '" + baseBranch + "'...");
             try {
                 mvnCleanInstall();
             } catch (MojoFailureException e) {
+                getMavenLog().info("Epic finish process paused on failed clean and install to fix project problems");
                 gitSetBranchLocalConfig(baseBranch, "breakpoint", "epicFinish.cleanInstall");
                 gitSetBranchLocalConfig(baseBranch, "breakpointEpicBranch", epicBranchName);
                 throw new GitFlowFailureException(e,
@@ -214,19 +226,20 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
         gitRemoveBranchLocalConfig(baseBranch, "breakpointEpicBranch");
 
         if (!keepEpicBranch) {
-            getLog().info("Removing local epic branch.");
+            getMavenLog().info("Removing local epic branch '" + epicBranchName + "'");
             gitBranchDeleteForce(epicBranchName);
 
             if (pushRemote) {
-                getLog().info("Removing remote epic branch.");
+                getMavenLog().info("Removing remote epic branch '" + epicBranchName + "'");
                 gitBranchDeleteRemote(epicBranchName);
             }
         }
 
         if (pushRemote) {
+            getMavenLog().info("Pushing base branch '" + baseBranch + "' to remote repository");
             gitPush(baseBranch, false, false);
         }
-        getLog().info("Epic finish process finished.");
+        getMavenLog().info("Epic finish process finished");
     }
 
 }

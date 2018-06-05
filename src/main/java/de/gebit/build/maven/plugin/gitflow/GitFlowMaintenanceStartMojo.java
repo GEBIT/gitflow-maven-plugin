@@ -77,6 +77,7 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
+        getMavenLog().info("Starting maintenance start process");
         // set git flow configuration
         initGitFlowConfig();
 
@@ -130,6 +131,7 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
         }
 
         if (!baseName.equals(currentBranchOrCommit)) {
+            getMavenLog().info("Switching to base release tag '" + baseName + "'");
             gitCheckout(baseName);
         }
 
@@ -160,6 +162,7 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
                 }
             } catch (VersionParseException e) {
                 if (!baseName.equals(currentBranchOrCommit)) {
+                    getMavenLog().info("Switching back to origin branch/commit '" + currentBranchOrCommit + "'");
                     gitCheckout(currentBranchOrCommit);
                 }
                 throw new GitFlowFailureException(e,
@@ -173,6 +176,7 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
             }
         } else if (maintenanceVersion == null || firstMaintenanceVersion == null) {
             if (!baseName.equals(currentBranchOrCommit)) {
+                getMavenLog().info("Switching back to origin branch/commit '" + currentBranchOrCommit + "'");
                 gitCheckout(currentBranchOrCommit);
             }
             throw new GitFlowFailureException(
@@ -194,12 +198,13 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
                 "What is the first version on the maintenance branch?", "firstMaintenanceVersion", null,
                 firstMaintenanceVersion);
 
-        getLog().info("Using maintenanceVersion: " + branchVersion);
-        getLog().info("Using firstMaintenanceVersion: " + branchFirstVersion);
+        getMavenLog().info("Using maintenanceVersion: " + branchVersion);
+        getMavenLog().info("Using firstMaintenanceVersion: " + branchFirstVersion);
 
         String maintenanceBranch = gitFlowConfig.getMaintenanceBranchPrefix() + branchVersion;
         if (gitBranchExists(maintenanceBranch)) {
             if (!baseName.equals(currentBranchOrCommit)) {
+                getMavenLog().info("Switching back to origin branch/commit '" + currentBranchOrCommit + "'");
                 gitCheckout(currentBranchOrCommit);
             }
             throw new GitFlowFailureException(
@@ -211,6 +216,7 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
         }
         if (gitRemoteBranchExists(maintenanceBranch)) {
             if (!baseName.equals(currentBranchOrCommit)) {
+                getMavenLog().info("Switching back to origin branch/commit '" + currentBranchOrCommit + "'");
                 gitCheckout(currentBranchOrCommit);
             }
             throw new GitFlowFailureException(
@@ -222,28 +228,36 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
                     "'mvn flow:maintenance-start' to run again and specify another maintenance version");
         }
 
+        getMavenLog().info("Creating maintenance branch '" + maintenanceBranch + "' based on '" + baseName + "'");
         // git checkout -b maintenance/... master
         gitCreateAndCheckout(maintenanceBranch, baseName);
 
         if (!currentVersion.equals(branchFirstVersion)) {
+            getMavenLog()
+                    .info("Setting first version '" + branchFirstVersion + "' for project on maintenance branch...");
             mvnSetVersions(branchFirstVersion, "On maintenance branch: ");
             gitCommit(commitMessages.getMaintenanceStartMessage());
         }
 
         if (pushRemote) {
+            getMavenLog().info("Pushing maintenance branch '" + maintenanceBranch + "' to remote repository");
             gitPush(maintenanceBranch, false, false, true);
         }
 
         if (installProject) {
+            getMavenLog().info("Cleaning and installing maintenance project...");
             try {
                 mvnCleanInstall();
             } catch (MojoFailureException e) {
+                getMavenLog()
+                        .info("Maintenance start process finished with failed execution of clean and install project");
                 throw new GitFlowFailureException(e,
                         "Failed to execute 'mvn clean install' on the project on maintenance branch after maintenance "
                                 + "start.",
                         "Maintenance branch was created successfully. No further steps with gitflow are required.");
             }
         }
+        getMavenLog().info("Maintenance start process finished");
     }
 
     private String getTagForReleaseVersion(String aReleaseVersion, GitFlowFailureInfo tagNotExistsError)

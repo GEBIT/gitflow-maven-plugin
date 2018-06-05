@@ -26,7 +26,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * branches and they are starting points for feature branches.
  *
  * @author Volodymyr Medvid
- * @since 1.5.15
+ * @since 2.0.0
  */
 @Mojo(name = "epic-start", aggregator = true)
 public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
@@ -55,7 +55,7 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
 
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
-        getLog().info("Starting epic start process.");
+        getMavenLog().info("Starting epic start process");
         initGitFlowConfig();
 
         checkCentralBranchConfig();
@@ -86,7 +86,7 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
                     }
                 }
             }
-            getLog().info("Base branch for new epic: " + baseBranch);
+            getMavenLog().info("Base branch for new epic is '" + baseBranch + "'");
             String originalBaseBranch = baseBranch;
 
             // use integration branch?
@@ -112,7 +112,8 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
                                 " Please consult a gitflow expert on how to fix this!");
                     }
 
-                    getLog().info("Using integration branch '" + integrationBranch + "' as start point for new epic.");
+                    getMavenLog()
+                            .info("Using integration branch '" + integrationBranch + "' as start point for new epic.");
                     baseBranch = integrationBranch;
                 }
             }
@@ -163,6 +164,7 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
                         "'mvn flow:epic-start' to run again and specify another epic name");
             }
 
+            getMavenLog().info("Creating epic branch '" + epicBranchName + "'");
             gitCreateAndCheckout(epicBranchName, baseBranch);
 
             epicIssue = extractIssueNumberFromEpicName(epicName);
@@ -177,11 +179,12 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
                 String version = insertSuffixInVersion(currentVersion, epicIssue);
                 getLog().info("Added epic issue number to project version: " + version);
                 if (!currentVersion.equals(version)) {
+                    getMavenLog().info("Setting version '" + version + "' for project on epic branch...");
                     mvnSetVersions(version, "On epic branch: ");
                     gitCommit(epicStartMessage);
                     versionChangeCommit = getCurrentCommit();
                 } else {
-                    getLog().info(
+                    getMavenLog().info(
                             "Project version for epic is same as base project version. Version update not needed.");
                 }
             }
@@ -197,14 +200,17 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
             }
             gitApplyBranchCentralConfigChanges(branchConfigChanges, "epic '" + epicName + "' started");
         } else {
+            getMavenLog().info("Restart after failed clean and install of epic project detected");
             epicBranchName = currentBranch;
             epicIssue = gitGetBranchCentralConfig(epicBranchName, BranchConfigKeys.ISSUE_NUMBER);
         }
 
         if (installProject) {
+            getMavenLog().info("Cleaning and installing epic project...");
             try {
                 mvnCleanInstall();
             } catch (MojoFailureException e) {
+                getMavenLog().info("Epic start process paused on failed clean and install to fix project problems");
                 gitSetBranchLocalConfig(epicBranchName, "breakpoint", "epicStart.cleanInstall");
                 throw new GitFlowFailureException(e,
                         "Failed to execute 'mvn clean install' on the project on epic branch after epic start.",
@@ -215,10 +221,12 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
         gitRemoveBranchLocalConfig(epicBranchName, "breakpoint");
 
         if (pushRemote) {
+            getMavenLog().info("Pushing epic branch '" + epicBranchName + "' to remote repository");
             gitPush(epicBranchName, false, false, true);
         }
 
         if (jobBuild) {
+            getMavenLog().info("Configuring automatic Jenkins job creation");
             try {
                 gitSetBranchCentralConfig(epicBranchName, "JOB_BUILD", "true");
             } catch (Exception exc) {
@@ -226,8 +234,8 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
             }
         }
 
-        getLog().info("Epic for issue '" + epicIssue + "' started on branch '" + epicBranchName + "'.");
-        getLog().info("Epic start process finished.");
+        getMavenLog().info("Epic for issue '" + epicIssue + "' started on branch '" + epicBranchName + "'");
+        getMavenLog().info("Epic start process finished");
     }
 
     private boolean validateEpicName(String anEpicName) {

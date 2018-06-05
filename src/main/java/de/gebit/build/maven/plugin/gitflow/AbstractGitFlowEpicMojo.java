@@ -18,7 +18,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * Abstract implementation for all epic mojos.
  *
  * @author Volodymyr Medvid
- * @since 1.5.15
+ * @since 2.0.0
  */
 public abstract class AbstractGitFlowEpicMojo extends AbstractGitFlowMojo {
 

@@ -97,7 +97,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
-        getLog().info("Starting feature finish process.");
+        getMavenLog().info("Starting feature finish process");
         checkCentralBranchConfig();
 
         Breakpoint breakpoint = getBreakpoint();
@@ -106,7 +106,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
         for (Step step : steps) {
             stepParameters = step.execute(stepParameters);
         }
-        getLog().info("Feature finish process finished.");
+        getMavenLog().info("Feature finish process finished");
     }
 
     /**
@@ -211,6 +211,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
         String featureBranch = getFeatureBranchToFinish(currentBranch, isOnFeatureBranch, branches);
 
         String baseBranch = gitFeatureBranchBaseBranch(featureBranch);
+        getMavenLog().info("Base branch of feature branch is '" + baseBranch + "'");
 
         stepParameters.featureBranch = featureBranch;
         stepParameters.baseBranch = baseBranch;
@@ -270,6 +271,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
         }
 
         if (!tempStepParameters.isOnFeatureBranch) {
+            getMavenLog().info("Switching to feature branch '" + featureBranch + "'");
             gitCheckout(featureBranch);
         }
 
@@ -280,12 +282,14 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
             throws MojoFailureException, CommandLineException {
         String featureBranch = stepParameters.featureBranch;
         if (stepParameters.breakpoint != Breakpoint.REBASE_BEFORE_FINISH) {
+
             String baseBranch = stepParameters.baseBranch;
             if (stepParameters.isOnFeatureBranch == null) {
                 String currentBranch = gitCurrentBranch();
                 stepParameters.isOnFeatureBranch = (currentBranch.equals(featureBranch));
             }
             if (!stepParameters.isOnFeatureBranch) {
+                getMavenLog().info("Switching to feature branch '" + featureBranch + "'");
                 gitCheckout(featureBranch);
             }
             rebaseFeatureBranchOnTopOfBaseBranch(featureBranch, baseBranch);
@@ -304,8 +308,11 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
         if (updateWithMerge) {
             // merge development into feature
             try {
+                getMavenLog().info("Merging (--no-ff) base branch '" + baseBranch + "' into feature branch '"
+                        + featureBranch + "' before performing feature finish...");
                 gitMerge(baseBranch, true);
             } catch (MojoFailureException ex) {
+                getMavenLog().info("Feature finish process paused to resolve merge conflicts");
                 gitSetBranchLocalConfig(featureBranch, "breakpoint", Breakpoint.REBASE_BEFORE_FINISH.getId());
                 throw new GitFlowFailureException(ex,
                         "Automatic merge of base branch '" + baseBranch + "' into feature branch '" + featureBranch
@@ -318,6 +325,8 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
                         "'mvn flow:feature-rebase-abort' to abort feature finish process");
             }
         } else {
+            getMavenLog().info("Rebasing feature branch '" + featureBranch + "' on top of base branch '" + baseBranch
+                    + "' before performing feature finish...");
             // rebase feature on top of development
             String baseCommit = gitBranchPoint(baseBranch, featureBranch);
             String versionChangeCommitOnBranch = gitVersionChangeCommitOnFeatureBranch(featureBranch, baseCommit);
@@ -326,6 +335,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
                 try {
                     gitRebaseOnto(baseBranch, versionChangeCommitOnBranch, featureBranch);
                 } catch (MojoFailureException ex) {
+                    getMavenLog().info("Feature finish process paused to resolve rebase conflicts");
                     gitSetBranchLocalConfig(featureBranch, "breakpoint", Breakpoint.REBASE_BEFORE_FINISH.getId());
                     throw new GitFlowFailureException(ex,
                             "Automatic rebase of feature branch '" + featureBranch + "' on top of base branch '"
@@ -343,6 +353,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
                 try {
                     gitRebase(baseBranch);
                 } catch (MojoFailureException ex) {
+                    getMavenLog().info("Feature finish process paused to resolve rebase conflicts");
                     gitSetBranchLocalConfig(featureBranch, "breakpoint", Breakpoint.REBASE_BEFORE_FINISH.getId());
                     throw new GitFlowFailureException(ex,
                             "Automatic rebase of feature branch '" + featureBranch + "' on top of base branch '"
@@ -370,9 +381,11 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
                     true, true)) {
                 throw new GitFlowFailureException("Continuation of feature finish aborted by user.", null);
             }
+            getMavenLog().info("Continue merging base branch into feature branch before performing feature finish...");
             try {
                 gitCommitMerge();
             } catch (MojoFailureException exc) {
+                getMavenLog().info("Feature finish process paused to resolve merge conflicts");
                 throw new GitFlowFailureException(exc,
                         "There are unresolved conflicts after merge of base branch into feature branch.\n"
                                 + "Git error message:\n" + StringUtils.trim(exc.getMessage()),
@@ -392,9 +405,12 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
                     true, true)) {
                 throw new GitFlowFailureException("Continuation of feature finish aborted by user.", null);
             }
+            getMavenLog()
+                    .info("Continue rebasing feature branch on top of base branch before performing feature finish...");
             try {
                 gitRebaseContinueOrSkip();
             } catch (MojoFailureException exc) {
+                getMavenLog().info("Feature finish process paused to resolve rebase conflicts");
                 throw new GitFlowFailureException(exc,
                         "There are unresolved conflicts after rebase of feature branch on top of base branch.\n"
                                 + "Git error message:\n" + StringUtils.trim(exc.getMessage()),
@@ -421,6 +437,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
     private StepParameters verifyFeatureProject(StepParameters stepParameters)
             throws MojoFailureException, CommandLineException {
         if (!skipTestProject) {
+            getMavenLog().info("Cleaning and verifying feature project before performing feature finish...");
             mvnCleanVerify();
         }
         return stepParameters;
@@ -467,9 +484,11 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
             gitCheckout(baseBranch);
             // git merge --no-ff feature/...
             try {
-                getLog().info("Merging feature branch into base branch.");
+                getMavenLog().info("Merging (" + (allowFF ? "--ff" : "--no-ff") + ") feature branch '" + featureBranch
+                        + "' into base branch '" + baseBranch + "'...");
                 gitMerge(featureBranch, !allowFF);
             } catch (MojoFailureException ex) {
+                getMavenLog().info("Feature finish process paused to resolve merge conflicts");
                 setBreakpoint(Breakpoint.FINAL_MERGE, featureBranch);
                 throw new GitFlowFailureException(ex,
                         "Automatic merge failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage()),
@@ -491,12 +510,15 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
         String featureBranch = stepParameters.featureBranch;
 
         if (stepParameters.breakpoint == Breakpoint.CLEAN_INSTALL) {
+            getMavenLog().info("Restart after failed clean and install of project on base branch detected");
             checkUncommittedChanges();
         }
         if (installProject) {
+            getMavenLog().info("Cleaning and installing project on base branch '" + baseBranch + "'...");
             try {
                 mvnCleanInstall();
             } catch (MojoFailureException e) {
+                getMavenLog().info("Feature finish process paused on failed clean and install to fix project problems");
                 Map<String, String> configs = new HashMap<>();
                 configs.put("breakpointFeatureBranch", featureBranch);
                 setBreakpoint(Breakpoint.CLEAN_INSTALL, baseBranch, configs);
@@ -518,15 +540,16 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
 
         removeBreakpoints(featureBranch, baseBranch);
         if (!keepFeatureBranch) {
-            getLog().info("Removing local feature branch.");
+            getMavenLog().info("Removing local feature branch '" + featureBranch + "'");
             gitBranchDeleteForce(featureBranch);
 
             if (pushRemote) {
-                getLog().info("Removing remote feature branch.");
+                getMavenLog().info("Removing remote feature branch '" + featureBranch + "'");
                 gitBranchDeleteRemote(featureBranch);
             }
         }
         if (pushRemote) {
+            getMavenLog().info("Pushing base branch '" + baseBranch + "' to remote repository");
             gitPush(baseBranch, false, false);
         }
         return stepParameters;
@@ -578,11 +601,11 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
     private void revertProjectVersionManually(String featureBranch, String featureVersion, String baseVersion)
             throws MojoFailureException, CommandLineException {
         if (!featureVersion.equals(baseVersion)) {
-            getLog().info("Reverting the project version on feature branch to the version on base branch.");
             gitCheckout(featureBranch);
             String issueNumber = getFeatureIssueNumber(featureBranch);
             String featureFinishMessage = substituteWithIssueNumber(commitMessages.getFeatureFinishMessage(),
                     issueNumber);
+            getMavenLog().info("Setting base version '" + baseVersion + "' for project on feature branch...");
             mvnSetVersions(baseVersion);
             gitCommit(featureFinishMessage);
         } else {
@@ -599,9 +622,11 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
                 true, true)) {
             throw new GitFlowFailureException("Continuation of feature finish aborted by user.", null);
         }
+        getMavenLog().info("Continue removing version change commit on feature branch using rebase...");
         try {
             gitRebaseContinueOrSkip();
         } catch (MojoFailureException exc) {
+            getMavenLog().info("Feature finish process paused to resolve rebase conflicts");
             throw new GitFlowFailureException(exc,
                     "There are unresolved conflicts after rebase.\nGit error message:\n"
                             + StringUtils.trim(exc.getMessage()),
@@ -622,9 +647,11 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
                 true, true)) {
             throw new GitFlowFailureException("Continuation of feature finish aborted by user.", null);
         }
+        getMavenLog().info("Continue merging feature branch into base branch...");
         try {
             gitCommitMerge();
         } catch (MojoFailureException exc) {
+            getMavenLog().info("Feature finish process paused to resolve merge conflicts");
             throw new GitFlowFailureException(exc,
                     "There are unresolved conflicts after merge.\nGit error message:\n"
                             + StringUtils.trim(exc.getMessage()),
@@ -661,9 +688,11 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
             return false;
         }
         try {
+            getMavenLog().info("Removing version change commit on feature branch using rebase...");
             removeCommits(branchPoint, versionChangeCommitId, featureBranch);
             getLog().info("Version change commit in feature branch removed.");
         } catch (MojoFailureException ex) {
+            getMavenLog().info("Feature finish process paused to resolve rebase conflicts");
             setBreakpoint(Breakpoint.REBASE_WITHOUT_VERSION_CHANGE, featureBranch);
             throw new GitFlowFailureException(ex,
                     "Automatic rebase failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage()),

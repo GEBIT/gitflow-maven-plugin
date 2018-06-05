@@ -72,7 +72,7 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
-        getLog().info("Starting feature cleanup process.");
+        getMavenLog().info("Starting feature clean-up process");
         checkCentralBranchConfig();
         if (!settings.isInteractiveMode()) {
             throw new GitFlowFailureException(
@@ -113,7 +113,7 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
                             "Remote and local feature branches '" + featureBranchName + "' diverge.",
                             "Rebase or merge the changes in local feature branch '" + featureBranchName + "' first.",
                             "'git rebase'"));
-                    // git checkout feature/...
+                    getMavenLog().info("Switching to feature branch '" + featureBranchName + "'");
                     gitCheckout(featureBranchName);
                 } else {
                     featureBranchName = currentBranch;
@@ -123,6 +123,7 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
                             "Rebase or merge the changes in local feature branch '{0}' first.", "'git rebase'"));
                 }
 
+                getMavenLog().info("Determining start commit for rebase clean-up");
                 String baseCommit = gitFeatureBranchBaseCommit(featureBranchName);
                 getLog().info("Base commit (start point) of feature branch: " + baseCommit);
                 String versionChangeCommitOnBranch = gitVersionChangeCommitOnFeatureBranch(featureBranchName,
@@ -138,10 +139,13 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
                             + "Use all feature commits while interactive cleanup rebase.");
                 }
 
+                getMavenLog().info("Starting interactive rebase...");
                 InteractiveRebaseStatus rebaseStatus = gitRebaseInteractive(rebaseCommit);
                 if (rebaseStatus == InteractiveRebaseStatus.PAUSED) {
+                    getMavenLog().info("Feature clean-up process paused to resolve rebase conflicts");
                     throw new GitFlowFailureException(ERROR_REBASE_PAUSED);
                 } else if (rebaseStatus == InteractiveRebaseStatus.CONFLICT) {
+                    getMavenLog().info("Feature clean-up process paused to resolve rebase conflicts");
                     throw new GitFlowFailureException(ERROR_REBASE_CONFLICTS);
                 }
 
@@ -153,14 +157,17 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
                                 + "Continue?", true, true)) {
                     throw new GitFlowFailureException("Continuation of feature clean up aborted by user.", null);
                 }
-                getLog().info("Continue interactive rebase.");
+                getMavenLog().info("Continue interactive rebase...");
                 InteractiveRebaseResult rebaseResult = gitInteractiveRebaseContinue();
                 switch (rebaseResult.getStatus()) {
                 case PAUSED:
+                    getMavenLog().info("Feature clean-up process paused to resolve rebase conflicts");
                     throw new GitFlowFailureException(ERROR_REBASE_PAUSED);
                 case CONFLICT:
+                    getMavenLog().info("Feature clean-up process paused to resolve rebase conflicts");
                     throw new GitFlowFailureException(ERROR_REBASE_CONFLICTS);
                 case UNRESOLVED_CONFLICT:
+                    getMavenLog().info("Feature clean-up process paused to resolve rebase conflicts");
                     throw new GitFlowFailureException(
                             "There are unresolved conflicts after rebase.\nGit error message:\n"
                                     + rebaseResult.getGitMessage(),
@@ -175,13 +182,16 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
                 }
             }
         } else {
+            getMavenLog().info("Restart after failed clean and install of feature project detected");
             checkUncommittedChanges();
         }
         if (installProject) {
-            // mvn clean install
+            getMavenLog().info("Cleaning and installing feature project...");
             try {
                 mvnCleanInstall();
             } catch (MojoFailureException e) {
+                getMavenLog()
+                        .info("Feature clean-up process paused on failed clean and install to fix project problems");
                 gitSetBranchLocalConfig(featureBranchName, "breakpoint", "featureCleanup.cleanInstall");
                 throw new GitFlowFailureException(e,
                         "Failed to execute 'mvn clean install' on the project on feature branch after cleanup.",
@@ -195,12 +205,13 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
         if (pushRemote) {
             // delete remote branch to not run into non-fast-forward error
             if (deleteRemoteBranchOnRebase) {
-                getLog().info("Deleting remote feature branch to not run into non-fast-forward error");
+                getMavenLog().info("Deleting remote feature branch to not run into non-fast-forward error");
                 gitBranchDeleteRemote(featureBranchName);
             }
+            getMavenLog().info("Pushing (forced) feature branch '" + featureBranchName + "' to remote repository");
             gitPush(featureBranchName, false, true);
         }
-        getLog().info("Feature cleanup process finished.");
+        getMavenLog().info("Feature clean-up process finished");
     }
 
 }

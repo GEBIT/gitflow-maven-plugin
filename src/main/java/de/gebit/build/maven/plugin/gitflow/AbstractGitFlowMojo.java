@@ -287,7 +287,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * using the first matching group (if present). You will need this if your
      * commit messages need to refer to e.g. an issue tracker key.
      *
-     * @since 1.5.15
+     * @since 2.0.0
      */
     @Parameter(property = "epicNamePattern", required = false)
     protected String epicNamePattern;
@@ -367,10 +367,26 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             getLog().info(getExceptionMessagePrefix(false) + message + getExceptionMessageSuffix(false, null));
             decorateExceptionMessage(e, isTerminalColorEnabled(), copyLogFile());
             throw e;
+        } finally {
+            closeExternalLog();
+        }
+    }
+
+    private void closeExternalLog() {
+        if (extLog != null) {
+            for (Handler h : extLog.getHandlers()) {
+                try {
+                    h.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+            extLog = null;
         }
     }
 
     private File copyLogFile() {
+        closeExternalLog();
         if (tempLogFile != null && tempLogFile.exists()) {
             String targetDir = project.getModel().getBuild().getDirectory();
             File logFile = new File(targetDir, "gitflow.log");
@@ -2893,7 +2909,11 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                                 "Please modify the parameter value to avoid cylces.");
                     }
                 }
-                getLog().info("Parameter set to '" + parameter.getValue() + "'");
+                String paramValue = parameter.getValue();
+                getLog().info("Parameter set to '" + paramValue + "'");
+                if (paramValue != null) {
+                    getMavenLog().info("- using parameter value '" + paramValue + "' for additional version command");
+                }
             }
         }
 
@@ -3270,20 +3290,23 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
         final CommandLineUtils.StringStreamConsumer err = new CommandLineUtils.StringStreamConsumer();
 
+        final String logPrefixOut = "[" + cmd.getExecutable().toUpperCase() + " out] ";
+        final String logPrefixErr = "[" + cmd.getExecutable().toUpperCase() + " err] ";
+
         // execute
         final int exitCode = CommandLineUtils.executeCommandLine(cmd, new StreamConsumer() {
 
             @Override
             public void consumeLine(String line) {
                 out.consumeLine(line);
-                getLog().info(line);
+                getExternalLog().info(logPrefixOut + line);
             }
         }, new StreamConsumer() {
 
             @Override
             public void consumeLine(String line) {
                 err.consumeLine(line);
-                getLog().info(line);
+                getExternalLog().severe(logPrefixErr + line);
             }
         });
 
@@ -3392,8 +3415,25 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
         final CommandLineUtils.StringStreamConsumer err = new CommandLineUtils.StringStreamConsumer();
 
+        final String logPrefixOut = "[" + cmd.getExecutable().toUpperCase() + " out] ";
+        final String logPrefixErr = "[" + cmd.getExecutable().toUpperCase() + " err] ";
+
         // execute
-        final int exitCode = CommandLineUtils.executeCommandLine(cmd, out, err);
+        final int exitCode = CommandLineUtils.executeCommandLine(cmd, new StreamConsumer() {
+
+            @Override
+            public void consumeLine(String line) {
+                out.consumeLine(line);
+                getExternalLog().info(logPrefixOut + line);
+            }
+        }, new StreamConsumer() {
+
+            @Override
+            public void consumeLine(String line) {
+                err.consumeLine(line);
+                getExternalLog().severe(logPrefixErr + line);
+            }
+        });
 
         String errorStr = err.getOutput();
         String outStr = out.getOutput();
@@ -3630,8 +3670,10 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                             record.getLevel().getName(), formatMessage(record), throwable);
                 }
             });
+            logHandler.setLevel(Level.ALL);
             extLog.addHandler(logHandler);
             extLog.setUseParentHandlers(false);
+            extLog.setLevel(Level.ALL);
         }
         return extLog;
     }
@@ -3672,7 +3714,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         }
     }
 
-    private class LogWrapper implements Log {
+    public class LogWrapper implements Log {
 
         private boolean isMavenLog = false;
 
@@ -3682,13 +3724,45 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
         @Override
         public boolean isDebugEnabled() {
+            return true;
+        }
+
+        @Override
+        public boolean isInfoEnabled() {
+            return true;
+        }
+
+        @Override
+        public boolean isWarnEnabled() {
+            return true;
+        }
+
+        @Override
+        public boolean isErrorEnabled() {
+            return true;
+        }
+
+        private boolean isMavenLogDebugEnabled() {
             return AbstractGitFlowMojo.super.getLog().isDebugEnabled();
+        }
+
+        private boolean isMavenLogInfoEnabled() {
+            return (isMavenLog && AbstractGitFlowMojo.super.getLog().isInfoEnabled())
+                    || AbstractGitFlowMojo.super.getLog().isDebugEnabled();
+        }
+
+        private boolean isMavenLogWarnEnabled() {
+            return AbstractGitFlowMojo.super.getLog().isWarnEnabled();
+        }
+
+        private boolean isMavenLogErrorEnabled() {
+            return AbstractGitFlowMojo.super.getLog().isErrorEnabled();
         }
 
         @Override
         public void debug(CharSequence content) {
             getExternalLog().log(Level.FINE, (String) content);
-            if (isMavenLog) {
+            if (isMavenLogDebugEnabled()) {
                 AbstractGitFlowMojo.super.getLog().debug(content);
             }
         }
@@ -3696,7 +3770,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         @Override
         public void debug(CharSequence content, Throwable error) {
             getExternalLog().log(Level.FINE, (String) content, error);
-            if (isMavenLog) {
+            if (isMavenLogDebugEnabled()) {
                 AbstractGitFlowMojo.super.getLog().debug(content, error);
             }
         }
@@ -3704,20 +3778,15 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         @Override
         public void debug(Throwable error) {
             getExternalLog().log(Level.FINE, "", error);
-            if (isMavenLog) {
+            if (isMavenLogDebugEnabled()) {
                 AbstractGitFlowMojo.super.getLog().debug(error);
             }
         }
 
         @Override
-        public boolean isInfoEnabled() {
-            return AbstractGitFlowMojo.super.getLog().isInfoEnabled();
-        }
-
-        @Override
         public void info(CharSequence content) {
             getExternalLog().log(Level.INFO, (String) content);
-            if (isMavenLog) {
+            if (isMavenLogInfoEnabled()) {
                 AbstractGitFlowMojo.super.getLog().info(content);
             }
         }
@@ -3725,7 +3794,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         @Override
         public void info(CharSequence content, Throwable error) {
             getExternalLog().log(Level.INFO, (String) content, error);
-            if (isMavenLog) {
+            if (isMavenLogInfoEnabled()) {
                 AbstractGitFlowMojo.super.getLog().info(content, error);
             }
         }
@@ -3733,55 +3802,57 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         @Override
         public void info(Throwable error) {
             getExternalLog().log(Level.INFO, "", error);
-            if (isMavenLog) {
+            if (isMavenLogInfoEnabled()) {
                 AbstractGitFlowMojo.super.getLog().info(error);
             }
         }
 
         @Override
-        public boolean isWarnEnabled() {
-            return AbstractGitFlowMojo.super.getLog().isWarnEnabled();
-        }
-
-        @Override
         public void warn(CharSequence content) {
             getExternalLog().log(Level.WARNING, (String) content);
-            AbstractGitFlowMojo.super.getLog().warn(content);
+            if (isMavenLogWarnEnabled()) {
+                AbstractGitFlowMojo.super.getLog().warn(content);
+            }
         }
 
         @Override
         public void warn(CharSequence content, Throwable error) {
             getExternalLog().log(Level.WARNING, (String) content, error);
-            AbstractGitFlowMojo.super.getLog().warn(content, error);
+            if (isMavenLogWarnEnabled()) {
+                AbstractGitFlowMojo.super.getLog().warn(content, error);
+            }
         }
 
         @Override
         public void warn(Throwable error) {
             getExternalLog().log(Level.WARNING, "", error);
-            AbstractGitFlowMojo.super.getLog().warn(error);
-        }
-
-        @Override
-        public boolean isErrorEnabled() {
-            return AbstractGitFlowMojo.super.getLog().isErrorEnabled();
+            if (isMavenLogWarnEnabled()) {
+                AbstractGitFlowMojo.super.getLog().warn(error);
+            }
         }
 
         @Override
         public void error(CharSequence content) {
             getExternalLog().log(Level.SEVERE, (String) content);
-            AbstractGitFlowMojo.super.getLog().error(content);
+            if (isMavenLogErrorEnabled()) {
+                AbstractGitFlowMojo.super.getLog().error(content);
+            }
         }
 
         @Override
         public void error(CharSequence content, Throwable error) {
             getExternalLog().log(Level.SEVERE, (String) content, error);
-            AbstractGitFlowMojo.super.getLog().error(content, error);
+            if (isMavenLogErrorEnabled()) {
+                AbstractGitFlowMojo.super.getLog().error(content, error);
+            }
         }
 
         @Override
         public void error(Throwable error) {
             getExternalLog().log(Level.SEVERE, "", error);
-            AbstractGitFlowMojo.super.getLog().error(error);
+            if (isMavenLogErrorEnabled()) {
+                AbstractGitFlowMojo.super.getLog().error(error);
+            }
         }
 
     }

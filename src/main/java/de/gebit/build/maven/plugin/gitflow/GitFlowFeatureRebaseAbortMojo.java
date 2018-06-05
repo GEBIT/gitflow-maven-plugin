@@ -25,7 +25,7 @@ public class GitFlowFeatureRebaseAbortMojo extends AbstractGitFlowFeatureMojo {
 
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
-        getLog().info("Starting feature rebase abort process.");
+        getMavenLog().info("Starting feature rebase abort process");
         checkCentralBranchConfig();
         boolean mergeInProgress = false;
         String featureBranch = gitRebaseFeatureBranchInProcess();
@@ -44,14 +44,18 @@ public class GitFlowFeatureRebaseAbortMojo extends AbstractGitFlowFeatureMojo {
                     + "Are you sure you want to abort the feature rebase process?", true, true)) {
                 throw new GitFlowFailureException("Aborting feature rebase process aborted by user.", null);
             }
+            getMavenLog().info("Aborting merge in progress");
             gitMergeAbort();
+            getMavenLog().info("Switching to feature branch '" + featureBranch + "'");
             gitCheckout(featureBranch);
         } else {
             if (!getPrompter().promptConfirmation("You have a rebase in process on your current branch. "
                     + "Are you sure you want to abort the feature rebase process?", true, true)) {
                 throw new GitFlowFailureException("Aborting feature rebase process aborted by user.", null);
             }
+            getMavenLog().info("Aborting rebase in progress");
             gitRebaseAbort();
+            getMavenLog().info("Switching to feature branch '" + featureBranch + "'");
             gitCheckout(featureBranch);
             gitRemoveBranchLocalConfig(featureBranch, "newBaseVersion");
             gitRemoveBranchLocalConfig(featureBranch, "newStartCommitMessage");
@@ -62,6 +66,7 @@ public class GitFlowFeatureRebaseAbortMojo extends AbstractGitFlowFeatureMojo {
                 gitBranchDeleteForce(tempFeatureBranch);
             }
         }
+        getMavenLog().info("Feature rebase abort process finished");
     }
 
 }

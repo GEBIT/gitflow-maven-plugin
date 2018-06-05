@@ -53,6 +53,7 @@ public class GitFlowBranchConfigMojo extends AbstractGitFlowMojo {
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
+        getMavenLog().info("Starting branch config process");
         // set git flow configuration
         initGitFlowConfig();
 
@@ -70,13 +71,15 @@ public class GitFlowBranchConfigMojo extends AbstractGitFlowMojo {
         if (branchName == null) {
             branchName = gitCurrentBranch();
         }
-        getLog().info(
-                "Setting branch property '" + propertyName + "' for '" + branchName + "' to '" + propertyValue + "'");
 
         if (propertyValue != null) {
+            getMavenLog().info("Setting branch property '" + propertyName + "' for branch '" + branchName + "' to '"
+                    + propertyValue + "'");
             gitSetBranchCentralConfig(branchName, propertyName, propertyValue);
         } else {
+            getMavenLog().info("Removing branch property '" + propertyName + "' for branch '" + branchName + "'");
             gitRemoveBranchCentralConfig(branchName, propertyName);
         }
+        getMavenLog().info("Branch config process finished");
     }
 }

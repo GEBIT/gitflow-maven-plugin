@@ -121,8 +121,6 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
             getMavenLog().info("Base branch for new feature is '" + baseBranch + "'");
             String originalBaseBranch = baseBranch;
 
-            getMavenLog().info("Checking if base branch is up to date");
-
             // use integration branch?
             String integrationBranch = gitFlowConfig.getIntegrationBranchPrefix() + baseBranch;
             gitEnsureLocalBranchIsUpToDateIfExists(integrationBranch,
@@ -147,7 +145,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
                     }
 
                     getMavenLog().info(
-                            "Using integration branch '" + integrationBranch + "' as start point for new feature.");
+                            "Using integration branch '" + integrationBranch + "' as start point for new feature");
                     baseBranch = integrationBranch;
                 }
             }
@@ -211,7 +209,6 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
             String baseVersion = currentVersion;
             String versionChangeCommit = null;
             if (!skipFeatureVersion && !tychoBuild) {
-                getMavenLog().info("Setting new version for project on feature branch");
                 String version = currentVersion;
                 getLog().info("Base project version: " + version);
                 if (isEpicBranch(baseBranch)) {
@@ -222,10 +219,10 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
                 version = insertSuffixInVersion(version, featureIssue);
                 getLog().info("Added feature issue number to project version: " + version);
                 if (!currentVersion.equals(version)) {
+                    getMavenLog().info("Setting version '" + version + "' for project on feature branch...");
                     mvnSetVersions(version, "On feature branch: ");
                     gitCommit(featureStartMessage);
                     versionChangeCommit = getCurrentCommit();
-                    getMavenLog().info("New project version on feature branch is '" + version + "'");
                 } else {
                     getMavenLog().info(
                             "Project version for feature is same as base project version. Version update not needed");
@@ -243,6 +240,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
             }
             gitApplyBranchCentralConfigChanges(branchConfigChanges, "feature '" + featureName + "' started");
         } else {
+            getMavenLog().info("Restart after failed clean and install of feature project detected");
             featureBranchName = currentBranch;
             featureIssue = gitGetBranchCentralConfig(featureBranchName, BranchConfigKeys.ISSUE_NUMBER);
         }
@@ -252,6 +250,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
             try {
                 mvnCleanInstall();
             } catch (MojoFailureException e) {
+                getMavenLog().info("Feature start process paused on failed clean and install to fix project problems");
                 gitSetBranchLocalConfig(featureBranchName, "breakpoint", "featureStart.cleanInstall");
                 throw new GitFlowFailureException(e,
                         "Failed to execute 'mvn clean install' on the project on feature branch after feature start.",
@@ -262,7 +261,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
         gitRemoveBranchLocalConfig(featureBranchName, "breakpoint");
 
         if (pushRemote) {
-            getMavenLog().info("Pushing feature branch to remote repository");
+            getMavenLog().info("Pushing feature branch '" + featureBranchName + "' to remote repository");
             gitPush(featureBranchName, false, false, true);
         }
 

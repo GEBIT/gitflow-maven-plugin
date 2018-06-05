@@ -41,6 +41,7 @@ public class GitFlowSetVersionMojo extends AbstractGitFlowMojo {
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
+        getMavenLog().info("Starting set version process");
         // set git flow configuration
         initGitFlowConfig();
 
@@ -66,7 +67,9 @@ public class GitFlowSetVersionMojo extends AbstractGitFlowMojo {
             }
         }
 
+        getMavenLog().info("Setting version '" + newVersion + "' for project on current branch...");
         // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
         mvnSetVersions(newVersion, "");
+        getMavenLog().info("Set version process finished");
     }
 }

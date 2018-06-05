@@ -31,7 +31,7 @@ public class GitFlowConfig {
     /**
      * Prefix of epic branches.
      *
-     * @since 1.5.15
+     * @since 2.0.0
      */
     private String epicBranchPrefix;
     /** Prefix of the release branch. */

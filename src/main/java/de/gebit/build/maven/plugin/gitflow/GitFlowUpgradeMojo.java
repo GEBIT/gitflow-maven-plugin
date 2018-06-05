@@ -41,18 +41,20 @@ public class GitFlowUpgradeMojo extends AbstractGitFlowMojo {
 
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
+        getMavenLog().info("Starting upgrade process");
         checkOrInitCentralBranchConfig();
+        getMavenLog().info("Upgrade process finished");
     }
 
     private void checkOrInitCentralBranchConfig() throws MojoFailureException, CommandLineException {
         String configBranchVersion = gitGetBranchCentralConfig(configBranchName, "version");
         if (!BranchConfigKeys.CENTRAL_BRANCH_CONFIG_VERSION.equals(configBranchVersion)) {
             if (configBranchVersion == null) {
-                getLog().info("Initializing central branch config on version "
-                        + BranchConfigKeys.CENTRAL_BRANCH_CONFIG_VERSION + ".");
+                getMavenLog().info("Initializing central branch config on version "
+                        + BranchConfigKeys.CENTRAL_BRANCH_CONFIG_VERSION);
             } else {
-                getLog().info("Upgrading central branch config from version " + configBranchVersion + " to version "
-                        + BranchConfigKeys.CENTRAL_BRANCH_CONFIG_VERSION + ".");
+                getMavenLog().info("Upgrading central branch config from version " + configBranchVersion
+                        + " to version " + BranchConfigKeys.CENTRAL_BRANCH_CONFIG_VERSION);
             }
             reinitCentralBranchConfig();
             if (configBranchVersion == null) {
@@ -63,8 +65,8 @@ public class GitFlowUpgradeMojo extends AbstractGitFlowMojo {
                         + BranchConfigKeys.CENTRAL_BRANCH_CONFIG_VERSION + ".");
             }
         } else {
-            getLog().info("Central branch config is up to date (version: "
-                    + BranchConfigKeys.CENTRAL_BRANCH_CONFIG_VERSION + ").");
+            getMavenLog().info("Central branch config is up to date (version: "
+                    + BranchConfigKeys.CENTRAL_BRANCH_CONFIG_VERSION + ")");
         }
     }
 

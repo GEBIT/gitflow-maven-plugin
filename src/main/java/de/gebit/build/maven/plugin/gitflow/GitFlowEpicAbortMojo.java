@@ -19,14 +19,14 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * Abort epic branch.
  *
  * @author Volodymyr Medvid
- * @since 1.5.15
+ * @since 2.0.0
  */
 @Mojo(name = "epic-abort", aggregator = true)
 public class GitFlowEpicAbortMojo extends AbstractGitFlowEpicMojo {
 
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
-        getLog().info("Starting epic abort process.");
+        getMavenLog().info("Starting epic abort process");
         checkCentralBranchConfig();
         if (gitRebaseInProcess()) {
             throw new GitFlowFailureException("A rebase of the current branch is in process. Cannot abort epic now.",
@@ -74,19 +74,19 @@ public class GitFlowEpicAbortMojo extends AbstractGitFlowEpicMojo {
             }
             String baseBranch = gitEpicBranchBaseBranch(epicBranchName);
             gitResetHard();
-            getLog().info("Switching to base branch: " + baseBranch);
+            getMavenLog().info("Switching to base branch '" + baseBranch + "'");
             gitCheckout(baseBranch);
         }
 
         if (gitBranchExists(epicBranchName)) {
-            getLog().info("Removing local epic branch.");
+            getMavenLog().info("Removing local epic branch '" + epicBranchName + "'");
             gitBranchDeleteForce(epicBranchName);
         }
         if (pushRemote) {
-            getLog().info("Removing remote epic branch.");
+            getMavenLog().info("Removing remote epic branch '" + epicBranchName + "'");
             gitBranchDeleteRemote(epicBranchName);
         }
-        getLog().info("Epic abort process finished.");
+        getMavenLog().info("Epic abort process finished");
     }
 
 }

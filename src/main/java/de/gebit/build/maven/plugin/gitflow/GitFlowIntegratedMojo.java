@@ -42,6 +42,7 @@ public class GitFlowIntegratedMojo extends AbstractGitFlowMojo {
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
+        getMavenLog().info("Starting integration process");
         initGitFlowConfig();
         checkCentralBranchConfig();
 
@@ -67,9 +68,12 @@ public class GitFlowIntegratedMojo extends AbstractGitFlowMojo {
                 "integrationBranch", integrationBranch,
                 gitFlowConfig.getIntegrationBranchPrefix() + gitCurrentBranch());
 
+        getMavenLog().info("Updating the reference of integration branch '" + integrationBranch + "' to HEAD");
         gitUpdateRef(integrationBranch, "HEAD");
         if (pushRemote) {
+            getMavenLog().info("Pushing integration branch '" + integrationBranch + "' to remote repository");
             gitPush(integrationBranch, false, false);
         }
+        getMavenLog().info("Integration process finished");
     }
 }

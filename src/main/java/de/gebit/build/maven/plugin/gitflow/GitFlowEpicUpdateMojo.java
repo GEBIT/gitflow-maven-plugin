@@ -27,7 +27,7 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
 
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
-        getLog().info("Starting epic update process.");
+        getMavenLog().info("Starting epic update process");
         checkCentralBranchConfig();
         String epicBranchName = gitMergeIntoEpicBranchInProcess();
         boolean continueOnCleanInstall = false;
@@ -67,6 +67,7 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
                             new GitFlowFailureInfo("Remote and local epic branches '" + epicBranchName + "' diverge.",
                                     "Rebase or merge the changes in local epic branch '" + epicBranchName + "' first.",
                                     "'git rebase'"));
+                    getMavenLog().info("Switching to epic branch '" + epicBranchName + "'");
                     gitCheckout(epicBranchName);
                 } else {
                     epicBranchName = currentBranch;
@@ -77,6 +78,7 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
                 }
 
                 String baseBranch = gitEpicBranchBaseBranch(epicBranchName);
+                getMavenLog().info("Base branch of epic branch is '" + baseBranch + "'");
 
                 // use integration branch?
                 String integrationBranch = gitFlowConfig.getIntegrationBranchPrefix() + baseBranch;
@@ -100,12 +102,14 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
                     if (useIntegrationBranch) {
                         if (!gitIsAncestorBranch(integrationBranch, baseBranch)) {
                             throw new GitFlowFailureException(
-                                    "Integration branch '" + integrationBranch + "' is ahead of base branch '" + baseBranch
+                                    "Integration branch '" + integrationBranch + "' is ahead of base branch '"
+                                            + baseBranch
                                             + "', this indicates a severe error condition on your branches.",
                                     " Please consult a gitflow expert on how to fix this!");
                         }
 
-                        getLog().info("Using integration branch '" + integrationBranch + "' to update the epic branch.");
+                        getMavenLog()
+                                .info("Using integration branch '" + integrationBranch + "' to update the epic branch");
                         baseBranch = integrationBranch;
                     }
                 }
@@ -128,8 +132,11 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
                 }
 
                 try {
+                    getMavenLog().info("Merging (--no-ff) base branch '" + baseBranch + "' into epic branch '"
+                            + epicBranchName + "'...");
                     gitMerge(baseBranch, true);
                 } catch (MojoFailureException ex) {
+                    getMavenLog().info("Epic update process paused to resolve merge conflicts");
                     throw new GitFlowFailureException(ex,
                             "Automatic merge failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage()),
                             "Fix the merge conflicts and mark them as resolved.\nIMPORTANT: "
@@ -147,9 +154,11 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
                         true, true)) {
                     throw new GitFlowFailureException("Continuation of epic update aborted by user.", null);
                 }
+                getMavenLog().info("Continue merging base branch into epic branch...");
                 try {
                     gitCommitMerge();
                 } catch (MojoFailureException exc) {
+                    getMavenLog().info("Epic update process paused to resolve merge conflicts");
                     throw new GitFlowFailureException(exc,
                             "There are unresolved conflicts after merge.\nGit error message:\n"
                                     + StringUtils.trim(exc.getMessage()),
@@ -161,12 +170,15 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
                 }
             }
         } else {
+            getMavenLog().info("Restart after failed clean and install of epic project detected");
             checkUncommittedChanges();
         }
         if (installProject) {
+            getMavenLog().info("Cleaning and installing epic project...");
             try {
                 mvnCleanInstall();
             } catch (MojoFailureException e) {
+                getMavenLog().info("Epic update process paused on failed clean and install to fix project problems");
                 gitSetBranchLocalConfig(epicBranchName, "breakpoint", "epicUpdate.cleanInstall");
                 throw new GitFlowFailureException(e,
                         "Failed to execute 'mvn clean install' on the project on epic branch after update.",
@@ -176,9 +188,10 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
         }
         gitRemoveBranchLocalConfig(epicBranchName, "breakpoint");
         if (pushRemote) {
+            getMavenLog().info("Pushing epic branch '" + epicBranchName + "' to remote repository");
             gitPush(epicBranchName, false, false);
         }
-        getLog().info("Epic update process finished.");
+        getMavenLog().info("Epic update process finished");
     }
 
 }

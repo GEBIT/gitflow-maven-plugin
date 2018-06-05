@@ -35,7 +35,7 @@ public class GitFlowFeatureAbortMojo extends AbstractGitFlowFeatureMojo {
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         // check if rebase in process
-        getLog().info("Starting feature abort process.");
+        getMavenLog().info("Starting feature abort process");
         checkCentralBranchConfig();
         String featureBranchName = gitRebaseFeatureBranchInProcess();
         if (featureBranchName != null) {
@@ -86,20 +86,20 @@ public class GitFlowFeatureAbortMojo extends AbstractGitFlowFeatureMojo {
             }
             String baseBranch = gitFeatureBranchBaseBranch(featureBranchName);
             gitResetHard();
-            getLog().info("Switching to base branch: " + baseBranch);
+            getMavenLog().info("Switching to base branch '" + baseBranch + "'");
             gitCheckout(baseBranch);
         }
 
         if (gitBranchExists(featureBranchName)) {
-            getLog().info("Removing local feature branch.");
+            getMavenLog().info("Removing local feature branch '" + featureBranchName + "'");
             // git branch -D feature/...
             gitBranchDeleteForce(featureBranchName);
         }
         if (pushRemote) {
-            getLog().info("Removing remote feature branch.");
+            getMavenLog().info("Removing remote feature branch '" + featureBranchName + "'");
             // delete the remote branch
             gitBranchDeleteRemote(featureBranchName);
         }
-        getLog().info("Feature abort process finished.");
+        getMavenLog().info("Feature abort process finished");
     }
 }
