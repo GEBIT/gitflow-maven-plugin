@@ -121,6 +121,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     /** Success exit code. */
     private static final int SUCCESS_EXIT_CODE = 0;
 
+    private static final long PROGRESS_OUTPUT_TIMEOUT_IN_MILLIS = 5000;
+
     /** Command line for Git executable. */
     private final Commandline cmdGit = new ShellCommandLine();
 
@@ -2920,15 +2922,14 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         getLog().info("Updating version(s) to '" + version + "'.");
 
         if (tychoBuild) {
-            executeMvnCommand(false, TYCHO_VERSIONS_PLUGIN_SET_GOAL, "-DnewVersion=" + version, "-Dtycho.mode=maven");
+            executeMvnCommand(TYCHO_VERSIONS_PLUGIN_SET_GOAL, "-DnewVersion=" + version, "-Dtycho.mode=maven");
         } else {
-            executeMvnCommand(false, VERSIONS_MAVEN_PLUGIN_SET_GOAL, "-DnewVersion=" + version,
-                    "-DgenerateBackupPoms=false");
+            executeMvnCommand(VERSIONS_MAVEN_PLUGIN_SET_GOAL, "-DnewVersion=" + version, "-DgenerateBackupPoms=false");
         }
         for (String command : getCommandsAfterVersion(processAdditionalCommands)) {
             try {
                 command = normilizeWhitespaces(command.replaceAll("\\@\\{version\\}", version));
-                executeMvnCommand(false, CommandLineUtils.translateCommandline(command));
+                executeMvnCommand(CommandLineUtils.translateCommandline(command));
             } catch (Exception e) {
                 throw new GitFlowFailureException(e, "Failed to execute additional version maven command: " + command
                         + "\nMaven error message:\n" + e.getMessage(),
@@ -3014,7 +3015,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected void mvnCleanVerify() throws MojoFailureException, CommandLineException {
         getLog().info("Cleaning and verifying the project.");
-        executeMvnCommand(printTestOutput, "clean", "verify");
+        executeMvnCommand(printTestOutput ? OutputMode.FULL : OutputMode.PROGRESS, "clean", "verify");
     }
 
     /**
@@ -3026,7 +3027,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     protected void mvnCleanInstall() throws MojoFailureException, CommandLineException {
         getLog().info("Cleaning and installing the project.");
 
-        executeMvnCommand(printInstallOutput, "clean", "install");
+        executeMvnCommand(printInstallOutput ? OutputMode.FULL : OutputMode.PROGRESS, "clean", "install");
     }
 
     /**
@@ -3038,7 +3039,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     protected void mvnGoals(String goals) throws MojoFailureException, CommandLineException {
         getLog().info("Executing mvn " + goals + ".");
         try {
-            executeMvnCommand(printReleaseOutput, CommandLineUtils.translateCommandline(goals));
+            executeMvnCommand(printReleaseOutput ? OutputMode.FULL : OutputMode.PROGRESS,
+                    CommandLineUtils.translateCommandline(goals));
         } catch (Exception e) {
             throw new MojoFailureException("Failed to execute mvn " + goals, e);
         }
@@ -3083,17 +3085,21 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         executeCommand(cmdGit, true, args);
     }
 
+    private void executeMvnCommand(final String... args) throws CommandLineException, MojoFailureException {
+        executeMvnCommand(OutputMode.DEBUG, args);
+    }
+
     /**
      * Executes Maven command.
      *
-     * @param copyOutput
-     *            Copy output to console.
+     * @param outputMode
+     *            the output mode for console
      * @param args
      *            Maven command line arguments.
      * @throws CommandLineException
      * @throws MojoFailureException
      */
-    private void executeMvnCommand(boolean copyOutput, final String... args)
+    private void executeMvnCommand(OutputMode outputMode, final String... args)
             throws CommandLineException, MojoFailureException {
         String[] effectiveArgs = addArgs(args, "-f", session.getRequest().getPom().getAbsolutePath());
         if (session.getRequest().getUserSettingsFile() != null) {
@@ -3148,11 +3154,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         } else {
             cmd = cmdMvn;
         }
-        if (copyOutput) {
-            executeCommandCopyOut(cmd, true, effectiveArgs);
-        } else {
-            executeCommand(cmd, true, effectiveArgs);
-        }
+        executeCommand(outputMode, cmd, true, effectiveArgs);
     }
 
     private Commandline getCmdMvnConfiguredByUserProperties() {
@@ -3259,73 +3261,6 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Executes command line.
-     *
-     * @param cmd
-     *            Command line.
-     * @param failOnError
-     *            Whether to throw exception on NOT success exit code.
-     * @param args
-     *            Command line arguments.
-     * @return {@link CommandResult} instance holding command exit code, output
-     *         and error if any.
-     * @throws CommandLineException
-     * @throws MojoFailureException
-     *             If <code>failOnError</code> is <code>true</code> and command
-     *             exit code is NOT equals to 0.
-     */
-    private CommandResult executeCommandCopyOut(final Commandline cmd, final boolean failOnError, final String... args)
-            throws CommandLineException, MojoFailureException {
-        // initialize executables
-        initExecutables();
-
-        if (getLog().isDebugEnabled()) {
-            getLog().debug(cmd.getExecutable() + " " + StringUtils.join(args, " "));
-        }
-
-        cmd.clearArgs();
-        cmd.addArguments(args);
-
-        final StringBufferStreamConsumer out = new StringBufferStreamConsumer(verbose);
-
-        final CommandLineUtils.StringStreamConsumer err = new CommandLineUtils.StringStreamConsumer();
-
-        final String logPrefixOut = "[" + cmd.getExecutable().toUpperCase() + " out] ";
-        final String logPrefixErr = "[" + cmd.getExecutable().toUpperCase() + " err] ";
-
-        // execute
-        final int exitCode = CommandLineUtils.executeCommandLine(cmd, new StreamConsumer() {
-
-            @Override
-            public void consumeLine(String line) {
-                out.consumeLine(line);
-                getExternalLog().info(logPrefixOut + line);
-            }
-        }, new StreamConsumer() {
-
-            @Override
-            public void consumeLine(String line) {
-                err.consumeLine(line);
-                getExternalLog().severe(logPrefixErr + line);
-            }
-        });
-
-        String errorStr = err.getOutput();
-        String outStr = out.getOutput();
-
-        if (failOnError && exitCode != SUCCESS_EXIT_CODE) {
-            // not all commands print errors to error stream
-            if (StringUtils.isBlank(errorStr) && StringUtils.isNotBlank(outStr)) {
-                errorStr = outStr;
-            }
-
-            throw new MojoFailureException(errorStr);
-        }
-
-        return new CommandResult(exitCode, null, errorStr);
-    }
-
-    /**
      * Check whether commandline git is available at all.
      */
     protected boolean isGitAvailable() throws MojoFailureException, CommandLineException {
@@ -3378,7 +3313,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
     protected ExtendedPrompter getPrompter() {
         if (extendedPrompter == null) {
-            extendedPrompter = new ExtendedPrompter(prompter, settings.isInteractiveMode());
+            extendedPrompter = new ExtendedPrompter(prompter, settings.isInteractiveMode(), this);
         }
         return extendedPrompter;
     }
@@ -3401,6 +3336,27 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     private CommandResult executeCommand(final Commandline cmd, final boolean failOnError, final String... args)
             throws CommandLineException, MojoFailureException {
+        return executeCommand(OutputMode.DEBUG, cmd, failOnError, args);
+    }
+
+    /**
+     * Executes command line.
+     *
+     * @param cmd
+     *            Command line.
+     * @param failOnError
+     *            Whether to throw exception on NOT success exit code.
+     * @param args
+     *            Command line arguments.
+     * @return {@link CommandResult} instance holding command exit code, output
+     *         and error if any.
+     * @throws CommandLineException
+     * @throws MojoFailureException
+     *             If <code>failOnError</code> is <code>true</code> and command
+     *             exit code is NOT equals to 0.
+     */
+    private CommandResult executeCommand(OutputMode outputMode, final Commandline cmd, final boolean failOnError,
+            final String... args) throws CommandLineException, MojoFailureException {
         // initialize executables
         initExecutables();
 
@@ -3415,8 +3371,12 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
         final CommandLineUtils.StringStreamConsumer err = new CommandLineUtils.StringStreamConsumer();
 
-        final String logPrefixOut = "[" + cmd.getExecutable().toUpperCase() + " out] ";
-        final String logPrefixErr = "[" + cmd.getExecutable().toUpperCase() + " err] ";
+        final String logContext = cmd.getExecutable().toUpperCase();
+
+        final Date lastProgressOutput = (outputMode == OutputMode.PROGRESS) ? new Date() : null;
+        if (lastProgressOutput != null) {
+            System.out.print("running external command...");
+        }
 
         // execute
         final int exitCode = CommandLineUtils.executeCommandLine(cmd, new StreamConsumer() {
@@ -3424,16 +3384,25 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             @Override
             public void consumeLine(String line) {
                 out.consumeLine(line);
-                getExternalLog().info(logPrefixOut + line);
+                getLog().logCommandOut(logContext, line, outputMode);
+                if (hasToPrintProgressOutput(lastProgressOutput)) {
+                    System.out.print(".");
+                }
             }
         }, new StreamConsumer() {
 
             @Override
             public void consumeLine(String line) {
                 err.consumeLine(line);
-                getExternalLog().severe(logPrefixErr + line);
+                getLog().logCommandErr(logContext, line, outputMode);
+                if (hasToPrintProgressOutput(lastProgressOutput)) {
+                    System.out.print(".");
+                }
             }
         });
+        if (lastProgressOutput != null) {
+            System.out.println();
+        }
 
         String errorStr = err.getOutput();
         String outStr = out.getOutput();
@@ -3450,6 +3419,17 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         }
 
         return new CommandResult(exitCode, StringUtils.trim(outStr), errorStr);
+    }
+
+    protected boolean hasToPrintProgressOutput(Date lastProgressOutput) {
+        if (lastProgressOutput != null) {
+            long now = new Date().getTime();
+            if (now - lastProgressOutput.getTime() >= PROGRESS_OUTPUT_TIMEOUT_IN_MILLIS) {
+                lastProgressOutput.setTime(now);
+                return true;
+            }
+        }
+        return false;
     }
 
     protected void gitResetHard() throws MojoFailureException, CommandLineException {
@@ -3625,7 +3605,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     @Override
-    public Log getLog() {
+    public LogWrapper getLog() {
         if (logWrapper == null) {
             logWrapper = new LogWrapper(false);
         }
@@ -3666,8 +3646,9 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                         pw.close();
                         throwable = sw.toString();
                     }
-                    return String.format("%1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS.%1$tL - %2$-7s %3$s %4$s%n", date,
-                            record.getLevel().getName(), formatMessage(record), throwable);
+                    String context = record.getLoggerName() != null ? "[" + record.getLoggerName() + "]" : "";
+                    return String.format("%1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS.%1$tL - %2$-5s %3$-8s %4$s %5$s%n", date,
+                            record.getLevel().getName(), context, formatMessage(record), throwable);
                 }
             });
             logHandler.setLevel(Level.ALL);
@@ -3759,9 +3740,37 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             return AbstractGitFlowMojo.super.getLog().isErrorEnabled();
         }
 
+        private boolean isMavenCommandOutEnabled(OutputMode outputMode) {
+            return (outputMode == OutputMode.FULL && AbstractGitFlowMojo.super.getLog().isInfoEnabled())
+                    || (outputMode == OutputMode.DEBUG && AbstractGitFlowMojo.super.getLog().isDebugEnabled());
+        }
+
+        private void logExternally(Level level, CharSequence content) {
+            logExternally(level, content, null);
+        }
+
+        private void logExternally(Level level, String context, CharSequence content) {
+            logExternally(level, context, content, null);
+        }
+
+        private void logExternally(Level level, Throwable error) {
+            logExternally(level, null, error);
+        }
+
+        private void logExternally(Level level, CharSequence content, Throwable error) {
+            logExternally(level, null, content, error);
+        }
+
+        private void logExternally(Level level, String context, CharSequence content, Throwable error) {
+            LogRecord record = new LogRecord(level, (String) content);
+            record.setThrown(error);
+            record.setLoggerName(context);
+            getExternalLog().log(record);
+        }
+
         @Override
         public void debug(CharSequence content) {
-            getExternalLog().log(Level.FINE, (String) content);
+            logExternally(ExtLevel.DEBUG, content);
             if (isMavenLogDebugEnabled()) {
                 AbstractGitFlowMojo.super.getLog().debug(content);
             }
@@ -3769,7 +3778,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
         @Override
         public void debug(CharSequence content, Throwable error) {
-            getExternalLog().log(Level.FINE, (String) content, error);
+            logExternally(ExtLevel.DEBUG, content, error);
             if (isMavenLogDebugEnabled()) {
                 AbstractGitFlowMojo.super.getLog().debug(content, error);
             }
@@ -3777,7 +3786,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
         @Override
         public void debug(Throwable error) {
-            getExternalLog().log(Level.FINE, "", error);
+            logExternally(ExtLevel.DEBUG, error);
             if (isMavenLogDebugEnabled()) {
                 AbstractGitFlowMojo.super.getLog().debug(error);
             }
@@ -3785,7 +3794,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
         @Override
         public void info(CharSequence content) {
-            getExternalLog().log(Level.INFO, (String) content);
+            logExternally(ExtLevel.INFO, content);
             if (isMavenLogInfoEnabled()) {
                 AbstractGitFlowMojo.super.getLog().info(content);
             }
@@ -3793,7 +3802,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
         @Override
         public void info(CharSequence content, Throwable error) {
-            getExternalLog().log(Level.INFO, (String) content, error);
+            logExternally(ExtLevel.INFO, content, error);
             if (isMavenLogInfoEnabled()) {
                 AbstractGitFlowMojo.super.getLog().info(content, error);
             }
@@ -3801,7 +3810,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
         @Override
         public void info(Throwable error) {
-            getExternalLog().log(Level.INFO, "", error);
+            logExternally(ExtLevel.INFO, error);
             if (isMavenLogInfoEnabled()) {
                 AbstractGitFlowMojo.super.getLog().info(error);
             }
@@ -3809,7 +3818,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
         @Override
         public void warn(CharSequence content) {
-            getExternalLog().log(Level.WARNING, (String) content);
+            logExternally(ExtLevel.WARN, content);
             if (isMavenLogWarnEnabled()) {
                 AbstractGitFlowMojo.super.getLog().warn(content);
             }
@@ -3817,7 +3826,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
         @Override
         public void warn(CharSequence content, Throwable error) {
-            getExternalLog().log(Level.WARNING, (String) content, error);
+            logExternally(ExtLevel.WARN, content, error);
             if (isMavenLogWarnEnabled()) {
                 AbstractGitFlowMojo.super.getLog().warn(content, error);
             }
@@ -3825,7 +3834,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
         @Override
         public void warn(Throwable error) {
-            getExternalLog().log(Level.WARNING, "", error);
+            logExternally(ExtLevel.WARN, error);
             if (isMavenLogWarnEnabled()) {
                 AbstractGitFlowMojo.super.getLog().warn(error);
             }
@@ -3833,7 +3842,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
         @Override
         public void error(CharSequence content) {
-            getExternalLog().log(Level.SEVERE, (String) content);
+            logExternally(ExtLevel.ERROR, content);
             if (isMavenLogErrorEnabled()) {
                 AbstractGitFlowMojo.super.getLog().error(content);
             }
@@ -3841,7 +3850,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
         @Override
         public void error(CharSequence content, Throwable error) {
-            getExternalLog().log(Level.SEVERE, (String) content, error);
+            logExternally(ExtLevel.ERROR, content, error);
             if (isMavenLogErrorEnabled()) {
                 AbstractGitFlowMojo.super.getLog().error(content, error);
             }
@@ -3849,11 +3858,46 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
         @Override
         public void error(Throwable error) {
-            getExternalLog().log(Level.SEVERE, "", error);
+            logExternally(ExtLevel.ERROR, error);
             if (isMavenLogErrorEnabled()) {
                 AbstractGitFlowMojo.super.getLog().error(error);
             }
         }
 
+        public void logCommandOut(String command, String message, OutputMode outputMode) {
+            logExternally(ExtLevel.INFO, command, message);
+            if (isMavenCommandOutEnabled(outputMode)) {
+                AbstractGitFlowMojo.super.getLog().info(message);
+            }
+        }
+
+        public void logCommandErr(String command, String message, OutputMode outputMode) {
+            logExternally(ExtLevel.ERROR, command, message);
+            if (isMavenCommandOutEnabled(outputMode)) {
+                AbstractGitFlowMojo.super.getLog().error(message);
+            }
+        }
+
+        public void logExternally(String message) {
+            logExternally(ExtLevel.INFO, message);
+        }
+    }
+
+    private static class ExtLevel extends Level {
+
+        public static final Level ERROR = new ExtLevel("ERROR", 1000);
+        public static final Level WARN = new ExtLevel("WARN", 900);
+        @SuppressWarnings("hiding")
+        public static final Level INFO = new ExtLevel("INFO", 800);
+        public static final Level DEBUG = new ExtLevel("DEBUG", 500);
+
+        protected ExtLevel(String name, int value) {
+            super(name, value);
+        }
+
+    }
+
+    protected enum OutputMode {
+        NONE, PROGRESS, DEBUG, FULL;
     }
 }

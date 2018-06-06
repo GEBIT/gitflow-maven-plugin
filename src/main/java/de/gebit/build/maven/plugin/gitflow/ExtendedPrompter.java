@@ -11,6 +11,7 @@ package de.gebit.build.maven.plugin.gitflow;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -18,6 +19,8 @@ import org.apache.commons.collections.CollectionUtils;
 import org.codehaus.plexus.components.interactivity.Prompter;
 import org.codehaus.plexus.components.interactivity.PrompterException;
 import org.codehaus.plexus.util.StringUtils;
+
+import de.gebit.build.maven.plugin.gitflow.AbstractGitFlowMojo.OutputMode;
 
 /**
  * Wrapper class for a promptem that provides additional usefull methods for
@@ -31,6 +34,7 @@ public class ExtendedPrompter implements Prompter {
 
     private Prompter prompter;
     private boolean interactiveMode;
+    private AbstractGitFlowMojo mojo;
 
     /**
      * Creates an instance of {@link ExtendedPrompter}.
@@ -40,39 +44,94 @@ public class ExtendedPrompter implements Prompter {
      * @param isInteractiveMode
      *            <code>true</code> if interactive mode is active
      */
-    public ExtendedPrompter(Prompter aPrompter, boolean isInteractiveMode) {
+    public ExtendedPrompter(Prompter aPrompter, boolean isInteractiveMode, AbstractGitFlowMojo aMojo) {
         prompter = aPrompter;
         interactiveMode = isInteractiveMode;
+        mojo = aMojo;
     }
 
     @Override
     public String prompt(String message) throws PrompterException {
-        return prompter.prompt(message);
+        logPrompt(message);
+        String answer = prompter.prompt(message);
+        logAnswer(answer);
+        return answer;
     }
 
     @Override
     public String prompt(String message, String defaultReply) throws PrompterException {
-        return prompter.prompt(message, defaultReply);
+        logPrompt(formatPromptMessageForLog(message, null, defaultReply));
+        String answer = prompter.prompt(message, defaultReply);
+        logAnswer(answer);
+        return answer;
     }
 
     @Override
     public String prompt(String message, List possibleValues) throws PrompterException {
-        return prompter.prompt(message, possibleValues);
+        logPrompt(formatPromptMessageForLog(message, possibleValues, null));
+        String answer = prompter.prompt(message, possibleValues);
+        logAnswer(answer);
+        return answer;
     }
 
     @Override
     public String prompt(String message, List possibleValues, String defaultReply) throws PrompterException {
-        return prompter.prompt(message, possibleValues, defaultReply);
+        logPrompt(formatPromptMessageForLog(message, possibleValues, defaultReply));
+        String answer = prompter.prompt(message, possibleValues, defaultReply);
+        logAnswer(answer);
+        return answer;
     }
 
     @Override
     public String promptForPassword(String message) throws PrompterException {
-        return prompter.promptForPassword(message);
+        logPrompt(message);
+        String answer = prompter.promptForPassword(message);
+        logAnswer("******");
+        return answer;
     }
 
     @Override
     public void showMessage(String message) throws PrompterException {
+        logMessage(message);
         prompter.showMessage(message);
+    }
+
+    private void logPrompt(String message) {
+        mojo.getLog().logCommandOut("PROMPT", message + ":", OutputMode.NONE);
+    }
+
+    private void logAnswer(String answer) {
+        mojo.getLog().logCommandOut("ANSWER", answer, OutputMode.NONE);
+    }
+
+    private void logMessage(String message) {
+        mojo.getLog().logCommandOut("PROMPT", message, OutputMode.NONE);
+    }
+
+    private String formatPromptMessageForLog(String message, List possibleValues, String defaultReply) {
+        StringBuffer formatted = new StringBuffer(message.length() * 2);
+        formatted.append(message);
+        if (possibleValues != null && !possibleValues.isEmpty()) {
+            formatted.append(" ").append(formatPossiblePromptValues(possibleValues));
+        }
+        if (defaultReply != null) {
+            formatted.append(' ').append(defaultReply).append(": ");
+        }
+        return formatted.toString();
+    }
+
+    private String formatPossiblePromptValues(List possibleValues) {
+        StringBuffer formatted = new StringBuffer();
+        formatted.append("(");
+        for (Iterator it = possibleValues.iterator(); it.hasNext();) {
+            String possibleValue = (String) it.next();
+            formatted.append(possibleValue);
+            if (it.hasNext()) {
+                formatted.append('/');
+            }
+        }
+        formatted.append(')');
+        return formatted.toString();
     }
 
     public String promptValue(String promptMessage) throws GitFlowFailureException {
