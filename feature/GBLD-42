@@ -3,4 +3,4 @@ baseVersion = 2.0.1-SNAPSHOT
 branchType = feature
 issueNumber = GBLD-42
 baseBranch = master
-versionChangeCommit = bbdc11fa4a51b9cee94200ec38189ccebb19b21f
+versionChangeCommit = 19ce9947b28de4636752f20c948c0e76451e575e
