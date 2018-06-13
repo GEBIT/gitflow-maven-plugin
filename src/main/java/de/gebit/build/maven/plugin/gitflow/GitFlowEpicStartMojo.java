@@ -180,7 +180,7 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
                 getLog().info("Added epic issue number to project version: " + version);
                 if (!currentVersion.equals(version)) {
                     getMavenLog().info("Setting version '" + version + "' for project on epic branch...");
-                    mvnSetVersions(version, "On epic branch: ");
+                    mvnSetVersions(version, "On epic branch: ", epicBranchName);
                     gitCommit(epicStartMessage);
                     versionChangeCommit = getCurrentCommit();
                 } else {

@@ -465,7 +465,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
                 if (!rebased && !tychoBuild) {
                     // rebase not configured or not possible, then manually
                     // revert the version
-                    revertProjectVersionManually(featureBranch, featureVersion, baseVersion);
+                    revertProjectVersionManually(featureBranch, featureVersion, baseVersion, baseBranch);
                 }
             }
         } else {
@@ -598,15 +598,15 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
         return rebased;
     }
 
-    private void revertProjectVersionManually(String featureBranch, String featureVersion, String baseVersion)
-            throws MojoFailureException, CommandLineException {
+    private void revertProjectVersionManually(String featureBranch, String featureVersion, String baseVersion,
+            String baseBranch) throws MojoFailureException, CommandLineException {
         if (!featureVersion.equals(baseVersion)) {
             gitCheckout(featureBranch);
             String issueNumber = getFeatureIssueNumber(featureBranch);
             String featureFinishMessage = substituteWithIssueNumber(commitMessages.getFeatureFinishMessage(),
                     issueNumber);
             getMavenLog().info("Setting base version '" + baseVersion + "' for project on feature branch...");
-            mvnSetVersions(baseVersion);
+            mvnSetVersions(baseVersion, null, baseBranch);
             gitCommit(featureFinishMessage);
         } else {
             getLog().info("Project version on feature branch is same as project version on base branch. "

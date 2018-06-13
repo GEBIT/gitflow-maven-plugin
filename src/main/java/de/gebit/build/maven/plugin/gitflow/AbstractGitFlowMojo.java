@@ -312,6 +312,15 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     @Parameter(property = "configBranchDir", defaultValue = ".branch-config")
     protected String configBranchDir;
 
+    /**
+     * Additional maven commands that can prompt for user input or be
+     * conditionally enabled.
+     *
+     * @since 2.0.1
+     */
+    @Parameter
+    protected GitFlowParameter[] additionalMavenCommands;
+
     private ExtendedPrompter extendedPrompter;
 
     private CentralBranchConfigCache centralBranchConfigCache;
@@ -2819,6 +2828,11 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         mvnSetVersions(version, promptPrefix, null, false);
     }
 
+    protected void mvnSetVersions(final String version, String promptPrefix, String targetBranch)
+            throws MojoFailureException, CommandLineException {
+        mvnSetVersions(version, promptPrefix, null, false, targetBranch);
+    }
+
     /**
      * Executes 'set' goal of versions-maven-plugin or 'set-version' of
      * tycho-versions-plugin in case it is tycho build.
@@ -2833,6 +2847,23 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected void mvnSetVersions(final String version, String promptPrefix, String branchWithAdditionalVersionInfo,
             boolean sameBaseVersion) throws MojoFailureException, CommandLineException {
+        mvnSetVersions(version, promptPrefix, branchWithAdditionalVersionInfo, sameBaseVersion, null);
+    }
+
+    /**
+     * Executes 'set' goal of versions-maven-plugin or 'set-version' of
+     * tycho-versions-plugin in case it is tycho build.
+     *
+     * @param version
+     *            New version to set.
+     * @param promptPrefix
+     *            Specify a prompt prefix. A value <code>!= null</code> triggers
+     *            processing of {@link #additionalVersionCommands}
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void mvnSetVersions(final String version, String promptPrefix, String branchWithAdditionalVersionInfo,
+            boolean sameBaseVersion, String targetBranch) throws MojoFailureException, CommandLineException {
         BranchCentralConfigChanges branchConfigChanges = new BranchCentralConfigChanges();
         String currentBranch = branchWithAdditionalVersionInfo;
         if (currentBranch == null) {
@@ -2936,10 +2967,125 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                         "Please specify executable additional version maven command.");
             }
         }
+
+        if (targetBranch != null) {
+            executeAdditionalMavenCommands(targetBranch);
+        }
+
         if (!branchConfigChanges.isEmpty()) {
             gitApplyBranchCentralConfigChanges(branchConfigChanges,
                     "additional version values for '" + currentBranch + "'");
         }
+    }
+
+    private void executeAdditionalMavenCommands(String branch) throws MojoFailureException {
+        String promptPrefix = "";
+        boolean processAdditionalCommands = true;
+        if (processAdditionalCommands && additionalMavenCommands != null) {
+            StringSearchInterpolator interpolator = new StringSearchInterpolator("@{", "}");
+            interpolator.addValueSource(new PropertiesBasedValueSource(getProject().getProperties()));
+            Properties properties = new Properties();
+            properties.setProperty("branchName", branch);
+            interpolator.addValueSource(new PropertiesBasedValueSource(properties));
+
+            // process additional commands/parameters
+            for (int i = 0; i < additionalMavenCommands.length; i++) {
+                GitFlowParameter parameter = additionalMavenCommands[i];
+                if (!parameter.isEnabled()) {
+                    continue;
+                }
+                if (!parameter.isEnabledByPrompt() && parameter.getProperty() != null
+                        && session.getRequest().getUserProperties().getProperty(parameter.getProperty()) != null) {
+                    parameter.setValue(session.getRequest().getUserProperties().getProperty(parameter.getProperty()));
+                } else if (settings.isInteractiveMode()) {
+                    if (parameter.getPrompt() != null) {
+                        String value = null;
+
+                        String prompt;
+                        try {
+                            prompt = promptPrefix + interpolator.interpolate(parameter.getPrompt());
+                        } catch (InterpolationException e) {
+                            throw new GitFlowFailureException(e,
+                                    "Expression cycle detected in additionalMavenCommands parameter 'prompt'. "
+                                            + "Maven command can't be executed.",
+                                    "Please modify the parameter value to avoid cylces.");
+                        }
+                        try {
+                            String defaultValue = parameter.getDefaultValue() != null
+                                    ? interpolator.interpolate(parameter.getDefaultValue()) : null;
+                            if (defaultValue != null) {
+                                value = getPrompter().promptValue(prompt, defaultValue);
+                            } else {
+                                value = getPrompter().promptValue(prompt);
+                            }
+                            parameter.setValue(value);
+                        } catch (InterpolationException e) {
+                            throw new GitFlowFailureException(e,
+                                    "Expression cycle detected in additionalVersionCommand parameter 'defaultValue'. "
+                                            + "Maven command can't be executed.",
+                                    "Please modify the parameter value to avoid cylces.");
+                        }
+                    }
+                } else {
+                    try {
+                        String defaultValue = parameter.getDefaultValue() != null
+                                ? interpolator.interpolate(parameter.getDefaultValue()) : null;
+                        parameter.setValue(defaultValue);
+                    } catch (InterpolationException e) {
+                        throw new GitFlowFailureException(e,
+                                "Expression cycle detected in additionalVersionCommand parameter 'defaultValue'. "
+                                        + "Maven command can't be executed.",
+                                "Please modify the parameter value to avoid cylces.");
+                    }
+                }
+                String paramValue = parameter.getValue();
+                getLog().info("Parameter value set to '" + paramValue + "'");
+                if (paramValue != null) {
+                    getMavenLog().info("- using parameter value '" + paramValue + "' for additional maven command");
+                }
+            }
+            for (String command : getAdditionalMavenCommands()) {
+                try {
+                    command = normilizeWhitespaces(command.replaceAll("\\@\\{branchName\\}", branch));
+                    executeMvnCommand(CommandLineUtils.translateCommandline(command));
+                } catch (Exception e) {
+                    throw new GitFlowFailureException(e, "Failed to execute additional version maven command: " + command
+                            + "\nMaven error message:\n" + e.getMessage(),
+                            "Please specify executable additional version maven command.");
+                }
+            }
+        }
+
+    }
+
+    protected List<String> getAdditionalMavenCommands() throws MojoFailureException {
+        if (additionalMavenCommands == null || additionalMavenCommands.length == 0) {
+            return Collections.emptyList();
+        }
+        List<String> result = new ArrayList<String>();
+        for (GitFlowParameter parameter : additionalMavenCommands) {
+            if (!parameter.isEnabled()) {
+                continue;
+            }
+            if (parameter.isEnabledByPrompt() && !"true".equals(parameter.getValue())
+                    && !"yes".equals(parameter.getValue())) {
+                continue;
+            }
+
+            StringSearchInterpolator interpolator = new StringSearchInterpolator("@{", "}");
+            interpolator.addValueSource(new PropertiesBasedValueSource(getProject().getProperties()));
+            interpolator.addValueSource(new SingleResponseValueSource("value", parameter.getValue()));
+
+            try {
+                result.add(interpolator.interpolate(parameter.getCommand()));
+            } catch (InterpolationException e) {
+                throw new GitFlowFailureException(e,
+                        "Expression cycle detected in additionalMavenCommands parameter 'command'. "
+                                + "Maven command can't be executed.",
+                        "Please modify the parameter value to avoid cylces.");
+            }
+        }
+        return result;
     }
 
     private String normilizeWhitespaces(String text) {
