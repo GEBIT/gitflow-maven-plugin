@@ -175,17 +175,19 @@ public class GitFlowHotfixFinishMojo extends AbstractGitFlowMojo {
             mvnCleanInstall();
         }
 
-        if (!keepBranch) {
-            // git branch -d hotfix/...
-            gitBranchDelete(hotfixBranchName);
-        }
-
+        // first push modified branches
         if (pushRemote) {
             // if no release branch
             if (StringUtils.isBlank(releaseBranch) && !gitFlowConfig.isNoProduction()) {
                 gitPush(gitFlowConfig.getProductionBranch(), !skipTag, false);
             }
             gitPush(gitFlowConfig.getDevelopmentBranch(), !skipTag, false);
+        }
+
+        // then delete if wanted
+        if (!keepBranch) {
+            // git branch -d hotfix/...
+            gitBranchDelete(hotfixBranchName);
         }
     }
 }

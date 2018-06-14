@@ -225,6 +225,13 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
         gitRemoveBranchLocalConfig(baseBranch, "breakpoint");
         gitRemoveBranchLocalConfig(baseBranch, "breakpointEpicBranch");
 
+        // first push modified branches
+        if (pushRemote) {
+            getMavenLog().info("Pushing base branch '" + baseBranch + "' to remote repository");
+            gitPush(baseBranch, false, false);
+        }
+
+        // then delete if wanted
         if (!keepEpicBranch) {
             getMavenLog().info("Removing local epic branch '" + epicBranchName + "'");
             gitBranchDeleteForce(epicBranchName);
@@ -233,11 +240,6 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
                 getMavenLog().info("Removing remote epic branch '" + epicBranchName + "'");
                 gitBranchDeleteRemote(epicBranchName);
             }
-        }
-
-        if (pushRemote) {
-            getMavenLog().info("Pushing base branch '" + baseBranch + "' to remote repository");
-            gitPush(baseBranch, false, false);
         }
         getMavenLog().info("Epic finish process finished");
     }

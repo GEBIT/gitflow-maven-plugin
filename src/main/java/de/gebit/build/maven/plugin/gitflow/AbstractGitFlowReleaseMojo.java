@@ -460,14 +460,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
             mvnCleanInstall();
         }
 
-        if (!isKeepBranch()) {
-            // remove the release branch
-            gitBranchDeleteForce(releaseBranch);
-            if (pushRemote && isPushReleaseBranch()) {
-                gitBranchDeleteRemote(releaseBranch);
-            }
-        }
-
+        // first push modified branches
         if (pushRemote) {
             if (isUsingProductionBranch(developmentBranch, productionBranch)) {
                 gitPush(productionBranch, !isSkipTag(), false);
@@ -477,6 +470,15 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         if (isDetachReleaseCommit()) {
             // make sure we leave the workspace in the state as released
             gitCheckout(releaseCommit);
+        }
+
+        // then delete if wanted
+        if (!isKeepBranch()) {
+            // remove the release branch
+            gitBranchDeleteForce(releaseBranch);
+            if (pushRemote && isPushReleaseBranch()) {
+                gitBranchDeleteRemote(releaseBranch);
+            }
         }
     }
 

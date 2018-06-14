@@ -539,6 +539,12 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
         String featureBranch = stepParameters.featureBranch;
 
         removeBreakpoints(featureBranch, baseBranch);
+        // first push modified branches
+        if (pushRemote) {
+            getMavenLog().info("Pushing base branch '" + baseBranch + "' to remote repository");
+            gitPush(baseBranch, false, false);
+        }
+        // then delete if wanted
         if (!keepFeatureBranch) {
             getMavenLog().info("Removing local feature branch '" + featureBranch + "'");
             gitBranchDeleteForce(featureBranch);
@@ -547,10 +553,6 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
                 getMavenLog().info("Removing remote feature branch '" + featureBranch + "'");
                 gitBranchDeleteRemote(featureBranch);
             }
-        }
-        if (pushRemote) {
-            getMavenLog().info("Pushing base branch '" + baseBranch + "' to remote repository");
-            gitPush(baseBranch, false, false);
         }
         return stepParameters;
     }
