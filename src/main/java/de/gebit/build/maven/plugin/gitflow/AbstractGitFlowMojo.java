@@ -110,7 +110,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     public static final String USER_PROPERTY_KEY_EXTERNAL_GIT_EDITOR_USED = "external.git.editor.used";
 
     /** A full name of the versions-maven-plugin set goal. */
-    private static final String VERSIONS_MAVEN_PLUGIN_SET_GOAL = "org.codehaus.mojo:versions-maven-plugin:2.1:set";
+    private static final String VERSIONS_MAVEN_PLUGIN_SET_GOAL = "org.codehaus.mojo:versions-maven-plugin:2.5-gebit1:set";
 
     /** Name of the tycho-versions-plugin set-version goal. */
     private static final String TYCHO_VERSIONS_PLUGIN_SET_GOAL = "org.eclipse.tycho:tycho-versions-plugin:set-version";
@@ -2851,6 +2851,21 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
+     * When finishing versions of new modules might be wrong and need to be corrected.
+     */
+    protected void mvnFixupVersions(final String version, final String message) throws MojoFailureException, CommandLineException {
+        if (tychoBuild) {
+            // not supported
+        } else {
+            executeMvnCommand(VERSIONS_MAVEN_PLUGIN_SET_GOAL, "-DnewVersion=" + version, "-DgenerateBackupPoms=false", "-DprocessAllModules=true", "-DoldVersion=*");
+            CommandResult result = executeGitCommandExitCode("commit", "-m", message, "**/pom.xml");
+            if (result.exitCode == 0) {
+                getLog().info("New modules adapted to correct versin");
+            }
+        }
+    }
+
+    /**
      * Executes 'set' goal of versions-maven-plugin or 'set-version' of
      * tycho-versions-plugin in case it is tycho build.
      *
@@ -3161,7 +3176,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected void mvnCleanVerify() throws MojoFailureException, CommandLineException {
         getLog().info("Cleaning and verifying the project.");
-        executeMvnCommand(printTestOutput ? OutputMode.FULL : OutputMode.PROGRESS, "clean", "verify");
+        executeMvnCommand(printTestOutput ? OutputMode.FULL : OutputMode.PROGRESS, "clean", "install");
     }
 
     /**

@@ -91,6 +91,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
             new Step(this::ensureBranchesPreparedForFeatureFinish, Breakpoint.REBASE_BEFORE_FINISH),
             new Step(this::verifyFeatureProject),
             new Step(this::revertProjectVersion, Breakpoint.REBASE_WITHOUT_VERSION_CHANGE),
+            new Step(this::revertProjectVersion, Breakpoint.REBASE_WITHOUT_VERSION_CHANGE),
             new Step(this::mergeIntoBaseBranch, Breakpoint.FINAL_MERGE),
             new Step(this::buildBaseProject, Breakpoint.CLEAN_INSTALL), new Step(this::finalizeFeatureFinish) };
 
@@ -296,7 +297,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
         } else {
             continueFeatureRebase();
         }
-        boolean rebasedWithoutVersionChangeCommit = finilizeFeatureRebase(featureBranch);
+        boolean rebasedWithoutVersionChangeCommit = finalizeFeatureRebase(featureBranch);
         stepParameters.isOnFeatureBranch = true;
         stepParameters.rebasedWithoutVersionChangeCommit = rebasedWithoutVersionChangeCommit;
         return stepParameters;
@@ -425,7 +426,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
         }
     }
 
-    private boolean finilizeFeatureRebase(String featureBranch) throws MojoFailureException, CommandLineException {
+    private boolean finalizeFeatureRebase(String featureBranch) throws MojoFailureException, CommandLineException {
         boolean rebasedWithoutVersionChangeCommit = gitGetBranchLocalConfig(featureBranch,
                 "rebasedWithoutVersionChangeCommit") != null;
         if (rebasedWithoutVersionChangeCommit) {
@@ -462,6 +463,13 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
                 getLog().info("Project version on base branch: " + baseVersion);
 
                 boolean rebased = rebaseToRemoveVersionChangeCommit(featureBranch, baseBranch);
+                if (rebased) {
+                    getLog().info("Ensure consistent version in all modules");
+                    String issueNumber = getFeatureIssueNumber(featureBranch);
+                    String featureFinishMessage = substituteWithIssueNumber(commitMessages.getFeatureFinishMessage(),
+                            issueNumber);
+                    mvnFixupVersions(baseVersion, featureFinishMessage);
+                }
                 if (!rebased && !tychoBuild) {
                     // rebase not configured or not possible, then manually
                     // revert the version

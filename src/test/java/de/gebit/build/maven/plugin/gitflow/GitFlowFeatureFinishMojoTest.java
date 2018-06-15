@@ -15,6 +15,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Properties;
@@ -22,6 +23,7 @@ import java.util.Set;
 
 import org.apache.maven.execution.MavenExecutionResult;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
+import org.codehaus.plexus.util.FileUtils;
 import org.eclipse.jgit.api.CheckoutCommand.Stage;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.junit.After;
@@ -254,6 +256,64 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, USED_COMMIT_MESSAGE_MERGE,
                 COMMIT_MESSAGE_FOR_TESTFILE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+    }
+
+    @Test
+    public void testExecuteOnMasterBranchNewModuleOnBranch() throws Exception {
+        // set up
+        final String USED_FEATURE_BRANCH = BasicConstants.SINGLE_FEATURE_BRANCH;
+        final String USED_COMMIT_MESSAGE_MERGE = TestProjects.BASIC.jiraProject + "-NONE: Merge branch "
+                + USED_FEATURE_BRANCH;
+        git.switchToBranch(repositorySet, USED_FEATURE_BRANCH);
+
+        // create a new module
+        //FileUtils.write(testFile, TESTFILE_CONTENT, "UTF-8");
+        File workingDir = repositorySet.getWorkingDirectory();
+
+        // create module
+        File moduleDir =  new File(workingDir, "module");
+        moduleDir.mkdir();
+        FileUtils.fileWrite(new File(moduleDir, "pom.xml"), "<project xmlns=\"http://maven.apache.org/POM/4.0.0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n" +
+            "       xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd\">\n" +
+                "       <modelVersion>4.0.0</modelVersion>\n" +
+                "       <parent>\n" +
+                "               <groupId>de.gebit.build.maven.test</groupId>\n" +
+                "               <artifactId>basic-project</artifactId>\n" +
+                "               <version>1.2.3-GFTST-103-SNAPSHOT</version>\n" +
+                "       </parent>\n" +
+                "       <artifactId>basic-module</artifactId>\n" +
+                "</project>\n");
+        File pom = new File(workingDir, "pom.xml");
+        String pomContents = FileUtils.fileRead(pom);
+        pomContents = pomContents.replaceAll("</project>", "\t<modules><module>module</module></modules>\n\t<packaging>pom</packaging>\n</project>");
+        FileUtils.fileWrite(pom, pomContents);
+        git.commitAll(repositorySet, BasicConstants.SINGLE_FEATURE_ISSUE + ": new module");
+        git.push(repositorySet);
+
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        String PROMPT_MESSAGE = "Feature branches:" + LS + "1. " + USED_FEATURE_BRANCH + LS
+                + "Choose feature branch to finish";
+        when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1"))).thenReturn("1");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.featureBranchPrefix", BasicConstants.SINGLE_FEATURE_BRANCH_PREFIX);
+        userProperties.setProperty("flow.installProject", "true");
+
+        executeMojoWithResult(repositorySet.getWorkingDirectory().getParentFile(), "#install");
+
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1"));
+        verifyNoMoreInteractions(promptControllerMock);
+
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, USED_FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, USED_FEATURE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, USED_COMMIT_MESSAGE_MERGE,
+                "GFTST-103: reverting versions for development branch", "GFTST-103: new module");
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
     }
 

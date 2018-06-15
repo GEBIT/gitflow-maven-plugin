@@ -501,7 +501,7 @@ public abstract class AbstractGitFlowMojoTestCase {
             Properties properties, Prompter promptController, boolean throwCommandLineExceptionOnCommandLineExecution,
             String... activeProfiles) throws Exception {
         String pluginVersion = readPom(new File(".")).getVersion();
-        String fullGoal = GOAL_PREFIX + ":" + goal;
+        String fullGoal = (goal.startsWith("#") ? goal.substring(1) : GOAL_PREFIX + ":" + goal);
         MavenExecutionRequest request = createMavenExecutionRequest(basedir, fullGoal, useProfileWithDefaults,
                 properties, pluginVersion, throwCommandLineExceptionOnCommandLineExecution, activeProfiles);
         request.setInteractiveMode(promptController != null);
@@ -533,6 +533,10 @@ public abstract class AbstractGitFlowMojoTestCase {
             boolean throwCommandLineExceptionOnCommandLineExecution, String... activeProfiles) throws Exception {
         Properties userProperties = properties != null ? properties : new Properties();
         File pom = new File(basedir, "pom.xml");
+        if (!pom.exists()) {
+            // try different
+            pom = new File(basedir, "parent-pom.xml");
+        }
         MavenExecutionRequestPopulator executionRequestPopulator = container
                 .lookup(MavenExecutionRequestPopulator.class);
         ExtCliRequest cliRequest = new ExtCliRequest(new String[] { fullGoal });
