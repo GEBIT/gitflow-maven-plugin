@@ -126,7 +126,7 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         verifyZeroInteractions(promptControllerMock);
         assertFeatureFinishedCorrectly();
-        assertMavenCommandNotExecuted("clean install");
+        assertMavenCommandNotExecuted("clean verify");
         assertMavenCommandNotExecuted("clean test");
         assertArtifactNotInstalled();
     }
@@ -291,6 +291,10 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.commitAll(repositorySet, BasicConstants.SINGLE_FEATURE_ISSUE + ": new module");
         git.push(repositorySet);
 
+        // make sure project and parent are installed
+        executeMojoWithResult(repositorySet.getWorkingDirectory().getParentFile(), "#install");
+        executeMojoWithResult(repositorySet.getWorkingDirectory(), "#install");
+
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         String PROMPT_MESSAGE = "Feature branches:" + LS + "1. " + USED_FEATURE_BRANCH + LS
                 + "Choose feature branch to finish";
@@ -299,7 +303,6 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("flow.featureBranchPrefix", BasicConstants.SINGLE_FEATURE_BRANCH_PREFIX);
         userProperties.setProperty("flow.installProject", "true");
 
-        executeMojoWithResult(repositorySet.getWorkingDirectory().getParentFile(), "#install");
 
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
@@ -407,7 +410,7 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         verifyZeroInteractions(promptControllerMock);
         assertFeatureFinishedCorrectly();
-        assertMavenCommandExecuted("clean install");
+        assertMavenCommandExecuted("clean verify");
         assertMavenCommandNotExecuted("clean test");
     }
 
@@ -423,7 +426,7 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         verifyZeroInteractions(promptControllerMock);
         assertFeatureFinishedCorrectly();
-        assertMavenCommandExecuted("clean install");
+        assertMavenCommandExecuted("clean verify");
         assertMavenCommandNotExecuted("clean test");
     }
 

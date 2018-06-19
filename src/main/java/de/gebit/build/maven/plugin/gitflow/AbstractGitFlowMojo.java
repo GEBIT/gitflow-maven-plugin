@@ -3176,7 +3176,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected void mvnCleanVerify() throws MojoFailureException, CommandLineException {
         getLog().info("Cleaning and verifying the project.");
-        executeMvnCommand(printTestOutput ? OutputMode.FULL : OutputMode.PROGRESS, "clean", "install");
+        executeMvnCommand(printTestOutput ? OutputMode.FULL : OutputMode.PROGRESS, "clean", "verify");
     }
 
     /**
