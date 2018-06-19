@@ -120,7 +120,7 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         verifyZeroInteractions(promptControllerMock);
         assertEpicFinishedCorrectly();
-        assertMavenCommandNotExecuted("clean verify");
+        assertMavenCommandNotExecuted("clean install");
         assertMavenCommandNotExecuted("clean test");
         assertArtifactNotInstalled();
     }
@@ -373,7 +373,7 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         verifyZeroInteractions(promptControllerMock);
         assertEpicFinishedCorrectly();
-        assertMavenCommandExecuted("clean verify");
+        assertMavenCommandExecuted("clean install");
         assertMavenCommandNotExecuted("clean test");
     }
 
@@ -399,7 +399,7 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, USED_COMMIT_MESSAGE_MERGE,
                 BasicConstants.EPIC_WITHOUT_VERSION_COMMIT_MESSAGE_TESTFILE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
-        assertMavenCommandExecuted("clean verify");
+        assertMavenCommandExecuted("clean install");
         assertMavenCommandNotExecuted("clean test");
     }
 

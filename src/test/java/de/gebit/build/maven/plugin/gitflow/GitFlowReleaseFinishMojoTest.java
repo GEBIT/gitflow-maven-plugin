@@ -165,7 +165,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
-        assertMavenCommandNotExecuted("clean verify");
+        assertMavenCommandNotExecuted("clean install");
         assertMavenCommandNotExecuted("clean test");
         assertConfigCleanedUpForMaster();
     }
@@ -338,7 +338,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
-        assertMavenCommandExecuted("clean verify");
+        assertMavenCommandExecuted("clean install");
         assertMavenCommandNotExecuted("clean test");
     }
 
@@ -363,7 +363,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
-        assertMavenCommandExecuted("clean verify");
+        assertMavenCommandExecuted("clean install");
         assertMavenCommandNotExecuted("clean test");
     }
 

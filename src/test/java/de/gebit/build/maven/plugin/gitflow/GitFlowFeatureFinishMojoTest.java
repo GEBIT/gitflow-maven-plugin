@@ -126,7 +126,7 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         verifyZeroInteractions(promptControllerMock);
         assertFeatureFinishedCorrectly();
-        assertMavenCommandNotExecuted("clean verify");
+        assertMavenCommandNotExecuted("clean install");
         assertMavenCommandNotExecuted("clean test");
         assertArtifactNotInstalled();
     }
@@ -407,7 +407,7 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         verifyZeroInteractions(promptControllerMock);
         assertFeatureFinishedCorrectly();
-        assertMavenCommandExecuted("clean verify");
+        assertMavenCommandExecuted("clean install");
         assertMavenCommandNotExecuted("clean test");
     }
 
@@ -423,7 +423,7 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         verifyZeroInteractions(promptControllerMock);
         assertFeatureFinishedCorrectly();
-        assertMavenCommandExecuted("clean verify");
+        assertMavenCommandExecuted("clean install");
         assertMavenCommandNotExecuted("clean test");
     }
 
