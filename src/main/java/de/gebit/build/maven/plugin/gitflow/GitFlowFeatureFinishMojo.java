@@ -91,7 +91,6 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
             new Step(this::ensureBranchesPreparedForFeatureFinish, Breakpoint.REBASE_BEFORE_FINISH),
             new Step(this::verifyFeatureProject),
             new Step(this::revertProjectVersion, Breakpoint.REBASE_WITHOUT_VERSION_CHANGE),
-            new Step(this::revertProjectVersion, Breakpoint.REBASE_WITHOUT_VERSION_CHANGE),
             new Step(this::mergeIntoBaseBranch, Breakpoint.FINAL_MERGE),
             new Step(this::buildBaseProject, Breakpoint.CLEAN_INSTALL), new Step(this::finalizeFeatureFinish) };
 

@@ -2857,7 +2857,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         if (tychoBuild) {
             // not supported
         } else {
-            executeMvnCommand(VERSIONS_MAVEN_PLUGIN_SET_GOAL, "-DnewVersion=" + version, "-DgenerateBackupPoms=false", "-DprocessAllModules=true", "-DoldVersion=*");
+            executeMvnCommand(VERSIONS_MAVEN_PLUGIN_SET_GOAL, "-DnewVersion=" + version, "-DgenerateBackupPoms=false", "-DprocessAllModules=true", "-DprocessDependencies=false", "-DoldVersion=*");
             CommandResult result = executeGitCommandExitCode("commit", "-m", message, "**/pom.xml");
             if (result.exitCode == 0) {
                 getLog().info("New modules adapted to correct versin");
