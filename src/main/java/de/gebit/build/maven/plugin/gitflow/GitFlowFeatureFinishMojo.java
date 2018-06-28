@@ -451,6 +451,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
             if (stepParameters.rebasedWithoutVersionChangeCommit != null
                     && stepParameters.rebasedWithoutVersionChangeCommit == true) {
                 getLog().info("Project version on feature branch already reverted while rebasing.");
+                fixupModuleParents(featureBranch);
             } else {
                 String baseBranch = stepParameters.baseBranch;
                 String featureVersion = getCurrentProjectVersion();
@@ -463,11 +464,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
 
                 boolean rebased = rebaseToRemoveVersionChangeCommit(featureBranch, baseBranch);
                 if (rebased) {
-                    getLog().info("Ensure consistent version in all modules");
-                    String issueNumber = getFeatureIssueNumber(featureBranch);
-                    String featureFinishMessage = substituteWithIssueNumber(commitMessages.getFeatureFinishMessage(),
-                            issueNumber);
-                    mvnFixupVersions(baseVersion, featureFinishMessage);
+                    fixupModuleParents(featureBranch);
                 }
                 if (!rebased && !tychoBuild) {
                     // rebase not configured or not possible, then manually
@@ -479,6 +476,16 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
             stepParameters.baseBranch = continueRebaseToRemoveVersionChangeCommit(featureBranch);
         }
         return stepParameters;
+    }
+
+    private void fixupModuleParents(String featureBranch)
+            throws MojoFailureException, CommandLineException {
+        getLog().info("Ensure consistent version in all modules");
+        String baseVersion = getCurrentProjectVersion();
+        String issueNumber = getFeatureIssueNumber(featureBranch);
+        String featureFinishMessage = substituteWithIssueNumber(commitMessages.getFeatureFinishMessage(),
+                issueNumber);
+        mvnFixupVersions(baseVersion, issueNumber, featureFinishMessage);
     }
 
     private StepParameters mergeIntoBaseBranch(StepParameters stepParameters)

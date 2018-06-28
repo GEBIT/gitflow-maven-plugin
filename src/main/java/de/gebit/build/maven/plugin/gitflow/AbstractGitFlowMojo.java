@@ -110,7 +110,10 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     public static final String USER_PROPERTY_KEY_EXTERNAL_GIT_EDITOR_USED = "external.git.editor.used";
 
     /** A full name of the versions-maven-plugin set goal. */
-    private static final String VERSIONS_MAVEN_PLUGIN_SET_GOAL = "org.codehaus.mojo:versions-maven-plugin:2.5-gebit1:set";
+    private static final String VERSIONS_MAVEN_PLUGIN_SET_GOAL = "org.codehaus.mojo:versions-maven-plugin:2.5:set";
+
+    /** A full name of the versions-maven-plugin set goal. */
+    private static final String XML_EDITOR_MAVEN_PLUGIN_SET_GOAL = "de.gebit.build.maven:xml-editor-maven-plugin:1.0.2:replace";
 
     /** Name of the tycho-versions-plugin set-version goal. */
     private static final String TYCHO_VERSIONS_PLUGIN_SET_GOAL = "org.eclipse.tycho:tycho-versions-plugin:set-version";
@@ -2853,11 +2856,11 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     /**
      * When finishing versions of new modules might be wrong and need to be corrected.
      */
-    protected void mvnFixupVersions(final String version, final String message) throws MojoFailureException, CommandLineException {
+    protected void mvnFixupVersions(final String version, final String issueNumber, final String message) throws MojoFailureException, CommandLineException {
         if (tychoBuild) {
             // not supported
         } else {
-            executeMvnCommand(VERSIONS_MAVEN_PLUGIN_SET_GOAL, "-DnewVersion=" + version, "-DgenerateBackupPoms=false", "-DprocessAllModules=true", "-DprocessDependencies=false", "-DoldVersion=*");
+            executeMvnCommand(XML_EDITOR_MAVEN_PLUGIN_SET_GOAL, "-N", "-DtargetFile=**/pom.xml", "-Dxpath=/project/parent/version[contains(text(),'" + issueNumber + "')]/text()", "-Dreplacement=" + version, "-DfailIfNoMatch=false");
             CommandResult result = executeGitCommandExitCode("commit", "-m", message, "**/pom.xml");
             if (result.exitCode == 0) {
                 getLog().info("New modules adapted to correct versin");
