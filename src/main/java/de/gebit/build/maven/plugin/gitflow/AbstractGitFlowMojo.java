@@ -2670,31 +2670,30 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         executeGitCommand("rebase", "--skip");
     }
 
-    protected InteractiveRebaseResult gitInteractiveRebaseContinue() throws MojoFailureException, CommandLineException {
+    protected InteractiveRebaseStatus gitInteractiveRebaseContinue() throws MojoFailureException, CommandLineException {
         Integer commitNumber = gitGetInteractiveRebaseCommitNumber();
-        CommandResult commandResult = executeGitCommandExitCode("rebase", "--continue");
-        String gitMessage = commandResult.getError();
-        if (StringUtils.isBlank(gitMessage) && StringUtils.isNotBlank(commandResult.getOut())) {
-            gitMessage = commandResult.getOut();
-        }
-        if (commandResult.getExitCode() != SUCCESS_EXIT_CODE) {
-            Integer newCommitNumber = gitGetInteractiveRebaseCommitNumber();
-            if (gitRebaseInProcess() && commitNumber != null && newCommitNumber != null
-                    && commitNumber != newCommitNumber) {
-                return new InteractiveRebaseResult(InteractiveRebaseStatus.CONFLICT, gitMessage);
-            } else {
-                if (gitHasUnmargedFiles()) {
-                    return new InteractiveRebaseResult(InteractiveRebaseStatus.UNRESOLVED_CONFLICT, gitMessage);
+        try {
+            int exitCode = executeGitCommandInteractive("rebase", "--continue");
+            if (exitCode != SUCCESS_EXIT_CODE) {
+                Integer newCommitNumber = gitGetInteractiveRebaseCommitNumber();
+                if (gitRebaseInProcess() && commitNumber != null && newCommitNumber != null
+                        && commitNumber != newCommitNumber) {
+                    return InteractiveRebaseStatus.CONFLICT;
+                } else {
+                    if (gitHasUnmargedFiles()) {
+                        return InteractiveRebaseStatus.UNRESOLVED_CONFLICT;
+                    }
+                    throw new GitFlowFailureException("Continuation of interactive rebase failed.",
+                            "Fix the problem described above or consult a gitflow expert on how to fix this!");
                 }
-                throw new GitFlowFailureException(
-                        "Continuation of interactive rebase failed.\nGit error message:\n" + gitMessage,
-                        "Fix the problem described in git error message or consult a gitflow expert on how to fix this!");
             }
+            if (gitRebaseInProcess()) {
+                return InteractiveRebaseStatus.PAUSED;
+            }
+            return InteractiveRebaseStatus.SUCCESS;
+        } catch (IOException | InterruptedException ex) {
+            throw new MojoFailureException("Continuation of interactive rebase failed", ex);
         }
-        if (gitRebaseInProcess()) {
-            return new InteractiveRebaseResult(InteractiveRebaseStatus.PAUSED, gitMessage);
-        }
-        return InteractiveRebaseResult.SUCCESS;
     }
 
     protected boolean gitHasUnmargedFiles() throws MojoFailureException, CommandLineException {
@@ -2753,9 +2752,38 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     protected InteractiveRebaseStatus gitRebaseInteractive(String commitId)
             throws MojoFailureException, CommandLineException {
         getLog().info("Rebasing interactively on commit " + commitId);
+        try {
+            int exitCode = executeGitCommandInteractive("rebase", "--interactive", commitId);
+            if (exitCode != SUCCESS_EXIT_CODE) {
+                if (gitRebaseInProcess()) {
+                    return InteractiveRebaseStatus.CONFLICT;
+                } else {
+                    throw new GitFlowFailureException("Interactive rebase failed.",
+                            "Check the output above for the reason. "
+                                    + "Fix the problem or consult a gitflow expert on how to fix this!");
+                }
+            }
+            if (gitRebaseInProcess()) {
+                return InteractiveRebaseStatus.PAUSED;
+            }
+
+            return InteractiveRebaseStatus.SUCCESS;
+        } catch (IOException | InterruptedException ex) {
+            throw new MojoFailureException("Starting rebase interactive failed", ex);
+        }
+    }
+
+    private int executeGitCommandInteractive(String... args)
+            throws IOException, InterruptedException, CommandLineException {
+        // initialize executables
         initExecutables();
+
+        if (getLog().isDebugEnabled()) {
+            getLog().debug(cmdGit.getExecutable() + " " + StringUtils.join(args, " "));
+        }
+
         cmdGit.clearArgs();
-        cmdGit.addArguments(new String[] { "rebase", "--interactive", commitId });
+        cmdGit.addArguments(args);
 
         ProcessBuilder processBuilder = new ProcessBuilder(cmdGit.getShellCommandline())
                 .directory(cmdGit.getWorkingDirectory());
@@ -2775,25 +2803,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                 processBuilder.environment().put(envstring.substring(0, eqlsign), envstring.substring(eqlsign + 1));
             }
         }
-        try {
-            Process process = processBuilder.start();
-            if (process.waitFor() != SUCCESS_EXIT_CODE) {
-                if (gitRebaseInProcess()) {
-                    return InteractiveRebaseStatus.CONFLICT;
-                } else {
-                    throw new GitFlowFailureException("Interactive rebase failed.",
-                            "Check the output above for the reason. "
-                                    + "Fix the problem or consult a gitflow expert on how to fix this!");
-                }
-            }
-            if (gitRebaseInProcess()) {
-                return InteractiveRebaseStatus.PAUSED;
-            }
-
-            return InteractiveRebaseStatus.SUCCESS;
-        } catch (IOException | InterruptedException ex) {
-            throw new MojoFailureException("Starting rebase interactive failed", ex);
-        }
+        Process process = processBuilder.start();
+        return process.waitFor();
     }
 
     private boolean isExternalGitEditorUsedconfiguredConfiguredByUserProperties() {
@@ -2854,13 +2865,17 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * When finishing versions of new modules might be wrong and need to be corrected.
+     * When finishing versions of new modules might be wrong and need to be
+     * corrected.
      */
-    protected void mvnFixupVersions(final String version, final String issueNumber, final String message) throws MojoFailureException, CommandLineException {
+    protected void mvnFixupVersions(final String version, final String issueNumber, final String message)
+            throws MojoFailureException, CommandLineException {
         if (tychoBuild) {
             // not supported
         } else {
-            executeMvnCommand(XML_EDITOR_MAVEN_PLUGIN_SET_GOAL, "-N", "-DtargetFile=**/pom.xml", "-Dxpath=/project/parent/version[contains(text(),'" + issueNumber + "')]/text()", "-Dreplacement=" + version, "-DfailIfNoMatch=false");
+            executeMvnCommand(XML_EDITOR_MAVEN_PLUGIN_SET_GOAL, "-N", "-DtargetFile=**/pom.xml",
+                    "-Dxpath=/project/parent/version[contains(text(),'" + issueNumber + "')]/text()",
+                    "-Dreplacement=" + version, "-DfailIfNoMatch=false");
             CommandResult result = executeGitCommandExitCode("commit", "-m", message, "**/pom.xml");
             if (result.exitCode == 0) {
                 getLog().info("New modules adapted to correct versin");
@@ -3067,8 +3082,9 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                     command = normilizeWhitespaces(command.replaceAll("\\@\\{branchName\\}", branch));
                     executeMvnCommand(CommandLineUtils.translateCommandline(command));
                 } catch (Exception e) {
-                    throw new GitFlowFailureException(e, "Failed to execute additional version maven command: " + command
-                            + "\nMaven error message:\n" + e.getMessage(),
+                    throw new GitFlowFailureException(e,
+                            "Failed to execute additional version maven command: " + command
+                                    + "\nMaven error message:\n" + e.getMessage(),
                             "Please specify executable additional version maven command.");
                 }
             }
