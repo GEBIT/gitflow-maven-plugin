@@ -139,7 +139,8 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
                             + "Use all feature commits while interactive cleanup rebase.");
                 }
 
-                getMavenLog().info("Starting interactive rebase...");
+                getMavenLog().info(
+                        "Starting interactive rebase (an external editor will be started if configured in git)...");
                 InteractiveRebaseStatus rebaseStatus = gitRebaseInteractive(rebaseCommit);
                 if (rebaseStatus == InteractiveRebaseStatus.PAUSED) {
                     getMavenLog().info("Feature clean-up process paused to resolve rebase conflicts");
@@ -152,14 +153,15 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
             } else {
                 if (!getPrompter()
                         .promptConfirmation("You have an interactive rebase in process on your current branch. "
-                                + "If you run 'mvn flow:feature-rebase-cleanup' before and rebase was paused or had conflicts you "
-                                + "can continue. In other case it is better to clarify the reason of rebase in process. "
-                                + "Continue?", true, true)) {
+                                + "If you run 'mvn flow:feature-rebase-cleanup' before and rebase was paused or had "
+                                + "conflicts you can continue. In other case it is better to clarify the reason of "
+                                + "rebase in process. Continue?", true, true)) {
                     throw new GitFlowFailureException("Continuation of feature clean up aborted by user.", null);
                 }
-                getMavenLog().info("Continue interactive rebase...");
-                InteractiveRebaseResult rebaseResult = gitInteractiveRebaseContinue();
-                switch (rebaseResult.getStatus()) {
+                getMavenLog().info(
+                        "Continue interactive rebase (an external editor may be started if configured in git)...");
+                InteractiveRebaseStatus rebaseStatus = gitInteractiveRebaseContinue();
+                switch (rebaseStatus) {
                 case PAUSED:
                     getMavenLog().info("Feature clean-up process paused to resolve rebase conflicts");
                     throw new GitFlowFailureException(ERROR_REBASE_PAUSED);
@@ -168,13 +170,11 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
                     throw new GitFlowFailureException(ERROR_REBASE_CONFLICTS);
                 case UNRESOLVED_CONFLICT:
                     getMavenLog().info("Feature clean-up process paused to resolve rebase conflicts");
-                    throw new GitFlowFailureException(
-                            "There are unresolved conflicts after rebase.\nGit error message:\n"
-                                    + rebaseResult.getGitMessage(),
+                    throw new GitFlowFailureException("There are unresolved conflicts after rebase.",
                             "Fix the rebase conflicts and mark them as resolved. After that, run "
                                     + "'mvn flow:feature-rebase-cleanup' again. Do NOT run 'git rebase --continue'.",
-                            "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as "
-                                    + "resolved",
+                            "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
+                                    + "conflicts as resolved",
                             "'mvn flow:feature-rebase-cleanup' to continue feature clean up process");
                 case SUCCESS:
                 default:

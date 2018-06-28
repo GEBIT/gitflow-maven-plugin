@@ -1304,9 +1304,8 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         verify(promptControllerMock).prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y");
         verifyNoMoreInteractions(promptControllerMock);
         verifyZeroInteractions(promptControllerMock);
-        assertGitFlowFailureExceptionRegEx(result, new GitFlowFailureInfo(
-                "\\QContinuation of interactive rebase failed.\nGit error message:\n\\E.*",
-                "\\QFix the problem described in git error message or consult a gitflow expert on how to fix this!\\E"));
+        assertGitFlowFailureException(result, "Continuation of interactive rebase failed.",
+                "Fix the problem described above or consult a gitflow expert on how to fix this!");
         git.assertRebaseBranchInProcess(repositorySet, FEATURE_BRANCH);
     }
 
@@ -1337,14 +1336,13 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         verify(promptControllerMock).prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y");
         verifyNoMoreInteractions(promptControllerMock);
-        assertGitFlowFailureExceptionRegEx(result,
-                new GitFlowFailureInfo("\\QThere are unresolved conflicts after rebase.\nGit error message:\n\\E.*",
-                        "\\QFix the rebase conflicts and mark them as resolved. "
-                                + "After that, run 'mvn flow:feature-rebase-cleanup' again. "
-                                + "Do NOT run 'git rebase --continue'.\\E",
-                        "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts "
-                                + "as resolved\\E",
-                        "\\Q'mvn flow:feature-rebase-cleanup' to continue feature clean up process\\E"));
+        assertGitFlowFailureException(result, "There are unresolved conflicts after rebase.",
+                "Fix the rebase conflicts and mark them as resolved. "
+                        + "After that, run 'mvn flow:feature-rebase-cleanup' again. "
+                        + "Do NOT run 'git rebase --continue'.",
+                "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts "
+                        + "as resolved",
+                "'mvn flow:feature-rebase-cleanup' to continue feature clean up process");
         git.assertRebaseBranchInProcess(repositorySet, FEATURE_BRANCH, TESTFILE_NAME);
     }
 
