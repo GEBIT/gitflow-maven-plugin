@@ -3540,6 +3540,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         final Date lastProgressOutput = (outputMode == OutputMode.PROGRESS) ? new Date() : null;
         if (lastProgressOutput != null) {
             System.out.print("running external command...");
+            System.out.flush();
         }
 
         // execute
@@ -3551,6 +3552,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                 getLog().logCommandOut(logContext, line, outputMode);
                 if (hasToPrintProgressOutput(lastProgressOutput)) {
                     System.out.print(".");
+                    System.out.flush();
                 }
             }
         }, new StreamConsumer() {
@@ -3561,6 +3563,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                 getLog().logCommandErr(logContext, line, outputMode);
                 if (hasToPrintProgressOutput(lastProgressOutput)) {
                     System.out.print(".");
+                    System.out.flush();
                 }
             }
         });
