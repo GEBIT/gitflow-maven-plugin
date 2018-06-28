@@ -90,7 +90,7 @@ public class GitFlowSetVersionMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     private void assertSetVersionMavenCommandExecution(String version, boolean executed) throws IOException {
-        assertMavenCommandExecution("org.codehaus.mojo:versions-maven-plugin:2.5-gebit1:set -DnewVersion=" + version
+        assertMavenCommandExecution("org.codehaus.mojo:versions-maven-plugin:2.5:set -DnewVersion=" + version
                 + " -DgenerateBackupPoms=false", executed);
     }
 
