@@ -1846,8 +1846,7 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         verifyZeroInteractions(promptControllerMock);
         assertGitFlowFailureException(result,
-                "Failed to execute 'mvn clean install' on the project on base branch '" + MASTER_BRANCH
-                        + "' after epic finish.",
+                "Failed to install the project on base branch '" + MASTER_BRANCH + "' after epic finish.",
                 "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
                         + "'mvn flow:epic-finish' again in order to continue.");
         git.assertClean(repositorySet);
@@ -1879,8 +1878,7 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 promptControllerMock);
         verifyZeroInteractions(promptControllerMock);
         assertGitFlowFailureException(result,
-                "Failed to execute 'mvn clean install' on the project on base branch '" + MASTER_BRANCH
-                        + "' after epic finish.",
+                "Failed to install the project on base branch '" + MASTER_BRANCH + "' after epic finish.",
                 "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
                         + "'mvn flow:epic-finish' again in order to continue.");
         git.assertBranchLocalConfigValue(repositorySet, MASTER_BRANCH, "breakpoint", "epicFinish.cleanInstall");
@@ -1918,8 +1916,7 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 promptControllerMock);
         verifyZeroInteractions(promptControllerMock);
         assertGitFlowFailureException(result,
-                "Failed to execute 'mvn clean install' on the project on base branch '" + MASTER_BRANCH
-                        + "' after epic finish.",
+                "Failed to install the project on base branch '" + MASTER_BRANCH + "' after epic finish.",
                 "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
                         + "'mvn flow:epic-finish' again in order to continue.");
         git.assertBranchLocalConfigValue(repositorySet, MASTER_BRANCH, "breakpoint", "epicFinish.cleanInstall");

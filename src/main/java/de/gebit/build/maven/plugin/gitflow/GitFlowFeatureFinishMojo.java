@@ -437,7 +437,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
     private StepParameters verifyFeatureProject(StepParameters stepParameters)
             throws MojoFailureException, CommandLineException {
         if (!skipTestProject) {
-            getMavenLog().info("Cleaning and verifying feature project before performing feature finish...");
+            getMavenLog().info("Testing the feature project before performing feature finish...");
             mvnCleanVerify();
         }
         return stepParameters;
@@ -478,13 +478,11 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
         return stepParameters;
     }
 
-    private void fixupModuleParents(String featureBranch)
-            throws MojoFailureException, CommandLineException {
+    private void fixupModuleParents(String featureBranch) throws MojoFailureException, CommandLineException {
         getLog().info("Ensure consistent version in all modules");
         String baseVersion = getCurrentProjectVersion();
         String issueNumber = getFeatureIssueNumber(featureBranch);
-        String featureFinishMessage = substituteWithIssueNumber(commitMessages.getFeatureFinishMessage(),
-                issueNumber);
+        String featureFinishMessage = substituteWithIssueNumber(commitMessages.getFeatureFinishMessage(), issueNumber);
         mvnFixupVersions(baseVersion, issueNumber, featureFinishMessage);
     }
 
@@ -524,21 +522,26 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
         String featureBranch = stepParameters.featureBranch;
 
         if (stepParameters.breakpoint == Breakpoint.CLEAN_INSTALL) {
-            getMavenLog().info("Restart after failed clean and install of project on base branch detected");
+            getMavenLog().info("Restart after failed project installation on base branch detected");
             checkUncommittedChanges();
         }
         if (installProject) {
-            getMavenLog().info("Cleaning and installing project on base branch '" + baseBranch + "'...");
+            getMavenLog().info("Installing the project on base branch '" + baseBranch + "'...");
             try {
                 mvnCleanInstall();
             } catch (MojoFailureException e) {
-                getMavenLog().info("Feature finish process paused on failed clean and install to fix project problems");
+                getMavenLog()
+                        .info("Feature finish process paused on failed project installation to fix project problems");
                 Map<String, String> configs = new HashMap<>();
                 configs.put("breakpointFeatureBranch", featureBranch);
                 setBreakpoint(Breakpoint.CLEAN_INSTALL, baseBranch, configs);
+                String reason = null;
+                if (e instanceof GitFlowFailureException) {
+                    reason = ((GitFlowFailureException) e).getProblem();
+                }
                 throw new GitFlowFailureException(e,
-                        "Failed to execute 'mvn clean install' on the project on base branch '" + baseBranch
-                                + "' after feature finish.",
+                        "Failed to install the project on base branch '" + baseBranch + "' after feature finish."
+                                + (reason != null ? "\nReason: " + reason : ""),
                         "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
                                 + "'mvn flow:feature-finish' again in order to continue.\n"
                                 + "Do NOT push the base branch!");

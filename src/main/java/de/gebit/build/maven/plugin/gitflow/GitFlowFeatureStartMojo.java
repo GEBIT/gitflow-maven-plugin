@@ -240,20 +240,26 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
             }
             gitApplyBranchCentralConfigChanges(branchConfigChanges, "feature '" + featureName + "' started");
         } else {
-            getMavenLog().info("Restart after failed clean and install of feature project detected");
+            getMavenLog().info("Restart after failed feature project installation detected");
             featureBranchName = currentBranch;
             featureIssue = gitGetBranchCentralConfig(featureBranchName, BranchConfigKeys.ISSUE_NUMBER);
         }
 
         if (installProject) {
-            getMavenLog().info("Cleaning and installing feature project...");
+            getMavenLog().info("Installing the feature project...");
             try {
                 mvnCleanInstall();
             } catch (MojoFailureException e) {
-                getMavenLog().info("Feature start process paused on failed clean and install to fix project problems");
+                getMavenLog()
+                        .info("Feature start process paused on failed project installation to fix project problems");
                 gitSetBranchLocalConfig(featureBranchName, "breakpoint", "featureStart.cleanInstall");
+                String reason = null;
+                if (e instanceof GitFlowFailureException) {
+                    reason = ((GitFlowFailureException) e).getProblem();
+                }
                 throw new GitFlowFailureException(e,
-                        "Failed to execute 'mvn clean install' on the project on feature branch after feature start.",
+                        "Failed to install the project on feature branch after feature start."
+                                + (reason != null ? "\nReason: " + reason : ""),
                         "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
                                 + "'mvn flow:feature-start' again in order to continue.");
             }

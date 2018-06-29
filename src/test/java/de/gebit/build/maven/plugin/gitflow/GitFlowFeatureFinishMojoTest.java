@@ -268,25 +268,24 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.switchToBranch(repositorySet, USED_FEATURE_BRANCH);
 
         // create a new module
-        //FileUtils.write(testFile, TESTFILE_CONTENT, "UTF-8");
+        // FileUtils.write(testFile, TESTFILE_CONTENT, "UTF-8");
         File workingDir = repositorySet.getWorkingDirectory();
 
         // create module
-        File moduleDir =  new File(workingDir, "module");
+        File moduleDir = new File(workingDir, "module");
         moduleDir.mkdir();
-        FileUtils.fileWrite(new File(moduleDir, "pom.xml"), "<project xmlns=\"http://maven.apache.org/POM/4.0.0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n" +
-            "       xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd\">\n" +
-                "       <modelVersion>4.0.0</modelVersion>\n" +
-                "       <parent>\n" +
-                "               <groupId>de.gebit.build.maven.test</groupId>\n" +
-                "               <artifactId>basic-project</artifactId>\n" +
-                "               <version>1.2.3-GFTST-103-SNAPSHOT</version>\n" +
-                "       </parent>\n" +
-                "       <artifactId>basic-module</artifactId>\n" +
-                "</project>\n");
+        FileUtils.fileWrite(new File(moduleDir, "pom.xml"),
+                "<project xmlns=\"http://maven.apache.org/POM/4.0.0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
+                        + "       xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd\">\n"
+                        + "       <modelVersion>4.0.0</modelVersion>\n" + "       <parent>\n"
+                        + "               <groupId>de.gebit.build.maven.test</groupId>\n"
+                        + "               <artifactId>basic-project</artifactId>\n"
+                        + "               <version>1.2.3-GFTST-103-SNAPSHOT</version>\n" + "       </parent>\n"
+                        + "       <artifactId>basic-module</artifactId>\n" + "</project>\n");
         File pom = new File(workingDir, "pom.xml");
         String pomContents = FileUtils.fileRead(pom);
-        pomContents = pomContents.replaceAll("</project>", "\t<modules><module>module</module></modules>\n\t<packaging>pom</packaging>\n</project>");
+        pomContents = pomContents.replaceAll("</project>",
+                "\t<modules><module>module</module></modules>\n\t<packaging>pom</packaging>\n</project>");
         FileUtils.fileWrite(pom, pomContents);
         git.commitAll(repositorySet, BasicConstants.SINGLE_FEATURE_ISSUE + ": new module");
         git.push(repositorySet);
@@ -302,7 +301,6 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.featureBranchPrefix", BasicConstants.SINGLE_FEATURE_BRANCH_PREFIX);
         userProperties.setProperty("flow.installProject", "true");
-
 
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
@@ -2290,8 +2288,7 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         verifyZeroInteractions(promptControllerMock);
         assertGitFlowFailureException(result,
-                "Failed to execute 'mvn clean install' on the project on base branch '" + MASTER_BRANCH
-                        + "' after feature finish.",
+                "Failed to install the project on base branch '" + MASTER_BRANCH + "' after feature finish.",
                 "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
                         + "'mvn flow:feature-finish' again in order to continue.\nDo NOT push the base branch!");
         git.assertClean(repositorySet);
@@ -2322,8 +2319,7 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 promptControllerMock);
         verifyZeroInteractions(promptControllerMock);
         assertGitFlowFailureException(result,
-                "Failed to execute 'mvn clean install' on the project on base branch '" + MASTER_BRANCH
-                        + "' after feature finish.",
+                "Failed to install the project on base branch '" + MASTER_BRANCH + "' after feature finish.",
                 "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
                         + "'mvn flow:feature-finish' again in order to continue.\nDo NOT push the base branch!");
         git.assertBranchLocalConfigValue(repositorySet, MASTER_BRANCH, "breakpoint", "featureFinish.cleanInstall");
@@ -2360,8 +2356,7 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 promptControllerMock);
         verifyZeroInteractions(promptControllerMock);
         assertGitFlowFailureException(result,
-                "Failed to execute 'mvn clean install' on the project on base branch '" + MASTER_BRANCH
-                        + "' after feature finish.",
+                "Failed to install the project on base branch '" + MASTER_BRANCH + "' after feature finish.",
                 "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
                         + "'mvn flow:feature-finish' again in order to continue.\nDo NOT push the base branch!");
         git.assertBranchLocalConfigValue(repositorySet, MASTER_BRANCH, "breakpoint", "featureFinish.cleanInstall");

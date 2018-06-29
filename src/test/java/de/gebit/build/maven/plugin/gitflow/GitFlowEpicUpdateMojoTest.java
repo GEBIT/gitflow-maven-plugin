@@ -1681,8 +1681,7 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
                 promptControllerMock);
         // verify
         verifyZeroInteractions(promptControllerMock);
-        assertGitFlowFailureException(result,
-                "Failed to execute 'mvn clean install' on the project on epic branch after update.",
+        assertGitFlowFailureException(result, "Failed to install the project on epic branch after update.",
                 "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
                         + "'mvn flow:epic-update' again in order to continue.");
         git.assertClean(repositorySet);
@@ -1713,8 +1712,7 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
                 promptControllerMock);
         verifyZeroInteractions(promptControllerMock);
-        assertGitFlowFailureException(result,
-                "Failed to execute 'mvn clean install' on the project on epic branch after update.",
+        assertGitFlowFailureException(result, "Failed to install the project on epic branch after update.",
                 "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
                         + "'mvn flow:epic-update' again in order to continue.");
         git.assertBranchLocalConfigValue(repositorySet, EPIC_BRANCH, "breakpoint", "epicUpdate.cleanInstall");
@@ -1750,8 +1748,7 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
                 promptControllerMock);
         verifyZeroInteractions(promptControllerMock);
-        assertGitFlowFailureException(result,
-                "Failed to execute 'mvn clean install' on the project on epic branch after update.",
+        assertGitFlowFailureException(result, "Failed to install the project on epic branch after update.",
                 "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
                         + "'mvn flow:epic-update' again in order to continue.");
         git.assertBranchLocalConfigValue(repositorySet, EPIC_BRANCH, "breakpoint", "epicUpdate.cleanInstall");

@@ -11,18 +11,26 @@ package de.gebit.build.maven.plugin.gitflow;
 import org.apache.maven.plugin.MojoFailureException;
 
 /**
+ * Extension of {@link MojoFailureException} that provides structured message.
  *
- * @author VMedvid
+ * @author Volodymyr Medvid
  */
 public class GitFlowFailureException extends MojoFailureException {
 
-    public GitFlowFailureException(String problem, String solutionProposal, String... stepsToContinue) {
-        this(null, problem, solutionProposal, stepsToContinue);
+    private String problem;
+    private String solutionProposal;
+    private String[] stepsToContinue;
+
+    public GitFlowFailureException(String aProblem, String aSolutionProposal, String... aStepsToContinue) {
+        this(null, aProblem, aSolutionProposal, aStepsToContinue);
     }
 
-    public GitFlowFailureException(Throwable cause, String problem, String solutionProposal,
-            String... stepsToContinue) {
-        super(createGitflowMessage(problem, solutionProposal, stepsToContinue), cause);
+    public GitFlowFailureException(Throwable cause, String aProblem, String aSolutionProposal,
+            String... aStepsToContinue) {
+        super(createGitflowMessage(aProblem, aSolutionProposal, aStepsToContinue), cause);
+        this.problem = aProblem;
+        this.solutionProposal = aSolutionProposal;
+        this.stepsToContinue = aStepsToContinue;
     }
 
     public GitFlowFailureException(GitFlowFailureInfo aGitFlowFailureInfo) {
@@ -59,6 +67,18 @@ public class GitFlowFailureException extends MojoFailureException {
             }
         }
         return message.toString();
+    }
+
+    public String getProblem() {
+        return problem;
+    }
+
+    public String getSolutionProposal() {
+        return solutionProposal;
+    }
+
+    public String[] getStepsToContinue() {
+        return stepsToContinue;
     }
 
 }

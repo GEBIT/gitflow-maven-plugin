@@ -189,19 +189,25 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
             }
             finilizeFeatureRebase(featureBranchName);
         } else {
-            getMavenLog().info("Restart after failed clean and install of feature project detected");
+            getMavenLog().info("Restart after failed feaure project installation detected");
             checkUncommittedChanges();
         }
 
         if (installProject) {
-            getMavenLog().info("Cleaning and installing feature project...");
+            getMavenLog().info("Installing the feature project...");
             try {
                 mvnCleanInstall();
             } catch (MojoFailureException e) {
-                getMavenLog().info("Feature rebase process paused on failed clean and install to fix project problems");
+                getMavenLog()
+                        .info("Feature rebase process paused on failed project installation to fix project problems");
                 gitSetBranchLocalConfig(featureBranchName, "breakpoint", "featureRebase.cleanInstall");
+                String reason = null;
+                if (e instanceof GitFlowFailureException) {
+                    reason = ((GitFlowFailureException) e).getProblem();
+                }
                 throw new GitFlowFailureException(e,
-                        "Failed to execute 'mvn clean install' on the project on feature branch after rebase.",
+                        "Failed to install the project on feature branch after rebase."
+                                + (reason != null ? "\nReason: " + reason : ""),
                         "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
                                 + "'mvn flow:feature-rebase' again in order to continue.\n"
                                 + "Do NOT push the feature branch!");

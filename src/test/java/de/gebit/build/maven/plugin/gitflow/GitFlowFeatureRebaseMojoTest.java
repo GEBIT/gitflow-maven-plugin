@@ -1961,8 +1961,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
                 promptControllerMock);
         // verify
         verifyZeroInteractions(promptControllerMock);
-        assertGitFlowFailureException(result,
-                "Failed to execute 'mvn clean install' on the project on feature branch after rebase.",
+        assertGitFlowFailureException(result, "Failed to install the project on feature branch after rebase.",
                 "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
                         + "'mvn flow:feature-rebase' again in order to continue.\n"
                         + "Do NOT push the feature branch!");
@@ -1993,8 +1992,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
                 promptControllerMock);
         verifyZeroInteractions(promptControllerMock);
-        assertGitFlowFailureException(result,
-                "Failed to execute 'mvn clean install' on the project on feature branch after rebase.",
+        assertGitFlowFailureException(result, "Failed to install the project on feature branch after rebase.",
                 "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
                         + "'mvn flow:feature-rebase' again in order to continue.\n"
                         + "Do NOT push the feature branch!");
@@ -2030,8 +2028,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
                 promptControllerMock);
         verifyZeroInteractions(promptControllerMock);
-        assertGitFlowFailureException(result,
-                "Failed to execute 'mvn clean install' on the project on feature branch after rebase.",
+        assertGitFlowFailureException(result, "Failed to install the project on feature branch after rebase.",
                 "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
                         + "'mvn flow:feature-rebase' again in order to continue.\n"
                         + "Do NOT push the feature branch!");

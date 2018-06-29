@@ -200,20 +200,25 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
             }
             gitApplyBranchCentralConfigChanges(branchConfigChanges, "epic '" + epicName + "' started");
         } else {
-            getMavenLog().info("Restart after failed clean and install of epic project detected");
+            getMavenLog().info("Restart after failed epic project installation detected");
             epicBranchName = currentBranch;
             epicIssue = gitGetBranchCentralConfig(epicBranchName, BranchConfigKeys.ISSUE_NUMBER);
         }
 
         if (installProject) {
-            getMavenLog().info("Cleaning and installing epic project...");
+            getMavenLog().info("Installing the epic project...");
             try {
                 mvnCleanInstall();
             } catch (MojoFailureException e) {
-                getMavenLog().info("Epic start process paused on failed clean and install to fix project problems");
+                getMavenLog().info("Epic start process paused on failed project installation to fix project problems");
                 gitSetBranchLocalConfig(epicBranchName, "breakpoint", "epicStart.cleanInstall");
+                String reason = null;
+                if (e instanceof GitFlowFailureException) {
+                    reason = ((GitFlowFailureException) e).getProblem();
+                }
                 throw new GitFlowFailureException(e,
-                        "Failed to execute 'mvn clean install' on the project on epic branch after epic start.",
+                        "Failed to install the project on epic branch after epic start."
+                                + (reason != null ? "\nReason: " + reason : ""),
                         "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
                                 + "'mvn flow:epic-start' again in order to continue.");
             }

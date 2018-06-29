@@ -245,15 +245,18 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
         }
 
         if (installProject) {
-            getMavenLog().info("Cleaning and installing maintenance project...");
+            getMavenLog().info("Installing the maintenance project...");
             try {
                 mvnCleanInstall();
             } catch (MojoFailureException e) {
-                getMavenLog()
-                        .info("Maintenance start process finished with failed execution of clean and install project");
+                getMavenLog().info("Maintenance start process finished with failed project installation");
+                String reason = null;
+                if (e instanceof GitFlowFailureException) {
+                    reason = ((GitFlowFailureException) e).getProblem();
+                }
                 throw new GitFlowFailureException(e,
-                        "Failed to execute 'mvn clean install' on the project on maintenance branch after maintenance "
-                                + "start.",
+                        "Failed to install the project on maintenance branch after maintenance start."
+                                + (reason != null ? "\nReason: " + reason : ""),
                         "Maintenance branch was created successfully. No further steps with gitflow are required.");
             }
         }

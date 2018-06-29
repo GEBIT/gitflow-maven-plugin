@@ -1463,8 +1463,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
                 promptControllerMock);
         // verify
         verifyZeroInteractions(promptControllerMock);
-        assertGitFlowFailureException(result,
-                "Failed to execute 'mvn clean install' on the project on feature branch after cleanup.",
+        assertGitFlowFailureException(result, "Failed to install the project on feature branch after cleanup.",
                 "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
                         + "'mvn flow:feature-rebase-cleanup' again in order to continue.\n"
                         + "Do NOT push the feature branch!");
@@ -1500,8 +1499,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
                 promptControllerMock);
         verifyZeroInteractions(promptControllerMock);
-        assertGitFlowFailureException(result,
-                "Failed to execute 'mvn clean install' on the project on feature branch after cleanup.",
+        assertGitFlowFailureException(result, "Failed to install the project on feature branch after cleanup.",
                 "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
                         + "'mvn flow:feature-rebase-cleanup' again in order to continue.\n"
                         + "Do NOT push the feature branch!");
@@ -1541,8 +1539,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
                 promptControllerMock);
         verifyZeroInteractions(promptControllerMock);
-        assertGitFlowFailureException(result,
-                "Failed to execute 'mvn clean install' on the project on feature branch after cleanup.",
+        assertGitFlowFailureException(result, "Failed to install the project on feature branch after cleanup.",
                 "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
                         + "'mvn flow:feature-rebase-cleanup' again in order to continue.\n"
                         + "Do NOT push the feature branch!");

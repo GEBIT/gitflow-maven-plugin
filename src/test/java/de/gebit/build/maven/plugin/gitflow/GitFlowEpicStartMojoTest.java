@@ -1113,8 +1113,7 @@ public class GitFlowEpicStartMojoTest extends AbstractGitFlowMojoTestCase {
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        assertGitFlowFailureException(result,
-                "Failed to execute 'mvn clean install' on the project on epic branch after epic start.",
+        assertGitFlowFailureException(result, "Failed to install the project on epic branch after epic start.",
                 "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
                         + "'mvn flow:epic-start' again in order to continue.");
         assertVersionsInPom(repositorySet.getWorkingDirectory(), EPIC_BRANCH_VERSION);
@@ -1143,8 +1142,7 @@ public class GitFlowEpicStartMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("epicName", EPIC_NAME);
         userProperties.setProperty("flow.installProject", "true");
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
-        assertGitFlowFailureException(result,
-                "Failed to execute 'mvn clean install' on the project on epic branch after epic start.",
+        assertGitFlowFailureException(result, "Failed to install the project on epic branch after epic start.",
                 "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
                         + "'mvn flow:epic-start' again in order to continue.");
         git.assertBranchLocalConfigValue(repositorySet, EPIC_BRANCH, "breakpoint", "epicStart.cleanInstall");
@@ -1179,8 +1177,7 @@ public class GitFlowEpicStartMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("epicName", EPIC_NAME);
         userProperties.setProperty("flow.installProject", "true");
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
-        assertGitFlowFailureException(result,
-                "Failed to execute 'mvn clean install' on the project on epic branch after epic start.",
+        assertGitFlowFailureException(result, "Failed to install the project on epic branch after epic start.",
                 "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
                         + "'mvn flow:epic-start' again in order to continue.");
         git.assertBranchLocalConfigValue(repositorySet, EPIC_BRANCH, "breakpoint", "epicStart.cleanInstall");

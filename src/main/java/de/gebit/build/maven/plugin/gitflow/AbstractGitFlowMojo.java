@@ -324,6 +324,24 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     @Parameter
     protected GitFlowParameter[] additionalMavenCommands;
 
+    /**
+     * Maven goals (separated by space) to be used while testing project.
+     * Additional maven parameters can be used here.
+     *
+     * @since 2.0.4
+     */
+    @Parameter(property = "testProjectGoals", defaultValue = "clean verify")
+    protected String testProjectGoals;
+
+    /**
+     * Maven goals (separated by space) to be used while installing project.
+     * Additional maven parameters can be used here.
+     *
+     * @since 2.0.4
+     */
+    @Parameter(property = "installProjectGoals", defaultValue = "clean install")
+    protected String installProjectGoals;
+
     private ExtendedPrompter extendedPrompter;
 
     private CentralBranchConfigCache centralBranchConfigCache;
@@ -3194,8 +3212,19 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws CommandLineException
      */
     protected void mvnCleanVerify() throws MojoFailureException, CommandLineException {
-        getLog().info("Cleaning and verifying the project.");
-        executeMvnCommand(printTestOutput ? OutputMode.FULL : OutputMode.PROGRESS, "clean", "verify");
+        getLog().info("Testing the project.");
+        if (StringUtils.isBlank(testProjectGoals)) {
+            throw new GitFlowFailureException("Trying to test the project but parameter \"testProjectGoals\" is empty.",
+                    "Please specify goals in parameter \"testProjectGoals\" or skip test project execution.");
+        }
+        String[] goals;
+        try {
+            goals = CommandLineUtils.translateCommandline(testProjectGoals);
+        } catch (Exception exc) {
+            throw new GitFlowFailureException(exc,
+                    "Failed to parse value of parameter \"testProjectGoals\" [" + testProjectGoals + "]", null);
+        }
+        executeMvnCommand(printTestOutput ? OutputMode.FULL : OutputMode.PROGRESS, goals);
     }
 
     /**
@@ -3205,9 +3234,20 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws CommandLineException
      */
     protected void mvnCleanInstall() throws MojoFailureException, CommandLineException {
-        getLog().info("Cleaning and installing the project.");
-
-        executeMvnCommand(printInstallOutput ? OutputMode.FULL : OutputMode.PROGRESS, "clean", "install");
+        getLog().info("Installing the project.");
+        if (StringUtils.isBlank(installProjectGoals)) {
+            throw new GitFlowFailureException(
+                    "Trying to install the project but parameter \"installProjectGoals\" is empty.",
+                    "Please specify goals in parameter \"installProjectGoals\" or skip install project execution.");
+        }
+        String[] goals;
+        try {
+            goals = CommandLineUtils.translateCommandline(installProjectGoals);
+        } catch (Exception exc) {
+            throw new GitFlowFailureException(exc,
+                    "Failed to parse value of parameter \"installProjectGoals\" [" + installProjectGoals + "]", null);
+        }
+        executeMvnCommand(printInstallOutput ? OutputMode.FULL : OutputMode.PROGRESS, goals);
     }
 
     /**

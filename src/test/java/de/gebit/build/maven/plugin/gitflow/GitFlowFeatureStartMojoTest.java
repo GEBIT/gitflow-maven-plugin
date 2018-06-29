@@ -827,6 +827,21 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     @Test
+    public void testExecuteInstallProjectTrueAndInstallProjectGoalsSet() throws Exception {
+        // set up
+        Properties userProperties = new Properties();
+        userProperties.setProperty("featureName", FEATURE_NAME);
+        userProperties.setProperty("flow.installProject", "true");
+        userProperties.setProperty("installProjectGoals", "install -DskipTests");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertFeatureStartedCorrectly();
+        assertMavenCommandExecuted("install -DskipTests");
+        assertMavenCommandNotExecuted("clean install");
+    }
+
+    @Test
     public void testExecuteWithIntegrationBranchSameAsMasterBranch() throws Exception {
         // set up
         git.createIntegeratedBranch(repositorySet, INTEGRATION_BRANCH);
@@ -1244,6 +1259,83 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     @Test
+    public void testExecuteInstallProjectTrueAndInstallProjectGoalsEmpty() throws Exception {
+        // set up
+        Properties userProperties = new Properties();
+        userProperties.setProperty("featureName", FEATURE_NAME);
+        userProperties.setProperty("flow.installProject", "true");
+        userProperties.setProperty("installProjectGoals", "");
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertGitFlowFailureException(result,
+                "Failed to install the project on feature branch after feature start.\n"
+                        + "Reason: Trying to install the project but parameter \"installProjectGoals\" is empty.",
+                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
+                        + "'mvn flow:feature-start' again in order to continue.");
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
+    }
+
+    @Test
+    public void testExecuteInstallProjectTrueAndInstallProjectGoalsNotParseable() throws Exception {
+        // set up
+        Properties userProperties = new Properties();
+        userProperties.setProperty("featureName", FEATURE_NAME);
+        userProperties.setProperty("flow.installProject", "true");
+        userProperties.setProperty("installProjectGoals", "clean \"instal");
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertGitFlowFailureException(result,
+                "Failed to install the project on feature branch after feature start.\n"
+                        + "Reason: Failed to parse value of parameter \"installProjectGoals\" [clean \"instal]",
+                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
+                        + "'mvn flow:feature-start' again in order to continue.");
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
+    }
+
+    @Test
+    public void testExecuteInstallProjectTrueAndInstallProjectGoalsNonExisting() throws Exception {
+        // set up
+        Properties userProperties = new Properties();
+        userProperties.setProperty("featureName", FEATURE_NAME);
+        userProperties.setProperty("flow.installProject", "true");
+        userProperties.setProperty("installProjectGoals", "nonExistingGoal");
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertGitFlowFailureException(result,
+                "Failed to install the project on feature branch after feature start.",
+                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
+                        + "'mvn flow:feature-start' again in order to continue.");
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
+    }
+
+    @Test
     public void testExecuteFailureOnInstallProject() throws Exception {
         // set up
         final String COMMIT_MESSAGE_INVALID_JAVA_FILE = "Invalid java file";
@@ -1256,8 +1348,7 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        assertGitFlowFailureException(result,
-                "Failed to execute 'mvn clean install' on the project on feature branch after feature start.",
+        assertGitFlowFailureException(result, "Failed to install the project on feature branch after feature start.",
                 "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
                         + "'mvn flow:feature-start' again in order to continue.");
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
@@ -1286,8 +1377,7 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("featureName", FEATURE_NAME);
         userProperties.setProperty("flow.installProject", "true");
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
-        assertGitFlowFailureException(result,
-                "Failed to execute 'mvn clean install' on the project on feature branch after feature start.",
+        assertGitFlowFailureException(result, "Failed to install the project on feature branch after feature start.",
                 "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
                         + "'mvn flow:feature-start' again in order to continue.");
         git.assertBranchLocalConfigValue(repositorySet, FEATURE_BRANCH, "breakpoint", "featureStart.cleanInstall");
@@ -1322,8 +1412,7 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("featureName", FEATURE_NAME);
         userProperties.setProperty("flow.installProject", "true");
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
-        assertGitFlowFailureException(result,
-                "Failed to execute 'mvn clean install' on the project on feature branch after feature start.",
+        assertGitFlowFailureException(result, "Failed to install the project on feature branch after feature start.",
                 "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
                         + "'mvn flow:feature-start' again in order to continue.");
         git.assertBranchLocalConfigValue(repositorySet, FEATURE_BRANCH, "breakpoint", "featureStart.cleanInstall");

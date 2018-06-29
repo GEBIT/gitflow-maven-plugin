@@ -134,7 +134,7 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
                 }
 
                 if (!skipTestProject) {
-                    getMavenLog().info("Cleaning and verifying epic project before performing epic finish...");
+                    getMavenLog().info("Testing epic project before performing epic finish...");
                     mvnCleanVerify();
                 }
 
@@ -202,22 +202,26 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
                 baseBranch = gitCurrentBranch();
             }
         } else {
-            getMavenLog().info("Restart after failed clean and install of project on base branch detected");
+            getMavenLog().info("Restart after failed project installation on base branch detected");
             baseBranch = tmpBaseBranch;
             checkUncommittedChanges();
         }
 
         if (installProject) {
-            getMavenLog().info("Cleaning and installing project on base branch '" + baseBranch + "'...");
+            getMavenLog().info("Installing the project on base branch '" + baseBranch + "'...");
             try {
                 mvnCleanInstall();
             } catch (MojoFailureException e) {
-                getMavenLog().info("Epic finish process paused on failed clean and install to fix project problems");
+                getMavenLog().info("Epic finish process paused on failed project installation to fix project problems");
                 gitSetBranchLocalConfig(baseBranch, "breakpoint", "epicFinish.cleanInstall");
                 gitSetBranchLocalConfig(baseBranch, "breakpointEpicBranch", epicBranchName);
+                String reason = null;
+                if (e instanceof GitFlowFailureException) {
+                    reason = ((GitFlowFailureException) e).getProblem();
+                }
                 throw new GitFlowFailureException(e,
-                        "Failed to execute 'mvn clean install' on the project on base branch '" + baseBranch
-                                + "' after epic finish.",
+                        "Failed to install the project on base branch '" + baseBranch + "' after epic finish."
+                                + (reason != null ? "\nReason: " + reason : ""),
                         "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
                                 + "'mvn flow:epic-finish' again in order to continue.");
             }

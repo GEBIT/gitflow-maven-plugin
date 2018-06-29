@@ -908,6 +908,31 @@ public class GitFlowMaintenanceStartMojoTest extends AbstractGitFlowMojoTestCase
     }
 
     @Test
+    public void testExecuteInstallProjectTrueAndInstallProjectGoalsSet() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.installProject", "true");
+        userProperties.setProperty("installProjectGoals", "install -DskipTests");
+        when(promptControllerMock.prompt(PROMPT_SELECTING_RELEASE_NO_TAGS, Arrays.asList("0", "T"))).thenReturn("0");
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION))
+                .thenReturn(MAINTENANCE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION))
+                .thenReturn(MAINTENANCE_FIRST_VERSION);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_SELECTING_RELEASE_NO_TAGS, Arrays.asList("0", "T"));
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION);
+        verifyNoMoreInteractions(promptControllerMock);
+        assertMaintenanceBranchCratedCorrectlyFromMaster();
+        assertMavenCommandExecuted("install -DskipTests");
+        assertMavenCommandNotExecuted("clean install");
+    }
+
+    @Test
     public void testExecuteInBatchMode() throws Exception {
         // set up
         final String TAG = VERSION_TAG_PREFIX + "1.0.0";
@@ -1142,7 +1167,7 @@ public class GitFlowMaintenanceStartMojoTest extends AbstractGitFlowMojoTestCase
         verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION);
         verifyNoMoreInteractions(promptControllerMock);
         assertGitFlowFailureException(result,
-                "Failed to execute 'mvn clean install' on the project on maintenance branch after maintenance start.",
+                "Failed to install the project on maintenance branch after maintenance start.",
                 "Maintenance branch was created successfully. No further steps with gitflow are required.");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
