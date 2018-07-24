@@ -249,6 +249,7 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
+        getMavenLog().info("Starting release process");
         checkCentralBranchConfig();
         String currentBranch = gitCurrentBranch();
         if (!continueReleaseFinishIfMergeInProcess(currentBranch)) {
@@ -261,6 +262,7 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
             // perform start and finish in one step
             releaseStart();
             releaseFinish(currentBranch);
+            getMavenLog().info("Release process finished");
         }
     }
 }

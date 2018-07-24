@@ -855,6 +855,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected void gitApplyBranchCentralConfigChanges(BranchCentralConfigChanges changes, String commitMessage)
             throws MojoFailureException, CommandLineException {
+        getMavenLog().info("Storing branch properties to central branch config");
         File branchConfigWorktree = prepareBranchConfigWorktree(true);
         try {
             Commandline worktreeCmd = getWorktreeCmd(branchConfigWorktree);
@@ -974,7 +975,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     private Map<String, Properties> loadCentralBranchConfig() throws MojoFailureException, CommandLineException {
-        getLog().info("Loading central branch config.");
+        getMavenLog().info("Loading central branch config.");
         File branchConfigWorktree = prepareBranchConfigWorktree(false);
         if (branchConfigWorktree != null) {
             try {

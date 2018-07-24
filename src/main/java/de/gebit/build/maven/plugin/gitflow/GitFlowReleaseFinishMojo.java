@@ -209,6 +209,7 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
+        getMavenLog().info("Starting release finish process");
         checkCentralBranchConfig();
         String currentBranch = gitCurrentBranch();
         if (!continueReleaseFinishIfMergeInProcess(currentBranch)) {
@@ -220,7 +221,9 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
                         "Please switch to the release branch that you want to finish in order to proceed.",
                         "'git checkout BRANCH' to switch to the release branch");
             }
+            getMavenLog().info("Release branch to be finished is '" + currentBranch + "'");
             String developmentBranch = gitGetBranchCentralConfig(currentBranch, BranchConfigKeys.BASE_BRANCH);
+            getMavenLog().info("Base branch of release branch is '" + developmentBranch + "'");
             if (StringUtils.isBlank(developmentBranch)) {
                 throw new GitFlowFailureException(
                         "The release branch '" + currentBranch + "' has no development branch configured.",
@@ -257,6 +260,7 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
                             "Please consult a gitflow expert on how to fix this!"));
 
             releaseFinish(developmentBranch);
+            getMavenLog().info("Release finish process finished");
         }
     }
 }

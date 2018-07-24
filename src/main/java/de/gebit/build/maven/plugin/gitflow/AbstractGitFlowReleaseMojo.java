@@ -130,6 +130,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                             + "' or to a maintenance branch first in order to proceed.");
         }
         String developmentBranch = currentBranch;
+        getMavenLog().info("Base branch for release is '" + developmentBranch + "'");
         gitAssertRemoteBranchNotAheadOfLocalBranche(developmentBranch,
                 new GitFlowFailureInfo("Remote branch '" + developmentBranch + "' is ahead of the local branch.",
                         "Either pull changes on remote branch into local branch or reset the changes on remote "
@@ -190,7 +191,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                 }
             }
         }
-        getLog().info("Using releaseVersion: " + version);
+        getMavenLog().info("Using releaseVersion: " + version);
 
         // actually create the release branch now
         String releaseBranchName = gitFlowConfig.getReleaseBranchPrefix();
@@ -216,6 +217,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
 
         String developmentCommitRef = getCurrentCommit();
 
+        getMavenLog().info("Creating release branch '" + releaseBranchName + "'");
         gitCreateAndCheckout(releaseBranchName, developmentBranch);
 
         BranchCentralConfigChanges branchConfigChanges = new BranchCentralConfigChanges();
@@ -234,17 +236,20 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         }
 
         if (!version.equals(currentVersion)) {
+            getMavenLog().info("Setting release version '" + version + "' for project on release branch...");
             mvnSetVersions(version, isProcessAdditionalVersionCommands() ? "On release branch: " : null);
             gitCommit(commitMessages.getReleaseStartMessage());
         }
 
         if (pushRemote && isPushReleaseBranch()) {
+            getMavenLog().info("Pushing release branch '" + releaseBranchName + "' to remote repository");
             gitPush(gitCurrentBranch(), false, false, true);
         }
 
         gitApplyBranchCentralConfigChanges(branchConfigChanges, "release '" + releaseBranchName + "' started");
 
         if (isInstallProject()) {
+            getMavenLog().info("Installing the release project...");
             mvnCleanInstall();
         }
     }
@@ -303,6 +308,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         }
 
         if (!isSkipTestProject()) {
+            getMavenLog().info("Testing the release project...");
             mvnCleanVerify();
         }
 
@@ -317,10 +323,12 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                         continue;
                     }
                 }
+                getMavenLog().info("Executing release goals [" + goals + "]...");
                 mvnGoals(goals);
             }
         }
 
+        getMavenLog().info("Fetching branches from remote repository");
         gitFetchForced();
         // we're now on the target branch for the release
         String releaseCommit = getCurrentCommit();
@@ -334,7 +342,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                 tagVersion = currentVersion.replace("-" + Artifact.SNAPSHOT_VERSION, "");
             }
             String releaseTag = gitFlowConfig.getVersionTagPrefix() + tagVersion;
-            // git tag -a ...
+            getMavenLog().info("Creating release tag '" + releaseTag + "'");
             gitTag(releaseTag, commitMessages.getTagReleaseMessage());
             gitSetBranchLocalConfig(releaseBranch, "releaseTag", releaseTag);
         }
@@ -346,12 +354,13 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
             if (gitBranchExists(productionBranch)) {
                 gitCheckout(productionBranch);
             } else {
+                getMavenLog().info("Creating production branch '" + productionBranch + "'");
                 gitCreateAndCheckout(productionBranch, releaseBranch);
             }
-            getLog().info(
-                    "Merging release '" + releaseBranch + "' branch into production branch '" + productionBranch + "'");
             // merge release branch into production, never rebase
             try {
+                getMavenLog().info("Merging release branch '" + releaseBranch + "' into production branch '"
+                        + productionBranch + "'");
                 gitMerge(releaseBranch, isReleaseMergeProductionNoFF());
             } catch (MojoFailureException ex) {
                 throw new GitFlowFailureException(ex,
@@ -400,11 +409,11 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
             String productionBranch, String developmentBranch, String releaseCommit)
             throws MojoFailureException, CommandLineException {
         if (isUsingProductionBranch(developmentBranch, productionBranch)) {
-            getLog().info("Merging production branch '" + productionBranch + "' into development branch "
-                    + developmentBranch);
             // and merge back the target, which has the merged release branch,
             // never rebase
             try {
+                getMavenLog().info("Merging production branch '" + productionBranch + "' into development branch "
+                        + developmentBranch);
                 gitMerge(productionBranch, isReleaseMergeNoFF());
             } catch (MojoFailureException ex) {
                 throw new GitFlowFailureException(ex,
@@ -419,10 +428,10 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                         "'mvn flow:" + getCurrentGoal() + "' to continue release process");
             }
         } else {
-            getLog().info("Merging release '" + releaseBranch + "' branch into development branch '" + developmentBranch
-                    + "'");
             // merge release branch to development, never rebase
             try {
+                getMavenLog().info("Merging release branch '" + releaseBranch + "' into development branch '"
+                        + developmentBranch + "'");
                 gitMerge(releaseBranch, isReleaseMergeNoFF());
             } catch (MojoFailureException ex) {
                 throw new GitFlowFailureException(ex,
@@ -450,33 +459,40 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         gitRemoveBranchLocalConfig(releaseBranch, "nextSnapshotVersion");
 
         // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
+        getMavenLog().info("Setting next development version '" + nextSnapshotVersion
+                + "' for project on development branch...");
         mvnSetVersions(nextSnapshotVersion, "Next development version: ");
 
         // git commit -a -m updating for next development version
         gitCommit(commitMessages.getReleaseFinishMessage());
 
         if (!isDetachReleaseCommit() && installProject) {
-            // mvn clean install
+            getMavenLog().info("Installing the project...");
             mvnCleanInstall();
         }
 
         // first push modified branches
         if (pushRemote) {
             if (isUsingProductionBranch(developmentBranch, productionBranch)) {
+                getMavenLog().info("Pushing production branch '" + productionBranch + "' to remote repository");
                 gitPush(productionBranch, !isSkipTag(), false);
             }
+            getMavenLog().info("Pushing development branch '" + developmentBranch + "' to remote repository");
             gitPush(developmentBranch, !isSkipTag(), false);
         }
         if (isDetachReleaseCommit()) {
             // make sure we leave the workspace in the state as released
+            getMavenLog().info("Checking out release commit");
             gitCheckout(releaseCommit);
         }
 
         // then delete if wanted
         if (!isKeepBranch()) {
             // remove the release branch
+            getMavenLog().info("Removing local release branch '" + releaseBranch + "'");
             gitBranchDeleteForce(releaseBranch);
             if (pushRemote && isPushReleaseBranch()) {
+                getMavenLog().info("Removing remote release branch '" + releaseBranch + "'");
                 gitBranchDeleteRemote(releaseBranch);
             }
         }
@@ -501,6 +517,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                 gitFlowConfig.getOrigin() + "/" + gitFlowConfig.getDevelopmentBranch(),
                 gitFlowConfig.getOrigin() + "/" + gitFlowConfig.getMaintenanceBranchPrefix() + "*");
         if (mergeFromBranch != null) {
+            getMavenLog().info("Merge in progress detected. Continue release finish process.");
             releaseFinishContinueAfterMergeConflict(currentBranch, mergeFromBranch);
             return true;
         }
