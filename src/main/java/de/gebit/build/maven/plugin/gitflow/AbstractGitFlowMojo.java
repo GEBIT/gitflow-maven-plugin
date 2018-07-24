@@ -3037,6 +3037,14 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             interpolator.addValueSource(new PropertiesBasedValueSource(getProject().getProperties()));
             Properties properties = new Properties();
             properties.setProperty("branchName", branch);
+            String isFeature = String.valueOf(isFeatureBranch(branch));
+            String isEpic = String.valueOf(isEpicBranch(branch));
+            String isMaintenance = String.valueOf(isMaintenanceBranch(branch));
+            String isMaster = String.valueOf(isDevelopmentBranch(branch));
+            properties.setProperty("isFeature", isFeature);
+            properties.setProperty("isEpic", isEpic);
+            properties.setProperty("isMaintenance", isMaintenance);
+            properties.setProperty("isMaster", isMaster);
             interpolator.addValueSource(new PropertiesBasedValueSource(properties));
 
             // process additional commands/parameters
@@ -3098,7 +3106,10 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             for (String command : getAdditionalMavenCommands()) {
                 try {
                     command = normilizeWhitespaces(command.replaceAll("\\@\\{branchName\\}", branch));
-                    executeMvnCommand(CommandLineUtils.translateCommandline(command));
+                    String[] commandArgs = CommandLineUtils.translateCommandline(command);
+                    commandArgs = addArgs(commandArgs, "-DisFeature=" + isFeature, "-DisEpic=" + isEpic,
+                            "-DisMaintenance=" + isMaintenance, "-DisMaster=" + isMaster);
+                    executeMvnCommand(commandArgs);
                 } catch (Exception e) {
                     throw new GitFlowFailureException(e,
                             "Failed to execute additional version maven command: " + command
