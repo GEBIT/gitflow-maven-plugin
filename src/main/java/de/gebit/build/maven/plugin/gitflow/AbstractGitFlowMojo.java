@@ -113,7 +113,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     private static final String VERSIONS_MAVEN_PLUGIN_SET_GOAL = "org.codehaus.mojo:versions-maven-plugin:2.5:set";
 
     /** A full name of the versions-maven-plugin set goal. */
-    private static final String XML_EDITOR_MAVEN_PLUGIN_SET_GOAL = "de.gebit.build.maven:xml-editor-maven-plugin:1.0.2:replace";
+    private static final String XML_EDITOR_MAVEN_PLUGIN_SET_GOAL = "de.gebit.build.maven:xml-editor-maven-plugin:1.0.5:replace";
 
     /** Name of the tycho-versions-plugin set-version goal. */
     private static final String TYCHO_VERSIONS_PLUGIN_SET_GOAL = "org.eclipse.tycho:tycho-versions-plugin:set-version";
@@ -2893,6 +2893,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             // not supported
         } else {
             executeMvnCommand(XML_EDITOR_MAVEN_PLUGIN_SET_GOAL, "-N", "-DtargetFile=**/pom.xml",
+                    "-DexcludeFile=**/resources/**/pom.xml,**/target/**/pom.xml",
                     "-Dxpath=/project/parent/version[contains(text(),'" + issueNumber + "')]/text()",
                     "-Dreplacement=" + version, "-DfailIfNoMatch=false");
             CommandResult result = executeGitCommandExitCode("commit", "-m", message, "**/pom.xml");
