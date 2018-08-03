@@ -260,18 +260,91 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     @Test
-    public void testExecuteOnMasterBranchNewModuleOnBranch() throws Exception {
+    public void testExecuteOnMasterBranchNewModuleWithOneCommitOnFeautreBranch() throws Exception {
         // set up
         final String USED_FEATURE_BRANCH = BasicConstants.SINGLE_FEATURE_BRANCH;
         final String USED_COMMIT_MESSAGE_MERGE = TestProjects.BASIC.jiraProject + "-NONE: Merge branch "
                 + USED_FEATURE_BRANCH;
+        final String COMMIT_MESSAGE_NEW_MODULE = BasicConstants.SINGLE_FEATURE_ISSUE + ": new module";
         git.switchToBranch(repositorySet, USED_FEATURE_BRANCH);
 
-        // create a new module
-        // FileUtils.write(testFile, TESTFILE_CONTENT, "UTF-8");
-        File workingDir = repositorySet.getWorkingDirectory();
+        createNewModule();
+        git.commitAll(repositorySet, COMMIT_MESSAGE_NEW_MODULE);
+        git.push(repositorySet);
 
-        // create module
+        // make sure project and parent are installed
+        executeMojoWithResult(repositorySet.getWorkingDirectory().getParentFile(), "#install");
+        executeMojoWithResult(repositorySet.getWorkingDirectory(), "#install");
+
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        String PROMPT_MESSAGE = "Feature branches:" + LS + "1. " + USED_FEATURE_BRANCH + LS
+                + "Choose feature branch to finish";
+        when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1"))).thenReturn("1");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.featureBranchPrefix", BasicConstants.SINGLE_FEATURE_BRANCH_PREFIX);
+
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1"));
+        verifyNoMoreInteractions(promptControllerMock);
+
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, USED_FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, USED_FEATURE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, USED_COMMIT_MESSAGE_MERGE,
+                "GFTST-103: reverting versions for development branch", COMMIT_MESSAGE_NEW_MODULE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+        assertParentVersionsInPom(new File(repositorySet.getWorkingDirectory(), "module"), TestProjects.BASIC.version);
+    }
+
+    @Test
+    public void testExecuteOnMasterBranchNewModuleWithOneCommitOnFeautreBranchAndSquashNewModuleVersionFixCommitTrue()
+            throws Exception {
+        // set up
+        final String USED_FEATURE_BRANCH = BasicConstants.SINGLE_FEATURE_BRANCH;
+        final String USED_COMMIT_MESSAGE_MERGE = TestProjects.BASIC.jiraProject + "-NONE: Merge branch "
+                + USED_FEATURE_BRANCH;
+        final String COMMIT_MESSAGE_NEW_MODULE = BasicConstants.SINGLE_FEATURE_ISSUE + ": new module";
+        git.switchToBranch(repositorySet, USED_FEATURE_BRANCH);
+
+        createNewModule();
+        git.commitAll(repositorySet, COMMIT_MESSAGE_NEW_MODULE);
+        git.push(repositorySet);
+
+        // make sure project and parent are installed
+        executeMojoWithResult(repositorySet.getWorkingDirectory().getParentFile(), "#install");
+        executeMojoWithResult(repositorySet.getWorkingDirectory(), "#install");
+
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        String PROMPT_MESSAGE = "Feature branches:" + LS + "1. " + USED_FEATURE_BRANCH + LS
+                + "Choose feature branch to finish";
+        when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1"))).thenReturn("1");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.featureBranchPrefix", BasicConstants.SINGLE_FEATURE_BRANCH_PREFIX);
+        userProperties.setProperty("squashNewModuleVersionFixCommit", "true");
+
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1"));
+        verifyNoMoreInteractions(promptControllerMock);
+
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, USED_FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, USED_FEATURE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, USED_COMMIT_MESSAGE_MERGE,
+                COMMIT_MESSAGE_NEW_MODULE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+        assertParentVersionsInPom(new File(repositorySet.getWorkingDirectory(), "module"), TestProjects.BASIC.version);
+    }
+
+    public void createNewModule() throws IOException {
+        File workingDir = repositorySet.getWorkingDirectory();
         File moduleDir = new File(workingDir, "module");
         moduleDir.mkdir();
         FileUtils.fileWrite(new File(moduleDir, "pom.xml"),
@@ -287,7 +360,21 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         pomContents = pomContents.replaceAll("</project>",
                 "\t<modules><module>module</module></modules>\n\t<packaging>pom</packaging>\n</project>");
         FileUtils.fileWrite(pom, pomContents);
-        git.commitAll(repositorySet, BasicConstants.SINGLE_FEATURE_ISSUE + ": new module");
+    }
+
+    @Test
+    public void testExecuteOnMasterBranchNewModuleWithTwoCommitsOnFeautreBranchAndSquashNewModuleVersionFixCommitTrue()
+            throws Exception {
+        // set up
+        final String USED_FEATURE_BRANCH = BasicConstants.SINGLE_FEATURE_BRANCH;
+        final String USED_COMMIT_MESSAGE_MERGE = TestProjects.BASIC.jiraProject + "-NONE: Merge branch "
+                + USED_FEATURE_BRANCH;
+        final String COMMIT_MESSAGE_NEW_MODULE = BasicConstants.SINGLE_FEATURE_ISSUE + ": new module";
+        git.switchToBranch(repositorySet, USED_FEATURE_BRANCH);
+
+        createNewModule();
+        git.commitAll(repositorySet, COMMIT_MESSAGE_NEW_MODULE);
+        git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
 
         // make sure project and parent are installed
@@ -300,7 +387,7 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1"))).thenReturn("1");
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.featureBranchPrefix", BasicConstants.SINGLE_FEATURE_BRANCH_PREFIX);
-        userProperties.setProperty("flow.installProject", "true");
+        userProperties.setProperty("squashNewModuleVersionFixCommit", "true");
 
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
@@ -314,8 +401,10 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertMissingRemoteBranches(repositorySet, USED_FEATURE_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, USED_COMMIT_MESSAGE_MERGE,
-                "GFTST-103: reverting versions for development branch", "GFTST-103: new module");
+                GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, "GFTST-103: reverting versions for development branch",
+                COMMIT_MESSAGE_NEW_MODULE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+        assertParentVersionsInPom(new File(repositorySet.getWorkingDirectory(), "module"), TestProjects.BASIC.version);
     }
 
     @Test

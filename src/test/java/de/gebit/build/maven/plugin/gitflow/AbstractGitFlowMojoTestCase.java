@@ -744,7 +744,7 @@ public abstract class AbstractGitFlowMojoTestCase {
     protected void assertParentVersionsInPom(File projectPath, String expectedVersion)
             throws ComponentLookupException, ModelParseException, IOException {
         Model workingPom = readPom(projectPath);
-        assertProjectVersionInPom(workingPom, expectedVersion);
+        assertParentVersionsInPom(workingPom, expectedVersion);
     }
 
     /**

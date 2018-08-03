@@ -87,6 +87,14 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
     @Parameter(property = "updateWithMerge", defaultValue = "false")
     private boolean updateWithMerge = false;
 
+    /**
+     * Whether to squash a commit with correction of version for new modules and single feature commit.
+     *
+     * @since 2.0.5
+     */
+    @Parameter(property = "squashNewModuleVersionFixCommit", defaultValue = "false")
+    private boolean squashNewModuleVersionFixCommit = false;
+
     private final Step[] allProcessSteps = { new Step(this::selectFeatureAndBaseBranches),
             new Step(this::ensureBranchesPreparedForFeatureFinish, Breakpoint.REBASE_BEFORE_FINISH),
             new Step(this::verifyFeatureProject),
@@ -451,7 +459,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
             if (stepParameters.rebasedWithoutVersionChangeCommit != null
                     && stepParameters.rebasedWithoutVersionChangeCommit == true) {
                 getLog().info("Project version on feature branch already reverted while rebasing.");
-                fixupModuleParents(featureBranch);
+                fixupModuleParents(featureBranch, stepParameters.baseBranch);
             } else {
                 String baseBranch = stepParameters.baseBranch;
                 String featureVersion = getCurrentProjectVersion();
@@ -464,7 +472,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
 
                 boolean rebased = rebaseToRemoveVersionChangeCommit(featureBranch, baseBranch);
                 if (rebased) {
-                    fixupModuleParents(featureBranch);
+                    fixupModuleParents(featureBranch, baseBranch);
                 }
                 if (!rebased && !tychoBuild) {
                     // rebase not configured or not possible, then manually
@@ -478,12 +486,18 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
         return stepParameters;
     }
 
-    private void fixupModuleParents(String featureBranch) throws MojoFailureException, CommandLineException {
+    private void fixupModuleParents(String featureBranch, String baseBranch) throws MojoFailureException,
+            CommandLineException {
         getLog().info("Ensure consistent version in all modules");
         String baseVersion = getCurrentProjectVersion();
         String issueNumber = getFeatureIssueNumber(featureBranch);
         String featureFinishMessage = substituteWithIssueNumber(commitMessages.getFeatureFinishMessage(), issueNumber);
-        mvnFixupVersions(baseVersion, issueNumber, featureFinishMessage);
+        boolean amend = false;
+        if (squashNewModuleVersionFixCommit) {
+            int feautreCommits = gitGetDistanceToAncestor(featureBranch, baseBranch);
+            amend = (feautreCommits == 1);
+        }
+        mvnFixupVersions(baseVersion, issueNumber, featureFinishMessage, amend);
     }
 
     private StepParameters mergeIntoBaseBranch(StepParameters stepParameters)

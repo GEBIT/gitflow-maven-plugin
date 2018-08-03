@@ -568,7 +568,7 @@ public class TestProjects {
 
         public static final String EPIC_WITHOUT_VERSION_ON_MAINTENANCE_ISSUE = BASIC.jiraProject + "-204";
         public static final String EPIC_WITHOUT_VERSION_ON_MAINTENANCE_NAME = EPIC_WITHOUT_VERSION_ON_MAINTENANCE_ISSUE
-                + "-without-version-on-maintenance";
+                + "-without-vers-on-maint";
         public static final String EPIC_WITHOUT_VERSION_ON_MAINTENANCE_BRANCH = "epic/"
                 + EPIC_WITHOUT_VERSION_ON_MAINTENANCE_NAME;
         public static final String EPIC_WITHOUT_VERSION_ON_MAINTENANCE_VERSION = EXISTING_MAINTENANCE_RELEASE_VERSION
@@ -611,7 +611,7 @@ public class TestProjects {
         public static final String SECOND_EPIC_VERSION_COMMIT_MESSAGE = SECOND_EPIC_ISSUE
                 + ": updating versions for epic branch";
 
-        public static final String SINGLE_EPIC_ON_MAINTENANCE_BRANCH_PREFIX = "single-epic-on-maintenance/";
+        public static final String SINGLE_EPIC_ON_MAINTENANCE_BRANCH_PREFIX = "single-epic-on-maint/";
 
         public static final String SINGLE_EPIC_ON_MAINTENANCE_ISSUE = BASIC.jiraProject + "-209";
         public static final String SINGLE_EPIC_ON_MAINTENANCE_NAME = SINGLE_EPIC_ON_MAINTENANCE_ISSUE
@@ -623,11 +623,11 @@ public class TestProjects {
         public static final String SINGLE_EPIC_ON_MAINTENANCE_VERSION_COMMIT_MESSAGE = SINGLE_EPIC_ON_MAINTENANCE_ISSUE
                 + ": updating versions for epic branch";
 
-        public static final String EPIC_ON_MAINTENANCE_WITHOUT_VERSION_BRANCH_PREFIX = "epic-on-maintenance-without-version/";
+        public static final String EPIC_ON_MAINTENANCE_WITHOUT_VERSION_BRANCH_PREFIX = "epic-on-maint-without-vers/";
 
         public static final String EPIC_ON_MAINTENANCE_WITHOUT_VERSION_ISSUE = BASIC.jiraProject + "-210";
         public static final String EPIC_ON_MAINTENANCE_WITHOUT_VERSION_NAME = EPIC_ON_MAINTENANCE_WITHOUT_VERSION_ISSUE
-                + "-on-maintenance-without-version";
+                + "-on-maint-without-vers";
         public static final String EPIC_ON_MAINTENANCE_WITHOUT_VERSION_BRANCH = EPIC_ON_MAINTENANCE_WITHOUT_VERSION_BRANCH_PREFIX
                 + EPIC_ON_MAINTENANCE_WITHOUT_VERSION_NAME;
         public static final String EPIC_ON_MAINTENANCE_WITHOUT_VERSION_VERSION = TestProjects.BASIC.releaseVersion + "-"
@@ -678,7 +678,7 @@ public class TestProjects {
         public static final String SECOND_FEATURE_VERSION_COMMIT_MESSAGE = SECOND_FEATURE_ISSUE
                 + ": updating versions for feature branch";
 
-        public static final String SINGLE_FEATURE_ON_MAINTENANCE_BRANCH_PREFIX = "single-feature-on-maintenance/";
+        public static final String SINGLE_FEATURE_ON_MAINTENANCE_BRANCH_PREFIX = "single-feature-on-maint/";
 
         public static final String SINGLE_FEATURE_ON_MAINTENANCE_ISSUE = BASIC.jiraProject + "-106";
         public static final String SINGLE_FEATURE_ON_MAINTENANCE_NAME = SINGLE_FEATURE_ON_MAINTENANCE_ISSUE
@@ -698,7 +698,7 @@ public class TestProjects {
         public static final String FEATURE_ON_MAINTENANCE_VERSION_COMMIT_MESSAGE = FEATURE_ON_MAINTENANCE_ISSUE
                 + ": updating versions for feature branch";
 
-        public static final String FEATURE_ON_MAINTENANCE_ON_MASTER_WITH_COMMIT_BRANCH_PREFIX = "feature-on-maintenance-on-master-with-commit/";
+        public static final String FEATURE_ON_MAINTENANCE_ON_MASTER_WITH_COMMIT_BRANCH_PREFIX = "feature-on-maint-on-master-with-commit/";
 
         public static final String FEATURE_ON_MAINTENANCE_ON_MASTER_WITH_COMMIT_ISSUE = BASIC.jiraProject + "-108";
         public static final String FEATURE_ON_MAINTENANCE_ON_MASTER_WITH_COMMIT_NAME = FEATURE_ON_MAINTENANCE_ON_MASTER_WITH_COMMIT_ISSUE
@@ -718,11 +718,11 @@ public class TestProjects {
         public static final String FEATURE_WITHOUT_VERSION_VERSION_COMMIT_MESSAGE = FEATURE_WITHOUT_VERSION_ISSUE
                 + ": updating versions for feature branch";
 
-        public static final String FEATURE_ON_MAINTENANCE_WITHOUT_VERSION_BRANCH_PREFIX = "feature-on-maintenance-without-version/";
+        public static final String FEATURE_ON_MAINTENANCE_WITHOUT_VERSION_BRANCH_PREFIX = "feature-on-maint-without-vers/";
 
         public static final String FEATURE_ON_MAINTENANCE_WITHOUT_VERSION_ISSUE = BASIC.jiraProject + "-110";
         public static final String FEATURE_ON_MAINTENANCE_WITHOUT_VERSION_NAME = FEATURE_ON_MAINTENANCE_WITHOUT_VERSION_ISSUE
-                + "-on-maintenance-without-version";
+                + "-on-maint-without-vers";
         public static final String FEATURE_ON_MAINTENANCE_WITHOUT_VERSION_BRANCH = FEATURE_ON_MAINTENANCE_WITHOUT_VERSION_BRANCH_PREFIX
                 + FEATURE_ON_MAINTENANCE_WITHOUT_VERSION_NAME;
         public static final String FEATURE_ON_MAINTENANCE_WITHOUT_VERSION_VERSION = TestProjects.BASIC.releaseVersion
@@ -790,7 +790,7 @@ public class TestProjects {
 
         public static final String FEATURE_WITHOUT_VERSION_ON_EPIC_WITHOUT_VERSION_ISSUE = BASIC.jiraProject + "-117";
         public static final String FEATURE_WITHOUT_VERSION_ON_EPIC_WITHOUT_VERSION_NAME = FEATURE_WITHOUT_VERSION_ON_EPIC_WITHOUT_VERSION_ISSUE
-                + "-without-version-on-epic-without-version";
+                + "-without-vers-on-epic-without-vers";
         public static final String FEATURE_WITHOUT_VERSION_ON_EPIC_WITHOUT_VERSION_BRANCH = "feature/"
                 + FEATURE_WITHOUT_VERSION_ON_EPIC_WITHOUT_VERSION_NAME;
         public static final String FEATURE_WITHOUT_VERSION_ON_EPIC_WITHOUT_VERSION_VERSION = TestProjects.BASIC.releaseVersion

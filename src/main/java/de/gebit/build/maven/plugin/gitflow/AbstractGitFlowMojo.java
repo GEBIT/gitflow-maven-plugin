@@ -2886,9 +2886,16 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     /**
      * When finishing versions of new modules might be wrong and need to be
      * corrected.
+     *
+     * @param version the correct version
+     * @param issueNumber all versions that contains this issueNumber will be replaced with correct version
+     * @param message the message for correction commit if <code>amend=false</code>
+     * @param amend <code>true</code> if the correction should be included in last commit
+     * @throws MojoFailureException
+     * @throws CommandLineException
      */
-    protected void mvnFixupVersions(final String version, final String issueNumber, final String message)
-            throws MojoFailureException, CommandLineException {
+    protected void mvnFixupVersions(final String version, final String issueNumber, final String message,
+            boolean amend) throws MojoFailureException, CommandLineException {
         if (tychoBuild) {
             // not supported
         } else {
@@ -2896,9 +2903,15 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                     "-DexcludeFile=**/resources/**/pom.xml,**/target/**/pom.xml",
                     "-Dxpath=/project/parent/version[contains(text(),'" + issueNumber + "')]/text()",
                     "-Dreplacement=" + version, "-DfailIfNoMatch=false");
-            CommandResult result = executeGitCommandExitCode("commit", "-m", message, "**/pom.xml");
+            CommandResult result;
+            if (amend) {
+                result = executeGitCommandExitCode("commit", "--amend", "--no-edit", "**/pom.xml");
+            } else {
+                result = executeGitCommandExitCode("commit", "-m", message, "**/pom.xml");
+            }
             if (result.exitCode == 0) {
-                getLog().info("New modules adapted to correct versin");
+                getMavenLog().info("New modules adapted to correct version"
+                        + (amend ? " and the changes squashed with last commit" : ""));
             }
         }
     }
