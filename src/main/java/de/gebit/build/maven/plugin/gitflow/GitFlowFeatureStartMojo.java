@@ -119,36 +119,8 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
                 }
             }
             getMavenLog().info("Base branch for new feature is '" + baseBranch + "'");
-            String originalBaseBranch = baseBranch;
 
-            // use integration branch?
-            String integrationBranch = gitFlowConfig.getIntegrationBranchPrefix() + baseBranch;
-            gitEnsureLocalBranchIsUpToDateIfExists(integrationBranch,
-                    new GitFlowFailureInfo(
-                            "Local and remote integration branches '" + integrationBranch
-                                    + "' diverge, this indicates a severe error condition on your branches.",
-                            "Please consult a gitflow expert on how to fix this!"));
-            gitAssertLocalAndRemoteBranchesOnSameState(baseBranch);
-            if (gitBranchExists(integrationBranch)) {
-                boolean useIntegrationBranch = true;
-                if (!Objects.equals(getCurrentCommit(integrationBranch), getCurrentCommit(baseBranch))) {
-                    useIntegrationBranch = getPrompter().promptConfirmation("The current commit on " + baseBranch
-                            + " is not integrated. Create a branch of the last integrated commit (" + integrationBranch
-                            + ")?", true, true);
-                }
-                if (useIntegrationBranch) {
-                    if (!gitIsAncestorBranch(integrationBranch, baseBranch)) {
-                        throw new GitFlowFailureException(
-                                "Integration branch '" + integrationBranch + "' is ahead of base branch '" + baseBranch
-                                        + "', this indicates a severe error condition on your branches.",
-                                " Please consult a gitflow expert on how to fix this!");
-                    }
-
-                    getMavenLog().info(
-                            "Using integration branch '" + integrationBranch + "' as start point for new feature");
-                    baseBranch = integrationBranch;
-                }
-            }
+            String baseBranchStartPoint = selectBaseBranchStartPoint(baseBranch, "feature");
 
             featureName = getPrompter().promptRequiredParameterValue(
                     "What is a name of feature branch? " + gitFlowConfig.getFeatureBranchPrefix(), "featureName",
@@ -203,7 +175,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
                     featureIssue);
 
             getMavenLog().info("Creating feature branch '" + featureBranchName + "'");
-            gitCreateAndCheckout(featureBranchName, baseBranch);
+            gitCreateAndCheckout(featureBranchName, baseBranchStartPoint);
 
             String currentVersion = getCurrentProjectVersion();
             String baseVersion = currentVersion;
@@ -231,7 +203,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
 
             BranchCentralConfigChanges branchConfigChanges = new BranchCentralConfigChanges();
             branchConfigChanges.set(featureBranchName, BranchConfigKeys.BRANCH_TYPE, BranchType.FEATURE.getType());
-            branchConfigChanges.set(featureBranchName, BranchConfigKeys.BASE_BRANCH, originalBaseBranch);
+            branchConfigChanges.set(featureBranchName, BranchConfigKeys.BASE_BRANCH, baseBranch);
             branchConfigChanges.set(featureBranchName, BranchConfigKeys.ISSUE_NUMBER, featureIssue);
             branchConfigChanges.set(featureBranchName, BranchConfigKeys.BASE_VERSION, baseVersion);
             branchConfigChanges.set(featureBranchName, BranchConfigKeys.START_COMMIT_MESSAGE, featureStartMessage);
@@ -318,7 +290,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
         if (featureNamePattern == null) {
             return true;
         }
-        return aFeatureName.matches(featureNamePattern);
+        return aFeatureName != null && aFeatureName.matches(featureNamePattern);
     }
 
     /**

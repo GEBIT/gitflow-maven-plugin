@@ -87,36 +87,8 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
                 }
             }
             getMavenLog().info("Base branch for new epic is '" + baseBranch + "'");
-            String originalBaseBranch = baseBranch;
 
-            // use integration branch?
-            final String integrationBranch = gitFlowConfig.getIntegrationBranchPrefix() + baseBranch;
-            gitEnsureLocalBranchIsUpToDateIfExists(integrationBranch,
-                    new GitFlowFailureInfo(
-                            "Local and remote integration branches '" + integrationBranch
-                                    + "' diverge, this indicates a severe error condition on your branches.",
-                            "Please consult a gitflow expert on how to fix this!"));
-            gitAssertLocalAndRemoteBranchesOnSameState(baseBranch);
-            if (gitBranchExists(integrationBranch)) {
-                boolean useIntegrationBranch = true;
-                if (!Objects.equals(getCurrentCommit(integrationBranch), getCurrentCommit(baseBranch))) {
-                    useIntegrationBranch = getPrompter().promptConfirmation("The current commit on " + baseBranch
-                            + " is not integrated. Create a branch of the last integrated commit (" + integrationBranch
-                            + ")?", true, true);
-                }
-                if (useIntegrationBranch) {
-                    if (!gitIsAncestorBranch(integrationBranch, baseBranch)) {
-                        throw new GitFlowFailureException(
-                                "Integration branch '" + integrationBranch + "' is ahead of base branch '" + baseBranch
-                                        + "', this indicates a severe error condition on your branches.",
-                                " Please consult a gitflow expert on how to fix this!");
-                    }
-
-                    getMavenLog()
-                            .info("Using integration branch '" + integrationBranch + "' as start point for new epic.");
-                    baseBranch = integrationBranch;
-                }
-            }
+            String baseBranchStartPoint = selectBaseBranchStartPoint(baseBranch, "epic");
 
             epicName = getPrompter().promptRequiredParameterValue(
                     "What is a name of epic branch? " + gitFlowConfig.getEpicBranchPrefix(), "epicName", epicName,
@@ -165,7 +137,7 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
             }
 
             getMavenLog().info("Creating epic branch '" + epicBranchName + "'");
-            gitCreateAndCheckout(epicBranchName, baseBranch);
+            gitCreateAndCheckout(epicBranchName, baseBranchStartPoint);
 
             epicIssue = extractIssueNumberFromEpicName(epicName);
             getLog().info("Epic issue number: " + epicIssue);
@@ -191,7 +163,7 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
 
             BranchCentralConfigChanges branchConfigChanges = new BranchCentralConfigChanges();
             branchConfigChanges.set(epicBranchName, BranchConfigKeys.BRANCH_TYPE, BranchType.EPIC.getType());
-            branchConfigChanges.set(epicBranchName, BranchConfigKeys.BASE_BRANCH, originalBaseBranch);
+            branchConfigChanges.set(epicBranchName, BranchConfigKeys.BASE_BRANCH, baseBranch);
             branchConfigChanges.set(epicBranchName, BranchConfigKeys.ISSUE_NUMBER, epicIssue);
             branchConfigChanges.set(epicBranchName, BranchConfigKeys.BASE_VERSION, baseVersion);
             branchConfigChanges.set(epicBranchName, BranchConfigKeys.START_COMMIT_MESSAGE, epicStartMessage);

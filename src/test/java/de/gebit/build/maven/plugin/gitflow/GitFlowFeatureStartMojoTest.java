@@ -52,7 +52,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
     private static final String INTEGRATION_BRANCH = "integration/" + MASTER_BRANCH;
 
     private static final String PROMPT_BRANCH_OF_LAST_INTEGRATED = "The current commit on " + MASTER_BRANCH
-            + " is not integrated. Create a branch of the last integrated commit (" + INTEGRATION_BRANCH + ")?";
+            + " is not integrated (probably not stable). Create a branch based of the last integrated commit ("
+            + INTEGRATION_BRANCH + ")?";
 
     private RepositorySet repositorySet;
 
@@ -311,12 +312,62 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         // set up
         git.createAndCommitTestfile(repositorySet);
         // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
+        // verify
+        assertGitFlowFailureException(result, "Local branch is ahead of the remote branch '" + MASTER_BRANCH + "'.",
+                "Push commits made on local branch to the remote branch in order to proceed or run feature start in "
+                        + "interactive mode.",
+                "'git push " + MASTER_BRANCH + "' to push local changes to remote branch",
+                "'mvn flow:feature-start' to run in interactive mode");
+
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+        assertNoChangesInRepositoriesExceptCommitedTestfile();
+        git.assertTestfileContent(repositorySet);
+    }
+
+    @Test
+    public void testExecuteWithLocalChangesInInteractiveModeAndAnswerYes() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        when(promptControllerMock.prompt("Local branch '" + MASTER_BRANCH + "' can't be used as base branch for feature"
+                + " bacause it is ahead of remote branch. Create a branch based of remote branch?",
+                Arrays.asList("y", "n"), "y")).thenReturn("y");
+        when(promptControllerMock.prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME))
+                .thenReturn(FEATURE_NAME);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt("Local branch '" + MASTER_BRANCH + "' can't be used as base branch for "
+                + "feature bacause it is ahead of remote branch. Create a branch based of remote branch?",
+                Arrays.asList("y", "n"), "y");
+        verify(promptControllerMock).prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME);
+        verifyNoMoreInteractions(promptControllerMock);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
+    }
+
+    @Test
+    public void testExecuteWithLocalChangesInInteractiveModeAndAnswerNo() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        when(promptControllerMock.prompt("Local branch '" + MASTER_BRANCH + "' can't be used as base branch for feature"
+                + " bacause it is ahead of remote branch. Create a branch based of remote branch?",
+                Arrays.asList("y", "n"), "y")).thenReturn("n");
+        // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
                 promptControllerMock);
         // verify
-        assertGitFlowFailureException(result, "Local branch is ahead of the remote branch '" + MASTER_BRANCH + "'.",
-                "Push commits made on local branch to the remote branch in order to proceed.",
-                "'git push " + MASTER_BRANCH + "'");
+        verify(promptControllerMock).prompt("Local branch '" + MASTER_BRANCH + "' can't be used as base branch for "
+                + "feature bacause it is ahead of remote branch. Create a branch based of remote branch?",
+                Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
+        assertGitFlowFailureException(result, "The feature start process aborted by user.", null);
 
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         assertNoChangesInRepositoriesExceptCommitedTestfile();
@@ -328,26 +379,163 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         // set up
         git.remoteCreateTestfile(repositorySet);
         // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
+        // verify
+        assertGitFlowFailureException(result, "Remote branch is ahead of the local branch '" + MASTER_BRANCH + "'.",
+                "Pull changes on remote branch to the local branch in order to proceed or run feature start in "
+                        + "interactive mode.",
+                "'git pull' to pull changes into local branch",
+                "'mvn flow:feature-start' to run in interactive mode");
+        assertNoChanges();
+    }
+
+    @Test
+    public void testExecuteWithRemoteChangesInInteractiveModeAndAnswerLocal() throws Exception {
+        // set up
+        git.remoteCreateTestfile(repositorySet);
+        when(promptControllerMock.prompt("Remote branch '" + MASTER_BRANCH + "' is ahead of local branch. "
+                + "Select if you want to create feature branch based of (l)ocal or (r)emote branch or (a)bort the "
+                + "feature start process.", Arrays.asList("l", "r", "a"), "a")).thenReturn("l");
+        when(promptControllerMock.prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME))
+                .thenReturn(FEATURE_NAME);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt("Remote branch '" + MASTER_BRANCH + "' is ahead of local branch. "
+                + "Select if you want to create feature branch based of (l)ocal or (r)emote branch or (a)bort the "
+                + "feature start process.", Arrays.asList("l", "r", "a"), "a");
+        verify(promptControllerMock).prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME);
+        verifyNoMoreInteractions(promptControllerMock);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
+        git.assertCommitsInRemoteBranch(repositorySet, MASTER_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
+    }
+
+    @Test
+    public void testExecuteWithRemoteChangesInInteractiveModeAndAnswerRemote() throws Exception {
+        // set up
+        git.remoteCreateTestfile(repositorySet);
+        when(promptControllerMock.prompt("Remote branch '" + MASTER_BRANCH + "' is ahead of local branch. "
+                + "Select if you want to create feature branch based of (l)ocal or (r)emote branch or (a)bort the "
+                + "feature start process.", Arrays.asList("l", "r", "a"), "a")).thenReturn("r");
+        when(promptControllerMock.prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME))
+                .thenReturn(FEATURE_NAME);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt("Remote branch '" + MASTER_BRANCH + "' is ahead of local branch. "
+                + "Select if you want to create feature branch based of (l)ocal or (r)emote branch or (a)bort the "
+                + "feature start process.", Arrays.asList("l", "r", "a"), "a");
+        verify(promptControllerMock).prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME);
+        verifyNoMoreInteractions(promptControllerMock);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION,
+                GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
+        git.assertCommitsInRemoteBranch(repositorySet, MASTER_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
+    }
+
+    @Test
+    public void testExecuteWithRemoteChangesInInteractiveModeAndAnswerAbort() throws Exception {
+        // set up
+        git.remoteCreateTestfile(repositorySet);
+        when(promptControllerMock.prompt("Remote branch '" + MASTER_BRANCH + "' is ahead of local branch. "
+                + "Select if you want to create feature branch based of (l)ocal or (r)emote branch or (a)bort the "
+                + "feature start process.", Arrays.asList("l", "r", "a"), "a")).thenReturn("a");
+        // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
                 promptControllerMock);
         // verify
-        assertGitFlowFailureException(result, "Remote branch is ahead of the local branch '" + MASTER_BRANCH + "'.",
-                "Pull changes on remote branch to the local branch in order to proceed.", "'git pull'");
+        verify(promptControllerMock).prompt("Remote branch '" + MASTER_BRANCH + "' is ahead of local branch. "
+                + "Select if you want to create feature branch based of (l)ocal or (r)emote branch or (a)bort the "
+                + "feature start process.", Arrays.asList("l", "r", "a"), "a");
+        verifyNoMoreInteractions(promptControllerMock);
+        assertGitFlowFailureException(result, "The feature start process aborted by user.", null);
         assertNoChanges();
     }
 
     @Test
     public void testExecuteWithLocalAndRemoteChanges() throws Exception {
         // set up
+        final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
+        git.createAndCommitTestfile(repositorySet);
+        git.remoteCreateTestfile(repositorySet, "remote_testfile.txt", COMMIT_MESSAGE_REMOTE_TESTFILE);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
+        // verify
+        assertGitFlowFailureException(result, "Local and remote branches '" + MASTER_BRANCH + "' diverge.",
+                "Rebase or merge the changes in local branch in order to proceed or run feature start in "
+                        + "interactive mode.", "'git pull' to merge changes in local branch",
+                "'mvn flow:feature-start' to run in interactive mode");
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+        git.assertClean(repositorySet);
+        assertNoChangesInRepositoriesExceptCommitedTestfile();
+    }
+
+    @Test
+    public void testExecuteWithLocalAndRemoteChangesInInteractiveModeAndAnswerYes() throws Exception {
+        // set up
+        final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
+        final String REMOTE_TESTFILE_NAME = "remote_testfile.txt";
+        git.createAndCommitTestfile(repositorySet);
+        git.remoteCreateTestfile(repositorySet, REMOTE_TESTFILE_NAME, COMMIT_MESSAGE_REMOTE_TESTFILE);
+        when(promptControllerMock.prompt("Local branch '" + MASTER_BRANCH + "' can't be used as base branch for feature"
+                + " bacause the local and remote branches diverge. Create a branch based of remote branch?",
+                Arrays.asList("y", "n"), "y")).thenReturn("y");
+        when(promptControllerMock.prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME))
+                .thenReturn(FEATURE_NAME);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt("Local branch '" + MASTER_BRANCH + "' can't be used as base branch for "
+                + "feature bacause the local and remote branches diverge. Create a branch based of remote branch?",
+                Arrays.asList("y", "n"), "y");
+        verify(promptControllerMock).prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME);
+        verifyNoMoreInteractions(promptControllerMock);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION,
+                COMMIT_MESSAGE_REMOTE_TESTFILE);
+
+        git.assertTestfileContent(repositorySet, REMOTE_TESTFILE_NAME);
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
+    }
+
+    @Test
+    public void testExecuteWithLocalAndRemoteChangesInInteractiveModeAndAnswerNo() throws Exception {
+        // set up
         git.createAndCommitTestfile(repositorySet);
         final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
         git.remoteCreateTestfile(repositorySet, "remote_testfile.txt", COMMIT_MESSAGE_REMOTE_TESTFILE);
+        when(promptControllerMock.prompt("Local branch '" + MASTER_BRANCH + "' can't be used as base branch for feature"
+                + " bacause the local and remote branches diverge. Create a branch based of remote branch?",
+                Arrays.asList("y", "n"), "y")).thenReturn("n");
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
                 promptControllerMock);
         // verify
-        assertGitFlowFailureException(result, "Local and remote branches '" + MASTER_BRANCH + "' diverge.",
-                "Rebase or merge the changes in local branch in order to proceed.", "'git pull'");
+        verify(promptControllerMock).prompt("Local branch '" + MASTER_BRANCH + "' can't be used as base branch for "
+                + "feature bacause the local and remote branches diverge. Create a branch based of remote branch?",
+                Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
+        assertGitFlowFailureException(result, "The feature start process aborted by user.", null);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         git.assertClean(repositorySet);
         assertNoChangesInRepositoriesExceptCommitedTestfile();
@@ -383,13 +571,14 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("flow.push", "false");
         git.setOffline(repositorySet);
         // test
-        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
-                promptControllerMock);
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
         git.setOnline(repositorySet);
         assertGitFlowFailureException(result, "Local branch is ahead of the remote branch '" + MASTER_BRANCH + "'.",
-                "Push commits made on local branch to the remote branch in order to proceed.",
-                "'git push " + MASTER_BRANCH + "'");
+                "Push commits made on local branch to the remote branch in order to proceed or run feature start in "
+                        + "interactive mode.",
+                "'git push " + MASTER_BRANCH + "' to push local changes to remote branch",
+                "'mvn flow:feature-start' to run in interactive mode");
 
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         git.assertTestfileContent(repositorySet);
@@ -437,7 +626,10 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.setOnline(repositorySet);
         assertGitFlowFailureException(result, "Remote branch is ahead of the local branch '" + MASTER_BRANCH + "'.",
-                "Pull changes on remote branch to the local branch in order to proceed.", "'git pull'");
+                "Pull changes on remote branch to the local branch in order to proceed or run feature start in "
+                        + "interactive mode.",
+                "'git pull' to pull changes into local branch",
+                "'mvn flow:feature-start' to run in interactive mode");
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
@@ -462,7 +654,9 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         git.setOnline(repositorySet);
         assertGitFlowFailureException(result, "Local and remote branches '" + MASTER_BRANCH + "' diverge.",
-                "Rebase or merge the changes in local branch in order to proceed.", "'git pull'");
+                "Rebase or merge the changes in local branch in order to proceed or run feature start in "
+                        + "interactive mode.", "'git pull' to merge changes in local branch",
+                        "'mvn flow:feature-start' to run in interactive mode");
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
@@ -950,26 +1144,22 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         // set up
         git.createIntegeratedBranch(repositorySet, INTEGRATION_BRANCH);
         git.remoteCreateTestfileInBranch(repositorySet, INTEGRATION_BRANCH);
-        when(promptControllerMock.prompt(PROMPT_BRANCH_OF_LAST_INTEGRATED, Arrays.asList("y", "n"), "y"))
-                .thenReturn("y");
+        when(promptControllerMock.prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME))
+                .thenReturn(FEATURE_NAME);
         // test
-        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
-                promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
         // verify
-        assertGitFlowFailureException(result,
-                "Integration branch '" + INTEGRATION_BRANCH + "' is ahead of base branch '" + MASTER_BRANCH
-                        + "', this indicates a severe error condition on your branches.",
-                " Please consult a gitflow expert on how to fix this!");
-        verify(promptControllerMock).prompt(PROMPT_BRANCH_OF_LAST_INTEGRATED, Arrays.asList("y", "n"), "y");
+        verify(promptControllerMock).prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME);
         verifyNoMoreInteractions(promptControllerMock);
-        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertClean(repositorySet);
-        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertMissingLocalBranches(repositorySet, FEATURE_BRANCH);
-        git.assertMissingRemoteBranches(repositorySet, FEATURE_BRANCH);
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
-        git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, INTEGRATION_BRANCH, MASTER_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
     }
 
     @Test
@@ -1007,30 +1197,27 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         git.createIntegeratedBranch(repositorySet, INTEGRATION_BRANCH);
         git.remoteCreateTestfileInBranch(repositorySet, INTEGRATION_BRANCH);
         git.fetch(repositorySet);
-        when(promptControllerMock.prompt(PROMPT_BRANCH_OF_LAST_INTEGRATED, Arrays.asList("y", "n"), "y"))
-                .thenReturn("y");
+        when(promptControllerMock.prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME))
+                .thenReturn(FEATURE_NAME);
         Properties userProperties = new Properties();
+        userProperties.setProperty("flow.push", "false");
         userProperties.setProperty("flow.fetchRemote", "false");
         git.setOffline(repositorySet);
         // test
-        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
-                promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
         git.setOnline(repositorySet);
-        assertGitFlowFailureException(result,
-                "Integration branch '" + INTEGRATION_BRANCH + "' is ahead of base branch '" + MASTER_BRANCH
-                        + "', this indicates a severe error condition on your branches.",
-                " Please consult a gitflow expert on how to fix this!");
-        verify(promptControllerMock).prompt(PROMPT_BRANCH_OF_LAST_INTEGRATED, Arrays.asList("y", "n"), "y");
+        verify(promptControllerMock).prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME);
         verifyNoMoreInteractions(promptControllerMock);
-        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertClean(repositorySet);
-        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertMissingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
         git.assertMissingRemoteBranches(repositorySet, FEATURE_BRANCH);
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
-        git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, INTEGRATION_BRANCH, MASTER_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
     }
 
     @Test
@@ -1060,6 +1247,364 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, INTEGRATION_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
+    }
+
+    @Test
+    public void testExecuteWithIntegrationBranchAndDivergentLocalAndRemoteMasterBranchInInteractiveModeAndAnswerAbort()
+            throws Exception {
+        // set up
+        final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
+        final String REMOTE_TESTFILE_NAME = "remote_testfile.txt";
+        git.createIntegeratedBranch(repositorySet, INTEGRATION_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
+        git.remoteCreateTestfile(repositorySet, REMOTE_TESTFILE_NAME, COMMIT_MESSAGE_REMOTE_TESTFILE);
+        when(promptControllerMock.prompt("Local branch '" + MASTER_BRANCH + "' can't be used as base branch for feature"
+                + " bacause the local and remote branches diverge. Select if you want to create feature branch based of"
+                + " (r)emote branch '" + MASTER_BRANCH + "' with not integrated commits (probably not stable) or based "
+                + "of last (i)ntegrated commit ('" + INTEGRATION_BRANCH + "') or (a)bort the feature start process.",
+                Arrays.asList("r", "i", "a"), "a")).thenReturn("a");
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt("Local branch '" + MASTER_BRANCH + "' can't be used as base branch for "
+                + "feature bacause the local and remote branches diverge. Select if you want to create feature branch "
+                + "based of (r)emote branch '" + MASTER_BRANCH + "' with not integrated commits (probably not stable) "
+                + "or based of last (i)ntegrated commit ('" + INTEGRATION_BRANCH + "') or (a)bort the feature start "
+                + "process.", Arrays.asList("r", "i", "a"), "a");
+        verifyNoMoreInteractions(promptControllerMock);
+        assertGitFlowFailureException(result, "The feature start process aborted by user.", null);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, FEATURE_BRANCH);
+    }
+
+    @Test
+    public void testExecuteWithIntegrationBranchAndDivergentLocalAndRemoteMasterBranchInInteractiveModeAndAnswerRemote()
+            throws Exception {
+        // set up
+        final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
+        final String REMOTE_TESTFILE_NAME = "remote_testfile.txt";
+        git.createIntegeratedBranch(repositorySet, INTEGRATION_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
+        git.remoteCreateTestfile(repositorySet, REMOTE_TESTFILE_NAME, COMMIT_MESSAGE_REMOTE_TESTFILE);
+        when(promptControllerMock.prompt("Local branch '" + MASTER_BRANCH + "' can't be used as base branch for feature"
+                + " bacause the local and remote branches diverge. Select if you want to create feature branch based of"
+                + " (r)emote branch '" + MASTER_BRANCH + "' with not integrated commits (probably not stable) or based "
+                + "of last (i)ntegrated commit ('" + INTEGRATION_BRANCH + "') or (a)bort the feature start process.",
+                Arrays.asList("r", "i", "a"), "a")).thenReturn("r");
+        when(promptControllerMock.prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME))
+                .thenReturn(FEATURE_NAME);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt("Local branch '" + MASTER_BRANCH + "' can't be used as base branch for "
+                + "feature bacause the local and remote branches diverge. Select if you want to create feature branch "
+                + "based of (r)emote branch '" + MASTER_BRANCH + "' with not integrated commits (probably not stable) "
+                + "or based of last (i)ntegrated commit ('" + INTEGRATION_BRANCH + "') or (a)bort the feature start "
+                + "process.", Arrays.asList("r", "i", "a"), "a");
+        verify(promptControllerMock).prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME);
+        verifyNoMoreInteractions(promptControllerMock);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION,
+                COMMIT_MESSAGE_REMOTE_TESTFILE);
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
+    }
+
+    @Test
+    public void testExecuteWithIntegrationBranchAndDivergentLocalAndRemoteMasterBranchInInteractiveModeAndAnswerIntegrated()
+            throws Exception {
+        // set up
+        final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
+        final String REMOTE_TESTFILE_NAME = "remote_testfile.txt";
+        git.createIntegeratedBranch(repositorySet, INTEGRATION_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
+        git.remoteCreateTestfile(repositorySet, REMOTE_TESTFILE_NAME, COMMIT_MESSAGE_REMOTE_TESTFILE);
+        when(promptControllerMock.prompt("Local branch '" + MASTER_BRANCH + "' can't be used as base branch for feature"
+                + " bacause the local and remote branches diverge. Select if you want to create feature branch based of"
+                + " (r)emote branch '" + MASTER_BRANCH + "' with not integrated commits (probably not stable) or based "
+                + "of last (i)ntegrated commit ('" + INTEGRATION_BRANCH + "') or (a)bort the feature start process.",
+                Arrays.asList("r", "i", "a"), "a")).thenReturn("i");
+        when(promptControllerMock.prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME))
+                .thenReturn(FEATURE_NAME);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt("Local branch '" + MASTER_BRANCH + "' can't be used as base branch for "
+                + "feature bacause the local and remote branches diverge. Select if you want to create feature branch "
+                + "based of (r)emote branch '" + MASTER_BRANCH + "' with not integrated commits (probably not stable) "
+                + "or based of last (i)ntegrated commit ('" + INTEGRATION_BRANCH + "') or (a)bort the feature start "
+                + "process.", Arrays.asList("r", "i", "a"), "a");
+        verify(promptControllerMock).prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME);
+        verifyNoMoreInteractions(promptControllerMock);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
+    }
+
+    @Test
+    public void testExecuteWithIntegrationBranchAndLocalMasterBranchAheadOfRemoteInInteractiveModeAndAnswerAbort()
+            throws Exception {
+        // set up
+        final String COMMIT_MESSAGE_SECOND_TESTFILE = "SECOND: Unit test dummy file commit";
+        final String SECOND_TESTFILE_NAME = "second_testfile.txt";
+        git.createIntegeratedBranch(repositorySet, INTEGRATION_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        git.createAndCommitTestfile(repositorySet, SECOND_TESTFILE_NAME, COMMIT_MESSAGE_SECOND_TESTFILE);
+        when(promptControllerMock.prompt("Local branch '" + MASTER_BRANCH + "' can't be used as base branch for feature"
+                + " bacause it is ahead of remote branch. Select if you want to create feature branch based of (r)emote"
+                + " branch '" + MASTER_BRANCH + "' with not integrated commits (probably not stable) or based of last "
+                + "(i)ntegrated commit ('" + INTEGRATION_BRANCH + "') or (a)bort the feature start process.",
+                Arrays.asList("r", "i", "a"), "a")).thenReturn("a");
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt("Local branch '" + MASTER_BRANCH + "' can't be used as base branch for "
+                + "feature bacause it is ahead of remote branch. Select if you want to create feature branch based of "
+                + "(r)emote branch '" + MASTER_BRANCH + "' with not integrated commits (probably not stable) or based "
+                + "of last (i)ntegrated commit ('" + INTEGRATION_BRANCH + "') or (a)bort the feature start process.",
+                Arrays.asList("r", "i", "a"), "a");
+        verifyNoMoreInteractions(promptControllerMock);
+        assertGitFlowFailureException(result, "The feature start process aborted by user.", null);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, FEATURE_BRANCH);
+    }
+
+    @Test
+    public void testExecuteWithIntegrationBranchAndLocalMasterBranchAheadOfRemoteInInteractiveModeAndAnswerRemote()
+            throws Exception {
+        // set up
+        final String COMMIT_MESSAGE_SECOND_TESTFILE = "SECOND: Unit test dummy file commit";
+        final String SECOND_TESTFILE_NAME = "second_testfile.txt";
+        git.createIntegeratedBranch(repositorySet, INTEGRATION_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        git.createAndCommitTestfile(repositorySet, SECOND_TESTFILE_NAME, COMMIT_MESSAGE_SECOND_TESTFILE);
+        when(promptControllerMock.prompt("Local branch '" + MASTER_BRANCH + "' can't be used as base branch for feature"
+                + " bacause it is ahead of remote branch. Select if you want to create feature branch based of (r)emote"
+                + " branch '" + MASTER_BRANCH + "' with not integrated commits (probably not stable) or based of last "
+                + "(i)ntegrated commit ('" + INTEGRATION_BRANCH + "') or (a)bort the feature start process.",
+                Arrays.asList("r", "i", "a"), "a")).thenReturn("r");
+        when(promptControllerMock.prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME))
+                .thenReturn(FEATURE_NAME);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt("Local branch '" + MASTER_BRANCH + "' can't be used as base branch for "
+                + "feature bacause it is ahead of remote branch. Select if you want to create feature branch based of "
+                + "(r)emote branch '" + MASTER_BRANCH + "' with not integrated commits (probably not stable) or based "
+                + "of last (i)ntegrated commit ('" + INTEGRATION_BRANCH + "') or (a)bort the feature start process.",
+                Arrays.asList("r", "i", "a"), "a");
+        verify(promptControllerMock).prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME);
+        verifyNoMoreInteractions(promptControllerMock);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION,
+                GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
+    }
+
+    @Test
+    public void testExecuteWithIntegrationBranchAndLocalMasterBranchAheadOfRemoteInInteractiveModeAndAnswerIntegrated()
+            throws Exception {
+        // set up
+        final String COMMIT_MESSAGE_SECOND_TESTFILE = "SECOND: Unit test dummy file commit";
+        final String SECOND_TESTFILE_NAME = "second_testfile.txt";
+        git.createIntegeratedBranch(repositorySet, INTEGRATION_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        git.createAndCommitTestfile(repositorySet, SECOND_TESTFILE_NAME, COMMIT_MESSAGE_SECOND_TESTFILE);
+        when(promptControllerMock.prompt("Local branch '" + MASTER_BRANCH + "' can't be used as base branch for feature"
+                + " bacause it is ahead of remote branch. Select if you want to create feature branch based of (r)emote"
+                + " branch '" + MASTER_BRANCH + "' with not integrated commits (probably not stable) or based of last "
+                + "(i)ntegrated commit ('" + INTEGRATION_BRANCH + "') or (a)bort the feature start process.",
+                Arrays.asList("r", "i", "a"), "a")).thenReturn("i");
+        when(promptControllerMock.prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME))
+                .thenReturn(FEATURE_NAME);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt("Local branch '" + MASTER_BRANCH + "' can't be used as base branch for "
+                + "feature bacause it is ahead of remote branch. Select if you want to create feature branch based of "
+                + "(r)emote branch '" + MASTER_BRANCH + "' with not integrated commits (probably not stable) or based "
+                + "of last (i)ntegrated commit ('" + INTEGRATION_BRANCH + "') or (a)bort the feature start process.",
+                Arrays.asList("r", "i", "a"), "a");
+        verify(promptControllerMock).prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME);
+        verifyNoMoreInteractions(promptControllerMock);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
+    }
+
+    @Test
+    public void testExecuteWithIntegrationBranchAndRemoteMasterBranchAheadOfLocalInInteractiveModeAndAnswerAbort()
+            throws Exception {
+        // set up
+        final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
+        final String REMOTE_TESTFILE_NAME = "remote_testfile.txt";
+        git.createIntegeratedBranch(repositorySet, INTEGRATION_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        git.remoteCreateTestfile(repositorySet, REMOTE_TESTFILE_NAME, COMMIT_MESSAGE_REMOTE_TESTFILE);
+        when(promptControllerMock.prompt("Remote branch '" + MASTER_BRANCH + "' is ahead of local branch. Select if you"
+                + " want to create feature branch based of (l)ocal branch, (r)emote branch with not integrated commits "
+                + "(probably not stable) or based of last (i)ntegrated commit ('" + INTEGRATION_BRANCH + "') or (a)bort"
+                + " the feature start process.", Arrays.asList("l", "r", "i", "a"), "a")).thenReturn("a");
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt("Remote branch '" + MASTER_BRANCH + "' is ahead of local branch. Select if "
+                + "you want to create feature branch based of (l)ocal branch, (r)emote branch with not integrated "
+                + "commits (probably not stable) or based of last (i)ntegrated commit ('" + INTEGRATION_BRANCH
+                + "') or (a)bort the feature start process.", Arrays.asList("l", "r", "i", "a"), "a");
+        verifyNoMoreInteractions(promptControllerMock);
+        assertGitFlowFailureException(result, "The feature start process aborted by user.", null);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, FEATURE_BRANCH);
+    }
+
+    @Test
+    public void testExecuteWithIntegrationBranchAndRemoteMasterBranchAheadOfLocalInInteractiveModeAndAnswerLocal()
+            throws Exception {
+        // set up
+        final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
+        final String REMOTE_TESTFILE_NAME = "remote_testfile.txt";
+        git.createIntegeratedBranch(repositorySet, INTEGRATION_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        git.remoteCreateTestfile(repositorySet, REMOTE_TESTFILE_NAME, COMMIT_MESSAGE_REMOTE_TESTFILE);
+        when(promptControllerMock.prompt("Remote branch '" + MASTER_BRANCH + "' is ahead of local branch. Select if you"
+                + " want to create feature branch based of (l)ocal branch, (r)emote branch with not integrated commits "
+                + "(probably not stable) or based of last (i)ntegrated commit ('" + INTEGRATION_BRANCH + "') or (a)bort"
+                + " the feature start process.", Arrays.asList("l", "r", "i", "a"), "a")).thenReturn("l");
+        when(promptControllerMock.prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME))
+                .thenReturn(FEATURE_NAME);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt("Remote branch '" + MASTER_BRANCH + "' is ahead of local branch. Select if "
+                + "you want to create feature branch based of (l)ocal branch, (r)emote branch with not integrated "
+                + "commits (probably not stable) or based of last (i)ntegrated commit ('" + INTEGRATION_BRANCH
+                + "') or (a)bort the feature start process.", Arrays.asList("l", "r", "i", "a"), "a");
+        verify(promptControllerMock).prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME);
+        verifyNoMoreInteractions(promptControllerMock);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION,
+                GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
+    }
+
+    @Test
+    public void testExecuteWithIntegrationBranchAndRemoteMasterBranchAheadOfLocalInInteractiveModeAndAnswerRemote()
+            throws Exception {
+        // set up
+        final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
+        final String REMOTE_TESTFILE_NAME = "remote_testfile.txt";
+        git.createIntegeratedBranch(repositorySet, INTEGRATION_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        git.remoteCreateTestfile(repositorySet, REMOTE_TESTFILE_NAME, COMMIT_MESSAGE_REMOTE_TESTFILE);
+        when(promptControllerMock.prompt("Remote branch '" + MASTER_BRANCH + "' is ahead of local branch. Select if you"
+                + " want to create feature branch based of (l)ocal branch, (r)emote branch with not integrated commits "
+                + "(probably not stable) or based of last (i)ntegrated commit ('" + INTEGRATION_BRANCH + "') or (a)bort"
+                + " the feature start process.", Arrays.asList("l", "r", "i", "a"), "a")).thenReturn("r");
+        when(promptControllerMock.prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME))
+                .thenReturn(FEATURE_NAME);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt("Remote branch '" + MASTER_BRANCH + "' is ahead of local branch. Select if "
+                + "you want to create feature branch based of (l)ocal branch, (r)emote branch with not integrated "
+                + "commits (probably not stable) or based of last (i)ntegrated commit ('" + INTEGRATION_BRANCH
+                + "') or (a)bort the feature start process.", Arrays.asList("l", "r", "i", "a"), "a");
+        verify(promptControllerMock).prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME);
+        verifyNoMoreInteractions(promptControllerMock);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION,
+                COMMIT_MESSAGE_REMOTE_TESTFILE, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
+    }
+
+    @Test
+    public void testExecuteWithIntegrationBranchAndRemoteMasterBranchAheadOfLocalInInteractiveModeAndAnswerIntegrated()
+            throws Exception {
+        // set up
+        final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
+        final String REMOTE_TESTFILE_NAME = "remote_testfile.txt";
+        git.createIntegeratedBranch(repositorySet, INTEGRATION_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        git.remoteCreateTestfile(repositorySet, REMOTE_TESTFILE_NAME, COMMIT_MESSAGE_REMOTE_TESTFILE);
+        when(promptControllerMock.prompt("Remote branch '" + MASTER_BRANCH + "' is ahead of local branch. Select if you"
+                + " want to create feature branch based of (l)ocal branch, (r)emote branch with not integrated commits "
+                + "(probably not stable) or based of last (i)ntegrated commit ('" + INTEGRATION_BRANCH + "') or (a)bort"
+                + " the feature start process.", Arrays.asList("l", "r", "i", "a"), "a")).thenReturn("i");
+        when(promptControllerMock.prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME))
+                .thenReturn(FEATURE_NAME);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt("Remote branch '" + MASTER_BRANCH + "' is ahead of local branch. Select if "
+                + "you want to create feature branch based of (l)ocal branch, (r)emote branch with not integrated "
+                + "commits (probably not stable) or based of last (i)ntegrated commit ('" + INTEGRATION_BRANCH
+                + "') or (a)bort the feature start process.", Arrays.asList("l", "r", "i", "a"), "a");
+        verify(promptControllerMock).prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME);
+        verifyNoMoreInteractions(promptControllerMock);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
     }
 
     @Test

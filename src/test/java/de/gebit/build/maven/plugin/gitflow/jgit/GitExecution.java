@@ -389,6 +389,7 @@ public class GitExecution {
     public void remoteCreateTestfile(RepositorySet repositorySet, String filename, String commitMessage)
             throws GitAPIException, IOException {
         createTestfile(repositorySet.getClonedRemoteWorkingDirectory(), filename);
+        repositorySet.getClonedRemoteRepoGit().pull().call();
         repositorySet.getClonedRemoteRepoGit().add().addFilepattern(".").call();
         repositorySet.getClonedRemoteRepoGit().commit().setMessage(commitMessage).call();
         repositorySet.getClonedRemoteRepoGit().push().call();

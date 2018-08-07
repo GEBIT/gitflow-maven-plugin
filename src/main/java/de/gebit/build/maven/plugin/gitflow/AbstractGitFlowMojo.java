@@ -1732,7 +1732,10 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      *            Branch name to fetch and compare.
      * @throws MojoFailureException
      * @throws CommandLineException
+     * @deprecated use {@link #gitAssertRemoteBranchNotAheadOfLocalBranche(String, GitFlowFailureInfo, GitFlowFailureInfo)}
+     * instead
      */
+    @Deprecated
     protected void gitFetchRemoteAndCompare(final String branchName) throws MojoFailureException, CommandLineException {
         if (!gitFetchRemoteAndCompare(branchName, new Callable<Void>() {
 
@@ -1756,7 +1759,9 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @return <code>true</code> if the branch exists, <code>false</code> if not
      * @throws MojoFailureException
      * @throws CommandLineException
+     * @deprecated use {@link #gitCompareLocalAndRemoteBranches(String, Callable, Callable, Callable)} instead
      */
+    @Deprecated
     protected boolean gitFetchRemoteAndCompare(final String branchName, Callable<Void> diffFunctor)
             throws MojoFailureException, CommandLineException {
         if (gitRemoteBranchExists(branchName)) {
@@ -2283,6 +2288,62 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             }
         }
         return true;
+    }
+
+    /**
+     * Compares local branch reference with the remote one.
+     *
+     * @param branchName the name of the branch to be checked
+     * @return the branch reference state
+     * @throws MojoFailureException
+     * @throws CommandLineException if a git command can't be executed
+     */
+    protected BranchRefState gitCheckBranchReference(String branchName) throws MojoFailureException,
+            CommandLineException {
+        boolean hasRemote = true;
+        if (!gitRemoteBranchExists(branchName)) {
+            hasRemote = false;
+        }
+        if (!gitBranchExists(branchName)) {
+            if (hasRemote) {
+                // no such local branch, create it now (then it's up to date)
+                gitCreateBranchFromRemote(branchName);
+                return BranchRefState.SYNCHRONIZED;
+            } else {
+                return BranchRefState.BRANCH_MISSING;
+            }
+        } else if (!hasRemote) {
+            return BranchRefState.REMOTE_MISSING;
+        }
+        String revlistout = executeGitCommandReturn("rev-list", "--left-right", "--count",
+                branchName + "..." + gitFlowConfig.getOrigin() + "/" + branchName);
+        String[] counts = org.apache.commons.lang3.StringUtils.split(revlistout, '\t');
+        if (counts != null && counts.length > 1) {
+            String localCommitsCount = org.apache.commons.lang3.StringUtils.deleteWhitespace(counts[0]);
+            String remoteCommitsCount = org.apache.commons.lang3.StringUtils.deleteWhitespace(counts[1]);
+            if (!"0".equals(localCommitsCount) && !"0".equals(remoteCommitsCount)) {
+                return BranchRefState.DIVERGE;
+            } else if (!"0".equals(localCommitsCount)) {
+                return BranchRefState.LOCAL_AHEAD;
+            } else if (!"0".equals(remoteCommitsCount)) {
+                return BranchRefState.REMOTE_AHEAD;
+            } else {
+                return BranchRefState.SYNCHRONIZED;
+            }
+        } else {
+            throw new GitFlowFailureException("Unexpected result of external command execution (rev-list):\n"
+                    + revlistout, "Please report the error in the GBLD JIRA.");
+        }
+    }
+
+    /**
+     * Return remote branch name for passed local branch. E.g. "orgin/master" for "master".
+     *
+     * @param localBranchName the name of the local branch
+     * @return the remote branch name
+     */
+    protected String gitLocalToRemoteRef(String localBranchName) {
+        return gitFlowConfig.getOrigin() + "/" + localBranchName;
     }
 
     /**
@@ -3019,14 +3080,16 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         getLog().info("Updating version(s) to '" + version + "'.");
 
         if (tychoBuild) {
-            executeMvnCommand(TYCHO_VERSIONS_PLUGIN_SET_GOAL, "-DnewVersion=" + version, "-Dtycho.mode=maven");
+            executeMvnCommand(OutputMode.PROGRESS, TYCHO_VERSIONS_PLUGIN_SET_GOAL, "-DnewVersion=" + version,
+                    "-Dtycho.mode=maven");
         } else {
-            executeMvnCommand(VERSIONS_MAVEN_PLUGIN_SET_GOAL, "-DnewVersion=" + version, "-DgenerateBackupPoms=false");
+            executeMvnCommand(OutputMode.PROGRESS, VERSIONS_MAVEN_PLUGIN_SET_GOAL, "-DnewVersion=" + version,
+                    "-DgenerateBackupPoms=false");
         }
         for (String command : getCommandsAfterVersion(processAdditionalCommands)) {
             try {
                 command = normilizeWhitespaces(command.replaceAll("\\@\\{version\\}", version));
-                executeMvnCommand(CommandLineUtils.translateCommandline(command));
+                executeMvnCommand(OutputMode.PROGRESS, CommandLineUtils.translateCommandline(command));
             } catch (Exception e) {
                 throw new GitFlowFailureException(e, "Failed to execute additional version maven command: " + command
                         + "\nMaven error message:\n" + e.getMessage(),
@@ -3124,7 +3187,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                     String[] commandArgs = CommandLineUtils.translateCommandline(command);
                     commandArgs = addArgs(commandArgs, "-DisFeature=" + isFeature, "-DisEpic=" + isEpic,
                             "-DisMaintenance=" + isMaintenance, "-DisMaster=" + isMaster);
-                    executeMvnCommand(commandArgs);
+                    executeMvnCommand(OutputMode.PROGRESS, commandArgs);
                 } catch (Exception e) {
                     throw new GitFlowFailureException(e,
                             "Failed to execute additional version maven command: " + command
@@ -3853,6 +3916,201 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         return !gitFlowConfig.isNoProduction() && !developmentBranch.equals(productionBranch);
     }
 
+    /**
+     * Select base branch for feature or epic start from local or remote base branch or integration branch.
+     *
+     * @param baseBranch the name of the base branch
+     * @param newBranchType the type of the new branch ("feautre" or "epic")
+     * @return the branch to use as start point for the new branch
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected String selectBaseBranchStartPoint(String baseBranch, String newBranchType)
+            throws MojoFailureException, CommandLineException {
+        // use integration branch?
+        String integrationBranch = gitFlowConfig.getIntegrationBranchPrefix() + baseBranch;
+        gitEnsureLocalBranchIsUpToDateIfExists(integrationBranch,
+                new GitFlowFailureInfo(
+                        "Local and remote integration branches '" + integrationBranch
+                                + "' diverge, this indicates a severe error condition on your branches.",
+                        "Please consult a gitflow expert on how to fix this!"));
+        BranchRefState baseBranchRefState = gitCheckBranchReference(baseBranch);
+        String remoteBaseBranch = gitLocalToRemoteRef(baseBranch);
+        boolean useRemoteBranch = false;
+        String baseBranchToCheck = baseBranchRefState == BranchRefState.REMOTE_MISSING ?
+                baseBranch : remoteBaseBranch;
+        if (gitBranchExists(integrationBranch)
+                && !Objects.equals(getCurrentCommit(integrationBranch), getCurrentCommit(baseBranchToCheck))) {
+            if (gitIsAncestorBranch(integrationBranch, baseBranchToCheck)) {
+                String answer;
+                boolean useIntegrationBranch = true;
+                switch (baseBranchRefState) {
+                case DIVERGE:
+                    // select remote or integrated?
+                    answer = getPrompter().promptSelection(
+                            "Local branch '" + baseBranch + "' can't be used as base branch for " + newBranchType
+                                    + " bacause the local and remote branches diverge. Select if you "
+                                    + "want to create " + newBranchType + " branch based of (r)emote branch '"
+                                    + baseBranch + "' with not integrated commits (probably not stable) or "
+                                    + "based of last (i)ntegrated commit ('" + integrationBranch
+                                    + "') or (a)bort the " + newBranchType + " start process.",
+                            new String[] { "r", "i", "a" }, "a",
+                            new GitFlowFailureInfo("Local and remote branches '" + baseBranch + "' diverge.",
+                                    "Rebase or merge the changes in local branch in order to proceed or run "
+                                            + newBranchType + " start in interactive mode.",
+                                    "'git pull' to merge changes in local branch",
+                                    "'mvn flow:" + newBranchType + "-start' to run in interactive mode"));
+                    if ("r".equalsIgnoreCase(answer)) {
+                        useIntegrationBranch = false;
+                        useRemoteBranch = true;
+                    } else if ("i".equalsIgnoreCase(answer)) {
+                        useIntegrationBranch = true;
+                        useRemoteBranch = false;
+                    } else {
+                        throw new GitFlowFailureException("The " + newBranchType + " start process aborted by user.",
+                                null);
+                    }
+                    break;
+                case LOCAL_AHEAD:
+                    // select remote or integrated?
+                    answer = getPrompter().promptSelection(
+                            "Local branch '" + baseBranch + "' can't be used as base branch for " + newBranchType
+                                    + " bacause it is ahead of remote branch. Select if you "
+                                    + "want to create " + newBranchType + " branch based of (r)emote branch '"
+                                    + baseBranch + "' with not integrated commits (probably not stable) or "
+                                    + "based of last (i)ntegrated commit ('" + integrationBranch
+                                    + "') or (a)bort the " + newBranchType + " start process.",
+                            new String[] { "r", "i", "a" }, "a",
+                            new GitFlowFailureInfo("Local branch is ahead of the remote branch '" + baseBranch
+                                    + "'.", "Push commits made on local branch to the remote branch in order "
+                                    + "to proceed or run " + newBranchType + " start in interactive mode.",
+                                    "'git push " + baseBranch + "' to push local changes to remote branch",
+                                    "'mvn flow:" + newBranchType + "-start' to run in interactive mode"));
+                    if ("r".equalsIgnoreCase(answer)) {
+                        useIntegrationBranch = false;
+                        useRemoteBranch = true;
+                    } else if ("i".equalsIgnoreCase(answer)) {
+                        useIntegrationBranch = true;
+                        useRemoteBranch = false;
+                    } else {
+                        throw new GitFlowFailureException("The " + newBranchType + " start process aborted by user.",
+                                null);
+                    }
+                    break;
+                case REMOTE_AHEAD:
+                    // select local or remote or integrated?
+                    answer = getPrompter().promptSelection(
+                            "Remote branch '" + baseBranch + "' is ahead of local branch. Select if you "
+                                    + "want to create " + newBranchType + " branch based of (l)ocal branch, (r)emote "
+                                    + "branch with not integrated commits (probably not stable) or "
+                                    + "based of last (i)ntegrated commit ('" + integrationBranch
+                                    + "') or (a)bort the " + newBranchType + " start process.",
+                            new String[] { "l", "r", "i", "a" }, "a",
+                            new GitFlowFailureInfo("Remote branch is ahead of the local branch '" + baseBranch
+                                    + "'.", "Pull changes on remote branch to the local branch in order to "
+                                    + "proceed or run " + newBranchType + " start in interactive mode.",
+                                    "'git pull' to pull changes into local branch",
+                                    "'mvn flow:" + newBranchType + "-start' to run in interactive mode"));
+                    if ("l".equalsIgnoreCase(answer)) {
+                        useIntegrationBranch = false;
+                        useRemoteBranch = false;
+                    } else if ("r".equalsIgnoreCase(answer)) {
+                        useIntegrationBranch = false;
+                        useRemoteBranch = true;
+                    } else if ("i".equalsIgnoreCase(answer)) {
+                        useIntegrationBranch = true;
+                        useRemoteBranch = false;
+                    } else {
+                        throw new GitFlowFailureException("The " + newBranchType + " start process aborted by user.",
+                                null);
+                    }
+                    break;
+                default:
+                    useIntegrationBranch = getPrompter().promptConfirmation("The current commit on " + baseBranch
+                            + " is not integrated (probably not stable). "
+                            + "Create a branch based of the last integrated commit (" + integrationBranch + ")?",
+                            true, true);
+                    useRemoteBranch = false;
+                    break;
+                }
+                if (useIntegrationBranch) {
+                    getMavenLog().info("Using integration branch '" + integrationBranch + "' as start point for new "
+                            + newBranchType);
+                    return integrationBranch;
+                } else if (useRemoteBranch) {
+                    getMavenLog().info("Using remote branch '" + remoteBaseBranch + "' as start point for new "
+                            + newBranchType);
+                    return remoteBaseBranch;
+                }
+                return baseBranch;
+            } else {
+                getLog().warn("Integration branch '" + integrationBranch + "' is ahead of base branch '"
+                        + baseBranchToCheck + "'. This indicates a severe error condition on your branches. "
+                        + "Integration branch can't be used as base for this " + newBranchType + " branch.");
+            }
+        }
+        String answer;
+        switch (baseBranchRefState) {
+        case DIVERGE:
+            // select remote?
+            useRemoteBranch = getPrompter().promptConfirmation("Local branch '" + baseBranch
+                    + "' can't be used as base branch for " + newBranchType + " bacause the local and remote "
+                    + "branches diverge. Create a branch based of remote branch?", true,
+                    new GitFlowFailureInfo("Local and remote branches '" + baseBranch + "' diverge.",
+                            "Rebase or merge the changes in local branch in order to proceed or run " + newBranchType
+                            + " start in interactive mode.",
+                            "'git pull' to merge changes in local branch",
+                            "'mvn flow:" + newBranchType + "-start' to run in interactive mode"));
+            if (!useRemoteBranch) {
+                throw new GitFlowFailureException("The " + newBranchType + " start process aborted by user.", null);
+            }
+            break;
+        case LOCAL_AHEAD:
+            // select remote?
+            useRemoteBranch = getPrompter().promptConfirmation("Local branch '" + baseBranch + "' can't be used as "
+                    + "base branch for " + newBranchType + " bacause it is ahead of remote branch. "
+                    + "Create a branch based of remote branch?", true,
+                    new GitFlowFailureInfo("Local branch is ahead of the remote branch '" + baseBranch + "'.",
+                            "Push commits made on local branch to the remote branch in order to proceed or run "
+                                    + newBranchType + " start in interactive mode.",
+                            "'git push " + baseBranch + "' to push local changes to remote branch",
+                            "'mvn flow:" + newBranchType + "-start' to run in interactive mode"));
+            if (!useRemoteBranch) {
+                throw new GitFlowFailureException("The " + newBranchType + " start process aborted by user.", null);
+            }
+            break;
+        case REMOTE_AHEAD:
+            // select local or remote?
+            answer = getPrompter().promptSelection(
+                    "Remote branch '" + baseBranch + "' is ahead of local branch. Select if you want to create "
+                            + newBranchType + " branch based of (l)ocal or (r)emote branch or (a)bort the "
+                            + newBranchType + " start process.",
+                    new String[] { "l", "r", "a" }, "a",
+                    new GitFlowFailureInfo("Remote branch is ahead of the local branch '" + baseBranch + "'.",
+                            "Pull changes on remote branch to the local branch in order to proceed or run "
+                                    + newBranchType + " start in interactive mode.",
+                            "'git pull' to pull changes into local branch",
+                            "'mvn flow:" + newBranchType + "-start' to run in interactive mode"));
+            if ("l".equalsIgnoreCase(answer)) {
+                useRemoteBranch = false;
+            } else if ("r".equalsIgnoreCase(answer)) {
+                useRemoteBranch = true;
+            } else {
+                throw new GitFlowFailureException("The " + newBranchType + " start process aborted by user.", null);
+            }
+            break;
+        default:
+            useRemoteBranch = false;
+            break;
+        }
+        if (useRemoteBranch) {
+            getMavenLog().info(
+                    "Using remote branch '" + remoteBaseBranch + "' as start point for new " + newBranchType);
+            return remoteBaseBranch;
+        }
+        return baseBranch;
+    }
+
     @Override
     public LogWrapper getLog() {
         if (logWrapper == null) {
@@ -4148,5 +4406,14 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
     protected enum OutputMode {
         NONE, PROGRESS, DEBUG, FULL;
+    }
+
+    protected enum BranchRefState {
+        LOCAL_AHEAD,
+        REMOTE_AHEAD,
+        DIVERGE,
+        SYNCHRONIZED,
+        REMOTE_MISSING,
+        BRANCH_MISSING;
     }
 }

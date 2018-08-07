@@ -59,7 +59,8 @@ public class GitFlowEpicStartMojoOnMaintenanceTest extends AbstractGitFlowMojoTe
     private static final String PROMPT_EPIC_BRANCH_NAME = ExecutorHelper.EPIC_START_PROMPT_EPIC_BRANCH_NAME;
 
     private static final String PROMPT_BRANCH_OF_LAST_INTEGRATED = "The current commit on " + MAINTENANCE_BRANCH
-            + " is not integrated. Create a branch of the last integrated commit (" + INTEGRATION_BRANCH + ")?";
+            + " is not integrated (probably not stable). Create a branch based of the last integrated commit ("
+            + INTEGRATION_BRANCH + ")?";
 
     private RepositorySet repositorySet;
 
@@ -130,13 +131,14 @@ public class GitFlowEpicStartMojoOnMaintenanceTest extends AbstractGitFlowMojoTe
         // set up
         git.createAndCommitTestfile(repositorySet);
         // test
-        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
-                promptControllerMock);
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
         // verify
         assertGitFlowFailureException(result,
                 "Local branch is ahead of the remote branch '" + MAINTENANCE_BRANCH + "'.",
-                "Push commits made on local branch to the remote branch in order to proceed.",
-                "'git push " + MAINTENANCE_BRANCH + "'");
+                "Push commits made on local branch to the remote branch in order to proceed or run epic start in "
+                        + "interactive mode.",
+                "'git push " + MAINTENANCE_BRANCH + "' to push local changes to remote branch",
+                "'mvn flow:epic-start' to run in interactive mode");
 
         assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
         assertNoChangesInRepositoriesExceptCommitedTestfile();
@@ -148,12 +150,14 @@ public class GitFlowEpicStartMojoOnMaintenanceTest extends AbstractGitFlowMojoTe
         // set up
         git.remoteCreateTestfileInBranch(repositorySet, MAINTENANCE_BRANCH);
         // test
-        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
-                promptControllerMock);
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
         // verify
         assertGitFlowFailureException(result,
                 "Remote branch is ahead of the local branch '" + MAINTENANCE_BRANCH + "'.",
-                "Pull changes on remote branch to the local branch in order to proceed.", "'git pull'");
+                "Pull changes on remote branch to the local branch in order to proceed or run epic start in "
+                        + "interactive mode.",
+                "'git pull' to pull changes into local branch",
+                "'mvn flow:epic-start' to run in interactive mode");
         assertNoChanges();
     }
 
@@ -188,14 +192,15 @@ public class GitFlowEpicStartMojoOnMaintenanceTest extends AbstractGitFlowMojoTe
         userProperties.setProperty("flow.push", "false");
         git.setOffline(repositorySet);
         // test
-        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
-                promptControllerMock);
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
         git.setOnline(repositorySet);
         assertGitFlowFailureException(result,
                 "Local branch is ahead of the remote branch '" + MAINTENANCE_BRANCH + "'.",
-                "Push commits made on local branch to the remote branch in order to proceed.",
-                "'git push " + MAINTENANCE_BRANCH + "'");
+                "Push commits made on local branch to the remote branch in order to proceed or run epic start in "
+                        + "interactive mode.",
+                "'git push " + MAINTENANCE_BRANCH + "' to push local changes to remote branch",
+                "'mvn flow:epic-start' to run in interactive mode");
 
         assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
         assertNoChangesInRepositoriesExceptCommitedTestfile();
@@ -239,7 +244,10 @@ public class GitFlowEpicStartMojoOnMaintenanceTest extends AbstractGitFlowMojoTe
         git.setOnline(repositorySet);
         assertGitFlowFailureException(result,
                 "Remote branch is ahead of the local branch '" + MAINTENANCE_BRANCH + "'.",
-                "Pull changes on remote branch to the local branch in order to proceed.", "'git pull'");
+                "Pull changes on remote branch to the local branch in order to proceed or run epic start in "
+                        + "interactive mode.",
+                "'git pull' to pull changes into local branch",
+                "'mvn flow:epic-start' to run in interactive mode");
         assertNoChanges();
     }
 
@@ -354,26 +362,22 @@ public class GitFlowEpicStartMojoOnMaintenanceTest extends AbstractGitFlowMojoTe
         // set up
         git.createIntegeratedBranch(repositorySet, INTEGRATION_BRANCH);
         git.remoteCreateTestfileInBranch(repositorySet, INTEGRATION_BRANCH);
-        when(promptControllerMock.prompt(PROMPT_BRANCH_OF_LAST_INTEGRATED, Arrays.asList("y", "n"), "y"))
-                .thenReturn("y");
+        when(promptControllerMock.prompt(PROMPT_EPIC_BRANCH_NAME)).thenReturn(EPIC_NAME);
         // test
-        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
-                promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
         // verify
-        assertGitFlowFailureException(result,
-                "Integration branch '" + INTEGRATION_BRANCH + "' is ahead of base branch '" + MAINTENANCE_BRANCH
-                        + "', this indicates a severe error condition on your branches.",
-                " Please consult a gitflow expert on how to fix this!");
-        verify(promptControllerMock).prompt(PROMPT_BRANCH_OF_LAST_INTEGRATED, Arrays.asList("y", "n"), "y");
+        verify(promptControllerMock).prompt(PROMPT_EPIC_BRANCH_NAME);
         verifyNoMoreInteractions(promptControllerMock);
-        assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), EXPECTED_BRANCH_VERSION);
         git.assertClean(repositorySet);
-        git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
-        git.assertMissingLocalBranches(repositorySet, EPIC_BRANCH);
-        git.assertMissingRemoteBranches(repositorySet, EPIC_BRANCH);
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
-        git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, INTEGRATION_BRANCH, MAINTENANCE_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_MAINTENANCE_SET_VERSION);
+        git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, EPIC_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, EPIC_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_SET_VERSION,
+                COMMIT_MESSAGE_MAINTENANCE_SET_VERSION);
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
     }
 
 }
