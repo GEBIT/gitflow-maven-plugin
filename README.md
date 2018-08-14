@@ -1,6 +1,6 @@
 # Git-Flow Maven Plugin
 
-[![License](http://img.shields.io/badge/License-Apache License 2.0-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
+[![License](https://img.shields.io/badge/License-Apache%20License%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0.html)
 
 The Maven plugin for Vincent Driessen's [successful Git branching model](http://nvie.com/posts/a-successful-git-branching-model/).
 
