@@ -95,7 +95,7 @@ public class GitFlowFeatureStartMojoOnMaintenanceTest extends AbstractGitFlowMoj
 
     private void assertCentralBranchConfigSetCorrectly(final String expectedVersionChangeCommit)
             throws IOException, GitAPIException {
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
         assertEquals("feature", branchConfig.getProperty("branchType"));
         assertEquals(MAINTENANCE_BRANCH, branchConfig.getProperty("baseBranch"));
         assertEquals(FEATURE_ISSUE, branchConfig.getProperty("issueNumber"));
@@ -418,7 +418,7 @@ public class GitFlowFeatureStartMojoOnMaintenanceTest extends AbstractGitFlowMoj
                 BasicConstants.EPIC_ON_MAINTENANCE_VERSION_COMMIT_MESSAGE, COMMIT_MESSAGE_MAINTENANCE_SET_VERSION);
 
         final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
         assertEquals("feature", branchConfig.getProperty("branchType"));
         assertEquals(BasicConstants.EPIC_ON_MAINTENANCE_BRANCH, branchConfig.getProperty("baseBranch"));
         assertEquals(FEATURE_ISSUE, branchConfig.getProperty("issueNumber"));
@@ -448,7 +448,7 @@ public class GitFlowFeatureStartMojoOnMaintenanceTest extends AbstractGitFlowMoj
                 COMMIT_MESSAGE_MAINTENANCE_SET_VERSION);
 
         final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
         assertEquals("feature", branchConfig.getProperty("branchType"));
         assertEquals(BasicConstants.EPIC_WITHOUT_VERSION_ON_MAINTENANCE_BRANCH, branchConfig.getProperty("baseBranch"));
         assertEquals(FEATURE_ISSUE, branchConfig.getProperty("issueNumber"));

@@ -169,7 +169,7 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
 
         assertVersions(EXPECTED_FEATURE_VERSION, NEW_UPSTREAM_VERSION);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH,
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH,
                 USED_FEATURE_BRANCH);
         assertEquals(NEW_UPSTREAM_VERSION, branchConfig.getProperty("additionalVersionParameter0"));
     }
@@ -188,7 +188,7 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
 
         assertVersions(FEATURE_VERSION, NEW_UPSTREAM_VERSION);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
         assertEquals(NEW_UPSTREAM_VERSION, branchConfig.getProperty("additionalVersionParameter0"));
 
         assertEquals(PROJECT_VERSION, branchConfig.getProperty("baseVersion"));
@@ -212,7 +212,7 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
 
         assertVersions(FEATURE_VERSION, NEW_UPSTREAM_VERSION);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
         assertEquals(NEW_UPSTREAM_VERSION, branchConfig.getProperty("additionalVersionParameter0"));
 
         assertEquals(PROJECT_VERSION, branchConfig.getProperty("baseVersion"));
@@ -240,7 +240,7 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
 
         assertVersions(OTHER_FEATURE_VERSION, OTHER_UPSTREAM_VERSION);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
         assertEquals(OTHER_UPSTREAM_VERSION, branchConfig.getProperty("additionalVersionParameter0"));
 
         assertEquals(OTHER_PROJECT_VERSION, branchConfig.getProperty("baseVersion"));
@@ -286,7 +286,7 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
 
         assertVersions(FEATURE_VERSION, NEW_UPSTREAM_VERSION);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
         assertEquals(NEW_UPSTREAM_VERSION, branchConfig.getProperty("additionalVersionParameter0"));
 
         assertEquals(PROJECT_VERSION, branchConfig.getProperty("baseVersion"));
@@ -312,7 +312,7 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
 
         assertVersions(FEATURE_VERSION, NEW_UPSTREAM_VERSION);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
         assertEquals(NEW_UPSTREAM_VERSION, branchConfig.getProperty("additionalVersionParameter0"));
 
         assertEquals(PROJECT_VERSION, branchConfig.getProperty("baseVersion"));
@@ -364,7 +364,7 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
 
         assertVersions(OTHER_FEATURE_VERSION, OTHER_UPSTREAM_VERSION);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
         assertEquals(OTHER_UPSTREAM_VERSION, branchConfig.getProperty("additionalVersionParameter0"));
 
         assertEquals(OTHER_PROJECT_VERSION, branchConfig.getProperty("baseVersion"));
@@ -388,7 +388,7 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
 
         assertVersions(PROJECT_VERSION, EXPECTED_UPSTREAM_VERSION);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH,
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH,
                 FEATURE_WITHOUT_VERSION_BRANCH);
         assertEquals(null, branchConfig.getProperty("additionalVersionParameter0"));
 
@@ -416,7 +416,7 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
 
         assertVersions(OTHER_PROJECT_VERSION, OTHER_UPSTREAM_VERSION);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH,
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH,
                 FEATURE_WITHOUT_VERSION_BRANCH);
         assertEquals(null, branchConfig.getProperty("additionalVersionParameter0"));
 
@@ -450,7 +450,7 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
         git.assertCommitsInLocalBranch(repositorySet, RELEASE_BRANCH, COMMIT_MESSAGE_SET_VERSION_FOR_RELEASE,
                 GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
         assertEquals("release", branchConfig.getProperty("branchType"));
         assertEquals(MASTER_BRANCH, branchConfig.getProperty("baseBranch"));
         assertEquals(EXPECTED_DEVELOPMENT_COMMIT, branchConfig.getProperty("developmentSavepointCommitRef"));
@@ -484,7 +484,7 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
         git.assertCommitsInLocalBranch(repositorySet, RELEASE_BRANCH, COMMIT_MESSAGE_SET_VERSION_FOR_RELEASE,
                 GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
         assertEquals("release", branchConfig.getProperty("branchType"));
         assertEquals(MASTER_BRANCH, branchConfig.getProperty("baseBranch"));
         assertEquals(EXPECTED_DEVELOPMENT_COMMIT, branchConfig.getProperty("developmentSavepointCommitRef"));
@@ -521,7 +521,7 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
         git.assertCommitsInLocalBranch(repositorySet, RELEASE_BRANCH, COMMIT_MESSAGE_SET_VERSION_FOR_RELEASE,
                 GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
         assertEquals("release", branchConfig.getProperty("branchType"));
         assertEquals(MASTER_BRANCH, branchConfig.getProperty("baseBranch"));
         assertEquals(EXPECTED_DEVELOPMENT_COMMIT, branchConfig.getProperty("developmentSavepointCommitRef"));
@@ -552,7 +552,7 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
         git.assertCommitsInLocalBranch(repositorySet, RELEASE_BRANCH, COMMIT_MESSAGE_SET_VERSION_FOR_RELEASE,
                 GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
         assertEquals("release", branchConfig.getProperty("branchType"));
         assertEquals(MASTER_BRANCH, branchConfig.getProperty("baseBranch"));
         assertEquals(EXPECTED_DEVELOPMENT_COMMIT, branchConfig.getProperty("developmentSavepointCommitRef"));
@@ -582,7 +582,7 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
         git.assertCommitsInLocalBranch(repositorySet, RELEASE_BRANCH, COMMIT_MESSAGE_SET_VERSION_FOR_RELEASE,
                 GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
         assertEquals("release", branchConfig.getProperty("branchType"));
         assertEquals(MASTER_BRANCH, branchConfig.getProperty("baseBranch"));
         assertEquals(EXPECTED_DEVELOPMENT_COMMIT, branchConfig.getProperty("developmentSavepointCommitRef"));

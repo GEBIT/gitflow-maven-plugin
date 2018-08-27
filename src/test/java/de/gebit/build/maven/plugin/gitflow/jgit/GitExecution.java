@@ -1464,6 +1464,33 @@ public class GitExecution {
     }
 
     /**
+     * Returns the last remote commit in passed branch or <code>null</code> if no
+     * commits found in branch.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param branch
+     *            the remote branch to be checked
+     * @return the last remote commit in passed branch or <code>null</code> if no
+     *         commits found in branch
+     * @throws IOException
+     *             in case of an I/O error
+     * @throws GitAPIException
+     *             if an error occurs on git command execution
+     */
+    public RevCommit lastRemoteCommitInBranch(RepositorySet repositorySet, String branch)
+            throws IOException, GitAPIException {
+        ObjectId branchObjectId = objectIdOfBranch(repositorySet.getRemoteRepoGit(), branch);
+        Iterator<RevCommit> commitsIterator = repositorySet.getLocalRepoGit().log().add(branchObjectId).setMaxCount(1)
+                .call().iterator();
+        if (commitsIterator.hasNext()) {
+            return commitsIterator.next();
+        } else {
+            return null;
+        }
+    }
+
+    /**
      * Tries to read passed properties file from the passed branch in local
      * repository.
      *
@@ -1483,6 +1510,35 @@ public class GitExecution {
     public Properties readPropertiesFileInLocalBranch(RepositorySet repositorySet, String branch, String filepath)
             throws IOException, GitAPIException {
         try (ObjectStream stream = readFileInLocalBranch(repositorySet, branch, filepath)) {
+            if (stream != null) {
+                Properties props = new Properties();
+                props.load(stream);
+                return props;
+            }
+            return null;
+        }
+    }
+
+    /**
+     * Tries to read passed properties file from the passed branch in remote
+     * repository.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param branch
+     *            the remote branch to be checked
+     * @param filepath
+     *            the relative path to the properties file to be read
+     * @return the properties from the properties file or <code>null</code> if
+     *         property file doesn't exist
+     * @throws IOException
+     *             in case of an I/O error
+     * @throws GitAPIException
+     *             if an error occurs on git command execution
+     */
+    public Properties readPropertiesFileInRemoteBranch(RepositorySet repositorySet, String branch, String filepath)
+            throws IOException, GitAPIException {
+        try (ObjectStream stream = readFileInRemoteBranch(repositorySet, branch, filepath)) {
             if (stream != null) {
                 Properties props = new Properties();
                 props.load(stream);
@@ -1521,6 +1577,42 @@ public class GitExecution {
                 if (treeWalk.next()) {
                     ObjectId objectId = treeWalk.getObjectId(0);
                     ObjectLoader loader = repositorySet.getLocalRepoGit().getRepository().open(objectId);
+                    return loader.openStream();
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Returns the stream of the passed file from the passed branch in remote
+     * repository or <code>null</code> if file can't be found.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param branch
+     *            the remote branch to be checked
+     * @param filepath
+     *            the relative path to the file to be read
+     * @return the stream of the file or <code>null</code> if file can't be
+     *         found
+     * @throws IOException
+     *             in case of an I/O error
+     * @throws GitAPIException
+     *             if an error occurs on git command execution
+     */
+    public ObjectStream readFileInRemoteBranch(RepositorySet repositorySet, String branch, String filepath)
+            throws IOException, GitAPIException {
+        RevCommit lastCommit = lastRemoteCommitInBranch(repositorySet, branch);
+        if (lastCommit != null) {
+            RevTree tree = lastCommit.getTree();
+            try (TreeWalk treeWalk = new TreeWalk(repositorySet.getRemoteRepoGit().getRepository())) {
+                treeWalk.addTree(tree);
+                treeWalk.setRecursive(true);
+                treeWalk.setFilter(PathFilter.create(filepath));
+                if (treeWalk.next()) {
+                    ObjectId objectId = treeWalk.getObjectId(0);
+                    ObjectLoader loader = repositorySet.getRemoteRepoGit().getRepository().open(objectId);
                     return loader.openStream();
                 }
             }

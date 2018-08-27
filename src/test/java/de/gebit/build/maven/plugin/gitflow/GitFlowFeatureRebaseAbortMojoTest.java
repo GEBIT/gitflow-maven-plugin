@@ -109,7 +109,7 @@ public class GitFlowFeatureRebaseAbortMojoTest extends AbstractGitFlowMojoTestCa
         git.assertMissingLocalBranches(repositorySet, TMP_FEATURE_BRANCH);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
         assertEquals(PROJECT_VERSION, branchConfig.getProperty("baseVersion"));
         assertEquals(COMMIT_MESSAGE_SET_VERSION, branchConfig.getProperty("startCommitMessage"));
         assertEquals(EXPECTED_VERSION_CHANGE_COMMIT, branchConfig.getProperty("versionChangeCommit"));
@@ -187,7 +187,7 @@ public class GitFlowFeatureRebaseAbortMojoTest extends AbstractGitFlowMojoTestCa
         git.assertMissingLocalBranches(repositorySet, USED_TMP_FEATURE_BRANCH);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), PROJECT_VERSION);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH,
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH,
                 USED_FEATURE_BRANCH);
         assertEquals(PROJECT_VERSION, branchConfig.getProperty("baseVersion"));
         assertEquals(BasicConstants.FEATURE_WITHOUT_VERSION_VERSION_COMMIT_MESSAGE,
@@ -255,7 +255,7 @@ public class GitFlowFeatureRebaseAbortMojoTest extends AbstractGitFlowMojoTestCa
         git.assertMissingLocalBranches(repositorySet, TMP_FEATURE_BRANCH);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
         assertEquals(PROJECT_VERSION, branchConfig.getProperty("baseVersion"));
         assertEquals(COMMIT_MESSAGE_SET_VERSION, branchConfig.getProperty("startCommitMessage"));
         assertEquals(EXPECTED_VERSION_CHANGE_COMMIT, branchConfig.getProperty("versionChangeCommit"));

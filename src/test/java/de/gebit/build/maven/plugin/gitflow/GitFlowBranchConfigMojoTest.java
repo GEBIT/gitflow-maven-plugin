@@ -93,13 +93,12 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
         verifyNoMoreInteractions(promptControllerMock);
         assertFalse("config branch directory not removed",
                 new File(repositorySet.getWorkingDirectory(), CONFIG_BRANCH_DIR).exists());
-        git.assertExistingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
+        git.assertMissingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
         git.assertExistingRemoteBranches(repositorySet, CONFIG_BRANCH_NAME);
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, CONFIG_BRANCH_NAME, CONFIG_BRANCH_NAME);
-        git.assertCommitsInLocalBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
+        git.assertCommitsInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
                 EXPECTED_INITIAL_COMMIT_MESSAGE);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
         assertEquals(PROPERTY_VALUE, branchConfig.getProperty(PROPERTY_NAME));
     }
 
@@ -116,13 +115,12 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
         verifyNoMoreInteractions(promptControllerMock);
         assertFalse("config branch directory not removed",
                 new File(repositorySet.getWorkingDirectory(), CONFIG_BRANCH_DIR).exists());
-        git.assertExistingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
+        git.assertMissingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
         git.assertExistingRemoteBranches(repositorySet, CONFIG_BRANCH_NAME);
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, CONFIG_BRANCH_NAME, CONFIG_BRANCH_NAME);
-        git.assertCommitsInLocalBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
+        git.assertCommitsInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
                 EXPECTED_INITIAL_COMMIT_MESSAGE);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
         assertEquals(PROPERTY_VALUE, branchConfig.getProperty(PROPERTY_NAME));
     }
 
@@ -147,13 +145,12 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
         verifyNoMoreInteractionsAndReset(promptControllerMock);
         assertFalse("config branch directory not removed",
                 new File(repositorySet.getWorkingDirectory(), CONFIG_BRANCH_DIR).exists());
-        git.assertExistingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
+        git.assertMissingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
         git.assertExistingRemoteBranches(repositorySet, CONFIG_BRANCH_NAME);
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, CONFIG_BRANCH_NAME, CONFIG_BRANCH_NAME);
-        git.assertCommitsInLocalBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
+        git.assertCommitsInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
                 EXPECTED_COMMIT_MESSAGE, EXPECTED_INITIAL_COMMIT_MESSAGE);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
         assertEquals(PROPERTY_VALUE, branchConfig.getProperty(PROPERTY_NAME));
         assertEquals(PROPERTY_VALUE2, branchConfig.getProperty(PROPERTY_NAME2));
     }
@@ -174,13 +171,12 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
         verifyNoMoreInteractions(promptControllerMock);
         assertFalse("config branch directory not removed",
                 new File(repositorySet.getWorkingDirectory(), CONFIG_BRANCH_DIR).exists());
-        git.assertExistingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
+        git.assertMissingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
         git.assertExistingRemoteBranches(repositorySet, CONFIG_BRANCH_NAME);
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, CONFIG_BRANCH_NAME, CONFIG_BRANCH_NAME);
-        git.assertCommitsInLocalBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
+        git.assertCommitsInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
                 EXPECTED_INITIAL_COMMIT_MESSAGE);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH_NAME, OTHER_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, OTHER_BRANCH);
         assertEquals(PROPERTY_VALUE, branchConfig.getProperty(PROPERTY_NAME));
     }
 
@@ -197,13 +193,12 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
         verifyNoMoreInteractions(promptControllerMock);
         assertFalse("config branch directory not removed",
                 new File(repositorySet.getWorkingDirectory(), CONFIG_BRANCH_DIR).exists());
-        git.assertExistingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
+        git.assertMissingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
         git.assertExistingRemoteBranches(repositorySet, CONFIG_BRANCH_NAME);
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, CONFIG_BRANCH_NAME, CONFIG_BRANCH_NAME);
-        git.assertCommitsInLocalBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
+        git.assertCommitsInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
                 EXPECTED_INITIAL_COMMIT_MESSAGE);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
         assertTrue("branch config is not empty as expected", branchConfig.isEmpty());
     }
 
@@ -219,13 +214,12 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
         verifyZeroInteractions(promptControllerMock);
         assertFalse("config branch directory not removed",
                 new File(repositorySet.getWorkingDirectory(), CONFIG_BRANCH_DIR).exists());
-        git.assertExistingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
+        git.assertMissingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
         git.assertExistingRemoteBranches(repositorySet, CONFIG_BRANCH_NAME);
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, CONFIG_BRANCH_NAME, CONFIG_BRANCH_NAME);
-        git.assertCommitsInLocalBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
+        git.assertCommitsInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
                 EXPECTED_INITIAL_COMMIT_MESSAGE);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
         assertEquals(PROPERTY_VALUE, branchConfig.getProperty(PROPERTY_NAME));
     }
 
@@ -242,13 +236,12 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
         verifyNoMoreInteractions(promptControllerMock);
         assertFalse("config branch directory not removed",
                 new File(repositorySet.getWorkingDirectory(), CONFIG_BRANCH_DIR).exists());
-        git.assertExistingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
+        git.assertMissingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
         git.assertExistingRemoteBranches(repositorySet, CONFIG_BRANCH_NAME);
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, CONFIG_BRANCH_NAME, CONFIG_BRANCH_NAME);
-        git.assertCommitsInLocalBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
+        git.assertCommitsInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
                 EXPECTED_INITIAL_COMMIT_MESSAGE);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
         assertEquals(PROPERTY_VALUE, branchConfig.getProperty(PROPERTY_NAME));
     }
 
@@ -265,13 +258,12 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
         verifyNoMoreInteractions(promptControllerMock);
         assertFalse("config branch directory not removed",
                 new File(repositorySet.getWorkingDirectory(), CONFIG_BRANCH_DIR).exists());
-        git.assertExistingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
+        git.assertMissingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
         git.assertExistingRemoteBranches(repositorySet, CONFIG_BRANCH_NAME);
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, CONFIG_BRANCH_NAME, CONFIG_BRANCH_NAME);
-        git.assertCommitsInLocalBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
+        git.assertCommitsInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
                 EXPECTED_INITIAL_COMMIT_MESSAGE);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
         assertEquals(PROPERTY_VALUE, branchConfig.getProperty(PROPERTY_NAME));
     }
 
@@ -286,13 +278,12 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         assertFalse("config branch directory not removed",
                 new File(repositorySet.getWorkingDirectory(), CONFIG_BRANCH_DIR).exists());
-        git.assertExistingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
+        git.assertMissingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
         git.assertExistingRemoteBranches(repositorySet, CONFIG_BRANCH_NAME);
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, CONFIG_BRANCH_NAME, CONFIG_BRANCH_NAME);
-        git.assertCommitsInLocalBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
+        git.assertCommitsInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
                 EXPECTED_INITIAL_COMMIT_MESSAGE);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
         assertEquals(PROPERTY_VALUE, branchConfig.getProperty(PROPERTY_NAME));
     }
 
@@ -325,13 +316,12 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         assertFalse("config branch directory not removed",
                 new File(repositorySet.getWorkingDirectory(), CONFIG_BRANCH_DIR).exists());
-        git.assertExistingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
+        git.assertMissingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
         git.assertExistingRemoteBranches(repositorySet, CONFIG_BRANCH_NAME);
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, CONFIG_BRANCH_NAME, CONFIG_BRANCH_NAME);
-        git.assertCommitsInLocalBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
+        git.assertCommitsInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
                 EXPECTED_INITIAL_COMMIT_MESSAGE);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
         assertTrue("branch config is not empty as expected", branchConfig.isEmpty());
     }
 
@@ -348,13 +338,12 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         assertFalse("config branch directory not removed",
                 new File(repositorySet.getWorkingDirectory(), CONFIG_BRANCH_DIR).exists());
-        git.assertExistingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
+        git.assertMissingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
         git.assertExistingRemoteBranches(repositorySet, CONFIG_BRANCH_NAME);
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, CONFIG_BRANCH_NAME, CONFIG_BRANCH_NAME);
-        git.assertCommitsInLocalBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
+        git.assertCommitsInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
                 EXPECTED_COMMIT_MESSAGE, EXPECTED_INITIAL_COMMIT_MESSAGE);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
         assertTrue("branch config is not empty as expected", branchConfig.isEmpty());
     }
 
@@ -372,13 +361,12 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         assertFalse("config branch directory not removed",
                 new File(repositorySet.getWorkingDirectory(), CONFIG_BRANCH_DIR).exists());
-        git.assertExistingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
+        git.assertMissingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
         git.assertExistingRemoteBranches(repositorySet, CONFIG_BRANCH_NAME);
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, CONFIG_BRANCH_NAME, CONFIG_BRANCH_NAME);
-        git.assertCommitsInLocalBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
+        git.assertCommitsInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
                 EXPECTED_INITIAL_COMMIT_MESSAGE);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
         assertEquals(PROPERTY_VALUE, branchConfig.getProperty(PROPERTY_NAME));
     }
 
@@ -398,12 +386,11 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
                 "Invalid branch name '" + OTHER_BRANCH + "' detected.\nCentral branch config can't be changed.", null);
         assertFalse("config branch directory not removed",
                 new File(repositorySet.getWorkingDirectory(), CONFIG_BRANCH_DIR).exists());
-        git.assertExistingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
+        git.assertMissingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
         git.assertExistingRemoteBranches(repositorySet, CONFIG_BRANCH_NAME);
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, CONFIG_BRANCH_NAME, CONFIG_BRANCH_NAME);
-        git.assertCommitsInLocalBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_INITIAL_COMMIT_MESSAGE);
+        git.assertCommitsInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_INITIAL_COMMIT_MESSAGE);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
         assertNull("branch config exists but not expected", branchConfig);
     }
 
@@ -420,13 +407,10 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         assertFalse("config branch directory not removed",
                 new File(repositorySet.getWorkingDirectory(), CONFIG_BRANCH_DIR).exists());
-        git.assertExistingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
+        git.assertMissingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
         git.assertExistingRemoteBranches(repositorySet, CONFIG_BRANCH_NAME);
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, CONFIG_BRANCH_NAME, CONFIG_BRANCH_NAME);
-        git.assertCommitsInLocalBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
-                EXPECTED_INITIAL_COMMIT_MESSAGE);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH_NAME,
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME,
                 FEATURE_BRANCH);
         assertEquals(PROPERTY_VALUE, branchConfig.getProperty(PROPERTY_NAME));
     }
@@ -445,13 +429,12 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
         verifyNoMoreInteractions(promptControllerMock);
         assertFalse("config branch directory not removed",
                 new File(repositorySet.getWorkingDirectory(), CONFIG_BRANCH_DIR).exists());
-        git.assertExistingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
+        git.assertMissingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
         git.assertExistingRemoteBranches(repositorySet, CONFIG_BRANCH_NAME);
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, CONFIG_BRANCH_NAME, CONFIG_BRANCH_NAME);
-        git.assertCommitsInLocalBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
+        git.assertCommitsInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
                 EXPECTED_INITIAL_COMMIT_MESSAGE);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
         assertEquals(PROPERTY_VALUE, branchConfig.getProperty(PROPERTY_NAME));
     }
 
@@ -472,13 +455,12 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
         verifyNoMoreInteractions(promptControllerMock);
         assertFalse("config branch directory not removed",
                 new File(repositorySet.getWorkingDirectory(), CONFIG_BRANCH_DIR).exists());
-        git.assertExistingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
+        git.assertMissingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
         git.assertExistingRemoteBranches(repositorySet, CONFIG_BRANCH_NAME);
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, CONFIG_BRANCH_NAME, CONFIG_BRANCH_NAME);
-        git.assertCommitsInLocalBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
+        git.assertCommitsInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
                 EXPECTED_INITIAL_COMMIT_MESSAGE);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
         assertEquals(PROPERTY_VALUE, branchConfig.getProperty(PROPERTY_NAME));
     }
 
@@ -497,13 +479,12 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
         verifyNoMoreInteractions(promptControllerMock);
         assertFalse("config branch directory not removed",
                 new File(repositorySet.getWorkingDirectory(), CONFIG_BRANCH_DIR).exists());
-        git.assertExistingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
+        git.assertMissingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
         git.assertExistingRemoteBranches(repositorySet, CONFIG_BRANCH_NAME);
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, CONFIG_BRANCH_NAME, CONFIG_BRANCH_NAME);
-        git.assertCommitsInLocalBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
+        git.assertCommitsInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
                 EXPECTED_INITIAL_COMMIT_MESSAGE);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
         assertEquals(PROPERTY_VALUE, branchConfig.getProperty(PROPERTY_NAME));
     }
 

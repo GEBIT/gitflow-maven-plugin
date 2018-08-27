@@ -20,7 +20,6 @@ import org.junit.Test;
 import de.gebit.build.maven.plugin.gitflow.jgit.RepositorySet;
 
 /**
- *
  * @author Volodymyr Medvid
  */
 public class GitFlowUpgradeMojoTest extends AbstractGitFlowMojoTestCase {
@@ -77,11 +76,10 @@ public class GitFlowUpgradeMojoTest extends AbstractGitFlowMojoTestCase {
         final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
 
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertMissingLocalBranches(repositorySet, MAINTENANCE_BRANCH);
-        git.assertExistingLocalBranches(repositorySet, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, CONFIG_BRANCH, MAINTENANCE_BRANCH);
         git.assertExistingRemoteBranches(repositorySet, CONFIG_BRANCH);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
         assertEquals("feature", branchConfig.getProperty("branchType"));
         assertEquals(MAINTENANCE_BRANCH, branchConfig.getProperty("baseBranch"));
         assertEquals(FEATURE_ISSUE, branchConfig.getProperty("issueNumber"));
@@ -104,11 +102,10 @@ public class GitFlowUpgradeMojoTest extends AbstractGitFlowMojoTestCase {
         final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
 
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
-        git.assertMissingLocalBranches(repositorySet, MASTER_BRANCH);
-        git.assertExistingLocalBranches(repositorySet, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, CONFIG_BRANCH, MASTER_BRANCH);
         git.assertExistingRemoteBranches(repositorySet, CONFIG_BRANCH);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
         assertEquals("feature", branchConfig.getProperty("branchType"));
         assertEquals(MASTER_BRANCH, branchConfig.getProperty("baseBranch"));
         assertEquals(FEATURE_ISSUE, branchConfig.getProperty("issueNumber"));
@@ -132,11 +129,10 @@ public class GitFlowUpgradeMojoTest extends AbstractGitFlowMojoTestCase {
         final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
 
         git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
-        git.assertMissingLocalBranches(repositorySet, MAINTENANCE_BRANCH);
-        git.assertExistingLocalBranches(repositorySet, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, CONFIG_BRANCH, MAINTENANCE_BRANCH);
         git.assertExistingRemoteBranches(repositorySet, CONFIG_BRANCH);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, EPIC_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH, EPIC_BRANCH);
         assertEquals("epic", branchConfig.getProperty("branchType"));
         assertEquals(MAINTENANCE_BRANCH, branchConfig.getProperty("baseBranch"));
         assertEquals(EPIC_ISSUE, branchConfig.getProperty("issueNumber"));
@@ -159,11 +155,10 @@ public class GitFlowUpgradeMojoTest extends AbstractGitFlowMojoTestCase {
         final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
 
         git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
-        git.assertMissingLocalBranches(repositorySet, MASTER_BRANCH);
-        git.assertExistingLocalBranches(repositorySet, CONFIG_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, CONFIG_BRANCH, MASTER_BRANCH);
         git.assertExistingRemoteBranches(repositorySet, CONFIG_BRANCH);
 
-        Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, EPIC_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH, EPIC_BRANCH);
         assertEquals("epic", branchConfig.getProperty("branchType"));
         assertEquals(MASTER_BRANCH, branchConfig.getProperty("baseBranch"));
         assertEquals(EPIC_ISSUE, branchConfig.getProperty("issueNumber"));

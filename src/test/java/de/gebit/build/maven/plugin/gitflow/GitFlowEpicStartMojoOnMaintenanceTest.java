@@ -95,7 +95,18 @@ public class GitFlowEpicStartMojoOnMaintenanceTest extends AbstractGitFlowMojoTe
 
     private void assertCentralBranchConfigSetCorrectly(final String expectedVersionChangeCommit)
             throws IOException, GitAPIException {
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH, EPIC_BRANCH);
+        assertCentralBranchConfigPropertiesSetCorrectly(branchConfig, expectedVersionChangeCommit);
+    }
+
+    private void assertCentralBranchConfigSetLocallyCorrectly(final String expectedVersionChangeCommit)
+            throws IOException, GitAPIException {
         Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, EPIC_BRANCH);
+        assertCentralBranchConfigPropertiesSetCorrectly(branchConfig, expectedVersionChangeCommit);
+    }
+
+    private void assertCentralBranchConfigPropertiesSetCorrectly(Properties branchConfig,
+            String expectedVersionChangeCommit) throws IOException, GitAPIException {
         assertEquals("epic", branchConfig.getProperty("branchType"));
         assertEquals(MAINTENANCE_BRANCH, branchConfig.getProperty("baseBranch"));
         assertEquals(EPIC_ISSUE, branchConfig.getProperty("issueNumber"));
@@ -226,7 +237,7 @@ public class GitFlowEpicStartMojoOnMaintenanceTest extends AbstractGitFlowMojoTe
         assertEpicStartedCorrectlyOnMaintenanceOffline();
 
         final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
-        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
+        assertCentralBranchConfigSetLocallyCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
     }
 
     @Test
