@@ -17,7 +17,6 @@ package de.gebit.build.maven.plugin.gitflow;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;

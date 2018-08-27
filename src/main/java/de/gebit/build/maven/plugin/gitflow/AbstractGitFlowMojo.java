@@ -907,7 +907,14 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                     if (pushRemote) {
                         // push the change
                         getLog().info("Pushing branch config changes to central branch config.");
-                        executeCommand(worktreeCmd, true, "push", gitFlowConfig.getOrigin(), configBranchName);
+                        CommandResult gitResult = executeCommand(worktreeCmd, false, "push", gitFlowConfig.getOrigin(),
+                                configBranchName);
+                        if (gitResult.getExitCode() != SUCCESS_EXIT_CODE) {
+                            gitFetchForced();
+                            executeCommand(worktreeCmd, true, "rebase",
+                                    gitFlowConfig.getOrigin() + "/" + configBranchName, configBranchName);
+                            executeCommand(worktreeCmd, true, "push", gitFlowConfig.getOrigin(), configBranchName);
+                        }
                     } else {
                         getLog().warn("");
                         getLog().warn("******************************************************************************");
@@ -1136,6 +1143,14 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             executeGitCommand("worktree", "prune");
         } catch (MojoFailureException | CommandLineException e) {
             getLog().warn("Failed to prune worktree information on central branch config cleanup.", e);
+        }
+        if (pushRemote) {
+            // remove local branch
+            try {
+                executeGitCommand("branch", "-D", configBranchName);
+            } catch (MojoFailureException | CommandLineException e) {
+                getLog().warn("Failed to delete local branch on central branch config cleanup.", e);
+            }
         }
     }
 
@@ -2432,7 +2447,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws CommandLineException
      */
     protected boolean gitRemoteBranchExists(String branchName) throws MojoFailureException, CommandLineException {
-        gitFetchOnce();
+        gitFetchForced();
         String branchResult = executeGitCommandReturn("for-each-ref",
                 "refs/remotes/" + gitFlowConfig.getOrigin() + "/" + branchName);
         return (StringUtils.isNotBlank(branchResult));
