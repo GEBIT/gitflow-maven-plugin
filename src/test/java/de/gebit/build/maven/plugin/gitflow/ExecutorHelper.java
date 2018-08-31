@@ -92,6 +92,11 @@ public class ExecutorHelper {
         return testCase.executeMojoWithResult(repositorySet.getWorkingDirectory(), "feature-rebase", userProperties);
     }
 
+    public static MavenExecutionResult executeFeatureIntegrateWithResult(AbstractGitFlowMojoTestCase testCase,
+            RepositorySet repositorySet, Properties userProperties) throws Exception {
+        return testCase.executeMojoWithResult(repositorySet.getWorkingDirectory(), "feature-integrate", userProperties);
+    }
+
     public static void executeHotfixStart(AbstractGitFlowMojoTestCase testCase, RepositorySet repositorySet,
             String hotfixVersion) throws Exception {
         Prompter promptControllerMock = mock(Prompter.class);

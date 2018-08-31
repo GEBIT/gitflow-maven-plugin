@@ -28,7 +28,7 @@ import de.gebit.build.maven.plugin.gitflow.steps.Step;
 import de.gebit.build.maven.plugin.gitflow.steps.StepsUtil;
 
 /**
- * Integrate cuurent feature branche into target feature branch. Useful to check
+ * Integrate current feature branche into target feature branch. Useful to check
  * if the feature effects another features before finishing.
  *
  * @author Volodymyr Medvid
@@ -103,14 +103,14 @@ public class GitFlowFeatureIntegrateMojo extends AbstractGitFlowFeatureMojo {
         if (breakpoint != null) {
             switch (breakpoint) {
             case REBASE:
-                String currentBranch = gitRebaseBranchInProcess();
-                stepParameters.tempSourceFeatureBranch = currentBranch;
-                stepParameters.targetFeatureBranch = gitGetBranchLocalConfig(currentBranch, "targetFeatureBranch");
-                stepParameters.sourceFeatureBranch = gitGetBranchLocalConfig(currentBranch, "sourceFeatureBranch");
+                String rebasingBranch = gitRebaseBranchInProcess();
+                stepParameters.tempSourceFeatureBranch = rebasingBranch;
+                stepParameters.targetFeatureBranch = gitGetBranchLocalConfig(rebasingBranch, "targetFeatureBranch");
+                stepParameters.sourceFeatureBranch = gitGetBranchLocalConfig(rebasingBranch, "sourceFeatureBranch");
                 stepParameters.sourceBaseBranch = gitFeatureBranchBaseBranch(stepParameters.sourceFeatureBranch);
                 break;
             case CLEAN_INSTALL:
-                currentBranch = gitCurrentBranch();
+                String currentBranch = gitCurrentBranch();
                 stepParameters.targetFeatureBranch = currentBranch;
                 stepParameters.sourceFeatureBranch = gitGetBranchLocalConfig(currentBranch, "sourceFeatureBranch");
                 stepParameters.sourceBaseBranch = gitFeatureBranchBaseBranch(stepParameters.sourceFeatureBranch);

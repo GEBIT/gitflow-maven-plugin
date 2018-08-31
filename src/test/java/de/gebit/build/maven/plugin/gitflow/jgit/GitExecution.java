@@ -1950,6 +1950,10 @@ public class GitExecution {
         return branchConfig.getTrackingBranch();
     }
 
+    public void rebase(RepositorySet repositorySet, String targetBranch) throws GitAPIException {
+        repositorySet.getLocalRepoGit().rebase().setUpstream(targetBranch).call();
+    }
+
     private class CommitRevFilter extends RevFilter {
 
         private List<String> excludedMessages;
