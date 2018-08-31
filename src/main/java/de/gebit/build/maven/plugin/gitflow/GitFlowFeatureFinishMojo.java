@@ -8,8 +8,7 @@
  */
 package de.gebit.build.maven.plugin.gitflow;
 
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,10 +21,21 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
+import de.gebit.build.maven.plugin.gitflow.steps.Breakpoint;
+import de.gebit.build.maven.plugin.gitflow.steps.FeatureFinishBreakpoint;
+import de.gebit.build.maven.plugin.gitflow.steps.FeatureFinishStep;
+import de.gebit.build.maven.plugin.gitflow.steps.FeatureFinishStepParameters;
+import de.gebit.build.maven.plugin.gitflow.steps.Step;
+import de.gebit.build.maven.plugin.gitflow.steps.StepsUtil;
+
 /**
- * The git flow feature finish mojo.
+ * Finish the implementation of a feature. Remove the version commit that
+ * changed the version (to reduce unnecessary commits in the pom.xml), merge
+ * into development branch (using fast forward strategy if parameter
+ * <code>rebase</code> is <code>true</code>), push development branch to remote
+ * and finally delete the feature branch.
  *
- * @author Aleksandr Mashchenko
+ * @author Volodymyr Medvid
  */
 @Mojo(name = "feature-finish", aggregator = true)
 public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
@@ -43,16 +53,15 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
     private boolean skipTestProject = false;
 
     /**
-     * You can try a rebase of the feature branch skipping the initial commit
-     * that update the pom versions just before finishing a feature. The
-     * operation will peform a rebase, which may not finish successfully. You
-     * can make your changes and run feature-finish again in that case. <br>
-     * Note: problems arise if you're modifying the poms near the version
-     * number. You will need to fix those conflicts before running
-     * feature-finish again, as otherwise the pom will be invalid and the
-     * process cannot be started. If you cannot fix the pom into a working state
-     * with the current commit you can manually issue a
-     * <code>git rebase --continue</code>.
+     * You can try a rebase of the feature branch skipping the initial commit that
+     * update the pom versions just before finishing a feature. The operation will
+     * peform a rebase, which may not finish successfully. You can make your changes
+     * and run feature-finish again in that case. <br>
+     * Note: problems arise if you're modifying the poms near the version number.
+     * You will need to fix those conflicts before running feature-finish again, as
+     * otherwise the pom will be invalid and the process cannot be started. If you
+     * cannot fix the pom into a working state with the current commit you can
+     * manually issue a <code>git rebase --continue</code>.
      *
      * @since 1.3.0
      */
@@ -69,8 +78,8 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
     private boolean allowFF = false;
 
     /**
-     * Whether to rebase feature branch on top of development branch before
-     * merging into it.
+     * Whether to rebase feature branch on top of development branch before merging
+     * into it.
      *
      * @since 2.0.1
      */
@@ -78,9 +87,9 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
     private boolean rebase = false;
 
     /**
-     * Whether a merge of development branch into feature branch should be
-     * performed instead of a rebase on top of development branch before merging
-     * into it. Is used only if parameter <code>rebase</code> is true.
+     * Whether a merge of development branch into feature branch should be performed
+     * instead of a rebase on top of development branch before merging into it. Is
+     * used only if parameter <code>rebase</code> is true.
      *
      * @since 2.0.1
      */
@@ -88,42 +97,40 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
     private boolean updateWithMerge = false;
 
     /**
-     * Whether to squash a commit with correction of version for new modules and single feature commit.
+     * Whether to squash a commit with correction of version for new modules and
+     * single feature commit.
      *
      * @since 2.0.5
      */
     @Parameter(property = "squashNewModuleVersionFixCommit", defaultValue = "false")
     private boolean squashNewModuleVersionFixCommit = false;
 
-    private final Step[] allProcessSteps = { new Step(this::selectFeatureAndBaseBranches),
-            new Step(this::ensureBranchesPreparedForFeatureFinish, Breakpoint.REBASE_BEFORE_FINISH),
-            new Step(this::verifyFeatureProject),
-            new Step(this::revertProjectVersion, Breakpoint.REBASE_WITHOUT_VERSION_CHANGE),
-            new Step(this::mergeIntoBaseBranch, Breakpoint.FINAL_MERGE),
-            new Step(this::buildBaseProject, Breakpoint.CLEAN_INSTALL), new Step(this::finalizeFeatureFinish) };
+    private final List<Step<FeatureFinishBreakpoint, FeatureFinishStepParameters>> allProcessSteps = Arrays.asList(
+            new FeatureFinishStep(this::selectFeatureAndBaseBranches),
+            new FeatureFinishStep(this::ensureBranchesPreparedForFeatureFinish,
+                    FeatureFinishBreakpoint.REBASE_BEFORE_FINISH),
+            new FeatureFinishStep(this::verifyFeatureProject),
+            new FeatureFinishStep(this::revertProjectVersion, FeatureFinishBreakpoint.REBASE_WITHOUT_VERSION_CHANGE),
+            new FeatureFinishStep(this::mergeIntoBaseBranch, FeatureFinishBreakpoint.FINAL_MERGE),
+            new FeatureFinishStep(this::buildBaseProject, FeatureFinishBreakpoint.CLEAN_INSTALL),
+            new FeatureFinishStep(this::finalizeFeatureFinish));
 
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         getMavenLog().info("Starting feature finish process");
         checkCentralBranchConfig();
-
-        Breakpoint breakpoint = getBreakpoint();
-        Step[] steps = getStepsToExecute(breakpoint);
-        StepParameters stepParameters = initParameters(breakpoint);
-        for (Step step : steps) {
-            stepParameters = step.execute(stepParameters);
-        }
+        StepsUtil.processSteps(allProcessSteps, this::getBreakpoint, this::initParameters);
         getMavenLog().info("Feature finish process finished");
     }
 
     /**
      * Check the breakpoint marker stored into branch local config.
      *
-     * @return the type of marked breakpoint or <code>null</code> if no
-     *         breakpoint found.
+     * @return the type of marked breakpoint or <code>null</code> if no breakpoint
+     *         found.
      */
-    private Breakpoint getBreakpoint() throws MojoFailureException, CommandLineException {
+    private FeatureFinishBreakpoint getBreakpoint() throws MojoFailureException, CommandLineException {
         String branch;
         try {
             branch = gitMergeFromFeatureBranchInProcess();
@@ -138,32 +145,9 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
         }
         String breakpointId = gitGetBranchLocalConfig(branch, "breakpoint");
         if (breakpointId != null) {
-            return Breakpoint.valueById(breakpointId);
+            return FeatureFinishBreakpoint.valueById(breakpointId);
         }
         return null;
-    }
-
-    /**
-     * Get steps to be executed.<br>
-     * If breakpoint parameter is <code>null</code> then returns all steps.<br>
-     * If breakpoint parameter is not <code>null</code> then returns all steps
-     * beginning from the breakpoint.
-     *
-     * @param breakpoint
-     *            the breakpoint which to start from or <code>null</code> to get
-     *            all steps
-     * @return the steps to be executed
-     */
-    private Step[] getStepsToExecute(Breakpoint breakpoint) {
-        List<Step> steps = new ArrayList<>();
-        for (int i = allProcessSteps.length - 1; i >= 0; i--) {
-            steps.add(allProcessSteps[i]);
-            if (breakpoint != null && breakpoint == allProcessSteps[i].breakpoint) {
-                break;
-            }
-        }
-        Collections.reverse(steps);
-        return steps.toArray(new Step[steps.size()]);
     }
 
     /**
@@ -173,8 +157,9 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
      *            the breakpoint to consider while parameters initialization
      * @return initialized parameters
      */
-    private StepParameters initParameters(Breakpoint breakpoint) throws MojoFailureException, CommandLineException {
-        StepParameters stepParameters = new StepParameters();
+    private FeatureFinishStepParameters initParameters(FeatureFinishBreakpoint breakpoint)
+            throws MojoFailureException, CommandLineException {
+        FeatureFinishStepParameters stepParameters = new FeatureFinishStepParameters();
         stepParameters.breakpoint = breakpoint;
         if (breakpoint != null) {
             switch (breakpoint) {
@@ -203,7 +188,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
         return stepParameters;
     }
 
-    private StepParameters selectFeatureAndBaseBranches(StepParameters stepParameters)
+    private FeatureFinishStepParameters selectFeatureAndBaseBranches(FeatureFinishStepParameters stepParameters)
             throws MojoFailureException, CommandLineException {
         // check uncommitted changes
         checkUncommittedChanges();
@@ -227,11 +212,11 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
         return stepParameters;
     }
 
-    private StepParameters ensureBranchesPreparedForFeatureFinish(StepParameters stepParameters)
-            throws MojoFailureException, CommandLineException {
-        StepParameters tempStepParameters = stepParameters;
+    private FeatureFinishStepParameters ensureBranchesPreparedForFeatureFinish(
+            FeatureFinishStepParameters stepParameters) throws MojoFailureException, CommandLineException {
+        FeatureFinishStepParameters tempStepParameters = stepParameters;
         String featureBranch = tempStepParameters.featureBranch;
-        if (stepParameters.breakpoint == Breakpoint.REBASE_BEFORE_FINISH) {
+        if (stepParameters.breakpoint == FeatureFinishBreakpoint.REBASE_BEFORE_FINISH) {
             tempStepParameters = rebaseBeforeMerge(tempStepParameters);
         } else {
             String baseBranch = tempStepParameters.baseBranch;
@@ -286,10 +271,10 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
         return tempStepParameters;
     }
 
-    private StepParameters rebaseBeforeMerge(StepParameters stepParameters)
+    private FeatureFinishStepParameters rebaseBeforeMerge(FeatureFinishStepParameters stepParameters)
             throws MojoFailureException, CommandLineException {
         String featureBranch = stepParameters.featureBranch;
-        if (stepParameters.breakpoint != Breakpoint.REBASE_BEFORE_FINISH) {
+        if (stepParameters.breakpoint != FeatureFinishBreakpoint.REBASE_BEFORE_FINISH) {
 
             String baseBranch = stepParameters.baseBranch;
             if (stepParameters.isOnFeatureBranch == null) {
@@ -321,7 +306,8 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
                 gitMerge(baseBranch, true);
             } catch (MojoFailureException ex) {
                 getMavenLog().info("Feature finish process paused to resolve merge conflicts");
-                gitSetBranchLocalConfig(featureBranch, "breakpoint", Breakpoint.REBASE_BEFORE_FINISH.getId());
+                gitSetBranchLocalConfig(featureBranch, "breakpoint",
+                        FeatureFinishBreakpoint.REBASE_BEFORE_FINISH.getId());
                 throw new GitFlowFailureException(ex,
                         "Automatic merge of base branch '" + baseBranch + "' into feature branch '" + featureBranch
                                 + "' failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage()),
@@ -344,7 +330,8 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
                     gitRebaseOnto(baseBranch, versionChangeCommitOnBranch, featureBranch);
                 } catch (MojoFailureException ex) {
                     getMavenLog().info("Feature finish process paused to resolve rebase conflicts");
-                    gitSetBranchLocalConfig(featureBranch, "breakpoint", Breakpoint.REBASE_BEFORE_FINISH.getId());
+                    gitSetBranchLocalConfig(featureBranch, "breakpoint",
+                            FeatureFinishBreakpoint.REBASE_BEFORE_FINISH.getId());
                     throw new GitFlowFailureException(ex,
                             "Automatic rebase of feature branch '" + featureBranch + "' on top of base branch '"
                                     + baseBranch + "' failed.\nGit error message:\n"
@@ -362,7 +349,8 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
                     gitRebase(baseBranch);
                 } catch (MojoFailureException ex) {
                     getMavenLog().info("Feature finish process paused to resolve rebase conflicts");
-                    gitSetBranchLocalConfig(featureBranch, "breakpoint", Breakpoint.REBASE_BEFORE_FINISH.getId());
+                    gitSetBranchLocalConfig(featureBranch, "breakpoint",
+                            FeatureFinishBreakpoint.REBASE_BEFORE_FINISH.getId());
                     throw new GitFlowFailureException(ex,
                             "Automatic rebase of feature branch '" + featureBranch + "' on top of base branch '"
                                     + baseBranch + "' failed.\nGit error message:\n"
@@ -406,10 +394,9 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
             }
         } else {
             // continue with the rebase
-            if (!getPrompter().promptConfirmation(
-                    "You have a rebase in process on your current branch. "
-                            + "If you run 'mvn flow:feature-finish' before and rebase had conflicts you can "
-                            + "continue. In other case it is better to clarify the reason of rebase in process. Continue?",
+            if (!getPrompter().promptConfirmation("You have a rebase in process on your current branch. "
+                    + "If you run 'mvn flow:feature-finish' before and rebase had conflicts you can "
+                    + "continue. In other case it is better to clarify the reason of rebase in process. Continue?",
                     true, true)) {
                 throw new GitFlowFailureException("Continuation of feature finish aborted by user.", null);
             }
@@ -442,7 +429,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
         return rebasedWithoutVersionChangeCommit;
     }
 
-    private StepParameters verifyFeatureProject(StepParameters stepParameters)
+    private FeatureFinishStepParameters verifyFeatureProject(FeatureFinishStepParameters stepParameters)
             throws MojoFailureException, CommandLineException {
         if (!skipTestProject) {
             getMavenLog().info("Testing the feature project before performing feature finish...");
@@ -451,11 +438,11 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
         return stepParameters;
     }
 
-    private StepParameters revertProjectVersion(StepParameters stepParameters)
+    private FeatureFinishStepParameters revertProjectVersion(FeatureFinishStepParameters stepParameters)
             throws MojoFailureException, CommandLineException {
         String featureBranch = stepParameters.featureBranch;
 
-        if (stepParameters.breakpoint != Breakpoint.REBASE_WITHOUT_VERSION_CHANGE) {
+        if (stepParameters.breakpoint != FeatureFinishBreakpoint.REBASE_WITHOUT_VERSION_CHANGE) {
             if (stepParameters.rebasedWithoutVersionChangeCommit != null
                     && stepParameters.rebasedWithoutVersionChangeCommit == true) {
                 getLog().info("Project version on feature branch already reverted while rebasing.");
@@ -486,25 +473,25 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
         return stepParameters;
     }
 
-    private void fixupModuleParents(String featureBranch, String baseBranch) throws MojoFailureException,
-            CommandLineException {
+    private void fixupModuleParents(String featureBranch, String baseBranch)
+            throws MojoFailureException, CommandLineException {
         getLog().info("Ensure consistent version in all modules");
         String baseVersion = getCurrentProjectVersion();
         String issueNumber = getFeatureIssueNumber(featureBranch);
         String featureFinishMessage = substituteWithIssueNumber(commitMessages.getFeatureFinishMessage(), issueNumber);
         boolean amend = false;
         if (squashNewModuleVersionFixCommit) {
-            int feautreCommits = gitGetDistanceToAncestor(featureBranch, baseBranch);
-            amend = (feautreCommits == 1);
+            int featureCommits = gitGetDistanceToAncestor(featureBranch, baseBranch);
+            amend = (featureCommits == 1);
         }
         mvnFixupVersions(baseVersion, issueNumber, featureFinishMessage, amend);
     }
 
-    private StepParameters mergeIntoBaseBranch(StepParameters stepParameters)
+    private FeatureFinishStepParameters mergeIntoBaseBranch(FeatureFinishStepParameters stepParameters)
             throws MojoFailureException, CommandLineException {
         String featureBranch = stepParameters.featureBranch;
 
-        if (stepParameters.breakpoint != Breakpoint.FINAL_MERGE) {
+        if (stepParameters.breakpoint != FeatureFinishBreakpoint.FINAL_MERGE) {
             String baseBranch = stepParameters.baseBranch;
             // git checkout develop
             gitCheckout(baseBranch);
@@ -515,7 +502,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
                 gitMerge(featureBranch, !allowFF);
             } catch (MojoFailureException ex) {
                 getMavenLog().info("Feature finish process paused to resolve merge conflicts");
-                setBreakpoint(Breakpoint.FINAL_MERGE, featureBranch);
+                setBreakpoint(FeatureFinishBreakpoint.FINAL_MERGE, featureBranch);
                 throw new GitFlowFailureException(ex,
                         "Automatic merge failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage()),
                         "Fix the merge conflicts and mark them as resolved. After that, run "
@@ -530,12 +517,12 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
         return stepParameters;
     }
 
-    private StepParameters buildBaseProject(StepParameters stepParameters)
+    private FeatureFinishStepParameters buildBaseProject(FeatureFinishStepParameters stepParameters)
             throws CommandLineException, MojoFailureException, GitFlowFailureException {
         String baseBranch = stepParameters.baseBranch;
         String featureBranch = stepParameters.featureBranch;
 
-        if (stepParameters.breakpoint == Breakpoint.CLEAN_INSTALL) {
+        if (stepParameters.breakpoint == FeatureFinishBreakpoint.CLEAN_INSTALL) {
             getMavenLog().info("Restart after failed project installation on base branch detected");
             checkUncommittedChanges();
         }
@@ -548,7 +535,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
                         .info("Feature finish process paused on failed project installation to fix project problems");
                 Map<String, String> configs = new HashMap<>();
                 configs.put("breakpointFeatureBranch", featureBranch);
-                setBreakpoint(Breakpoint.CLEAN_INSTALL, baseBranch, configs);
+                setBreakpoint(FeatureFinishBreakpoint.CLEAN_INSTALL, baseBranch, configs);
                 String reason = null;
                 if (e instanceof GitFlowFailureException) {
                     reason = ((GitFlowFailureException) e).getProblem();
@@ -564,7 +551,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
         return stepParameters;
     }
 
-    private StepParameters finalizeFeatureFinish(StepParameters stepParameters)
+    private FeatureFinishStepParameters finalizeFeatureFinish(FeatureFinishStepParameters stepParameters)
             throws MojoFailureException, CommandLineException {
         String baseBranch = stepParameters.baseBranch;
         String featureBranch = stepParameters.featureBranch;
@@ -697,18 +684,18 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
     }
 
     /**
-     * Merges the first commit on the given branch ignoring any changes. This
-     * first commit is the commit that changed the versions.
+     * Merges the first commit on the given branch ignoring any changes. This first
+     * commit is the commit that changed the versions.
      *
      * @param featureBranch
      *            The feature branch name.
      * @param branchPoint
      *            the branch point on both feature and development branch
      * @param versionChangeCommitId
-     *            commit ID of the version change commit. Must be first commit
-     *            on featuereBranch after branchPoint
-     * @return true if the version has been premerged and does not need to be
-     *         turned back
+     *            commit ID of the version change commit. Must be first commit on
+     *            featuereBranch after branchPoint
+     * @return true if the version has been premerged and does not need to be turned
+     *         back
      * @throws MojoFailureException
      * @throws CommandLineException
      */
@@ -726,7 +713,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
             getLog().info("Version change commit in feature branch removed.");
         } catch (MojoFailureException ex) {
             getMavenLog().info("Feature finish process paused to resolve rebase conflicts");
-            setBreakpoint(Breakpoint.REBASE_WITHOUT_VERSION_CHANGE, featureBranch);
+            setBreakpoint(FeatureFinishBreakpoint.REBASE_WITHOUT_VERSION_CHANGE, featureBranch);
             throw new GitFlowFailureException(ex,
                     "Automatic rebase failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage()),
                     "Fix the rebase conflicts and mark them as resolved. "
@@ -770,8 +757,8 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
     }
 
     /**
-     * Remove breakpoint information and known additional configs from branch
-     * local config.
+     * Remove breakpoint information and known additional configs from branch local
+     * config.
      *
      * @param featureBranch
      *            the feature branch name
@@ -783,92 +770,6 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
         gitRemoveBranchLocalConfig(featureBranch, "breakpoint");
         gitRemoveBranchLocalConfig(baseBranch, "breakpoint");
         gitRemoveBranchLocalConfig(baseBranch, "breakpointFeatureBranch");
-    }
-
-    /**
-     * Breakpoint types.
-     *
-     * @author Volodymyr Medvid
-     */
-    protected enum Breakpoint {
-        CLEAN_INSTALL("cleanInstall"), FINAL_MERGE("finalMerge"), REBASE_BEFORE_FINISH(
-                "rebaseBeforeFinish"), REBASE_WITHOUT_VERSION_CHANGE("rebaseWithoutVersionChange");
-
-        private String id;
-
-        private Breakpoint(String shortId) {
-            id = "featureFinish." + shortId;
-        }
-
-        public static Breakpoint valueById(String anId) {
-            for (Breakpoint breakpoint : values()) {
-                if (breakpoint.getId().equals(anId)) {
-                    return breakpoint;
-                }
-            }
-            return null;
-        }
-
-        public String getId() {
-            return id;
-        }
-    }
-
-    /**
-     * Single process step for feature finish.
-     *
-     * @author Volodymyr Medvid
-     */
-    private class Step {
-
-        private StepOperator executor;
-        private Breakpoint breakpoint;
-
-        /**
-         * Creates a process step.
-         *
-         * @param anExecutor
-         *            the method to be executed on this step
-         */
-        public Step(StepOperator anExecutor) {
-            this(anExecutor, null);
-        }
-
-        /**
-         * Creates a process step.
-         *
-         * @param anExecutor
-         *            the method to be executed on this step
-         * @param aBreakpoint
-         *            the breakpoint type associated with this step. The process
-         *            will be restarted from this step if previous run faild on
-         *            passed break point.
-         */
-        public Step(StepOperator anExecutor, Breakpoint aBreakpoint) {
-            executor = anExecutor;
-            breakpoint = aBreakpoint;
-        }
-
-        /**
-         * Execute the process step.
-         */
-        public StepParameters execute(StepParameters parameters) throws MojoFailureException, CommandLineException {
-            return executor.execute(parameters);
-        }
-    }
-
-    @FunctionalInterface
-    private interface StepOperator {
-
-        StepParameters execute(StepParameters parameters) throws MojoFailureException, CommandLineException;
-    }
-
-    private class StepParameters {
-        private Breakpoint breakpoint;
-        private String featureBranch;
-        private String baseBranch;
-        private Boolean isOnFeatureBranch;
-        private Boolean rebasedWithoutVersionChangeCommit;
     }
 
 }

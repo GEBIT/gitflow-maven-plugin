@@ -2590,6 +2590,26 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         return null;
     }
 
+    /**
+     * Checks whether a rebase is in progress by looking at .git/rebase-apply.
+     *
+     * @return the name of the rebesing branch
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected String gitRebaseBranchInProcess() throws MojoFailureException, CommandLineException {
+        String headName = gitGetRebaseHeadNameIfExists();
+        if (headName == null) {
+            return null;
+        }
+        final String branchRef = headName.trim();
+        if (!branchRef.startsWith("refs/heads/")) {
+            throw new MojoFailureException("Illegal rebasing branch reference: " + branchRef);
+        }
+        final String tempBranchName = branchRef.substring("refs/heads/".length());
+        return tempBranchName;
+    }
+
     protected boolean gitInteractiveRebaseInProcess() throws MojoFailureException, CommandLineException {
         return gitGetRebaseFileIfExists("interactive") != null;
     }

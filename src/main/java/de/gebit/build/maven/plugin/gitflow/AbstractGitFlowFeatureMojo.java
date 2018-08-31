@@ -211,17 +211,9 @@ public abstract class AbstractGitFlowFeatureMojo extends AbstractGitFlowMojo {
      * @throws CommandLineException
      */
     protected String gitRebaseFeatureBranchInProcess() throws MojoFailureException, CommandLineException {
-        String headName = gitGetRebaseHeadNameIfExists();
-        if (headName == null) {
-            return null;
-        }
-        final String branchRef = headName.trim();
-        if (!branchRef.startsWith("refs/heads/")) {
-            throw new MojoFailureException("Illegal rebasing branch reference: " + branchRef);
-        }
-        final String tempBranchName = branchRef.substring("refs/heads/".length());
-        if (!tempBranchName.startsWith(gitFlowConfig.getFeatureBranchPrefix())) {
-            throw new MojoFailureException("Rebasing branch is not a feature branch: " + branchRef);
+        final String tempBranchName = gitRebaseBranchInProcess();
+        if (tempBranchName != null && !tempBranchName.startsWith(gitFlowConfig.getFeatureBranchPrefix())) {
+            throw new MojoFailureException("Rebasing branch is not a feature branch: " + tempBranchName);
         }
         return tempBranchName;
     }
