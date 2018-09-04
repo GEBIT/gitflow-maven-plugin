@@ -100,7 +100,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
      * Whether to squash a commit with correction of version for new modules and
      * single feature commit.
      *
-     * @since 2.0.5
+     * @since 2.1.0
      */
     @Parameter(property = "squashNewModuleVersionFixCommit", defaultValue = "false")
     private boolean squashNewModuleVersionFixCommit = false;

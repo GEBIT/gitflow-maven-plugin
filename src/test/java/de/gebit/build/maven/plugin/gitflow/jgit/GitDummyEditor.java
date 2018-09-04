@@ -40,8 +40,8 @@ public class GitDummyEditor {
     public static final String PROPERTY_KEY_TARGET_BASEDIR = "DummyEditor.target.basedir";
 
     /**
-     * The relative path to the dummy editor working directory. Relative to the
-     * base directory.
+     * The relative path to the dummy editor working directory. Relative to the base
+     * directory.
      */
     private static final String RELATIVE_PATH_TO_EDITOR_WORKING_DIR = "__editor";
 
@@ -73,11 +73,18 @@ public class GitDummyEditor {
             FILE_NAME_GIT_REBASE_TODO).getPath();
 
     /**
-     * The relative path to the input file git-rebase-todo-commands used by
-     * dummy editor. Relative to the base directory.
+     * The relative path to the input file git-rebase-todo-commands used by dummy
+     * editor. Relative to the base directory.
      */
     public static final String REBASE_TODO_COMMANDS_FILE_RELATIVE_PATH = new File(RELATIVE_PATH_TO_EDITOR_WORKING_DIR,
             INPUT_FILE_NAME_GIT_REBASE_TODO_COMMANDS).getPath();
+
+    /**
+     * The relative path to the input file COMMIT_EDITMSG used by dummy editor.
+     * Relative to the base directory.
+     */
+    public static final String COMMIT_EDITMSG_FILE_RELATIVE_PATH = new File(RELATIVE_PATH_TO_EDITOR_WORKING_DIR,
+            INPUT_FILE_NAME_COMMIT_EDITMSG).getPath();
 
     private static boolean allowToOverwriteFiles = true;
 
@@ -165,7 +172,7 @@ public class GitDummyEditor {
         log("Processing COMMIT_EDITMSG...");
         File inputFile = new File(targetDir, INPUT_FILE_NAME_COMMIT_EDITMSG);
         if (inputFile.exists()) {
-            Files.copy(inputFile.toPath(), editorFile.toPath());
+            Files.copy(inputFile.toPath(), editorFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
             log("- commit message replaced");
         } else {
             log("- default commit message used");

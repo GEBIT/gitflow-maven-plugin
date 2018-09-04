@@ -86,26 +86,25 @@ import de.gebit.build.maven.plugin.gitflow.BranchCentralConfigChanges.Change;
 public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
     /**
-     * A property key for an alternative maven cmd executable that can be
-     * defined in request user properties.
+     * A property key for an alternative maven cmd executable that can be defined in
+     * request user properties.
      */
     public static final String USER_PROPERTY_KEY_CMD_MVN_EXECUTABLE = "cmd.mvn.executable";
 
     /**
-     * A property key for argumetns (array of Strings) for the alternative maven
-     * cmd executable that will be prepended to other arguments.
+     * A property key for argumetns (array of Strings) for the alternative maven cmd
+     * executable that will be prepended to other arguments.
      */
     public static final String USER_PROPERTY_KEY_CMD_MVN_ARGS_PREPEND = "cmd.mvn.args.prepend";
 
     /**
-     * A property key for argumetns (array of Strings) for the alternative maven
-     * cmd executable that will be appended to other arguments.
+     * A property key for argumetns (array of Strings) for the alternative maven cmd
+     * executable that will be appended to other arguments.
      */
     public static final String USER_PROPERTY_KEY_CMD_MVN_ARGS_APPEND = "cmd.mvn.args.append";
 
     /**
-     * A property key for a flag that determines if an external git editor is
-     * used.
+     * A property key for a flag that determines if an external git editor is used.
      */
     public static final String USER_PROPERTY_KEY_EXTERNAL_GIT_EDITOR_USED = "external.git.editor.used";
 
@@ -185,10 +184,10 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     protected boolean pushRemote;
 
     /**
-     * Additional maven commands/goals after the version has been updated. Will
-     * be committed together with the version change. Can contain an
-     * {@literal @}{version} placeholder which will be replaced with the new
-     * version before execution.
+     * Additional maven commands/goals after the version has been updated. Will be
+     * committed together with the version change. Can contain an
+     * {@literal @}{version} placeholder which will be replaced with the new version
+     * before execution.
      *
      * @since 1.3.0
      */
@@ -196,8 +195,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     protected String commandsAfterVersion;
 
     /**
-     * When set to <code>true</code> the output generated from executing the
-     * tests is written to the console.
+     * When set to <code>true</code> the output generated from executing the tests
+     * is written to the console.
      *
      * @since 1.3.0
      */
@@ -205,8 +204,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     private boolean printTestOutput;
 
     /**
-     * When set to <code>true</code> the output generated from executing the
-     * install is written to the console.
+     * When set to <code>true</code> the output generated from executing the install
+     * is written to the console.
      *
      * @since 1.3.0
      */
@@ -214,8 +213,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     private boolean printInstallOutput;
 
     /**
-     * When set to <code>true</code> the output generated from executing the
-     * release goals is written to the console.
+     * When set to <code>true</code> the output generated from executing the release
+     * goals is written to the console.
      *
      * @since 1.3.0
      */
@@ -241,8 +240,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     private boolean verbose = false;
 
     /**
-     * Optional list of properties that if present on the invocation will be
-     * passed to forked mvn invocations.
+     * Optional list of properties that if present on the invocation will be passed
+     * to forked mvn invocations.
      *
      * @since 1.3.9
      */
@@ -286,11 +285,11 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     protected Settings settings;
 
     /**
-     * A regex pattern that a new epic name must match. It is also used to
-     * extract a "key" from a branch name which can be referred to as
-     * <code>@key</code> in commit messages. The extraction will be performed
-     * using the first matching group (if present). You will need this if your
-     * commit messages need to refer to e.g. an issue tracker key.
+     * A regex pattern that a new epic name must match. It is also used to extract a
+     * "key" from a branch name which can be referred to as <code>@key</code> in
+     * commit messages. The extraction will be performed using the first matching
+     * group (if present). You will need this if your commit messages need to refer
+     * to e.g. an issue tracker key.
      *
      * @since 2.0.0
      */
@@ -298,8 +297,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     protected String epicNamePattern;
 
     /**
-     * Name of the branch used to hold the branch specific configuration
-     * properties.
+     * Name of the branch used to hold the branch specific configuration properties.
      *
      * @since 1.4.0
      */
@@ -316,8 +314,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     protected String configBranchDir;
 
     /**
-     * Additional maven commands that can prompt for user input or be
-     * conditionally enabled.
+     * Additional maven commands that can prompt for user input or be conditionally
+     * enabled.
      *
      * @since 2.0.1
      */
@@ -325,8 +323,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     protected GitFlowParameter[] additionalMavenCommands;
 
     /**
-     * Maven goals (separated by space) to be used while testing project.
-     * Additional maven parameters can be used here.
+     * Maven goals (separated by space) to be used while testing project. Additional
+     * maven parameters can be used here.
      *
      * @since 2.0.4
      */
@@ -436,19 +434,17 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Perform whatever build-process behavior this <code>Mojo</code>
-     * implements.
+     * Perform whatever build-process behavior this <code>Mojo</code> implements.
      *
      * @throws CommandLineException
-     *             if an unexpected problem on execution of external commands
-     *             occurs
+     *             if an unexpected problem on execution of external commands occurs
      * @throws MojoExecutionException
-     *             if an unexpected problem occurs. Throwing this exception
-     *             causes a "BUILD ERROR" message to be displayed
+     *             if an unexpected problem occurs. Throwing this exception causes a
+     *             "BUILD ERROR" message to be displayed
      * @throws MojoFailureException
-     *             if an expected problem (such as a compilation failure)
-     *             occurs. Throwing this exception causes a "BUILD FAILURE"
-     *             message to be displayed
+     *             if an expected problem (such as a compilation failure) occurs.
+     *             Throwing this exception causes a "BUILD FAILURE" message to be
+     *             displayed
      */
     protected abstract void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException;
 
@@ -586,8 +582,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     /**
      * Check if the project has snapshot dependencies.
      *
-     * @return <code>true</code> if the project has at least one snapshot
-     *         dependency
+     * @return <code>true</code> if the project has at least one snapshot dependency
      */
     protected boolean hasProjectSnapshotDependencies() {
         getLog().info("Checking for SNAPSHOT versions in dependencies.");
@@ -777,8 +772,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      *
      * @param branchType
      *            the type of branches to be returned
-     * @return list of branches or empty list if no branches for passed type
-     *         found
+     * @return list of branches or empty list if no branches for passed type found
      * @throws MojoFailureException
      * @throws CommandLineException
      */
@@ -848,8 +842,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * Apply set/remove changes on branch central config.
      *
      * @param changes
-     *            the collection of set/remove changes on branch central config
-     *            to be applied
+     *            the collection of set/remove changes on branch central config to
+     *            be applied
      * @throws MojoFailureException
      * @throws CommandLineException
      */
@@ -1050,12 +1044,12 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Checkout configuration branch to a worktree. Creates new configuration
-     * branch if it doesn't exist yet and <code>createIfNotExisting=true</code>.
+     * Checkout configuration branch to a worktree. Creates new configuration branch
+     * if it doesn't exist yet and <code>createIfNotExisting=true</code>.
      *
      * @param createIfNotExisting
-     *            <code>true</code> if configuration branch should be created if
-     *            it doesn't exist yet
+     *            <code>true</code> if configuration branch should be created if it
+     *            doesn't exist yet
      * @return path to the configuration branch worktree or <code>null</code> if
      *         configuration branch doesn't exist and
      *         <code>createIfNotExisting=false</code>
@@ -1204,8 +1198,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      *
      * @param epicBranch
      *            the name of the epic branch
-     * @return the epic issue number or <code>null</code> if issue number can't
-     *         be find in central branch config
+     * @return the epic issue number or <code>null</code> if issue number can't be
+     *         find in central branch config
      * @throws MojoFailureException
      * @throws CommandLineException
      */
@@ -1296,8 +1290,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * Executes git checkout.
      *
      * @param branchName
-     *            Branch name to checkout. You can give a commit id, too. In
-     *            this case you will end up with a detached HEAD.
+     *            Branch name to checkout. You can give a commit id, too. In this
+     *            case you will end up with a detached HEAD.
      * @throws MojoFailureException
      * @throws CommandLineException
      */
@@ -1357,8 +1351,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @param branchName
      *            the name of the branch to be merged
      * @param noff
-     *            <code>true</code> if no fast forward option
-     *            <code>--no-ff</code> should be used
+     *            <code>true</code> if no fast forward option <code>--no-ff</code>
+     *            should be used
      * @throws MojoFailureException
      * @throws CommandLineException
      */
@@ -1439,8 +1433,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Returns the default commit message to use for merging a branch into
-     * another one.
+     * Returns the default commit message to use for merging a branch into another
+     * one.
      *
      * @param aBranchToMerge
      *            the branch to merge
@@ -1512,8 +1506,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Executes git symbolic-ref --short HEAD to get the current branch. Throws
-     * an exception when in detached HEAD state.
+     * Executes git symbolic-ref --short HEAD to get the current branch. Throws an
+     * exception when in detached HEAD state.
      *
      * @throws MojoFailureException
      * @throws CommandLineException
@@ -1542,8 +1536,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Executes git tag --sort=-v:refname -l [tagPrefix]* to get all tags in
-     * reverse order
+     * Executes git tag --sort=-v:refname -l [tagPrefix]* to get all tags in reverse
+     * order
      *
      * @param tagPrefix
      *            Prefix of release tags.
@@ -1614,8 +1608,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Returns <code>true</code> if the given branch exists on the configured
-     * origin remote.
+     * Returns <code>true</code> if the given branch exists on the configured origin
+     * remote.
      *
      * @param aBranch
      * @return
@@ -1659,9 +1653,9 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Execute git rev-list [branchPoint]..[branchName] --merges to check
-     * whether there are merge commits in the given branch from the given branch
-     * point. This is useful to determine if a rebase can be done.
+     * Execute git rev-list [branchPoint]..[branchName] --merges to check whether
+     * there are merge commits in the given branch from the given branch point. This
+     * is useful to determine if a rebase can be done.
      *
      * @param branchName
      *            The branch name.
@@ -1724,8 +1718,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Checks if the given branch exists on the configure origin remote, and if
-     * so, executes git push [origin] --delete <branch_name>.
+     * Checks if the given branch exists on the configure origin remote, and if so,
+     * executes git push [origin] --delete <branch_name>.
      *
      * @param branchName
      *            Branch name to delete.
@@ -1747,8 +1741,9 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      *            Branch name to fetch and compare.
      * @throws MojoFailureException
      * @throws CommandLineException
-     * @deprecated use {@link #gitAssertRemoteBranchNotAheadOfLocalBranche(String, GitFlowFailureInfo, GitFlowFailureInfo)}
-     * instead
+     * @deprecated use
+     *             {@link #gitAssertRemoteBranchNotAheadOfLocalBranche(String, GitFlowFailureInfo, GitFlowFailureInfo)}
+     *             instead
      */
     @Deprecated
     protected void gitFetchRemoteAndCompare(final String branchName) throws MojoFailureException, CommandLineException {
@@ -1774,7 +1769,9 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @return <code>true</code> if the branch exists, <code>false</code> if not
      * @throws MojoFailureException
      * @throws CommandLineException
-     * @deprecated use {@link #gitCompareLocalAndRemoteBranches(String, Callable, Callable, Callable)} instead
+     * @deprecated use
+     *             {@link #gitCompareLocalAndRemoteBranches(String, Callable, Callable, Callable)}
+     *             instead
      */
     @Deprecated
     protected boolean gitFetchRemoteAndCompare(final String branchName, Callable<Void> diffFunctor)
@@ -1826,11 +1823,11 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Asserts that the local and remote branches with passed name are on the
-     * same state. If local or remote branch is ahead or branches diverge a
-     * {@link MojoFailureException} will be thrown. If remote branch doesn't
-     * exist no exception will be thrown. If local branch doesn't exist it will
-     * be created from remote.
+     * Asserts that the local and remote branches with passed name are on the same
+     * state. If local or remote branch is ahead or branches diverge a
+     * {@link MojoFailureException} will be thrown. If remote branch doesn't exist
+     * no exception will be thrown. If local branch doesn't exist it will be created
+     * from remote.
      *
      * @param branchName
      *            the name of the branch to be compared
@@ -1846,25 +1843,23 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Asserts that the local and remote branches with passed name are on the
-     * same state. If local or remote branch is ahead or branches diverge a
-     * {@link MojoFailureException} will be thrown. If remote branch doesn't
-     * exist no exception will be thrown. If local branch doesn't exist it will
-     * be created from remote.
+     * Asserts that the local and remote branches with passed name are on the same
+     * state. If local or remote branch is ahead or branches diverge a
+     * {@link MojoFailureException} will be thrown. If remote branch doesn't exist
+     * no exception will be thrown. If local branch doesn't exist it will be created
+     * from remote.
      *
      * @param branchName
      *            the name of the branch to be compared
      * @param localAheadErrorMessage
-     *            the message to be used in exception if local branch is ahead
-     *            of remote (if <code>null</code> a default message will be
-     *            used)
+     *            the message to be used in exception if local branch is ahead of
+     *            remote (if <code>null</code> a default message will be used)
      * @param remoteAheadErrorMessage
-     *            the message to be used in exception if remote branch is ahead
-     *            of local (if <code>null</code> a default message will be used)
+     *            the message to be used in exception if remote branch is ahead of
+     *            local (if <code>null</code> a default message will be used)
      * @param divergeErrorMessage
-     *            the message to be used in exception if local and remote
-     *            branches diverge (if <code>null</code> a default message will
-     *            be used)
+     *            the message to be used in exception if local and remote branches
+     *            diverge (if <code>null</code> a default message will be used)
      * @throws MojoFailureException
      *             if local or remote branch is ahead or both branches have some
      *             commits
@@ -1906,25 +1901,23 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Asserts that the current local branch is not ahead of remote branch,
-     * branches doesn't diverge and remote branch exists. If local branch is
-     * ahead of remote or branches diverge or remote branch doesn't exist a
+     * Asserts that the current local branch is not ahead of remote branch, branches
+     * doesn't diverge and remote branch exists. If local branch is ahead of remote
+     * or branches diverge or remote branch doesn't exist a
      * {@link MojoFailureException} will be thrown.
      *
      * @param localAheadErrorMessage
-     *            the message to be used in exception if local branch is ahead
-     *            of remote (if <code>null</code> a default message will be
-     *            used)
+     *            the message to be used in exception if local branch is ahead of
+     *            remote (if <code>null</code> a default message will be used)
      * @param divergeErrorMessage
-     *            the message to be used in exception if local and remote
-     *            branches diverge (if <code>null</code> a default message will
-     *            be used)
+     *            the message to be used in exception if local and remote branches
+     *            diverge (if <code>null</code> a default message will be used)
      * @param remoteNotExistingErrorMessage
-     *            the message to be used in exception if remote branch doesn't
-     *            exist (if <code>null</code> a default message will be used)
+     *            the message to be used in exception if remote branch doesn't exist
+     *            (if <code>null</code> a default message will be used)
      * @throws MojoFailureException
-     *             if local branch is ahead of remote or branches diverge or
-     *             remote branch doesn't exist
+     *             if local branch is ahead of remote or branches diverge or remote
+     *             branch doesn't exist
      * @throws CommandLineException
      *             if a git command can't be executed
      */
@@ -1969,17 +1962,15 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @param branchName
      *            the name of the branch to be checked
      * @param remoteAheadErrorMessage
-     *            the message to be used in exception if remote branch is ahead
-     *            of local (if <code>null</code> a default message will be used)
+     *            the message to be used in exception if remote branch is ahead of
+     *            local (if <code>null</code> a default message will be used)
      * @param divergeErrorMessage
-     *            the message to be used in exception if local and remote
-     *            branches diverge (if <code>null</code> a default message will
-     *            be used)
-     * @return <code>true</code> if remote branch exists, <code>false</code> if
-     *         not
+     *            the message to be used in exception if local and remote branches
+     *            diverge (if <code>null</code> a default message will be used)
+     * @return <code>true</code> if remote branch exists, <code>false</code> if not
      * @throws MojoFailureException
-     *             if local branch is ahead of remote or branches diverge or
-     *             remote branch doesn't exist
+     *             if local branch is ahead of remote or branches diverge or remote
+     *             branch doesn't exist
      * @throws CommandLineException
      *             if a git command can't be executed
      */
@@ -2009,22 +2000,20 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Ensure that the local branch is up to date if the branch exists at
-     * all.<br>
-     * If remote branch is ahead of local the local branch reference will be
-     * updated with <code>git update-ref</code>.<br>
-     * If local and remote branches diverge a {@link GitFlowFailureException}
-     * will be thrown.<br>
-     * If local branch doesn't exist it will be created from the remote
-     * branch.<br>
-     * If local branch is ahead of remote or remote or both branches do not
-     * exist nothing will happen.
+     * Ensure that the local branch is up to date if the branch exists at all.<br>
+     * If remote branch is ahead of local the local branch reference will be updated
+     * with <code>git update-ref</code>.<br>
+     * If local and remote branches diverge a {@link GitFlowFailureException} will
+     * be thrown.<br>
+     * If local branch doesn't exist it will be created from the remote branch.<br>
+     * If local branch is ahead of remote or remote or both branches do not exist
+     * nothing will happen.
      *
      * @param branchName
      *            the name of the branch to be checked
      * @param divergeErrorInfo
-     *            the messate to be used in exception if local and remote
-     *            branches diverge
+     *            the messate to be used in exception if local and remote branches
+     *            diverge
      * @throws MojoFailureException
      * @throws CommandLineException
      */
@@ -2050,16 +2039,15 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
     /**
      * Ensure that the local branch exists.<br>
-     * If local branch doesn't exist it will be created from the remote
-     * branch.<br>
-     * If local and remote branches do not exist a
-     * {@link GitFlowFailureException} will be thrown.
+     * If local branch doesn't exist it will be created from the remote branch.<br>
+     * If local and remote branches do not exist a {@link GitFlowFailureException}
+     * will be thrown.
      *
      * @param branchName
      *            the name of the branch to be checked
      * @param branchNotExistingErrorMessage
-     *            the message to be used in exception if neither local nor
-     *            remote branch exists
+     *            the message to be used in exception if neither local nor remote
+     *            branch exists
      * @throws MojoFailureException
      * @throws CommandLineException
      */
@@ -2088,21 +2076,20 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * Ensure that the local and remote branches are on the same state.<br>
      * If local branch has not pushed commits or remote branch doesn't exist a
      * {@link GitFlowFailureException} will be thrown.<br>
-     * If remote branch is ahead of local the local branch reference will be
-     * updated with <code>git update-ref</code>.<br>
+     * If remote branch is ahead of local the local branch reference will be updated
+     * with <code>git update-ref</code>.<br>
      * If local branch doesn't exist it will be created from the remote branch.
      *
      * @param branchName
      *            the name of the branch to be checked
      * @param localAheadErrorMessage
-     *            the message to be used in exception if local branch is ahead
-     *            of remote
+     *            the message to be used in exception if local branch is ahead of
+     *            remote
      * @param divergeErrorMessage
-     *            the messate to be used in exception if local and remote
-     *            branches diverge
+     *            the messate to be used in exception if local and remote branches
+     *            diverge
      * @param remoteNotExistingErrorMessage
-     *            the message to be used in exception if remote branch dosn't
-     *            exist
+     *            the message to be used in exception if remote branch dosn't exist
      * @throws MojoFailureException
      * @throws CommandLineException
      */
@@ -2146,17 +2133,16 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
     /**
      * Ensure that the current branch is up to date.<br>
-     * If remote branch is ahead of local the local branch reference will be
-     * updated with <code>git update-ref</code> and HEAD reference will be hard
-     * reset.<br>
-     * If local and remote branches diverge a {@link GitFlowFailureException}
-     * will be thrown.<br>
+     * If remote branch is ahead of local the local branch reference will be updated
+     * with <code>git update-ref</code> and HEAD reference will be hard reset.<br>
+     * If local and remote branches diverge a {@link GitFlowFailureException} will
+     * be thrown.<br>
      * If local branch is ahead of remote or remote branch doesn't exist nothing
      * will happen.
      *
      * @param divergeErrorInfo
-     *            the messate to be used in exception if local and remote
-     *            branches diverge
+     *            the messate to be used in exception if local and remote branches
+     *            diverge
      * @throws MojoFailureException
      * @throws CommandLineException
      */
@@ -2184,11 +2170,10 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
     /**
      * Ensure that the current branch is up to date.<br>
-     * If remote branch is ahead of local the local branch reference will be
-     * updated with <code>git update-ref</code> and HEAD reference will be hard
-     * reset.<br>
-     * If local and remote branches diverge remote branch will be merged into
-     * local branch with <code>git merge</code>.<br>
+     * If remote branch is ahead of local the local branch reference will be updated
+     * with <code>git update-ref</code> and HEAD reference will be hard reset.<br>
+     * If local and remote branches diverge remote branch will be merged into local
+     * branch with <code>git merge</code>.<br>
      * If local branch is ahead of remote or remote branch doesn't exist nothing
      * will happen.
      *
@@ -2242,9 +2227,9 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
     /**
      * Executes git fetch if parameter <code>fetchRemote</code> is enabled and
-     * compares local branch with the remote. If local branch doesn't exist it
-     * will be created from remote. If remote branch doesn't exist no callback
-     * will be called.
+     * compares local branch with the remote. If local branch doesn't exist it will
+     * be created from remote. If remote branch doesn't exist no callback will be
+     * called.
      *
      * @param branchName
      *            the name of the branch to be compared
@@ -2253,10 +2238,9 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @param remoteAheadCallback
      *            the callback to be executed if remote branch is ahead of local
      * @param bothHaveChangesCallback
-     *            the callback to be executed if local and remote branches have
-     *            some commits
-     * @return <code>true</code> if remote branch exists, <code>false</code> if
-     *         not
+     *            the callback to be executed if local and remote branches have some
+     *            commits
+     * @return <code>true</code> if remote branch exists, <code>false</code> if not
      * @throws MojoFailureException
      * @throws CommandLineException
      *             if a git command can't be executed
@@ -2308,13 +2292,15 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     /**
      * Compares local branch reference with the remote one.
      *
-     * @param branchName the name of the branch to be checked
+     * @param branchName
+     *            the name of the branch to be checked
      * @return the branch reference state
      * @throws MojoFailureException
-     * @throws CommandLineException if a git command can't be executed
+     * @throws CommandLineException
+     *             if a git command can't be executed
      */
-    protected BranchRefState gitCheckBranchReference(String branchName) throws MojoFailureException,
-            CommandLineException {
+    protected BranchRefState gitCheckBranchReference(String branchName)
+            throws MojoFailureException, CommandLineException {
         boolean hasRemote = true;
         if (!gitRemoteBranchExists(branchName)) {
             hasRemote = false;
@@ -2346,15 +2332,18 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                 return BranchRefState.SYNCHRONIZED;
             }
         } else {
-            throw new GitFlowFailureException("Unexpected result of external command execution (rev-list):\n"
-                    + revlistout, "Please report the error in the GBLD JIRA.");
+            throw new GitFlowFailureException(
+                    "Unexpected result of external command execution (rev-list):\n" + revlistout,
+                    "Please report the error in the GBLD JIRA.");
         }
     }
 
     /**
-     * Return remote branch name for passed local branch. E.g. "orgin/master" for "master".
+     * Return remote branch name for passed local branch. E.g. "orgin/master" for
+     * "master".
      *
-     * @param localBranchName the name of the local branch
+     * @param localBranchName
+     *            the name of the local branch
      * @return the remote branch name
      */
     protected String gitLocalToRemoteRef(String localBranchName) {
@@ -2362,14 +2351,13 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Executes git push, optionally with the <code>--follow-tags</code>
-     * argument.
+     * Executes git push, optionally with the <code>--follow-tags</code> argument.
      *
      * @param branchName
      *            Branch name to push.
      * @param pushTags
-     *            If <code>true</code> adds <code>--follow-tags</code> argument
-     *            to the git <code>push</code> command.
+     *            If <code>true</code> adds <code>--follow-tags</code> argument to
+     *            the git <code>push</code> command.
      * @param force
      *            <code>true</code> to force non-FF (e.g. for feature branches)
      * @throws MojoFailureException
@@ -2387,15 +2375,15 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @param branchName
      *            Branch name to push.
      * @param pushTags
-     *            If <code>true</code> adds <code>--follow-tags</code> argument
-     *            to the git <code>push</code> command.
+     *            If <code>true</code> adds <code>--follow-tags</code> argument to
+     *            the git <code>push</code> command.
      * @param force
      *            <code>true</code> to force overwriting remote branch (e.g. for
-     *            feature branches). Argument <code>-f</code> will be added to
-     *            the git <code>push</code> command.
+     *            feature branches). Argument <code>-f</code> will be added to the
+     *            git <code>push</code> command.
      * @param setUpstream
-     *            If <code>true</code> adds <code>--set-upstream</code> argument
-     *            to the git <code>push</code> command.
+     *            If <code>true</code> adds <code>--set-upstream</code> argument to
+     *            the git <code>push</code> command.
      * @throws MojoFailureException
      * @throws CommandLineException
      */
@@ -2421,8 +2409,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Executes <code>git for-each-ref refs/heads/[branch name]</code> to find
-     * an existing branch.
+     * Executes <code>git for-each-ref refs/heads/[branch name]</code> to find an
+     * existing branch.
      *
      * @param branchName
      *            name of the branch to check for.
@@ -2437,8 +2425,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Execute <code>git for-each-ref refs/remotes/[origin]/[branch name]</code>
-     * to find an existing remote branch.
+     * Execute <code>git for-each-ref refs/remotes/[origin]/[branch name]</code> to
+     * find an existing remote branch.
      *
      * @param branchName
      *            name of the branch to check for
@@ -2474,8 +2462,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      *            the branch to check for. Use HEAD for current branch.
      * @param otherBranchName
      *            the branch to compare to. Use HEAD for current branch.
-     * @return the commit id of the branch point or <code>null</code> if not
-     *         found
+     * @return the commit id of the branch point or <code>null</code> if not found
      * @throws MojoFailureException
      * @throws CommandLineException
      */
@@ -2516,8 +2503,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      *            the branch to check for. Use HEAD for current branch.
      * @param childBranchName
      *            the branch to compare to. Use HEAD for current branch.
-     * @return <code>true</code> if the first branch is an ancestor of the
-     *         second branch
+     * @return <code>true</code> if the first branch is an ancestor of the second
+     *         branch
      * @throws MojoFailureException
      * @throws CommandLineException
      */
@@ -2858,8 +2845,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * Start a rebase --interactive in the current branch on the given commit.
      *
      * @param commitId
-     *            the commit to start the interactive rebase. Must be a
-     *            predecessor of the current branch tip
+     *            the commit to start the interactive rebase. Must be a predecessor
+     *            of the current branch tip
      * @return rebase result status
      * @throws MojoFailureException
      * @throws CommandLineException
@@ -2983,15 +2970,21 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * When finishing versions of new modules might be wrong and need to be
      * corrected.
      *
-     * @param version the correct version
-     * @param issueNumber all versions that contains this issueNumber will be replaced with correct version
-     * @param message the message for correction commit if <code>amend=false</code>
-     * @param amend <code>true</code> if the correction should be included in last commit
+     * @param version
+     *            the correct version
+     * @param issueNumber
+     *            all versions that contains this issueNumber will be replaced with
+     *            correct version
+     * @param message
+     *            the message for correction commit if <code>amend=false</code>
+     * @param amend
+     *            <code>true</code> if the correction should be included in last
+     *            commit
      * @throws MojoFailureException
      * @throws CommandLineException
      */
-    protected void mvnFixupVersions(final String version, final String issueNumber, final String message,
-            boolean amend) throws MojoFailureException, CommandLineException {
+    protected void mvnFixupVersions(final String version, final String issueNumber, final String message, boolean amend)
+            throws MojoFailureException, CommandLineException {
         if (tychoBuild) {
             // not supported
         } else {
@@ -3067,7 +3060,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                         }
                         try {
                             String defaultValue = parameter.getDefaultValue() != null
-                                    ? interpolator.interpolate(parameter.getDefaultValue()) : null;
+                                    ? interpolator.interpolate(parameter.getDefaultValue())
+                                    : null;
                             if (sameBaseVersion && branchWithAdditionalVersionInfo != null) {
                                 value = gitGetBranchCentralConfig(branchWithAdditionalVersionInfo,
                                         BranchConfigKeys.PREFIX_ADDITIONAL_VERSION_PARAM + i);
@@ -3095,7 +3089,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                 } else {
                     try {
                         String defaultValue = parameter.getDefaultValue() != null
-                                ? interpolator.interpolate(parameter.getDefaultValue()) : null;
+                                ? interpolator.interpolate(parameter.getDefaultValue())
+                                : null;
                         parameter.setValue(defaultValue);
                     } catch (InterpolationException e) {
                         throw new GitFlowFailureException(e,
@@ -3184,7 +3179,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                         }
                         try {
                             String defaultValue = parameter.getDefaultValue() != null
-                                    ? interpolator.interpolate(parameter.getDefaultValue()) : null;
+                                    ? interpolator.interpolate(parameter.getDefaultValue())
+                                    : null;
                             if (defaultValue != null) {
                                 value = getPrompter().promptValue(prompt, defaultValue);
                             } else {
@@ -3201,7 +3197,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                 } else {
                     try {
                         String defaultValue = parameter.getDefaultValue() != null
-                                ? interpolator.interpolate(parameter.getDefaultValue()) : null;
+                                ? interpolator.interpolate(parameter.getDefaultValue())
+                                : null;
                         parameter.setValue(defaultValue);
                     } catch (InterpolationException e) {
                         throw new GitFlowFailureException(e,
@@ -3543,12 +3540,12 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Performs strings replacements in the given message, specified with the
-     * given replacement map. Placeholders in the message must be declared as
+     * Performs strings replacements in the given message, specified with the given
+     * replacement map. Placeholders in the message must be declared as
      *
-     * @{someName} while the key in the map shall be just someName. If the map
-     *             does not contain a found placeholder, it will also look in
-     *             the project properties.
+     * @{someName} while the key in the map shall be just someName. If the map does
+     *             not contain a found placeholder, it will also look in the project
+     *             properties.
      * @param aMessage
      * @param someReplacements
      * @return
@@ -3578,9 +3575,9 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Substitute keys of the form <code>@{name}</code> in the messages. By
-     * default knows about <code>key</code>, which will be replaced by issue
-     * number and all project properties.
+     * Substitute keys of the form <code>@{name}</code> in the messages. By default
+     * knows about <code>key</code>, which will be replaced by issue number and all
+     * project properties.
      *
      * @param message
      *            the message to process
@@ -3613,8 +3610,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Check whether we can write to the repository. We're doing this by
-     * deleting a nonexisting remote tag
+     * Check whether we can write to the repository. We're doing this by deleting a
+     * nonexisting remote tag
      */
     protected void checkGitWriteable() throws MojoFailureException, CommandLineException {
         String tempBranchName = "temp/" + System.getProperty("user.name").toLowerCase().replace(' ', '-')
@@ -3671,12 +3668,12 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      *            Whether to throw exception on NOT success exit code.
      * @param args
      *            Command line arguments.
-     * @return {@link CommandResult} instance holding command exit code, output
-     *         and error if any.
+     * @return {@link CommandResult} instance holding command exit code, output and
+     *         error if any.
      * @throws CommandLineException
      * @throws MojoFailureException
-     *             If <code>failOnError</code> is <code>true</code> and command
-     *             exit code is NOT equals to 0.
+     *             If <code>failOnError</code> is <code>true</code> and command exit
+     *             code is NOT equals to 0.
      */
     private CommandResult executeCommand(final Commandline cmd, final boolean failOnError, final String... args)
             throws CommandLineException, MojoFailureException {
@@ -3692,12 +3689,12 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      *            Whether to throw exception on NOT success exit code.
      * @param args
      *            Command line arguments.
-     * @return {@link CommandResult} instance holding command exit code, output
-     *         and error if any.
+     * @return {@link CommandResult} instance holding command exit code, output and
+     *         error if any.
      * @throws CommandLineException
      * @throws MojoFailureException
-     *             If <code>failOnError</code> is <code>true</code> and command
-     *             exit code is NOT equals to 0.
+     *             If <code>failOnError</code> is <code>true</code> and command exit
+     *             code is NOT equals to 0.
      */
     private CommandResult executeCommand(OutputMode outputMode, final Commandline cmd, final boolean failOnError,
             final String... args) throws CommandLineException, MojoFailureException {
@@ -3816,8 +3813,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      *
      * @param branchName
      *            the branch name to be checked
-     * @return <code>true</code> if the branch name starts with maintenance
-     *         branch prefix
+     * @return <code>true</code> if the branch name starts with maintenance branch
+     *         prefix
      */
     protected boolean isMaintenanceBranch(String branchName) {
         return branchName.startsWith(gitFlowConfig.getMaintenanceBranchPrefix());
@@ -3840,8 +3837,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      *
      * @param branchName
      *            the branch name to be checked
-     * @return <code>true</code> if the branch name starts with epic branch
-     *         prefix
+     * @return <code>true</code> if the branch name starts with epic branch prefix
      */
     protected boolean isEpicBranch(String branchName) {
         return branchName.startsWith(gitFlowConfig.getEpicBranchPrefix());
@@ -3880,8 +3876,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      *
      * @param branchName
      *            the branch name to be checked
-     * @return <code>true</code> if the branch name starts with epic branch
-     *         prefix
+     * @return <code>true</code> if the branch name starts with epic branch prefix
      */
     protected boolean isProductionBranch(String branchName) {
         return (getDevelopmentBranchForProductionBranch(branchName) != null);
@@ -3912,8 +3907,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
     /**
      * Insert passed suffix into passed version. E.g. result for version
-     * <code>1.2.3-SNAPSHOT</code> and suffix <code>GBLD-42</code> will be
-     * version <code>1.2.3-GBLD-42-SNAPSHOT</code>.
+     * <code>1.2.3-SNAPSHOT</code> and suffix <code>GBLD-42</code> will be version
+     * <code>1.2.3-GBLD-42-SNAPSHOT</code>.
      *
      * @param version
      *            the version to be modified
@@ -3944,18 +3939,77 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      *            the name of development branch
      * @param productionBranch
      *            the name of production branch
-     * @return <code>true</code> if parameter <code>noProduction=false</code>
-     *         and prodaction and development branches are different
+     * @return <code>true</code> if parameter <code>noProduction=false</code> and
+     *         prodaction and development branches are different
      */
     protected boolean isUsingProductionBranch(String developmentBranch, String productionBranch) {
         return !gitFlowConfig.isNoProduction() && !developmentBranch.equals(productionBranch);
     }
 
     /**
-     * Select base branch for feature or epic start from local or remote base branch or integration branch.
+     * Squash commits on the current branch beginning from the first commit after
+     * passed base commit.
      *
-     * @param baseBranch the name of the base branch
-     * @param newBranchType the type of the new branch ("feautre" or "epic")
+     * @param baseCommit
+     *            the commit after which all commits should be squashed
+     * @param squashCommitMessage
+     *            the optional squash commit message. If <code>null</code> or empty,
+     *            the user will be asked to write the commit message.
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitSquash(String baseCommit, String squashCommitMessage)
+            throws MojoFailureException, CommandLineException {
+        String currentCommit = getCurrentCommit();
+        executeGitCommand("reset", "--soft", baseCommit);
+        CommandResult result;
+        try {
+            if (squashCommitMessage != null && !squashCommitMessage.isEmpty()) {
+                String messageBody = squashCommitMessage.replace("\\n", "\n");
+                if (messageBody.contains("\n")) {
+                    File tempFile = createTempCommitMessageFile(messageBody);
+                    result = executeGitCommandExitCode("commit", "--no-edit", "-F", tempFile.getAbsolutePath());
+                } else {
+                    result = executeGitCommandExitCode("commit", "--no-edit", "-m", messageBody);
+                }
+            } else {
+                result = executeGitCommandExitCode("commit");
+            }
+        } catch (Exception e) {
+            executeGitCommand("reset", "--hard", currentCommit);
+            throw e;
+        }
+        if (result.getExitCode() != SUCCESS_EXIT_CODE) {
+            executeGitCommand("reset", "--hard", currentCommit);
+            String error = result.getError();
+            if (StringUtils.isBlank(error) && StringUtils.isNotBlank(result.getOut())) {
+                error = result.getOut();
+            }
+            throw new GitFlowFailureException(error, "");
+        }
+    }
+
+    private File createTempCommitMessageFile(String messageBody) throws MojoFailureException {
+        try {
+            File tempFile = File.createTempFile("commit-", ".msg");
+            tempFile.deleteOnExit();
+            try (PrintWriter out = new PrintWriter(tempFile)) {
+                out.print(messageBody);
+            }
+            return tempFile;
+        } catch (IOException e) {
+            throw new MojoFailureException("Error on creation of temp file for sqash commit message", e);
+        }
+    }
+
+    /**
+     * Select base branch for feature or epic start from local or remote base branch
+     * or integration branch.
+     *
+     * @param baseBranch
+     *            the name of the base branch
+     * @param newBranchType
+     *            the type of the new branch ("feautre" or "epic")
      * @return the branch to use as start point for the new branch
      * @throws MojoFailureException
      * @throws CommandLineException
@@ -3972,8 +4026,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         BranchRefState baseBranchRefState = gitCheckBranchReference(baseBranch);
         String remoteBaseBranch = gitLocalToRemoteRef(baseBranch);
         boolean useRemoteBranch = false;
-        String baseBranchToCheck = baseBranchRefState == BranchRefState.REMOTE_MISSING ?
-                baseBranch : remoteBaseBranch;
+        String baseBranchToCheck = baseBranchRefState == BranchRefState.REMOTE_MISSING ? baseBranch : remoteBaseBranch;
         if (gitBranchExists(integrationBranch)
                 && !Objects.equals(getCurrentCommit(integrationBranch), getCurrentCommit(baseBranchToCheck))) {
             if (gitIsAncestorBranch(integrationBranch, baseBranchToCheck)) {
@@ -3987,8 +4040,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                                     + " bacause the local and remote branches diverge. Select if you "
                                     + "want to create " + newBranchType + " branch based of (r)emote branch '"
                                     + baseBranch + "' with not integrated commits (probably not stable) or "
-                                    + "based of last (i)ntegrated commit ('" + integrationBranch
-                                    + "') or (a)bort the " + newBranchType + " start process.",
+                                    + "based of last (i)ntegrated commit ('" + integrationBranch + "') or (a)bort the "
+                                    + newBranchType + " start process.",
                             new String[] { "r", "i", "a" }, "a",
                             new GitFlowFailureInfo("Local and remote branches '" + baseBranch + "' diverge.",
                                     "Rebase or merge the changes in local branch in order to proceed or run "
@@ -4010,15 +4063,15 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                     // select remote or integrated?
                     answer = getPrompter().promptSelection(
                             "Local branch '" + baseBranch + "' can't be used as base branch for " + newBranchType
-                                    + " bacause it is ahead of remote branch. Select if you "
-                                    + "want to create " + newBranchType + " branch based of (r)emote branch '"
-                                    + baseBranch + "' with not integrated commits (probably not stable) or "
-                                    + "based of last (i)ntegrated commit ('" + integrationBranch
-                                    + "') or (a)bort the " + newBranchType + " start process.",
+                                    + " bacause it is ahead of remote branch. Select if you " + "want to create "
+                                    + newBranchType + " branch based of (r)emote branch '" + baseBranch
+                                    + "' with not integrated commits (probably not stable) or "
+                                    + "based of last (i)ntegrated commit ('" + integrationBranch + "') or (a)bort the "
+                                    + newBranchType + " start process.",
                             new String[] { "r", "i", "a" }, "a",
-                            new GitFlowFailureInfo("Local branch is ahead of the remote branch '" + baseBranch
-                                    + "'.", "Push commits made on local branch to the remote branch in order "
-                                    + "to proceed or run " + newBranchType + " start in interactive mode.",
+                            new GitFlowFailureInfo("Local branch is ahead of the remote branch '" + baseBranch + "'.",
+                                    "Push commits made on local branch to the remote branch in order "
+                                            + "to proceed or run " + newBranchType + " start in interactive mode.",
                                     "'git push " + baseBranch + "' to push local changes to remote branch",
                                     "'mvn flow:" + newBranchType + "-start' to run in interactive mode"));
                     if ("r".equalsIgnoreCase(answer)) {
@@ -4038,12 +4091,12 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                             "Remote branch '" + baseBranch + "' is ahead of local branch. Select if you "
                                     + "want to create " + newBranchType + " branch based of (l)ocal branch, (r)emote "
                                     + "branch with not integrated commits (probably not stable) or "
-                                    + "based of last (i)ntegrated commit ('" + integrationBranch
-                                    + "') or (a)bort the " + newBranchType + " start process.",
+                                    + "based of last (i)ntegrated commit ('" + integrationBranch + "') or (a)bort the "
+                                    + newBranchType + " start process.",
                             new String[] { "l", "r", "i", "a" }, "a",
-                            new GitFlowFailureInfo("Remote branch is ahead of the local branch '" + baseBranch
-                                    + "'.", "Pull changes on remote branch to the local branch in order to "
-                                    + "proceed or run " + newBranchType + " start in interactive mode.",
+                            new GitFlowFailureInfo("Remote branch is ahead of the local branch '" + baseBranch + "'.",
+                                    "Pull changes on remote branch to the local branch in order to " + "proceed or run "
+                                            + newBranchType + " start in interactive mode.",
                                     "'git pull' to pull changes into local branch",
                                     "'mvn flow:" + newBranchType + "-start' to run in interactive mode"));
                     if ("l".equalsIgnoreCase(answer)) {
@@ -4063,8 +4116,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                 default:
                     useIntegrationBranch = getPrompter().promptConfirmation("The current commit on " + baseBranch
                             + " is not integrated (probably not stable). "
-                            + "Create a branch based of the last integrated commit (" + integrationBranch + ")?",
-                            true, true);
+                            + "Create a branch based of the last integrated commit (" + integrationBranch + ")?", true,
+                            true);
                     useRemoteBranch = false;
                     break;
                 }
@@ -4073,8 +4126,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                             + newBranchType);
                     return integrationBranch;
                 } else if (useRemoteBranch) {
-                    getMavenLog().info("Using remote branch '" + remoteBaseBranch + "' as start point for new "
-                            + newBranchType);
+                    getMavenLog().info(
+                            "Using remote branch '" + remoteBaseBranch + "' as start point for new " + newBranchType);
                     return remoteBaseBranch;
                 }
                 return baseBranch;
@@ -4088,12 +4141,13 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         switch (baseBranchRefState) {
         case DIVERGE:
             // select remote?
-            useRemoteBranch = getPrompter().promptConfirmation("Local branch '" + baseBranch
-                    + "' can't be used as base branch for " + newBranchType + " bacause the local and remote "
-                    + "branches diverge. Create a branch based of remote branch?", true,
+            useRemoteBranch = getPrompter().promptConfirmation("Local branch '"
+                    + baseBranch + "' can't be used as base branch for " + newBranchType
+                    + " bacause the local and remote " + "branches diverge. Create a branch based of remote branch?",
+                    true,
                     new GitFlowFailureInfo("Local and remote branches '" + baseBranch + "' diverge.",
                             "Rebase or merge the changes in local branch in order to proceed or run " + newBranchType
-                            + " start in interactive mode.",
+                                    + " start in interactive mode.",
                             "'git pull' to merge changes in local branch",
                             "'mvn flow:" + newBranchType + "-start' to run in interactive mode"));
             if (!useRemoteBranch) {
@@ -4102,9 +4156,10 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             break;
         case LOCAL_AHEAD:
             // select remote?
-            useRemoteBranch = getPrompter().promptConfirmation("Local branch '" + baseBranch + "' can't be used as "
-                    + "base branch for " + newBranchType + " bacause it is ahead of remote branch. "
-                    + "Create a branch based of remote branch?", true,
+            useRemoteBranch = getPrompter().promptConfirmation(
+                    "Local branch '" + baseBranch + "' can't be used as " + "base branch for " + newBranchType
+                            + " bacause it is ahead of remote branch. " + "Create a branch based of remote branch?",
+                    true,
                     new GitFlowFailureInfo("Local branch is ahead of the remote branch '" + baseBranch + "'.",
                             "Push commits made on local branch to the remote branch in order to proceed or run "
                                     + newBranchType + " start in interactive mode.",
@@ -4116,10 +4171,9 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             break;
         case REMOTE_AHEAD:
             // select local or remote?
-            answer = getPrompter().promptSelection(
-                    "Remote branch '" + baseBranch + "' is ahead of local branch. Select if you want to create "
-                            + newBranchType + " branch based of (l)ocal or (r)emote branch or (a)bort the "
-                            + newBranchType + " start process.",
+            answer = getPrompter().promptSelection("Remote branch '" + baseBranch
+                    + "' is ahead of local branch. Select if you want to create " + newBranchType
+                    + " branch based of (l)ocal or (r)emote branch or (a)bort the " + newBranchType + " start process.",
                     new String[] { "l", "r", "a" }, "a",
                     new GitFlowFailureInfo("Remote branch is ahead of the local branch '" + baseBranch + "'.",
                             "Pull changes on remote branch to the local branch in order to proceed or run "
@@ -4139,8 +4193,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             break;
         }
         if (useRemoteBranch) {
-            getMavenLog().info(
-                    "Using remote branch '" + remoteBaseBranch + "' as start point for new " + newBranchType);
+            getMavenLog()
+                    .info("Using remote branch '" + remoteBaseBranch + "' as start point for new " + newBranchType);
             return remoteBaseBranch;
         }
         return baseBranch;
@@ -4444,11 +4498,6 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     protected enum BranchRefState {
-        LOCAL_AHEAD,
-        REMOTE_AHEAD,
-        DIVERGE,
-        SYNCHRONIZED,
-        REMOTE_MISSING,
-        BRANCH_MISSING;
+        LOCAL_AHEAD, REMOTE_AHEAD, DIVERGE, SYNCHRONIZED, REMOTE_MISSING, BRANCH_MISSING;
     }
 }

@@ -144,13 +144,12 @@ public class GitExecution {
      * repository. Commits all files and pushes them to the remote repository.
      *
      * @param sourceBasedir
-     *            the source directory of the project that will be used in
-     *            remote and local repositories
+     *            the source directory of the project that will be used in remote
+     *            and local repositories
      * @return a repository set that contains references to the remote and local
      *         repositories
      * @throws IOException
-     *             if the source directory can't be copied to the target
-     *             directory
+     *             if the source directory can't be copied to the target directory
      * @throws GitAPIException
      *             if an error occurs while executiong of git commands
      */
@@ -291,8 +290,7 @@ public class GitExecution {
     }
 
     /**
-     * Creates a test file in local repository and adds it to the repository
-     * index.
+     * Creates a test file in local repository and adds it to the repository index.
      *
      * @param repositorySet
      *            the repository where git command should be executed
@@ -306,8 +304,7 @@ public class GitExecution {
     }
 
     /**
-     * Creates a test file in local repository and adds it to the repository
-     * index.
+     * Creates a test file in local repository and adds it to the repository index.
      *
      * @param repositorySet
      *            the repository where git command should be executed
@@ -934,8 +931,8 @@ public class GitExecution {
     }
 
     /**
-     * Assert that passed config entry for passed branch exists in local
-     * repository and has passed expected value.
+     * Assert that passed config entry for passed branch exists in local repository
+     * and has passed expected value.
      *
      * @param repositorySet
      *            the repository to be used
@@ -1005,8 +1002,7 @@ public class GitExecution {
     }
 
     /**
-     * Assert that passed config entry for passed branch exists in local
-     * repository.
+     * Assert that passed config entry for passed branch exists in local repository.
      *
      * @param repositorySet
      *            the repository to be used
@@ -1031,8 +1027,8 @@ public class GitExecution {
      *            the sub-section part of the config entry key
      * @param configName
      *            the name part of the config entry key
-     * @return the value of the config entry or <code>null</code> if config
-     *         entry doesn't exist
+     * @return the value of the config entry or <code>null</code> if config entry
+     *         doesn't exist
      */
     public String getConfigValue(RepositorySet repositorySet, String configSection, String configSubsection,
             String configName) {
@@ -1200,8 +1196,7 @@ public class GitExecution {
      * @param repositorySet
      *            the repository to be used
      * @param push
-     *            <code>true</code> if tags shhould be pushed to remote
-     *            repository
+     *            <code>true</code> if tags shhould be pushed to remote repository
      * @param tags
      *            the tags to be created
      * @throws GitAPIException
@@ -1318,8 +1313,8 @@ public class GitExecution {
     }
 
     /**
-     * Asserts that the log of passed branch in local repository consists of
-     * passed expected commit messages.
+     * Asserts that the log of passed branch in local repository consists of passed
+     * expected commit messages.
      *
      * @param repositorySet
      *            the repository to be used
@@ -1339,8 +1334,8 @@ public class GitExecution {
     }
 
     /**
-     * Asserts that the log of passed branch in remote repository consists of
-     * passed expected commit messages.
+     * Asserts that the log of passed branch in remote repository consists of passed
+     * expected commit messages.
      *
      * @param repositorySet
      *            the repository to be used
@@ -1363,7 +1358,7 @@ public class GitExecution {
         List<String> commitMessages = new ArrayList<String>();
         List<RevCommit> commits = readCommits(git, branch);
         for (RevCommit commit : commits) {
-            commitMessages.add(commit.getShortMessage().trim());
+            commitMessages.add(commit.getFullMessage().trim());
         }
         return commitMessages;
     }
@@ -1383,8 +1378,8 @@ public class GitExecution {
     }
 
     /**
-     * Asserts that passed local and remote branches are identical (reference
-     * same commit).
+     * Asserts that passed local and remote branches are identical (reference same
+     * commit).
      *
      * @param repositorySet
      *            the repository to be used
@@ -1558,8 +1553,7 @@ public class GitExecution {
      *            the local branch to be checked
      * @param filepath
      *            the relative path to the file to be read
-     * @return the stream of the file or <code>null</code> if file can't be
-     *         found
+     * @return the stream of the file or <code>null</code> if file can't be found
      * @throws IOException
      *             in case of an I/O error
      * @throws GitAPIException
@@ -1594,8 +1588,7 @@ public class GitExecution {
      *            the remote branch to be checked
      * @param filepath
      *            the relative path to the file to be read
-     * @return the stream of the file or <code>null</code> if file can't be
-     *         found
+     * @return the stream of the file or <code>null</code> if file can't be found
      * @throws IOException
      *             in case of an I/O error
      * @throws GitAPIException
@@ -1646,14 +1639,14 @@ public class GitExecution {
      * @throws IOException
      *             in case of an I/O error
      */
-    public void assertCommitMesaagesInGitEditorForInteractiveRebase(String... expectedCommitMessages)
+    public void assertCommitMessagesInGitEditorForInteractiveRebase(String... expectedCommitMessages)
             throws FileNotFoundException, IOException {
-        List<String> commitMessages = readCommitMesaagesForInteractiveRebaseInGitEditor();
+        List<String> commitMessages = readCommitMessagesForInteractiveRebaseInGitEditor();
         assertEqualsElements("Commit messages in git editor for interactive rebase are different from expected",
                 expectedCommitMessages, commitMessages);
     }
 
-    private List<String> readCommitMesaagesForInteractiveRebaseInGitEditor() throws FileNotFoundException, IOException {
+    private List<String> readCommitMessagesForInteractiveRebaseInGitEditor() throws FileNotFoundException, IOException {
         List<String> commitMessages = new ArrayList<String>();
         GitRebaseTodo gitRebaseTodo = loadGitRebaseTodoUsedInGitDummyEditor();
         for (GitRebaseTodoEntry gitRebaseTodoEntry : gitRebaseTodo.getEntries()) {
@@ -1665,8 +1658,8 @@ public class GitExecution {
     /**
      * Loads the information shown in git editor while interactive rebase.
      *
-     * @return the container with information shown in git editor while
-     *         interactive rebase
+     * @return the container with information shown in git editor while interactive
+     *         rebase
      * @throws FileNotFoundException
      *             if git-rebase-todo file copied by dummy editor can't be found
      * @throws IOException
@@ -1688,6 +1681,19 @@ public class GitExecution {
                 for (String command : commands) {
                     fileWriter.write(command + "\n");
                 }
+            }
+        }
+    }
+
+    public void defineCommitEditMsg(String commitMessage) throws IOException {
+        if (commitMessage != null && !commitMessage.isEmpty()) {
+            File commitEditMsgFile = new File(gitBaseDir, GitDummyEditor.COMMIT_EDITMSG_FILE_RELATIVE_PATH);
+            File parentDir = commitEditMsgFile.getParentFile();
+            if (!parentDir.exists()) {
+                parentDir.mkdirs();
+            }
+            try (FileWriter fileWriter = new FileWriter(commitEditMsgFile, false)) {
+                fileWriter.write(commitMessage);
             }
         }
     }

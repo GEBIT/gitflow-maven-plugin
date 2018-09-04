@@ -54,6 +54,10 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
     private static final String COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE = "NO-ISSUE: updating versions for"
             + " maintenance branch";
 
+    private static final String SQUASH_COMMIT_MESSAGE = "SQUASH: first line\\n\\nsecond line\\nthird line";
+
+    private static final String PREPARED_SQUASH_MESSAGE = prepareSquashMessage(SQUASH_COMMIT_MESSAGE);
+
     private static final String PROMPT_MESSAGE_ONE_FEATURE_SELECT = "Feature branches:" + LS + "1. " + FEATURE_BRANCH
             + LS + "Choose feature branch to clean up";
 
@@ -134,7 +138,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInLocalBranch(repositorySet, featureBranch, COMMIT_MESSAGE_FOR_TESTFILE,
                 commitMessageSetVersion);
 
-        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
+        git.assertCommitMessagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_TESTFILE_MODIFIED);
         git.assertTestfileContentModified(repositorySet);
     }
@@ -269,8 +273,12 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
         assertGitFlowFailureException(result,
-                "'mvn flow:feature-rebase-cleanup' can be executed only in interactive mode.",
-                "Please run in interactive mode.", "'mvn flow:feature-rebase-cleanup' to run in interactive mode");
+                "'mvn flow:feature-rebase-cleanup' can be executed in non-interactive mode only to squash all feature "
+                        + "commits.",
+                "Please either run in interactive mode or enable commit squashing to squash all feature commits.",
+                "'mvn flow:feature-rebase-cleanup' to run in interactive mode",
+                "'mvn flow:feature-rebase-cleanup -B -Dflow.squash=true -DsquashMessage=XXXX' to squash all feature "
+                        + "commits");
     }
 
     @Test
@@ -282,8 +290,10 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
         assertGitFlowFailureException(result,
-                "'mvn flow:feature-rebase-cleanup' can be executed only in interactive mode.",
-                "Please run in interactive mode.", "'mvn flow:feature-rebase-cleanup' to run in interactive mode");
+                "In non-interactive mode 'mvn flow:feature-rebase-cleanup' can be executed only on a feature branch.",
+                "Please switch to a feature branch first or run in interactive mode.",
+                "'git checkout BRANCH' to switch to the feature branch",
+                "'mvn flow:feature-rebase-cleanup' to run in interactive mode");
     }
 
     @Test
@@ -330,7 +340,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
                 COMMIT_MESSAGE_SET_VERSION);
         git.assertCommitsInRemoteBranch(repositorySet, MASTER_BRANCH);
 
-        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
+        git.assertCommitMessagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_TESTFILE_MODIFIED);
         git.assertTestfileContentModified(repositorySet);
     }
@@ -365,7 +375,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
                 BasicConstants.FEATURE_ON_MAINTENANCE_ON_MASTER_WITH_COMMIT_VERSION_COMMIT_MESSAGE,
                 COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE, BasicConstants.MASTER_WITH_COMMIT_MESSAGE);
 
-        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
+        git.assertCommitMessagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_TESTFILE_MODIFIED);
         git.assertTestfileContentModified(repositorySet);
 
@@ -400,7 +410,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
                 BasicConstants.FEATURE_ON_MAINTENANCE_ON_MASTER_WITH_COMMIT_VERSION_COMMIT_MESSAGE,
                 COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE, BasicConstants.MASTER_WITH_COMMIT_MESSAGE);
 
-        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
+        git.assertCommitMessagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_TESTFILE_MODIFIED);
         git.assertTestfileContentModified(repositorySet);
 
@@ -446,7 +456,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_SET_VERSION);
 
-        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
+        git.assertCommitMessagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_FEATURE_TESTFILE);
         git.assertTestfileContent(repositorySet);
         git.assertTestfileContent(repositorySet, FEATURE_TESTFILE_NAME);
@@ -500,7 +510,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInRemoteBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FEATURE_TESTFILE,
                 COMMIT_MESSAGE_TESTFILE_MODIFIED, COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_SET_VERSION);
 
-        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
+        git.assertCommitMessagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_TESTFILE_MODIFIED);
         git.assertTestfileContentModified(repositorySet);
     }
@@ -534,7 +544,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInRemoteBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FEATURE_TESTFILE,
                 COMMIT_MESSAGE_SET_VERSION);
 
-        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
+        git.assertCommitMessagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_TESTFILE_MODIFIED);
         git.assertTestfileContentModified(repositorySet);
     }
@@ -571,7 +581,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInRemoteBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_FEATURE_TESTFILE, COMMIT_MESSAGE_SET_VERSION);
 
-        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
+        git.assertCommitMessagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_FEATURE_TESTFILE);
         git.assertTestfileContent(repositorySet);
         git.assertTestfileContent(repositorySet, FEATURE_TESTFILE_NAME);
@@ -633,7 +643,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_SET_VERSION);
 
-        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
+        git.assertCommitMessagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_FEATURE_TESTFILE);
         git.assertTestfileContent(repositorySet);
         git.assertTestfileContent(repositorySet, FEATURE_TESTFILE_NAME);
@@ -681,7 +691,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInRemoteBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FEATURE_TESTFILE,
                 COMMIT_MESSAGE_TESTFILE_MODIFIED, COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_SET_VERSION);
 
-        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
+        git.assertCommitMessagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_TESTFILE_MODIFIED);
         git.assertTestfileContentModified(repositorySet);
     }
@@ -712,7 +722,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInRemoteBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FEATURE_TESTFILE,
                 COMMIT_MESSAGE_SET_VERSION);
 
-        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
+        git.assertCommitMessagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_TESTFILE_MODIFIED);
         git.assertTestfileContentModified(repositorySet);
     }
@@ -746,7 +756,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInRemoteBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_FEATURE_TESTFILE, COMMIT_MESSAGE_SET_VERSION);
 
-        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
+        git.assertCommitMessagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_FEATURE_TESTFILE);
         git.assertTestfileContent(repositorySet);
         git.assertTestfileContent(repositorySet, FEATURE_TESTFILE_NAME);
@@ -794,7 +804,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_SET_VERSION);
 
-        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
+        git.assertCommitMessagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_TESTFILE_MODIFIED);
         git.assertTestfileContentModified(repositorySet);
     }
@@ -817,7 +827,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_SET_VERSION);
 
-        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
+        git.assertCommitMessagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_TESTFILE_MODIFIED);
         git.assertTestfileContentModified(repositorySet);
     }
@@ -844,7 +854,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_SET_VERSION);
 
-        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
+        git.assertCommitMessagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_TESTFILE_MODIFIED);
         git.assertTestfileContentModified(repositorySet);
     }
@@ -862,7 +872,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, USED_FEATURE_BRANCH);
 
-        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
+        git.assertCommitMessagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_TESTFILE_MODIFIED);
 
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
@@ -885,7 +895,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
                 promptControllerMock);
         // verify
         verifyZeroInteractions(promptControllerMock);
-        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
+        git.assertCommitMessagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_TESTFILE_MODIFIED);
         assertGitFlowFailureException(result, "Interactive rebase is paused.",
                 "Perform your changes and run 'mvn flow:feature-rebase-cleanup' again in order to proceed. "
@@ -908,7 +918,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
                 promptControllerMock);
         // verify
         verifyZeroInteractions(promptControllerMock);
-        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
+        git.assertCommitMessagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_TESTFILE_MODIFIED);
         assertGitFlowFailureException(result, "Automatic rebase after interaction failed beacause of conflicts.",
                 "Fix the rebase conflicts and mark them as resolved. After that, run "
@@ -947,7 +957,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
                 promptControllerMock);
         verifyZeroInteractions(promptControllerMock);
-        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FEATURE_TESTFILE,
+        git.assertCommitMessagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FEATURE_TESTFILE,
                 COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_TESTFILE_MODIFIED);
         assertGitFlowFailureException(result, "Interactive rebase is paused.",
                 "Perform your changes and run 'mvn flow:feature-rebase-cleanup' again in order to proceed. "
@@ -988,7 +998,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
                 promptControllerMock);
         verifyZeroInteractions(promptControllerMock);
-        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FEATURE_TESTFILE,
+        git.assertCommitMessagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FEATURE_TESTFILE,
                 COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_TESTFILE_MODIFIED);
         assertGitFlowFailureException(result, "Interactive rebase is paused.",
                 "Perform your changes and run 'mvn flow:feature-rebase-cleanup' again in order to proceed. "
@@ -1019,7 +1029,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
                 promptControllerMock);
         verifyZeroInteractions(promptControllerMock);
-        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FEATURE_TESTFILE,
+        git.assertCommitMessagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FEATURE_TESTFILE,
                 COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_TESTFILE_MODIFIED);
         assertGitFlowFailureException(result, "Interactive rebase is paused.",
                 "Perform your changes and run 'mvn flow:feature-rebase-cleanup' again in order to proceed. "
@@ -1069,7 +1079,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
                 promptControllerMock);
         verifyZeroInteractions(promptControllerMock);
-        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
+        git.assertCommitMessagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_TESTFILE_MODIFIED);
         assertGitFlowFailureException(result, "Automatic rebase after interaction failed beacause of conflicts.",
                 "Fix the rebase conflicts and mark them as resolved. After that, run "
@@ -1115,7 +1125,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
                 promptControllerMock);
         verifyZeroInteractions(promptControllerMock);
-        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FEATURE_TESTFILE,
+        git.assertCommitMessagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FEATURE_TESTFILE,
                 COMMIT_MESSAGE_FEATURE_TESTFILE_MODIFIED, COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_TESTFILE_MODIFIED);
         assertGitFlowFailureException(result, "Automatic rebase after interaction failed beacause of conflicts.",
@@ -1173,7 +1183,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
                 promptControllerMock);
         verifyZeroInteractions(promptControllerMock);
-        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FEATURE_TESTFILE_MODIFIED,
+        git.assertCommitMessagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FEATURE_TESTFILE_MODIFIED,
                 COMMIT_MESSAGE_FEATURE_TESTFILE, COMMIT_MESSAGE_FOR_TESTFILE);
         assertGitFlowFailureException(result, "Interactive rebase is paused.",
                 "Perform your changes and run 'mvn flow:feature-rebase-cleanup' again in order to proceed. "
@@ -1227,7 +1237,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
                 promptControllerMock);
         verifyZeroInteractions(promptControllerMock);
-        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FEATURE_TESTFILE,
+        git.assertCommitMessagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FEATURE_TESTFILE,
                 COMMIT_MESSAGE_TESTFILE_MODIFIED, COMMIT_MESSAGE_FOR_TESTFILE);
         assertGitFlowFailureException(result, "Automatic rebase after interaction failed beacause of conflicts.",
                 "Fix the rebase conflicts and mark them as resolved. After that, run "
@@ -1284,7 +1294,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
                 promptControllerMock);
         verifyZeroInteractions(promptControllerMock);
-        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FEATURE_TESTFILE,
+        git.assertCommitMessagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FEATURE_TESTFILE,
                 COMMIT_MESSAGE_FEATURE_TESTFILE_MODIFIED, COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_TESTFILE_MODIFIED);
         assertGitFlowFailureException(result, "Automatic rebase after interaction failed beacause of conflicts.",
@@ -1321,7 +1331,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
                 promptControllerMock);
         verifyZeroInteractions(promptControllerMock);
-        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
+        git.assertCommitMessagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_TESTFILE_MODIFIED);
         assertGitFlowFailureException(result, "Automatic rebase after interaction failed beacause of conflicts.",
                 "Fix the rebase conflicts and mark them as resolved. After that, run "
@@ -1364,7 +1374,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_SET_VERSION);
 
-        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
+        git.assertCommitMessagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_TESTFILE_MODIFIED);
         git.assertTestfileContentModified(repositorySet);
     }
@@ -1387,7 +1397,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_SET_VERSION);
 
-        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
+        git.assertCommitMessagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_TESTFILE_MODIFIED);
         git.assertTestfileContentModified(repositorySet);
     }
@@ -1477,7 +1487,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
                 COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_SET_VERSION);
         git.assertCommitsInRemoteBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
 
-        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
+        git.assertCommitMessagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_TESTFILE_MODIFIED, COMMIT_MESSAGE_INVALID_JAVA_FILE);
         git.assertTestfileContentModified(repositorySet);
 
@@ -1519,7 +1529,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_INVALID_JAVA_FILE_REMOVED,
                 COMMIT_MESSAGE_INVALID_JAVA_FILE, COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_SET_VERSION);
 
-        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
+        git.assertCommitMessagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_TESTFILE_MODIFIED, COMMIT_MESSAGE_INVALID_JAVA_FILE);
         git.assertTestfileContentModified(repositorySet);
         git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "breakpoint");
@@ -1558,10 +1568,146 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_INVALID_JAVA_FILE,
                 COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_SET_VERSION);
 
-        git.assertCommitMesaagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
+        git.assertCommitMessagesInGitEditorForInteractiveRebase(COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_TESTFILE_MODIFIED, COMMIT_MESSAGE_INVALID_JAVA_FILE);
         git.assertTestfileContentModified(repositorySet);
         git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "breakpoint");
+    }
+
+    @Test
+    public void testExecuteCleanupSquash() throws Exception {
+        // set up
+        addTwoCommitsToFeatureBranch();
+        userProperties.setProperty("flow.cleanupSquash", "true");
+        userProperties.setProperty("squashMessage", SQUASH_COMMIT_MESSAGE);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, FEATURE_BRANCH, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, PREPARED_SQUASH_MESSAGE,
+                COMMIT_MESSAGE_SET_VERSION);
+
+        git.assertTestfileContentModified(repositorySet);
+    }
+
+    @Test
+    public void testExecuteCleanupSquashInBatchMode() throws Exception {
+        // set up
+        addTwoCommitsToFeatureBranch();
+        userProperties.setProperty("flow.cleanupSquash", "true");
+        userProperties.setProperty("squashMessage", SQUASH_COMMIT_MESSAGE);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, FEATURE_BRANCH, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, PREPARED_SQUASH_MESSAGE,
+                COMMIT_MESSAGE_SET_VERSION);
+
+        git.assertTestfileContentModified(repositorySet);
+    }
+
+    @Test
+    public void testExecuteCleanupSquashWithoutSquashMessage() throws Exception {
+        // set up
+        addTwoCommitsToFeatureBranch();
+        userProperties.setProperty("flow.cleanupSquash", "true");
+        git.defineCommitEditMsg(PREPARED_SQUASH_MESSAGE);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, FEATURE_BRANCH, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, PREPARED_SQUASH_MESSAGE,
+                COMMIT_MESSAGE_SET_VERSION);
+
+        git.assertTestfileContentModified(repositorySet);
+    }
+
+    @Test
+    public void testExecuteCleanupSquashWithoutSquashMessageAndEnterdEmptyMessage() throws Exception {
+        // set up
+        addTwoCommitsToFeatureBranch();
+        userProperties.setProperty("flow.cleanupSquash", "true");
+        git.defineCommitEditMsg("");
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertGitFlowFailureExceptionRegEx(result, new GitFlowFailureInfo(
+                "\\QFailed to squash feature commits.\nReason: \\E.*",
+                "\\QPlease try again with a valid squash commit message or consult a gitflow expert on how to fix this!"
+                        + "\\E"));
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_TESTFILE_MODIFIED,
+                COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_SET_VERSION);
+        git.assertCommitsInRemoteBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
+
+        git.assertTestfileContentModified(repositorySet);
+    }
+
+    @Test
+    public void testExecuteCleanupSquashWithEmptySquashMessage() throws Exception {
+        // set up
+        addTwoCommitsToFeatureBranch();
+        userProperties.setProperty("flow.cleanupSquash", "true");
+        userProperties.setProperty("squashMessage", "");
+        git.defineCommitEditMsg(PREPARED_SQUASH_MESSAGE);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, FEATURE_BRANCH, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, PREPARED_SQUASH_MESSAGE,
+                COMMIT_MESSAGE_SET_VERSION);
+
+        git.assertTestfileContentModified(repositorySet);
+    }
+
+    @Test
+    public void testExecuteCleanupSquashWithoutSquashMessageInBatchMode() throws Exception {
+        // set up
+        addTwoCommitsToFeatureBranch();
+        userProperties.setProperty("flow.cleanupSquash", "true");
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertGitFlowFailureExceptionRegEx(result,
+                new GitFlowFailureInfo(
+                        "Feature commits can't be squashed without squashMessage in non-interactive mode.",
+                        "Please either provide squashMessage or run in interactive mode.",
+                        "'mvn flow:feature-rebase-cleanup -B -Dflow.squash=true -DsquashMessage=XXXX' to squash all "
+                                + "feature commits using squash commit message",
+                        "'mvn flow:feature-rebase-cleanup -Dflow.squash=true' to run in interactive mode"));
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_TESTFILE_MODIFIED,
+                COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_SET_VERSION);
+        git.assertCommitsInRemoteBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
+
+        git.assertTestfileContentModified(repositorySet);
     }
 
 }

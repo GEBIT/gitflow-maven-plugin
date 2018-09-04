@@ -52,8 +52,8 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
             "'git rebase --abort' to abort feature clean up process");
 
     /**
-     * Controls whether a merge of the development branch instead of a rebase on
-     * the development branch is performed.
+     * Controls whether a merge of the development branch instead of a rebase on the
+     * development branch is performed.
      *
      * @since 1.3.0
      */
@@ -61,24 +61,37 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
     private boolean updateWithMerge = false;
 
     /**
-     * If fast forward pushes on feature branches are not allowed, the remote
-     * branch is deleted before pushing the rebased branch.
+     * If fast forward pushes on feature branches are not allowed, the remote branch
+     * is deleted before pushing the rebased branch.
      *
      * @since 1.5.11
      */
     @Parameter(property = "deleteRemoteBranchOnRebase", defaultValue = "false")
     private boolean deleteRemoteBranchOnRebase = false;
 
+    /**
+     * Whether to squash all commits in feature branch.
+     *
+     * @since 2.1.0
+     */
+    @Parameter(property = "flow.cleanupSquash", defaultValue = "false")
+    private boolean cleanupSquash = false;
+
+    /**
+     * The message for the squashed commit if <code>cleanupSquash</code> parameter
+     * or <code>flow.cleanupSquash</code> property set to <code>true</code>. Use
+     * <code>\n</code> for new line character in the squash commit message.
+     *
+     * @since 2.1.0
+     */
+    @Parameter(property = "squashMessage", readonly = true)
+    private String squashMessage;
+
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         getMavenLog().info("Starting feature clean-up process");
         checkCentralBranchConfig();
-        if (!settings.isInteractiveMode()) {
-            throw new GitFlowFailureException(
-                    "'mvn flow:feature-rebase-cleanup' can be executed only in interactive mode.",
-                    "Please run in interactive mode.", "'mvn flow:feature-rebase-cleanup' to run in interactive mode");
-        }
         String featureBranchName = gitInteractiveRebaseFeatureBranchInProcess();
         boolean continueOnCleanInstall = false;
         if (featureBranchName == null) {
@@ -107,7 +120,13 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
                 boolean isOnFeatureBranch = branches.contains(currentBranch);
                 if (!isOnFeatureBranch) {
                     featureBranchName = getPrompter().promptToSelectFromOrderedList("Feature branches:",
-                            "Choose feature branch to clean up", branches);
+                            "Choose feature branch to clean up", branches,
+                            new GitFlowFailureInfo(
+                                    "In non-interactive mode 'mvn flow:feature-rebase-cleanup' can be executed only on "
+                                            + "a feature branch.",
+                                    "Please switch to a feature branch first or run in interactive mode.",
+                                    "'git checkout BRANCH' to switch to the feature branch",
+                                    "'mvn flow:feature-rebase-cleanup' to run in interactive mode"));
                     getLog().info("Cleaning up feature on selected feature branch: " + featureBranchName);
                     gitEnsureLocalBranchIsUpToDateIfExists(featureBranchName, new GitFlowFailureInfo(
                             "Remote and local feature branches '" + featureBranchName + "' diverge.",
@@ -138,18 +157,49 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
                     getLog().info("First commit on feature branch is not a version change commit. "
                             + "Use all feature commits while interactive cleanup rebase.");
                 }
-
-                getMavenLog().info(
-                        "Starting interactive rebase (an external editor will be started if configured in git)...");
-                InteractiveRebaseStatus rebaseStatus = gitRebaseInteractive(rebaseCommit);
-                if (rebaseStatus == InteractiveRebaseStatus.PAUSED) {
-                    getMavenLog().info("Feature clean-up process paused to resolve rebase conflicts");
-                    throw new GitFlowFailureException(ERROR_REBASE_PAUSED);
-                } else if (rebaseStatus == InteractiveRebaseStatus.CONFLICT) {
-                    getMavenLog().info("Feature clean-up process paused to resolve rebase conflicts");
-                    throw new GitFlowFailureException(ERROR_REBASE_CONFLICTS);
+                if (cleanupSquash) {
+                    if (!settings.isInteractiveMode() && (squashMessage == null || squashMessage.isEmpty())) {
+                        throw new GitFlowFailureException(
+                                "Feature commits can't be squashed without squashMessage in non-interactive mode.",
+                                "Please either provide squashMessage or run in interactive mode.",
+                                "'mvn flow:feature-rebase-cleanup -B -Dflow.squash=true -DsquashMessage=XXXX' to "
+                                        + "squash all feature commits using squash commit message",
+                                "'mvn flow:feature-rebase-cleanup -Dflow.squash=true' to run in interactive mode");
+                    }
+                    try {
+                        gitSquash(rebaseCommit, squashMessage);
+                    } catch (MojoFailureException e) {
+                        String reason = null;
+                        if (e instanceof GitFlowFailureException) {
+                            reason = ((GitFlowFailureException) e).getProblem();
+                        }
+                        throw new GitFlowFailureException(e,
+                                "Failed to squash feature commits." + (reason != null ? "\nReason: " + reason : ""),
+                                "Please try again with a valid squash commit message or consult a gitflow expert on how"
+                                        + " to fix this!");
+                    }
+                } else {
+                    if (!settings.isInteractiveMode()) {
+                        throw new GitFlowFailureException(
+                                "'mvn flow:feature-rebase-cleanup' can be executed in non-interactive mode only to "
+                                        + "squash all feature commits.",
+                                "Please either run in interactive mode or enable commit squashing to squash all feature"
+                                        + " commits.",
+                                "'mvn flow:feature-rebase-cleanup' to run in interactive mode",
+                                "'mvn flow:feature-rebase-cleanup -B -Dflow.squash=true -DsquashMessage=XXXX' to squash"
+                                        + " all feature commits");
+                    }
+                    getMavenLog().info(
+                            "Starting interactive rebase (an external editor will be started if configured in git)...");
+                    InteractiveRebaseStatus rebaseStatus = gitRebaseInteractive(rebaseCommit);
+                    if (rebaseStatus == InteractiveRebaseStatus.PAUSED) {
+                        getMavenLog().info("Feature clean-up process paused to resolve rebase conflicts");
+                        throw new GitFlowFailureException(ERROR_REBASE_PAUSED);
+                    } else if (rebaseStatus == InteractiveRebaseStatus.CONFLICT) {
+                        getMavenLog().info("Feature clean-up process paused to resolve rebase conflicts");
+                        throw new GitFlowFailureException(ERROR_REBASE_CONFLICTS);
+                    }
                 }
-
             } else {
                 if (!getPrompter()
                         .promptConfirmation("You have an interactive rebase in process on your current branch. "

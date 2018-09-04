@@ -916,9 +916,7 @@ public abstract class AbstractGitFlowMojoTestCase {
                 executed, executedMavenCommands.contains(expectedMvnCommand));
     }
 
-    /**
-     * @return
-     */
+    @SuppressWarnings("unchecked")
     private List<String> loadExecutedMavenCommands() throws IOException {
         File mvnCommandsFile = new File(testBasedir, ExtMavenCli.MVN_CMDS_LOG_FILENAME);
         if (!mvnCommandsFile.exists()) {
@@ -1080,5 +1078,9 @@ public abstract class AbstractGitFlowMojoTestCase {
     protected void verifyNoMoreInteractionsAndReset(Object... mocks) {
         verifyNoMoreInteractions(mocks);
         reset(mocks);
+    }
+
+    protected static String prepareSquashMessage(String squashCommitMessage) {
+        return squashCommitMessage.replace("\\n", "\n");
     }
 }

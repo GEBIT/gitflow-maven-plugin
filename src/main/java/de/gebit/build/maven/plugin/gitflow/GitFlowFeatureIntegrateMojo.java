@@ -28,7 +28,7 @@ import de.gebit.build.maven.plugin.gitflow.steps.Step;
 import de.gebit.build.maven.plugin.gitflow.steps.StepsUtil;
 
 /**
- * Integrate current feature branche into target feature branch. Useful to check
+ * Integrate current feature branch into target feature branch. Useful to check
  * if the feature effects another features before finishing.
  *
  * @author Volodymyr Medvid
