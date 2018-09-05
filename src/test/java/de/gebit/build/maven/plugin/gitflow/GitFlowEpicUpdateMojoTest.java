@@ -161,7 +161,7 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, epicBranch, epicBranch);
-        git.assertCommitsInLocalBranch(repositorySet, epicBranch, COMMIT_MESSAGE_EPIC_TESTFILE,
+        git.assertCommitHeadLinesInLocalBranch(repositorySet, epicBranch, COMMIT_MESSAGE_EPIC_TESTFILE,
                 epicBranchCommitMessageSetVersion, COMMIT_MESSAGE_MASTER_TESTFILE, USED_COMMIT_MESSAGE_MARGE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), epicBranchVersion);
     }

@@ -1314,6 +1314,48 @@ public class GitExecution {
 
     /**
      * Asserts that the log of passed branch in local repository consists of passed
+     * expected commit messages (head line only).
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param branch
+     *            the branch to be checked
+     * @param expectedCommitMessages
+     *            the expected commit messages
+     * @throws GitAPIException
+     *             if an error occurs on git command execution
+     * @throws IOException
+     *             in case of an I/O error
+     */
+    public void assertCommitHeadLinesInLocalBranch(RepositorySet repositorySet, String branch,
+            String... expectedCommitMessages) throws GitAPIException, IOException {
+        List<String> commitMessages = commitMessagesInBranch(repositorySet.getLocalRepoGit(), branch, true);
+        assertCommitMessages(expectedCommitMessages, commitMessages, branch, "local");
+    }
+
+    /**
+     * Asserts that the log of passed branch in remote repository consists of passed
+     * expected commit messages (head line only).
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param branch
+     *            the branch to be checked
+     * @param expectedCommitMessages
+     *            the expected commit messages
+     * @throws GitAPIException
+     *             if an error occurs on git command execution
+     * @throws IOException
+     *             in case of an I/O error
+     */
+    public void assertCommitsHeadLinesInRemoteBranch(RepositorySet repositorySet, String branch,
+            String... expectedCommitMessages) throws GitAPIException, IOException {
+        List<String> commitMessages = commitMessagesInBranch(repositorySet.getRemoteRepoGit(), branch, true);
+        assertCommitMessages(expectedCommitMessages, commitMessages, branch, "remote");
+    }
+
+    /**
+     * Asserts that the log of passed branch in local repository consists of passed
      * expected commit messages.
      *
      * @param repositorySet
@@ -1329,7 +1371,7 @@ public class GitExecution {
      */
     public void assertCommitsInLocalBranch(RepositorySet repositorySet, String branch, String... expectedCommitMessages)
             throws GitAPIException, IOException {
-        List<String> commitMessages = commitMessagesInBranch(repositorySet.getLocalRepoGit(), branch);
+        List<String> commitMessages = commitMessagesInBranch(repositorySet.getLocalRepoGit(), branch, false);
         assertCommitMessages(expectedCommitMessages, commitMessages, branch, "local");
     }
 
@@ -1350,15 +1392,15 @@ public class GitExecution {
      */
     public void assertCommitsInRemoteBranch(RepositorySet repositorySet, String branch,
             String... expectedCommitMessages) throws GitAPIException, IOException {
-        List<String> commitMessages = commitMessagesInBranch(repositorySet.getRemoteRepoGit(), branch);
+        List<String> commitMessages = commitMessagesInBranch(repositorySet.getRemoteRepoGit(), branch, false);
         assertCommitMessages(expectedCommitMessages, commitMessages, branch, "remote");
     }
 
-    private List<String> commitMessagesInBranch(Git git, String branch) throws GitAPIException, IOException {
+    private List<String> commitMessagesInBranch(Git git, String branch, boolean headLinesOnly) throws GitAPIException, IOException {
         List<String> commitMessages = new ArrayList<String>();
         List<RevCommit> commits = readCommits(git, branch);
         for (RevCommit commit : commits) {
-            commitMessages.add(commit.getFullMessage().trim());
+            commitMessages.add(headLinesOnly ? commit.getShortMessage().trim() : commit.getFullMessage().trim());
         }
         return commitMessages;
     }
