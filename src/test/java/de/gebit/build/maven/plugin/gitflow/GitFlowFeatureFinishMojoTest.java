@@ -139,6 +139,8 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE, COMMIT_MESSAGE_FOR_TESTFILE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
     }
 
     @Test

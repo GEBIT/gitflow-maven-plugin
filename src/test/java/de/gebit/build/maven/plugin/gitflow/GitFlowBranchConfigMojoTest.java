@@ -25,6 +25,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import de.gebit.build.maven.plugin.gitflow.jgit.GitExecution;
 import de.gebit.build.maven.plugin.gitflow.jgit.RepositorySet;
 
 /**
@@ -98,7 +99,8 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
                 EXPECTED_INITIAL_COMMIT_MESSAGE);
 
-        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME,
+                MASTER_BRANCH);
         assertEquals(PROPERTY_VALUE, branchConfig.getProperty(PROPERTY_NAME));
     }
 
@@ -120,7 +122,8 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
                 EXPECTED_INITIAL_COMMIT_MESSAGE);
 
-        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME,
+                MASTER_BRANCH);
         assertEquals(PROPERTY_VALUE, branchConfig.getProperty(PROPERTY_NAME));
     }
 
@@ -129,7 +132,6 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
         // set up
         when(promptControllerMock.prompt(PROMPT_PROPERTY_NAME)).thenReturn(PROPERTY_NAME);
         when(promptControllerMock.prompt(PROMPT_PROPERTY_VALUE)).thenReturn(PROPERTY_VALUE);
-        git.createRemoteOrphanBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_INITIAL_COMMIT_MESSAGE);
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
         verify(promptControllerMock).prompt(PROMPT_PROPERTY_NAME);
         verify(promptControllerMock).prompt(PROMPT_PROPERTY_VALUE);
@@ -150,7 +152,8 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
                 EXPECTED_COMMIT_MESSAGE, EXPECTED_INITIAL_COMMIT_MESSAGE);
 
-        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME,
+                MASTER_BRANCH);
         assertEquals(PROPERTY_VALUE, branchConfig.getProperty(PROPERTY_NAME));
         assertEquals(PROPERTY_VALUE2, branchConfig.getProperty(PROPERTY_NAME2));
     }
@@ -183,6 +186,9 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteWithNoPropertyValue() throws Exception {
         // set up
+        git.createRemoteOrphanBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_INITIAL_COMMIT_MESSAGE);
+        git.setBranchCentralConfigValue(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH, PROPERTY_NAME,
+                PROPERTY_VALUE);
         when(promptControllerMock.prompt(PROMPT_PROPERTY_NAME)).thenReturn(PROPERTY_NAME);
         when(promptControllerMock.prompt(PROMPT_PROPERTY_VALUE)).thenReturn(null);
         // test
@@ -196,10 +202,9 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertMissingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
         git.assertExistingRemoteBranches(repositorySet, CONFIG_BRANCH_NAME);
         git.assertCommitsInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
-                EXPECTED_INITIAL_COMMIT_MESSAGE);
+                GitExecution.COMMIT_MESSAGE_SET_CENTRAL_BRANCH_CONFIG, EXPECTED_INITIAL_COMMIT_MESSAGE);
 
-        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
-        assertTrue("branch config is not empty as expected", branchConfig.isEmpty());
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
     }
 
     @Test
@@ -219,7 +224,8 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
                 EXPECTED_INITIAL_COMMIT_MESSAGE);
 
-        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME,
+                MASTER_BRANCH);
         assertEquals(PROPERTY_VALUE, branchConfig.getProperty(PROPERTY_NAME));
     }
 
@@ -241,7 +247,8 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
                 EXPECTED_INITIAL_COMMIT_MESSAGE);
 
-        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME,
+                MASTER_BRANCH);
         assertEquals(PROPERTY_VALUE, branchConfig.getProperty(PROPERTY_NAME));
     }
 
@@ -263,7 +270,8 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
                 EXPECTED_INITIAL_COMMIT_MESSAGE);
 
-        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME,
+                MASTER_BRANCH);
         assertEquals(PROPERTY_VALUE, branchConfig.getProperty(PROPERTY_NAME));
     }
 
@@ -283,7 +291,8 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
                 EXPECTED_INITIAL_COMMIT_MESSAGE);
 
-        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME,
+                MASTER_BRANCH);
         assertEquals(PROPERTY_VALUE, branchConfig.getProperty(PROPERTY_NAME));
     }
 
@@ -309,6 +318,9 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteInBatchModeAndMissingPropertyValue() throws Exception {
         // set up
+        git.createRemoteOrphanBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_INITIAL_COMMIT_MESSAGE);
+        git.setBranchCentralConfigValue(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH, PROPERTY_NAME,
+                PROPERTY_VALUE);
         Properties userProperties = new Properties();
         userProperties.setProperty("propertyName", PROPERTY_NAME);
         // test
@@ -319,20 +331,19 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertMissingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
         git.assertExistingRemoteBranches(repositorySet, CONFIG_BRANCH_NAME);
         git.assertCommitsInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
-                EXPECTED_INITIAL_COMMIT_MESSAGE);
+                GitExecution.COMMIT_MESSAGE_SET_CENTRAL_BRANCH_CONFIG, EXPECTED_INITIAL_COMMIT_MESSAGE);
 
-        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
-        assertTrue("branch config is not empty as expected", branchConfig.isEmpty());
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
     }
 
     @Test
     public void testExecuteRemoveProperty() throws Exception {
         // set up
+        git.createRemoteOrphanBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_INITIAL_COMMIT_MESSAGE);
+        git.setBranchCentralConfigValue(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH, PROPERTY_NAME,
+                PROPERTY_VALUE);
         Properties userProperties = new Properties();
         userProperties.setProperty("propertyName", PROPERTY_NAME);
-        userProperties.setProperty("propertyValue", PROPERTY_VALUE);
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
-        userProperties.remove("propertyValue");
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
@@ -341,21 +352,19 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertMissingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
         git.assertExistingRemoteBranches(repositorySet, CONFIG_BRANCH_NAME);
         git.assertCommitsInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
-                EXPECTED_COMMIT_MESSAGE, EXPECTED_INITIAL_COMMIT_MESSAGE);
+                GitExecution.COMMIT_MESSAGE_SET_CENTRAL_BRANCH_CONFIG, EXPECTED_INITIAL_COMMIT_MESSAGE);
 
-        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
-        assertTrue("branch config is not empty as expected", branchConfig.isEmpty());
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
     }
 
     @Test
     public void testExecuteRemoveNotExistingProperty() throws Exception {
         // set up
+        git.createRemoteOrphanBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_INITIAL_COMMIT_MESSAGE);
+        git.setBranchCentralConfigValue(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH, PROPERTY_NAME,
+                PROPERTY_VALUE);
         Properties userProperties = new Properties();
-        userProperties.setProperty("propertyName", PROPERTY_NAME);
-        userProperties.setProperty("propertyValue", PROPERTY_VALUE);
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         userProperties.setProperty("propertyName", PROPERTY_NAME2);
-        userProperties.remove("propertyValue");
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
@@ -363,10 +372,11 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
                 new File(repositorySet.getWorkingDirectory(), CONFIG_BRANCH_DIR).exists());
         git.assertMissingLocalBranches(repositorySet, CONFIG_BRANCH_NAME);
         git.assertExistingRemoteBranches(repositorySet, CONFIG_BRANCH_NAME);
-        git.assertCommitsInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
-                EXPECTED_INITIAL_COMMIT_MESSAGE);
+        git.assertCommitsInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME,
+                GitExecution.COMMIT_MESSAGE_SET_CENTRAL_BRANCH_CONFIG, EXPECTED_INITIAL_COMMIT_MESSAGE);
 
-        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME,
+                MASTER_BRANCH);
         assertEquals(PROPERTY_VALUE, branchConfig.getProperty(PROPERTY_NAME));
     }
 
@@ -390,7 +400,8 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertExistingRemoteBranches(repositorySet, CONFIG_BRANCH_NAME);
         git.assertCommitsInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_INITIAL_COMMIT_MESSAGE);
 
-        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME,
+                MASTER_BRANCH);
         assertNull("branch config exists but not expected", branchConfig);
     }
 
@@ -434,7 +445,8 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
                 EXPECTED_INITIAL_COMMIT_MESSAGE);
 
-        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME,
+                MASTER_BRANCH);
         assertEquals(PROPERTY_VALUE, branchConfig.getProperty(PROPERTY_NAME));
     }
 
@@ -460,7 +472,8 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
                 EXPECTED_INITIAL_COMMIT_MESSAGE);
 
-        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME,
+                MASTER_BRANCH);
         assertEquals(PROPERTY_VALUE, branchConfig.getProperty(PROPERTY_NAME));
     }
 
@@ -484,7 +497,8 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, EXPECTED_COMMIT_MESSAGE,
                 EXPECTED_INITIAL_COMMIT_MESSAGE);
 
-        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME, MASTER_BRANCH);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH_NAME,
+                MASTER_BRANCH);
         assertEquals(PROPERTY_VALUE, branchConfig.getProperty(PROPERTY_NAME));
     }
 

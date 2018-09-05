@@ -168,17 +168,18 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertMavenCommandNotExecuted("clean verify");
         assertMavenCommandNotExecuted("clean test");
         assertConfigCleanedUpForMaster();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
     }
 
-    private void assertConfigCleanedUpForMaster() {
+    private void assertConfigCleanedUpForMaster() throws Exception {
         assertConfigCleanedUp(MASTER_BRANCH, RELEASE_BRANCH);
     }
 
-    private void assertConfigCleanedUpForMaintenance() {
+    private void assertConfigCleanedUpForMaintenance() throws Exception {
         assertConfigCleanedUp(MAINTENANCE_BRANCH, RELEASE_ON_MAINTENANCE_BRANCH);
     }
 
-    private void assertConfigCleanedUp(String developmentBranch, String releaseBranch) {
+    private void assertConfigCleanedUp(String developmentBranch, String releaseBranch) throws Exception {
         git.assertBranchLocalConfigValueMissing(repositorySet, releaseBranch, "releaseTag");
         git.assertBranchLocalConfigValueMissing(repositorySet, releaseBranch, "releaseCommit");
         git.assertBranchLocalConfigValueMissing(repositorySet, releaseBranch, "nextSnapshotVersion");
@@ -755,6 +756,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
         assertConfigCleanedUpForMaster();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
     }
 
     @Test
@@ -815,6 +817,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
         assertConfigCleanedUpForMaster();
+        git.assertRemoteFileExists(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
     }
 
     @Test
@@ -837,6 +840,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
         assertConfigCleanedUpForMaster();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
     }
 
     @Test
@@ -885,6 +889,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
         assertConfigCleanedUpForMaster();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
     }
 
     @Test
@@ -1054,6 +1059,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
         assertConfigCleanedUpForMaster();
+        git.assertRemoteFileExists(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
     }
 
     @Test
@@ -1079,6 +1085,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
         assertConfigCleanedUpForMaster();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
     }
 
     @Test
@@ -1104,6 +1111,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
         assertConfigCleanedUpForMaster();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
     }
 
     @Test
@@ -1131,6 +1139,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
         assertConfigCleanedUpForMaster();
+        git.assertRemoteFileExists(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
     }
 
     @Test
@@ -1263,6 +1272,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertTestfileMissing(repositorySet, "master-testfile.txt");
         assertArtifactNotInstalled();
         assertConfigCleanedUpForMaster();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
     }
 
     @Test
@@ -1604,6 +1614,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
         assertConfigCleanedUpForMaster();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
     }
 
     @Test
@@ -1693,6 +1704,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_ON_MAINTENANCE_VERSION);
         assertDefaultDeployGoalExecuted();
         assertConfigCleanedUpForMaintenance();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_ON_MAINTENANCE_BRANCH);
     }
 
     @Test
@@ -1790,6 +1802,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
         assertConfigCleanedUpForMaster();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
     }
 
     @Test
@@ -1866,7 +1879,8 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_ON_MAINTENANCE_VERSION);
         assertDefaultDeployGoalExecuted();
-        assertConfigCleanedUpForMaster();
+        assertConfigCleanedUpForMaintenance();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_ON_MAINTENANCE_BRANCH);
     }
 
     @Test
@@ -1904,6 +1918,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
         assertConfigCleanedUpForMaster();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
     }
 
     @Test
@@ -1943,6 +1958,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_ON_MAINTENANCE_VERSION);
         assertDefaultDeployGoalExecuted();
         assertConfigCleanedUpForMaintenance();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_ON_MAINTENANCE_BRANCH);
     }
 
     @Test

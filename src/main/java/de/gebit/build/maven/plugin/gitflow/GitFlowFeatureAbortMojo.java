@@ -100,6 +100,8 @@ public class GitFlowFeatureAbortMojo extends AbstractGitFlowFeatureMojo {
             // delete the remote branch
             gitBranchDeleteRemote(featureBranchName);
         }
+        String featureName = featureBranchName.substring(gitFlowConfig.getFeatureBranchPrefix().length());
+        gitRemoveAllBranchCentralConfigsForBranch(featureBranchName, "feature '" + featureName + "' aborted");
         getMavenLog().info("Feature abort process finished");
     }
 }

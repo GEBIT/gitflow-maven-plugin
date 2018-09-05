@@ -83,6 +83,10 @@ public class GitExecution {
 
     public static final String COMMIT_MESSAGE_FOR_TESTFILE = "Unit test dummy file commit";
 
+    public static final String COMMIT_MESSAGE_SET_CENTRAL_BRANCH_CONFIG = "Set central branch config";
+
+    public static final String COMMIT_MESSAGE_REMOVE_CENTRAL_BRANCH_CONFIG = "Remove central branch config";
+
     private static final String COMMIT_MESSAGE_FOR_UNIT_TEST_SETUP = "Unit test set-up initial commit";
 
     private static final String GIT_BASEDIR_REMOTE_SUFFIX = "origin.git";
@@ -1075,7 +1079,7 @@ public class GitExecution {
             properties.store(new FileOutputStream(branchPropertyFile), null);
         }
         git.add().addFilepattern(".").call();
-        git.commit().setMessage("remove property").call();
+        git.commit().setMessage(COMMIT_MESSAGE_REMOVE_CENTRAL_BRANCH_CONFIG).call();
         git.push().call();
         git.checkout().setName(oldBranch).call();
     }
@@ -1085,20 +1089,29 @@ public class GitExecution {
         Git git = repositorySet.getClonedRemoteRepoGit();
         String oldBranch = currentBranch(git);
         git.fetch().call();
+        if (isLocalBranchExisting(git, configBranch)) {
+            git.branchDelete().setBranchNames(configBranch).setForce(true).call();
+        }
         git.checkout().setName(configBranch).setStartPoint("origin/" + configBranch).setCreateBranch(true).call();
         Properties properties = new Properties();
         File branchPropertyFile = new File(repositorySet.getClonedRemoteWorkingDirectory(), branch);
-        try (FileInputStream fis = new FileInputStream(branchPropertyFile)) {
-            properties.load(new FileInputStream(branchPropertyFile));
+        if (branchPropertyFile.exists()) {
+            try (FileInputStream fis = new FileInputStream(branchPropertyFile)) {
+                properties.load(new FileInputStream(branchPropertyFile));
+            }
         }
         properties.setProperty(configName, value);
         try (FileOutputStream fos = new FileOutputStream(branchPropertyFile)) {
             properties.store(new FileOutputStream(branchPropertyFile), null);
         }
         git.add().addFilepattern(".").call();
-        git.commit().setMessage("remove property").call();
+        git.commit().setMessage(COMMIT_MESSAGE_SET_CENTRAL_BRANCH_CONFIG).call();
         git.push().call();
         git.checkout().setName(oldBranch).call();
+    }
+
+    private boolean isLocalBranchExisting(Git git, String branchName) throws IOException {
+        return git.getRepository().exactRef(REFS_HEADS_PATH + branchName) != null;
     }
 
     /**
@@ -1396,7 +1409,8 @@ public class GitExecution {
         assertCommitMessages(expectedCommitMessages, commitMessages, branch, "remote");
     }
 
-    private List<String> commitMessagesInBranch(Git git, String branch, boolean headLinesOnly) throws GitAPIException, IOException {
+    private List<String> commitMessagesInBranch(Git git, String branch, boolean headLinesOnly)
+            throws GitAPIException, IOException {
         List<String> commitMessages = new ArrayList<String>();
         List<RevCommit> commits = readCommits(git, branch);
         for (RevCommit commit : commits) {
@@ -1668,6 +1682,42 @@ public class GitExecution {
             }
         }
         return new CommitRevFilter(excludedMessages);
+    }
+
+    /**
+     * Assert that passed filepath exists on passed remote branch.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param branch
+     *            the remote branch to be checked
+     * @param filepath
+     *            the relative path to the file to be checked
+     * @throws GitAPIException
+     * @throws IOException
+     */
+    public void assertRemoteFileExists(RepositorySet repositorySet, String branch, String filepath)
+            throws IOException, GitAPIException {
+        assertNotNull("File '" + filepath + "' is mising on remote branch '" + branch + "'",
+                readFileInRemoteBranch(repositorySet, branch, filepath));
+    }
+
+    /**
+     * Assert that passed filepath doesn't exist on passed remote branch.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param branch
+     *            the remote branch to be checked
+     * @param filepath
+     *            the relative path to the file to be checked
+     * @throws GitAPIException
+     * @throws IOException
+     */
+    public void assertRemoteFileMissing(RepositorySet repositorySet, String branch, String filepath)
+            throws IOException, GitAPIException {
+        assertNull("File '" + filepath + "' exists on remote branch '" + branch + "'",
+                readFileInRemoteBranch(repositorySet, branch, filepath));
     }
 
     /**

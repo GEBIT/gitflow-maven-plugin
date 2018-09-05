@@ -134,6 +134,8 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE,
                 COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_FOR_TESTFILE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, EPIC_BRANCH);
     }
 
     @Test

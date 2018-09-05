@@ -102,6 +102,7 @@ public class GitFlowReleaseAbortMojo extends AbstractGitFlowMojo {
         if (pushRemote) {
             gitBranchDeleteRemote(releaseBranch);
         }
+        gitRemoveAllBranchCentralConfigsForBranch(releaseBranch, "release '" + releaseBranch + "' aborted");
     }
 
     private String abortReleaseWithConflictsIfMergeInProcess(String currentBranch)

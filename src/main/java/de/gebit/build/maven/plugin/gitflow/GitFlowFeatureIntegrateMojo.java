@@ -368,6 +368,9 @@ public class GitFlowFeatureIntegrateMojo extends AbstractGitFlowFeatureMojo {
                 getMavenLog().info("Removing remote source feature branch '" + sourceFeatureBranch + "'");
                 gitBranchDeleteRemote(sourceFeatureBranch);
             }
+            String featureName = sourceFeatureBranch.substring(gitFlowConfig.getFeatureBranchPrefix().length());
+            gitRemoveAllBranchCentralConfigsForBranch(sourceFeatureBranch,
+                    "feature '" + featureName + "' integrated");
         }
         return stepParameters;
     }

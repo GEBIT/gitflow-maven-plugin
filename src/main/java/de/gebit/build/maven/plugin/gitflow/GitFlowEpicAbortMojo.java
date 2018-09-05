@@ -86,6 +86,8 @@ public class GitFlowEpicAbortMojo extends AbstractGitFlowEpicMojo {
             getMavenLog().info("Removing remote epic branch '" + epicBranchName + "'");
             gitBranchDeleteRemote(epicBranchName);
         }
+        String epicName = epicBranchName.substring(gitFlowConfig.getEpicBranchPrefix().length());
+        gitRemoveAllBranchCentralConfigsForBranch(epicBranchName, "epic '" + epicName + "' aborted");
         getMavenLog().info("Epic abort process finished");
     }
 

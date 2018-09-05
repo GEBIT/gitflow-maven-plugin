@@ -839,6 +839,21 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
+     * Remove all central branch configs for passed branch (usually after branch was deleted).
+     *
+     * @param branchName
+     *            the name of the branch
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitRemoveAllBranchCentralConfigsForBranch(String branchName, String commitMessage)
+            throws MojoFailureException, CommandLineException {
+        BranchCentralConfigChanges changes = new BranchCentralConfigChanges();
+        changes.removeAllForBranch(branchName);
+        gitApplyBranchCentralConfigChanges(changes, commitMessage);
+    }
+
+    /**
      * Apply set/remove changes on branch central config.
      *
      * @param changes
@@ -856,73 +871,100 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
             FileBasedConfigurationBuilder<FileBasedConfiguration> builder = new FileBasedConfigurationBuilder<FileBasedConfiguration>(
                     PropertiesConfiguration.class);
-            Map<String, List<Change>> allChanges = changes.getAllChanges();
-            if (!allChanges.isEmpty()) {
-                for (Entry<String, List<Change>> branchChangesEntry : allChanges.entrySet()) {
-                    String branchName = branchChangesEntry.getKey();
-                    List<Change> branchChanges = branchChangesEntry.getValue();
-                    if (branchName.contains("..")) {
-                        throw new GitFlowFailureException("Invalid branch name '" + branchName
-                                + "' detected.\nCentral branch config can't be changed.", null);
-                    }
-                    File branchPropertyFile = new File(branchConfigWorktree, branchName);
-                    if (branchPropertyFile.exists()) {
-                        // only set if existing at this point
-                        builder.getFileHandler().setFile(branchPropertyFile);
-                    } else {
-                        builder.getFileHandler().clearLocation();
-                    }
-                    try {
-                        Configuration config = builder.getConfiguration();
-                        for (Change change : branchChanges) {
-                            if (change.getValue() != null) {
-                                config.setProperty(change.getConfigName(), change.getValue());
-                            } else {
-                                config.clearProperty(change.getConfigName());
+            if (!changes.isEmpty()) {
+                boolean modified = false;
+                Map<String, List<Change>> allChanges = changes.getAllChanges();
+                if (!allChanges.isEmpty()) {
+                    for (Entry<String, List<Change>> branchChangesEntry : allChanges.entrySet()) {
+                        String branchName = branchChangesEntry.getKey();
+                        List<Change> branchChanges = branchChangesEntry.getValue();
+                        if (branchName.contains("..")) {
+                            throw new GitFlowFailureException("Invalid branch name '" + branchName
+                                    + "' detected.\nCentral branch config can't be changed.", null);
+                        }
+                        File branchPropertyFile = new File(branchConfigWorktree, branchName);
+                        if (branchPropertyFile.exists()) {
+                            // only set if existing at this point
+                            builder.getFileHandler().setFile(branchPropertyFile);
+                        } else {
+                            builder.getFileHandler().clearLocation();
+                        }
+                        try {
+                            Configuration config = builder.getConfiguration();
+                            for (Change change : branchChanges) {
+                                if (change.getValue() != null) {
+                                    config.setProperty(change.getConfigName(), change.getValue());
+                                } else {
+                                    config.clearProperty(change.getConfigName());
+                                }
                             }
+                            if (config.isEmpty()) {
+                                if (branchPropertyFile.exists()) {
+                                    executeCommand(worktreeCmd, true, "rm", branchName);
+                                    getLog().info("Empty branch config for '" + branchName + "' removed.");
+                                    modified = true;
+                                }
+                            } else {
+                                builder.getFileHandler().setFile(branchPropertyFile);
+                                builder.save();
+                                builder.resetResult();
+                                executeCommand(worktreeCmd, true, "add", branchName);
+                                getLog().info("Branch config for '" + branchName + "' modified.");
+                                modified = true;
+                            }
+                        } catch (ConfigurationException e) {
+                            throw new GitFlowFailureException(e,
+                                    "Failed to change properties in central branch configs for branch '" + branchName
+                                            + "'.",
+                                    "Please consult a gitflow expert on how to fix this and report the error in the GBLD JIRA.");
                         }
-                        builder.getFileHandler().setFile(branchPropertyFile);
-                        builder.save();
-                        builder.resetResult();
-                    } catch (ConfigurationException e) {
-                        throw new GitFlowFailureException(e,
-                                "Failed to change properties in central branch configs for branch '" + branchName
-                                        + "'.",
-                                "Please consult a gitflow expert on how to fix this and report the error in the GBLD JIRA.");
                     }
-
-                    // now commit the change and push it
-                    executeCommand(worktreeCmd, true, "add", branchName);
                 }
-                CommandResult result = executeCommand(worktreeCmd, false, "commit", "-m",
-                        getBranchConfigMessageFor(commitMessage));
-                if (result.exitCode == SUCCESS_EXIT_CODE) {
-                    getLog().info("Branch config changes committed: " + branchConfigChangesToLogString(allChanges));
-                    if (pushRemote) {
-                        // push the change
-                        getLog().info("Pushing branch config changes to central branch config.");
-                        CommandResult gitResult = executeCommand(worktreeCmd, false, "push", gitFlowConfig.getOrigin(),
-                                configBranchName);
-                        if (gitResult.getExitCode() != SUCCESS_EXIT_CODE) {
-                            gitFetchForced();
-                            executeCommand(worktreeCmd, true, "rebase",
-                                    gitFlowConfig.getOrigin() + "/" + configBranchName, configBranchName);
-                            executeCommand(worktreeCmd, true, "push", gitFlowConfig.getOrigin(), configBranchName);
+                List<String> allRemovedBranches = changes.getAllRemovedBranches();
+                if (!allRemovedBranches.isEmpty()) {
+                    for (String branchName : allRemovedBranches) {
+                        File branchPropertyFile = new File(branchConfigWorktree, branchName);
+                        if (branchPropertyFile.exists()) {
+                            executeCommand(worktreeCmd, true, "rm", branchName);
+                            getLog().info("Branch config for '" + branchName + "' removed.");
+                            modified = true;
+                        }
+                    }
+                }
+                if (modified) {
+                    // now commit the change and push it
+                    CommandResult result = executeCommand(worktreeCmd, false, "commit", "-m",
+                            getBranchConfigMessageFor(commitMessage));
+                    if (result.exitCode == SUCCESS_EXIT_CODE) {
+                        getLog().info("Branch config changes committed: " + branchConfigChangesToLogString(allChanges));
+                        if (pushRemote) {
+                            // push the change
+                            getLog().info("Pushing branch config changes to central branch config.");
+                            CommandResult gitResult = executeCommand(worktreeCmd, false, "push",
+                                    gitFlowConfig.getOrigin(), configBranchName);
+                            if (gitResult.getExitCode() != SUCCESS_EXIT_CODE) {
+                                gitFetchForced();
+                                executeCommand(worktreeCmd, true, "rebase",
+                                        gitFlowConfig.getOrigin() + "/" + configBranchName, configBranchName);
+                                executeCommand(worktreeCmd, true, "push", gitFlowConfig.getOrigin(), configBranchName);
+                            }
+                        } else {
+                            getLog().warn("");
+                            getLog().warn("**************************************************************************");
+                            getLog().warn("You have new changes in local branch for central branch config that were not"
+                                    + " pushed because of parameter pushRemote=false.");
+                            getLog().warn("IMPORTANT: Do not forget to push branch '" + configBranchName
+                                    + "' manually as soon as possible!");
+                            getLog().warn("**************************************************************************");
+                            getLog().warn("");
                         }
                     } else {
-                        getLog().warn("");
-                        getLog().warn("******************************************************************************");
-                        getLog().warn("You have new changes in local branch for central branch config that were not "
-                                + "pushed because of parameter pushRemote=false.");
-                        getLog().warn("IMPORTANT: Do not forget to push branch '" + configBranchName
-                                + "' manually as soon as possible!");
-                        getLog().warn("******************************************************************************");
-                        getLog().warn("");
+                        getLog().info("No changes detected for central branch config.");
                     }
+                    reloadCentralBranchConfigFromWorktree(branchConfigWorktree);
                 } else {
                     getLog().info("No changes detected for central branch config.");
                 }
-                reloadCentralBranchConfigFromWorktree(branchConfigWorktree);
             } else {
                 getLog().info("No changes detected for central branch config.");
             }

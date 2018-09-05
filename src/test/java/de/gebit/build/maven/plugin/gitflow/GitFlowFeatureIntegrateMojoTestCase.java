@@ -110,6 +110,8 @@ public class GitFlowFeatureIntegrateMojoTestCase extends AbstractGitFlowMojoTest
                 COMMIT_MESSAGE_TARGET_TESTFILE, BasicConstants.SECOND_FEATURE_VERSION_COMMIT_MESSAGE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), BasicConstants.SECOND_FEATURE_VERSION);
         assertArtifactNotInstalled();
+
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, SOURCE_FEATURE_BRANCH);
     }
 
     @Test

@@ -571,6 +571,8 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
                 getMavenLog().info("Removing remote feature branch '" + featureBranch + "'");
                 gitBranchDeleteRemote(featureBranch);
             }
+            String featureName = featureBranch.substring(gitFlowConfig.getFeatureBranchPrefix().length());
+            gitRemoveAllBranchCentralConfigsForBranch(featureBranch, "feature '" + featureName + "' finished");
         }
         return stepParameters;
     }

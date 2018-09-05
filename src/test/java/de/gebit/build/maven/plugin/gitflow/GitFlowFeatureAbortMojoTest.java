@@ -99,6 +99,8 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
     }
 
     @Test

@@ -99,6 +99,8 @@ public class GitFlowEpicAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, EPIC_BRANCH);
     }
 
     @Test

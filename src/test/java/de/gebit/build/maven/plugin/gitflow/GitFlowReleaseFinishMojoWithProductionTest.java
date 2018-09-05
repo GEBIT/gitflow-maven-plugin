@@ -163,6 +163,7 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         assertMavenCommandNotExecuted("clean verify");
         assertMavenCommandNotExecuted("clean test");
         assertConfigCleanedUpForMaster();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
     }
 
     private void assertConfigCleanedUpForMaster() {
@@ -212,6 +213,7 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
         assertDefaultDeployGoalExecuted();
         assertConfigCleanedUpForMaster();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
     }
 
     @Test
@@ -251,6 +253,7 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         assertEquals(MASTER_BRANCH, branchConfig.getProperty("baseBranch"));
         assertEquals(EXPECTED_DEVELOPMENT_COMMIT, branchConfig.getProperty("developmentSavepointCommitRef"));
         assertEquals(EXPECTED_PRODUCTION_COMMIT, branchConfig.getProperty("productionSavepointCommitRef"));
+        git.assertRemoteFileExists(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
 
         git.assertBranchLocalConfigValueMissing(repositorySet, RELEASE_BRANCH, "releaseCommit");
         git.assertBranchLocalConfigValueMissing(repositorySet, RELEASE_BRANCH, "nextSnapshotVersion");

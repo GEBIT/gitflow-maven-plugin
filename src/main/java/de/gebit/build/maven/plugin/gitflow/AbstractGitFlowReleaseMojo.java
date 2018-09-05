@@ -495,6 +495,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                 getMavenLog().info("Removing remote release branch '" + releaseBranch + "'");
                 gitBranchDeleteRemote(releaseBranch);
             }
+            gitRemoveAllBranchCentralConfigsForBranch(releaseBranch, "release '" + releaseBranch + "' finished");
         }
     }
 

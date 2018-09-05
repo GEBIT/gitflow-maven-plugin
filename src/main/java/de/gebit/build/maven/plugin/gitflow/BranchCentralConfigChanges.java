@@ -8,6 +8,7 @@
 //
 package de.gebit.build.maven.plugin.gitflow;
 
+import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -28,9 +29,10 @@ public class BranchCentralConfigChanges {
 
     private Map<String, List<String>> removedProperties = new HashMap<>();
 
+    private List<String> removedBranches = new ArrayList<>();
+
     /**
-     * Set the central branch config value for passed branch to be applied
-     * later.
+     * Set the central branch config value for passed branch to be applied later.
      *
      * @param branchName
      *            the name of the branch
@@ -81,35 +83,61 @@ public class BranchCentralConfigChanges {
     }
 
     /**
+     * Remove all central branch configs for passed branch to be applied later.
+     *
+     * @param branchName
+     *            the name of the branch
+     */
+    public void removeAllForBranch(String branchName) {
+        if (!removedBranches.contains(branchName)) {
+            removedBranches.add(branchName);
+        }
+    }
+
+    /**
+     * Return the list of branches which configs must be deleted completely.
+     *
+     * @return the list of branches which configs must be deleted completely or
+     *         empty list
+     */
+    public List<String> getAllRemovedBranches() {
+        return new ArrayList<>(removedBranches);
+    }
+
+    /**
      * Return all collected set/remove changes on branch central config.
      *
-     * @return all collected set/remove changes on branch central config or
-     *         empty map if no changes collected
+     * @return all collected set/remove changes on branch central config or empty
+     *         map if no changes collected
      */
     public Map<String, List<Change>> getAllChanges() {
         Map<String, List<Change>> allChanges = new HashMap<>();
         for (Entry<String, Properties> setPropertiesEntry : setProperties.entrySet()) {
             String branchName = setPropertiesEntry.getKey();
-            Properties properties = setPropertiesEntry.getValue();
-            if (!properties.isEmpty()) {
-                List<Change> changes = new LinkedList<>();
-                allChanges.put(branchName, changes);
-                Enumeration<?> keys = properties.propertyNames();
-                while (keys.hasMoreElements()) {
-                    String key = (String) keys.nextElement();
-                    String value = properties.getProperty(key);
-                    changes.add(new Change(key, value));
+            if (!removedBranches.contains(branchName)) {
+                Properties properties = setPropertiesEntry.getValue();
+                if (!properties.isEmpty()) {
+                    List<Change> changes = new LinkedList<>();
+                    allChanges.put(branchName, changes);
+                    Enumeration<?> keys = properties.propertyNames();
+                    while (keys.hasMoreElements()) {
+                        String key = (String) keys.nextElement();
+                        String value = properties.getProperty(key);
+                        changes.add(new Change(key, value));
+                    }
                 }
             }
         }
         for (Entry<String, List<String>> removedPropertiesEntry : removedProperties.entrySet()) {
             String branchName = removedPropertiesEntry.getKey();
-            List<String> keys = removedPropertiesEntry.getValue();
-            if (!keys.isEmpty()) {
-                List<Change> changes = new LinkedList<>();
-                allChanges.put(branchName, changes);
-                for (String key : keys) {
-                    changes.add(new Change(key));
+            if (!removedBranches.contains(branchName)) {
+                List<String> keys = removedPropertiesEntry.getValue();
+                if (!keys.isEmpty()) {
+                    List<Change> changes = new LinkedList<>();
+                    allChanges.put(branchName, changes);
+                    for (String key : keys) {
+                        changes.add(new Change(key));
+                    }
                 }
             }
         }
@@ -132,12 +160,12 @@ public class BranchCentralConfigChanges {
                 return false;
             }
         }
-        return true;
+        return removedBranches.isEmpty();
     }
 
     /**
-     * Data holder for configuration change information. Change type is remove
-     * if <code>value==null</code>. Otherwise the change type is set.
+     * Data holder for configuration change information. Change type is remove if
+     * <code>value==null</code>. Otherwise the change type is set.
      *
      * @author Volodymyr Medvid
      */

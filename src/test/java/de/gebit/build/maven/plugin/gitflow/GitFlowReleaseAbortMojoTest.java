@@ -96,17 +96,18 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
         git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         assertConfigCleanedUpForMaster();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
     }
 
-    private void assertConfigCleanedUpForMaster() {
+    private void assertConfigCleanedUpForMaster() throws Exception {
         assertConfigCleanedUp(MASTER_BRANCH, RELEASE_BRANCH);
     }
 
-    private void assertConfigCleanedUpForMaintenance() {
+    private void assertConfigCleanedUpForMaintenance() throws Exception {
         assertConfigCleanedUp(MAINTENANCE_BRANCH, RELEASE_ON_MAINTENANCE_BRANCH);
     }
 
-    private void assertConfigCleanedUp(String developmentBranch, String releaseBranch) {
+    private void assertConfigCleanedUp(String developmentBranch, String releaseBranch) throws Exception {
         git.assertBranchLocalConfigValueMissing(repositorySet, releaseBranch, "releaseTag");
         git.assertBranchLocalConfigValueMissing(repositorySet, releaseBranch, "releaseCommit");
         git.assertBranchLocalConfigValueMissing(repositorySet, releaseBranch, "nextSnapshotVersion");
@@ -130,6 +131,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
         git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         assertConfigCleanedUpForMaster();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
     }
 
     @Test
@@ -168,6 +170,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
         git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         assertConfigCleanedUpForMaster();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
     }
 
     @Test
@@ -186,6 +189,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertMissingLocalBranches(repositorySet, USED_RELEASE_BRANCH);
         git.assertMissingRemoteBranches(repositorySet, USED_RELEASE_BRANCH);
         assertConfigCleanedUp(MASTER_BRANCH, USED_RELEASE_BRANCH);
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, USED_RELEASE_BRANCH);
 
         git.assertAddedFiles(repositorySet, GitExecution.TESTFILE_NAME);
         git.assertTestfileContent(repositorySet);
@@ -205,6 +209,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertMissingLocalBranches(repositorySet, RELEASE_ON_MAINTENANCE_BRANCH);
         git.assertMissingRemoteBranches(repositorySet, RELEASE_ON_MAINTENANCE_BRANCH);
         assertConfigCleanedUpForMaintenance();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_ON_MAINTENANCE_BRANCH);
     }
 
     @Test
@@ -225,6 +230,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertMissingLocalBranches(repositorySet, USED_RELEASE_BRANCH);
         git.assertMissingRemoteBranches(repositorySet, USED_RELEASE_BRANCH);
         assertConfigCleanedUpForMaster();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, USED_RELEASE_BRANCH);
     }
 
     @Test
@@ -270,6 +276,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertMissingLocalBranches(repositorySet, RELEASE_ON_MAINTENANCE_BRANCH);
         git.assertMissingRemoteBranches(repositorySet, RELEASE_ON_MAINTENANCE_BRANCH);
         assertConfigCleanedUpForMaintenance();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_ON_MAINTENANCE_BRANCH);
     }
 
     @Test
@@ -286,6 +293,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertMissingLocalBranches(repositorySet, RELEASE_ON_MAINTENANCE_BRANCH);
         git.assertMissingRemoteBranches(repositorySet, RELEASE_ON_MAINTENANCE_BRANCH);
         assertConfigCleanedUpForMaintenance();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_ON_MAINTENANCE_BRANCH);
     }
 
     @Test
@@ -303,6 +311,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertMissingRemoteBranches(repositorySet, RELEASE_ON_MAINTENANCE_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
         assertConfigCleanedUpForMaintenance();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_ON_MAINTENANCE_BRANCH);
     }
 
     @Test
@@ -324,6 +333,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertMissingLocalBranches(repositorySet, RELEASE_ON_MAINTENANCE_BRANCH);
         git.assertMissingRemoteBranches(repositorySet, RELEASE_ON_MAINTENANCE_BRANCH);
         assertConfigCleanedUpForMaintenance();
+        git.assertRemoteFileExists(repositorySet, CONFIG_BRANCH, RELEASE_ON_MAINTENANCE_BRANCH);
     }
 
     @Test
@@ -347,6 +357,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertMissingRemoteBranches(repositorySet, RELEASE_ON_MAINTENANCE_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
         assertConfigCleanedUpForMaintenance();
+        git.assertRemoteFileExists(repositorySet, CONFIG_BRANCH, RELEASE_ON_MAINTENANCE_BRANCH);
     }
 
     @Test
@@ -382,6 +393,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         assertEquals(null, branchConfig.getProperty("productionSavepointCommitRef"));
 
         assertConfigCleanedUpForMaster();
+        git.assertRemoteFileExists(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
     }
 
     @Test
@@ -399,6 +411,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertMissingLocalBranches(repositorySet, RELEASE_ON_MAINTENANCE_BRANCH);
         git.assertMissingRemoteBranches(repositorySet, RELEASE_ON_MAINTENANCE_BRANCH);
         assertConfigCleanedUpForMaintenance();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_ON_MAINTENANCE_BRANCH);
     }
 
     @Test
@@ -422,6 +435,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertMissingLocalBranches(repositorySet, RELEASE_ON_MAINTENANCE_BRANCH);
         git.assertMissingRemoteBranches(repositorySet, RELEASE_ON_MAINTENANCE_BRANCH);
         assertConfigCleanedUpForMaintenance();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_ON_MAINTENANCE_BRANCH);
     }
 
     @Test
@@ -459,6 +473,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         assertEquals(null, branchConfig.getProperty("productionSavepointCommitRef"));
 
         assertConfigCleanedUpForMaintenance();
+        git.assertRemoteFileExists(repositorySet, CONFIG_BRANCH, RELEASE_ON_MAINTENANCE_BRANCH);
     }
 
     @Test
@@ -476,6 +491,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
         git.assertExistingRemoteBranches(repositorySet, RELEASE_BRANCH);
         assertConfigCleanedUpForMaster();
+        git.assertRemoteFileExists(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
     }
 
     @Test
@@ -493,6 +509,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
         git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
         assertConfigCleanedUpForMaster();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
     }
 
     @Test
@@ -514,6 +531,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertMissingLocalBranches(repositorySet, USED_RELEASE_BRANCH);
         git.assertExistingRemoteBranches(repositorySet, USED_RELEASE_BRANCH);
         assertConfigCleanedUpForMaster();
+        git.assertRemoteFileExists(repositorySet, CONFIG_BRANCH, USED_RELEASE_BRANCH);
     }
 
     @Test
@@ -536,6 +554,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertMissingLocalBranches(repositorySet, USED_RELEASE_BRANCH);
         git.assertExistingRemoteBranches(repositorySet, USED_RELEASE_BRANCH);
         assertConfigCleanedUpForMaintenance();
+        git.assertRemoteFileExists(repositorySet, CONFIG_BRANCH, USED_RELEASE_BRANCH);
     }
 
     @Test
@@ -557,6 +576,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertMissingLocalBranches(repositorySet, USED_RELEASE_BRANCH);
         git.assertMissingRemoteBranches(repositorySet, USED_RELEASE_BRANCH);
         assertConfigCleanedUpForMaster();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, USED_RELEASE_BRANCH);
     }
 
     @Test
@@ -605,6 +625,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertMissingLocalBranches(repositorySet, USED_RELEASE_BRANCH);
         git.assertExistingRemoteBranches(repositorySet, USED_RELEASE_BRANCH);
         assertConfigCleanedUpForMaster();
+        git.assertRemoteFileExists(repositorySet, CONFIG_BRANCH, USED_RELEASE_BRANCH);
     }
 
     @Test
@@ -638,6 +659,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         git.assertCommitsInRemoteBranch(repositorySet, MASTER_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
         assertConfigCleanedUpForMaster();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
         git.assertCurrentCommit(repositorySet, EXPECTED_DEVELOPMENT_COMMIT);
     }
 
@@ -673,6 +695,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInRemoteBranch(repositorySet, MAINTENANCE_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
         assertConfigCleanedUpForMaintenance();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_ON_MAINTENANCE_BRANCH);
         git.assertCurrentCommit(repositorySet, EXPECTED_DEVELOPMENT_COMMIT);
     }
 
@@ -705,6 +728,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         git.assertCommitsInRemoteBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER);
         assertConfigCleanedUpForMaster();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
         git.assertCurrentCommit(repositorySet, EXPECTED_DEVELOPMENT_COMMIT);
     }
 
@@ -741,6 +765,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInRemoteBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_MAINTENANCE,
                 COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
         assertConfigCleanedUpForMaintenance();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_ON_MAINTENANCE_BRANCH);
         git.assertCurrentCommit(repositorySet, EXPECTED_DEVELOPMENT_COMMIT);
     }
 
@@ -787,6 +812,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         git.assertCommitsInRemoteBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_REMOTE);
         assertConfigCleanedUpForMaster();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
         git.assertCurrentCommit(repositorySet, EXPECTED_DEVELOPMENT_COMMIT);
     }
 
@@ -831,6 +857,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         assertConfigCleanedUp(MASTER_BRANCH, USED_RELEASE_BRANCH);
         git.assertCurrentCommit(repositorySet, EXPECTED_DEVELOPMENT_COMMIT);
         git.assertLocalBranchCurrentCommit(repositorySet, PRODUCTION_BRANCH, EXPECTED_PRODUCTION_COMMIT);
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, USED_RELEASE_BRANCH);
     }
 
     @Test
@@ -888,6 +915,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         assertConfigCleanedUp(MASTER_BRANCH, USED_RELEASE_BRANCH);
         git.assertCurrentCommit(repositorySet, EXPECTED_DEVELOPMENT_COMMIT);
         git.assertLocalBranchCurrentCommit(repositorySet, PRODUCTION_BRANCH, EXPECTED_PRODUCTION_COMMIT);
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, USED_RELEASE_BRANCH);
     }
 
     @Test
@@ -930,6 +958,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         assertConfigCleanedUp(MASTER_BRANCH, USED_RELEASE_BRANCH);
         git.assertCurrentCommit(repositorySet, EXPECTED_DEVELOPMENT_COMMIT);
         git.assertLocalBranchCurrentCommit(repositorySet, PRODUCTION_BRANCH, EXPECTED_PRODUCTION_COMMIT);
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, USED_RELEASE_BRANCH);
     }
 
     @Test
@@ -968,6 +997,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInRemoteBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_REMOTE);
         assertConfigCleanedUp(MASTER_BRANCH, USED_RELEASE_BRANCH);
         git.assertCurrentCommit(repositorySet, EXPECTED_DEVELOPMENT_COMMIT);
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, USED_RELEASE_BRANCH);
     }
 
     @Test
@@ -1009,6 +1039,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         assertConfigCleanedUp(MASTER_BRANCH, USED_RELEASE_BRANCH);
         git.assertCurrentCommit(repositorySet, EXPECTED_DEVELOPMENT_COMMIT);
         git.assertLocalBranchCurrentCommit(repositorySet, PRODUCTION_BRANCH, EXPECTED_PRODUCTION_COMMIT);
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, USED_RELEASE_BRANCH);
     }
 
     @Test
@@ -1046,6 +1077,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         assertConfigCleanedUp(MASTER_BRANCH, USED_RELEASE_BRANCH);
         git.assertCurrentCommit(repositorySet, EXPECTED_DEVELOPMENT_COMMIT);
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, USED_RELEASE_BRANCH);
     }
 
     @Test
@@ -1089,6 +1121,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         assertConfigCleanedUp(MAINTENANCE_BRANCH, USED_RELEASE_BRANCH);
         git.assertCurrentCommit(repositorySet, EXPECTED_DEVELOPMENT_COMMIT);
         git.assertLocalBranchCurrentCommit(repositorySet, MAINTENANCE_PRODUCTION_BRANCH, EXPECTED_PRODUCTION_COMMIT);
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, USED_RELEASE_BRANCH);
     }
 
     @Test
@@ -1267,6 +1300,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         git.assertCommitsInRemoteBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER);
         assertConfigCleanedUpForMaster();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
         git.assertCurrentCommit(repositorySet, EXPECTED_DEVELOPMENT_COMMIT);
     }
 
@@ -1300,6 +1334,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         git.assertCommitsInRemoteBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER);
         assertConfigCleanedUpForMaster();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
         git.assertCurrentCommit(repositorySet, EXPECTED_DEVELOPMENT_COMMIT);
     }
 
@@ -1340,6 +1375,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
         assertConfigCleanedUp(MASTER_BRANCH, USED_RELEASE_BRANCH);
         git.assertCurrentCommit(repositorySet, EXPECTED_DEVELOPMENT_COMMIT);
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, USED_RELEASE_BRANCH);
     }
 
     @Test
