@@ -24,8 +24,8 @@ import org.codehaus.plexus.util.cli.CommandLineException;
 public class GitFlowBranchConfigMojo extends AbstractGitFlowMojo {
 
     /**
-     * Set the property name to specify. If not set in interactive mode you will
-     * be asked.
+     * Set the property name to specify. If not set in interactive mode you will be
+     * asked.
      *
      * @since 1.4.0
      */
@@ -33,8 +33,8 @@ public class GitFlowBranchConfigMojo extends AbstractGitFlowMojo {
     private String propertyName;
 
     /**
-     * Specify the property value to set. If not specified, the property is
-     * removed (in interactive mode you will be asked).
+     * Specify the property value to set. If not specified, the property is removed
+     * (in interactive mode you will be asked).
      *
      * @since 1.4.0
      */
@@ -42,13 +42,21 @@ public class GitFlowBranchConfigMojo extends AbstractGitFlowMojo {
     private String propertyValue;
 
     /**
-     * Name of the branch to configure. If not specified the current branch is
-     * used.
+     * Name of the branch to configure. If not specified the current branch is used.
      *
      * @since 1.4.0
      */
     @Parameter(property = "branchName")
     private String branchName;
+
+    /**
+     * Remove all properties for the branch. If specified, other parameters are
+     * ignored.
+     *
+     * @since 2.1.0
+     */
+    @Parameter(property = "removeAllForBranch")
+    private String removeAllForBranch;
 
     /** {@inheritDoc} */
     @Override
@@ -57,28 +65,46 @@ public class GitFlowBranchConfigMojo extends AbstractGitFlowMojo {
         // set git flow configuration
         initGitFlowConfig();
 
-        propertyName = getPrompter().promptRequiredParameterValue("Which property to modify?", "propertyName",
-                propertyName,
-                new GitFlowFailureInfo("Property 'propertyName' is required in non-interactive mode but was not set.",
-                        "Specify a propertyName or run in interactive mode.",
-                        "'mvn flow:branch-config -DpropertyName=XXX -B' to predefine property name",
-                        "'mvn flow:branch-config' to run in interactive mode"));
-
-        propertyValue = getPrompter().promptOptionalParameterValue("Set the value to (empty to delete)",
-                "propertyValue", propertyValue);
-
-        // modify the branch config
-        if (branchName == null) {
-            branchName = gitCurrentBranch();
-        }
-
-        if (propertyValue != null) {
-            getMavenLog().info("Setting branch property '" + propertyName + "' for branch '" + branchName + "' to '"
-                    + propertyValue + "'");
-            gitSetBranchCentralConfig(branchName, propertyName, propertyValue);
+        if (removeAllForBranch != null && !removeAllForBranch.trim().isEmpty()) {
+            if (gitBranchExists(removeAllForBranch) || gitRemoteBranchExists(removeAllForBranch)) {
+                if (!getPrompter().promptConfirmation(
+                        "The branch '" + removeAllForBranch + "' exists. Are you sure you want to remove all properties "
+                                + "for existing branch?",
+                        false,
+                        new GitFlowFailureInfo(
+                                "The branch '" + removeAllForBranch + "' exists. All properties for an "
+                                        + "existing branch can't be removed in non-interactive mode.",
+                                "Either remove branch locally and remotely first or run in interactive mode"))) {
+                    throw new GitFlowFailureException("Branch config process aborted by user.", null);
+                }
+            }
+            getMavenLog().info("Removing all properties for branch '" + removeAllForBranch + "'");
+            gitRemoveAllBranchCentralConfigsForBranch(removeAllForBranch, null);
         } else {
-            getMavenLog().info("Removing branch property '" + propertyName + "' for branch '" + branchName + "'");
-            gitRemoveBranchCentralConfig(branchName, propertyName);
+            propertyName = getPrompter().promptRequiredParameterValue("Which property to modify?", "propertyName",
+                    propertyName,
+                    new GitFlowFailureInfo(
+                            "Property 'propertyName' is required in non-interactive mode but was not set.",
+                            "Specify a propertyName or run in interactive mode.",
+                            "'mvn flow:branch-config -DpropertyName=XXX -B' to predefine property name",
+                            "'mvn flow:branch-config' to run in interactive mode"));
+
+            propertyValue = getPrompter().promptOptionalParameterValue("Set the value to (empty to delete)",
+                    "propertyValue", propertyValue);
+
+            // modify the branch config
+            if (branchName == null) {
+                branchName = gitCurrentBranch();
+            }
+
+            if (propertyValue != null) {
+                getMavenLog().info("Setting branch property '" + propertyName + "' for branch '" + branchName + "' to '"
+                        + propertyValue + "'");
+                gitSetBranchCentralConfig(branchName, propertyName, propertyValue);
+            } else {
+                getMavenLog().info("Removing branch property '" + propertyName + "' for branch '" + branchName + "'");
+                gitRemoveBranchCentralConfig(branchName, propertyName);
+            }
         }
         getMavenLog().info("Branch config process finished");
     }
