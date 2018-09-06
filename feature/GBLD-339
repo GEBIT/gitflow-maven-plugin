@@ -1,6 +1,0 @@
-JOB_BUILD = true
-startCommitMessage = GBLD-339: updating versions for feature branch
-branchType = feature
-issueNumber = GBLD-339
-baseBranch = master
-versionChangeCommit = 97234706dfad166782c959aecde7328a4bfce36b
