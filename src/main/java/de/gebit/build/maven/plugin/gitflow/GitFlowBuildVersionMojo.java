@@ -16,9 +16,15 @@ import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
- * The git flow build version mojo. Used to temporarily append a build
- * identifier to the version, e.g. for a CI build. Always operates on the
- * current branch.
+ * Update the build version in all POMs.
+ * <p>
+ * This is primarly used for CI builds to append a build identifier to the
+ * version. Always operates on the current branch.
+ * <p>
+ * Example:
+ * <pre>
+ * mvn flow:build-version [-DbuildVersion=XXXX]
+ * </pre>
  *
  * @author Erwin Tratar
  */

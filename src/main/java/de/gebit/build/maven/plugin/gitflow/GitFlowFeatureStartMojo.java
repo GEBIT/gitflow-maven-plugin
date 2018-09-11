@@ -26,10 +26,29 @@ import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
- * The git flow feature start mojo.
+ * Start implementing a new feature in a new feature branch.
+ * <p>
+ * Creates the new feature branch and updates the version in all
+ * <code>pom.xml</code> files to a branch specific version (e.g.
+ * <code>1.0.0-XYZ-1234-SNAPSHOT</code>). Feature branches can only be started
+ * from the development branch, a maintenance branch or an epic branch.
+ * <p>
+ * If featureName not specified, you will be asked for a branch name (apply the
+ * issue pattern). The changes will be committed in a single commit.
+ * <p>
+ * You may skip changing the version by specifying
+ * <code>-⁠DskipFeatureVersion=true</code>.
+ * <p>
+ * Use <code>-DjobBuild=true</code> to automatically create build jobs for the
+ * feature branch.
+ * <p>
+ * Example:
+ * <pre>
+ * mvn flow:feature-start [-⁠DfeatureName=XXXX] [-⁠DjobBuild=true|false][-⁠Dflow.installProject=true|false] [-⁠D...]
+ * </pre>
  *
- * @author Aleksandr Mashchenko
- *
+ * @see GitFlowFeatureAbortMojo
+ * @see GitFlowFeatureFinishMojo
  */
 @Mojo(name = "feature-start", aggregator = true)
 public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {

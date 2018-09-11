@@ -8,7 +8,6 @@
 //
 package de.gebit.build.maven.plugin.gitflow;
 
-import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -20,12 +19,28 @@ import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
- * Start an Epic Branch. Epic branches are more like maintenance branches, but
- * will not live forever and will be merged back to the base branch when the
- * Epic is done. Epic branches can be started on development or maintenance
- * branches and they are starting points for feature branches.
+ * Start implementing a new Epic.
+ * <p>
+ * Creates the new epic branch to aggregate multiple features and updates the
+ * version in all <code>pom.xml</code> files to a branch specific version (e.g.
+ * <code>1.0.0-XYZ-1234-SNAPSHOT</code>). If <code>epicName</code> is not specified, you will be
+ * asked for a branch name (apply the issue pattern). The version changes will be
+ * committed in a single commit. Epic branches can only be started from the master or a maintenance branch.
+ * <p>
+ * Make sure your local development is not behind
+ * the remote, before executing.
+ * <p>
+ * Use <code>-DjobBuild=true</code> to automatically create build jobs for the epic branch.
+ * <p>
+ * Example:
+ * <pre>
+ * mvn flow:epic-start [-⁠DepicName=XXXX] [-⁠DjobBuild=true|false] [-⁠Dflow.installProject=true|false] [-⁠D...]
+ * </pre>
  *
  * @author Volodymyr Medvid
+ * @see GitFlowEpicAbortMojo
+ * @see GitFlowEpicUpdateMojo
+ * @see GitFlowEpicFinishMojo
  * @since 2.0.0
  */
 @Mojo(name = "epic-start", aggregator = true)

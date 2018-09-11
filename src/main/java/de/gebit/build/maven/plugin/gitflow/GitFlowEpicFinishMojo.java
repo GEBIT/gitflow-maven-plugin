@@ -18,9 +18,19 @@ import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
- * Finish epic branch. Merge it into base branch and remove it.
+ * Finish epic branch.
+ * <p>
+ * Finish the implementation of the epic. Reverts the initial version commit,
+ * merges everything back into the development branch (using fast forward
+ * strategy if <code>flow.rebase=true</code>), pushes development branch to
+ * remote and finally deletes the epic branch.
+ * <p>
+ * Make sure your local development branch is not behind the remote, before
+ * executing.
  *
  * @author Volodymyr Medvid
+ * @see GitFlowEpicStartMojo
+ * @see GitFlowEpicAbortMojo
  * @since 2.0.0
  */
 @Mojo(name = "epic-finish", aggregator = true)

@@ -28,11 +28,26 @@ import de.gebit.build.maven.plugin.gitflow.steps.Step;
 import de.gebit.build.maven.plugin.gitflow.steps.StepsUtil;
 
 /**
- * Integrate current feature branch into target feature branch. Useful to check
- * if the feature effects another features before finishing.
- *
+ * Integrate the current feature branch into another feature branch.
+ * <p>
+ * Integrates the changes from the current feature branch into another feature
+ * branch to be tested together before finishing. The optional property
+ * <code>featureName</code> specifies the name of the target feature, e.g.
+ * <code>XYZ-1234</code> for the target feature branch <b>feature/XYZ-1234</b>.
+ * The target feature branch must exist.
+ * <p>
+ * If conflicts occur during rebase, you can fix the conflicts and continue the
+ * integration process by executing <code>flow:feature-integrate</code> again or
+ * you can abort the integration process by executing
+ * <code>flow:feature-integrate-abort</code>.
+ * <p>
+ * Example:
+ * <pre>
+ * mvn -N flow:feature-integrate [-⁠DfeatureName=XXXX] [-⁠Dflow.keepFeatureBranch=true|false] [-⁠Dflow.installProject=true|false]
+ * </pre>
  * @author Volodymyr Medvid
  * @since 2.1.0
+ * @see GitFlowFeatureIntegrateAbortMojo
  */
 @Mojo(name = "feature-integrate", aggregator = true)
 public class GitFlowFeatureIntegrateMojo extends AbstractGitFlowFeatureMojo {

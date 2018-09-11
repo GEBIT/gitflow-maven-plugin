@@ -22,9 +22,15 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
- * The git flow build version mojo. Used to explicitly set the version in all
- * projects.
- *
+ * Update the version(s) in all POMs.
+ * <p>
+ * Updates the version in all <code>pom.xml</code> files to the specified version. If no version is specified, you will
+ * be interactively asked for it.
+ * <p>
+ * Example:
+ * <pre>
+ * mvn flow:set-version [-⁠DnewVersion=XXXX]
+ * </pre>
  * @author Erwin Tratar
  */
 @Mojo(name = "set-version", aggregator = true)

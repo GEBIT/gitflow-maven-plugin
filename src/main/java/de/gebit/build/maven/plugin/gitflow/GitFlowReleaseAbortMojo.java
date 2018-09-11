@@ -24,9 +24,12 @@ import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
- * The git flow release abort mojo.
+ * Abort a release previously started with <code>flow:release-start</code>.
+ * <p>
+ * Switches back to development branch and deletes the release branch.
  *
- * @author Erwin Tratar
+ * @see GitFlowReleaseStartMojo
+ * @see GitFlowReleaseAbortMojo
  * @since 1.3.1
  */
 @Mojo(name = "release-abort", aggregator = true)

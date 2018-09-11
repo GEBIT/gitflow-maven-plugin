@@ -1,19 +1,67 @@
 # Git-Flow Maven Plugin
- 
-  The Maven plugin for Vincent Driessen's [successful Git branching model](http://nvie.com/posts/a-successful-git-branching-model/).
 
-  Currently a Java implementation of Git version control system [JGit](https://github.com/eclipse/jgit) doesn't support [`.gitattributes`](http://git-scm.com/book/en/Customizing-Git-Git-Attributes).
+The Maven plugin for Vincent Driessen's [successful Git branching model](http://nvie.com/posts/a-successful-git-branching-model/).
 
-  This plugin runs Git and Maven commands from the command line ensuring that all Git features work properly.
+We use a modified branching model with some specialities:
+* Support for maintenance branches
+* Support for epic branches
+* Automatic version changes for feature branches
 
-  Supports Eclipse Plugin projects build with [Tycho](https://eclipse.org/tycho/).
+You perform commands by invoking goals like this:
+
+```
+mvn flow:[goal] -N
+```
+
+# Prerequisites
+
+You will need to have some software installed:
+
+* An installation of Java. Your `JAVA_HOME` environment should be set accordingly. It is not required that `java` is on
+  the path, but it is recommended.
+* An installation of Maven, currently preferably [Maven 3.5.3](https://archive.apache.org/dist/maven/maven-3/3.5.3/binaries/).
+  Extract this installation and make sure the `mvn` executable/script is on the path
+* Access to the git repository must be configured in a way that does not prompt for passwords. To setup a private/public
+  key authenticated git connection instead of a password based have a look at [SSH Key erzeugen](https://wiki.gebit.de/display/GIT/SSH+Key+erzeugen).
+
 
 # Usage
 
-  If you feel like the plugin is missing a feature or has a defect, create a [new issue](https://github.com/gebit/gitflow-maven-plugin/issues/new) or submit a [Pull Request](https://github.com/gebit/gitflow-maven-plugin/pulls).
-  When creating a new issue, please provide a comprehensive description of your
-  concern. Especially for fixing bugs it is crucial that the developers can reproduce your problem. For this reason,
-  entire debug logs, POMs or most preferably little demo projects attached to the issue are very much appreciated.
-  Of course, patches are welcome, too. Contributors can check out the project from our
-  [source repository](https://github.com/gebit/gitflow-maven-plugin) and will find supplementary information in the
-  [guide to helping with Maven](http://maven.apache.org/guides/development/guide-helping.html).
+Typical steps for implementing a feature in a feature branches
+
++ Start a new feature branch:
+
+```
+mvn flow:feature-start
+```
+
+Make sure your local master is not behind the remote, before executing.
+
++ Add a Jenkins build job for the feature branch:
+
+```
+mvn flow:branch-config -DbranchName=feature/XYZ-1234 -DpropertyName=JOB_BUILD -DpropertyValue=true
+```
+
+(you will need to use the correct branch name, of course).
+
++ Rebasing a feature on the current upstream branch
+
+```
+mvn flow:feature-rebase -N
+```
+
+
++ Finish a feature by merging (rebasing upon) into the upstream branch:
+
+```
+mvn flow:feature-finish -N
+```
+
+Make sure your local master branch is not behind the remote, before executing.
+
+
+
+# Issues and Suggestions
+
+If you have issues or improvement suggestions, please use our [JIRA](https://jira.gebit.de/secure/CreateIssue!Default.jspa?pid=10511)

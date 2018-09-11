@@ -25,12 +25,39 @@ import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
- * The git flow feature update mojo. Will either rebase the feature branch on
- * the current development branch or merge the development branch into the
- * feature branch.
+ * Rebase a feature branch on top of development (upstream) branch.
+ * <p>
+ * Integrates the changes from the development branch (more specifically: from
+ * the branch this feature has been based upon) into the feature branch. Also
+ * handles the case where the version on the development branch is incremented
+ * and adapts the feature branch accordingly. If conflicts occur on rebase, you
+ * can fix the conflicts and continue the rebase process by executing
+ * <code>flow:feature-rebase</code> again or you can abort rebase process by
+ * executing <code>flow:feature-rebase-abort</code>.
+ * <p>
+ * This will either need he permission to force push (replace) the feature
+ * branch or to delete the feature branch on the remote before pushing to be
+ * able to replace it.
+ * <p>
+ * The <code>-N</code> option is needed for rare cases where a module in an
+ * upstream project is removed, that is still used in the current project before
+ * the rebase. If you don't specify -N yo will get errors like this:
+ *
+ * <pre>
+ * mvn flow:feature-rebase
+ * [INFO] Scanning for projects...
+ * [ERROR] [ERROR] Some problems were encountered while processing the POMs:
+ * [ERROR] 'dependencies.dependency.version' for de.gebit.xyz:abcd:jar is missing.
+ * </pre>
+ * <p>
+ * Example:
+ * <pre>
+ * mvn -N flow:feature-rebase
+ * </pre>
  *
  * @author Erwin Tratar
  * @since 1.3.1
+ * @see GitFlowFeatureRebaseAbortMojo
  */
 @Mojo(name = "feature-rebase", aggregator = true)
 public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {

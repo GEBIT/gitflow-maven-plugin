@@ -22,9 +22,11 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
- * The git flow integrated marker mojo. Will update the integration branch
- * associated with the current branch to the same reference to mark a successful
- * integration (e.g. after a build is run without any errors).
+ * Mark the current commit as integrated.
+ * <p>
+ * Updates the integration branch associated with the current branch to the same
+ * reference to mark a successful integration (e.g. after a build is run without
+ * any errors).
  *
  * @since 1.5.10
  * @author Erwin Tratar

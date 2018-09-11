@@ -23,10 +23,13 @@ import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
- * The git flow release finish mojo.
+ * Finish the release process previously started with <code>flow:release-start</code>.
+ * <p>
+ * Tags, deploys, merges to development branch, sets the new development version and finally pushes to remote and
+ * deletes release branch.
  *
- * @author Aleksandr Mashchenko
- *
+ * @see GitFlowReleaseStartMojo
+ * @see GitFlowReleaseAbortMojo
  */
 @Mojo(name = "release-finish", aggregator = true)
 public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {

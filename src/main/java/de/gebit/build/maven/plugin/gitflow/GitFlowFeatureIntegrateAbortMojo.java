@@ -16,10 +16,13 @@ import org.codehaus.plexus.util.cli.CommandLineException;
 import de.gebit.build.maven.plugin.gitflow.steps.FeatureIntegrateBreakpoint;
 
 /**
- * Abort rebase in process that was started during execution of
+ * Abort a rebase in process that was started during execution of
  * <code>flow:feature-integrate</code>.
+ * <p>
+ * Aborts the integration process properly. It can only be used on paused rebase caused by conflicts.
  *
  * @author Volodymyr Medvid
+ * @see GitFlowFeatureIntegrateMojo
  * @since 2.1.0
  */
 @Mojo(name = "feature-integrate-abort", aggregator = true)

@@ -24,9 +24,16 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
- * The git flow feature rebase cleanup mojo. Will find out the matching
- * development branch and start a rebase --interactive to allow you to
- * reorder/squash/reword your commits.
+ * Cleanup commits on a feature branch by squashing/reodering.
+ * <p>
+ * Cleans up the commits on a feature branch using interactive rebase, i.e.
+ * allows reordering and squashing into less commits. This is basically a
+ * <code>git rebase --interactive</code> with help to set the correct
+ * parameters.
+ * <p>
+ * No rebase on top of the development branch is executed here!
+ *
+ * @see GitFlowFeatureRebaseMojo
  *
  * @author Erwin Tratar
  * @since 1.5.11

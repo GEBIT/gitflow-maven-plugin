@@ -29,12 +29,27 @@ import de.gebit.build.maven.plugin.gitflow.steps.Step;
 import de.gebit.build.maven.plugin.gitflow.steps.StepsUtil;
 
 /**
- * Finish the implementation of a feature. Remove the version commit that
- * changed the version (to reduce unnecessary commits in the pom.xml), merge
- * into development branch (using fast forward strategy if parameter
- * <code>rebase</code> is <code>true</code>), push development branch to remote
- * and finally delete the feature branch.
+ * Finish the implementation of the feature.
+ * <p>
+ * Finish the implementation of the feature by merging it in the
+ * development/upstream branch. Removes the version commit that changed the
+ * version (to reduce unnecessary commits in <code>pom.xml</code>), merges into
+ * development branch (using fast forward strategy if <code>flow.rebase</code>
+ * is <code>true</code>), pushes the development branch to remote and finally
+ * deletes the feature branch.
+ * <p>
+ * Make sure your local development branch is not
+ * behind the remote, before executing.
+ * <p>
+ * If <code>flow.rebase</code> is <code>true</code>, rebases the feature branch
+ * on top of the development branch before finishing.
+ * <p>
+ * Example:
+ * <pre>
+ * mvn flow:feature-finish -N [-⁠Dflow.allowFF=true|false] [-⁠Dflow.rebase=true|false] [-⁠D...]
+ * </pre>
  *
+ * @see GitFlowFeatureStartMojo
  * @author Volodymyr Medvid
  */
 @Mojo(name = "feature-finish", aggregator = true)

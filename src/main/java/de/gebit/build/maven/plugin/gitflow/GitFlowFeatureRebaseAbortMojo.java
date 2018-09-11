@@ -14,10 +14,11 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
- * Abort rebase or marge in process that was started during execution of
- * flow:feature-rebase.
+ * Abort a rebase or marge in process that was started during execution of
+ * <code>flow:feature-rebase</code>.
  *
  * @author Volodymyr Medvid
+ * @see GitFlowFeatureRebaseMojo
  * @since 2.0.1
  */
 @Mojo(name = "feature-rebase-abort", aggregator = true)

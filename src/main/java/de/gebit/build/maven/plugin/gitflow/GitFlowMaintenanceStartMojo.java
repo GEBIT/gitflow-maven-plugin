@@ -22,7 +22,17 @@ import org.codehaus.plexus.util.cli.CommandLineException;
 import de.gebit.build.maven.plugin.gitflow.ExtendedPrompter.SelectOption;
 
 /**
- * The git flow maintenance branch start mojo.
+ * Start a maintenance branch.
+ * <p>
+ * Start a maintenance branch off of a release tag or some other point. First,
+ * prompts a tag or commit to base the branch upen, then creates the maintenance
+ * branch, sets a specific version for maintenance and finally pushes the
+ * maintenance branch to remote.
+ * <p>
+ * Example:
+ * <pre>
+ * mvn flow:maintenance-start [-⁠DmaintenanceVersion=X.Y] [-⁠DfirstMaintenanceVersion=X.Y.Z-SNAPSHOT]
+ * </pre>
  *
  * @author Erwin Tratar
  * @since 1.5.3

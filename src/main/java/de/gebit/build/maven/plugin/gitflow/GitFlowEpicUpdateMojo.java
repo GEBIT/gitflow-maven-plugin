@@ -18,9 +18,17 @@ import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
- * Merge the base branch into the epic branch.
+ * Merge the development branch into the epic branch.
+ * <p>
+ * Integrates the changes from development branch into the epic branch. If
+ * conflicts occur on merge, you can fix the conflicts and continue merge
+ * process by executing <code>flow:epic-update</code> again. We need to use a
+ * merge here, as the epic branch must not be rebased due to several feature
+ * branches being branched off further.
  *
  * @author Volodymyr Medvid
+ * @see GitFlowEpicStartMojo
+ * @since 2.0.0
  */
 @Mojo(name = "epic-update", aggregator = true)
 public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {

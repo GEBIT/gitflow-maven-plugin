@@ -22,10 +22,18 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
- * The git flow release start mojo.
+ * Start a new release of your project.
+ * <p>
+ * Creates a release branch, updates the versions in all pom.xml and pushes it to
+ * the remote.
+ * <p>
+ * After pushing nobody else can start a second release process. You may
+ * now perform additional release related changes (e.g. updating some
+ * documents...) before finishing. You can always abort a release (no harm
+ * done...) by calling the <code>flow:release-abort</code> goal.
  *
- * @author Aleksandr Mashchenko
- *
+ * @see GitFlowReleaseFinishMojo
+ * @see GitFlowReleaseAbortMojo
  */
 @Mojo(name = "release-start", aggregator = true)
 public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {

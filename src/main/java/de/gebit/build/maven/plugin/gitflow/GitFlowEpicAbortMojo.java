@@ -16,9 +16,13 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
- * Abort epic branch.
+ * Abort an epic branch.
+ * <p>
+ * Abort the implementation of the epic. Selects an epic branch for abortion,
+ * switches to development branch and deletes the epic branch.
  *
  * @author Volodymyr Medvid
+ * @see GitFlowEpicStartMojo
  * @since 2.0.0
  */
 @Mojo(name = "epic-abort", aggregator = true)

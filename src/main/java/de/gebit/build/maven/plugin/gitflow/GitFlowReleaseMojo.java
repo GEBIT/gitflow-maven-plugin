@@ -22,9 +22,12 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
- * The git flow release mojo.
+ * Start a new release of your project and finish it in a single step. See these goals for documentation.
+ * <p>
+ * This process cannot be reverted or aborted!
  *
- * @author Aleksandr Mashchenko
+ * @see GitFlowReleaseStartMojo
+ * @see GitFlowReleaseFinishMojo
  * @since 1.2.0
  */
 @Mojo(name = "release", aggregator = true)

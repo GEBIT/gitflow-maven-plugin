@@ -23,9 +23,12 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
- * The git flow feature abort mojo.
+ * Abort the implementation of a feature.
+ * <p>
+ * Selects a feature branch for abortion, switches to the development branch and deletes the feature branch.
  *
  * @author Erwin Tratar
+ * @see GitFlowFeatureStartMojo
  * @since 1.3.1
  */
 @Mojo(name = "feature-abort", aggregator = true)
