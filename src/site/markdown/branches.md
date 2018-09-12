@@ -1,8 +1,9 @@
-# Branching model
+Branching model
+---------------
 
 There are several types of branches used:
 
-## development
+### development
 
 The development branch is typically called `master`. All development and fixing is typically targetted at this branch,
 i.e. all feature branches are started from `master`.
@@ -12,14 +13,14 @@ If you follow this recommendation, it will ensure no change and no fix will ever
 There are situations, where you will develop off a maintenance branch. In theses cases you will need to take extra care
 to include all those changes also in the development branch!
 
-## maintenance
+### maintenance
 
 Typically your project will not be simply linear in it's version history. Instead, you will have multiple versions
 that are under maintenance. Every version under maintenance has a maintenance branch.
 
 These branches are stored as `maintenance/[version]`.
 
-## integration
+### integration
 
 Integration branches are a special case, as they are only ever updated automatically. They will be typically behind
 the branch they are following and are either updated on release, or on successfull integration builds. As such they
@@ -28,7 +29,7 @@ are a very good candidate for basing feature branches upon (as they pass all tes
 The branches are stored as `latest` (for the development branch) and `latest-[baseversion]` (e.g. `latest-maintenance/2.1`)
 for maintenance branches.
 
-## feature
+### feature
 
 The normal branch to work on is a feature branch. It is typically started off the development branch, but can also
 be started off a maintenance branch (don't forget to include it in the development brach after finishing, then!).
@@ -46,7 +47,7 @@ The branches are stored as `feature/[issue]`.
 create a branch `feature/POS-123-baseline-2-3`, though the suffix will not be included in the version in the pom.xml:
 `2.3.0-POS-123-SNAPSHOT`.
 
-## epic
+### epic
 
 In larger projects single big features are divided into smaller features, that should be developed together. Only after
 all features are finished and integrated, the whole result is then integrated into the upstream branch.
@@ -62,7 +63,7 @@ assumed the Epic itself has an own issue in JIRA to track it.
 
 The branches are stored as `epic/[version]`.
 
-## release
+### release
 
 Release branches are temporary while a release is performed. Typically they will be started and deleted automatically
 while a release build runs. But if a release is performed manually (using `mvn flow:releast-start` and
@@ -84,7 +85,7 @@ You perform command by invoking goals like this:
 mvn flow:[goal] -N
 ```
 
-## hotfixes
+### hotfixes
 
 Hotfixes are handled just like "normal" maintenance branches, just on demand.
 
@@ -95,7 +96,7 @@ Hotfixes are handled just like "normal" maintenance branches, just on demand.
 * With the next release of the maintenance branch the hotfix branch can be removed (the tagged releases remain, of course)
 
 
-## user branches
+### user branches
 
 There is one more type of banches, which has no special support, but which is commonly used. For experiments every user
 can create a user specific branch. The branch can have any content, typically you use it by explicitly (foce)

@@ -1,4 +1,5 @@
-# Git-Flow Maven Plugin
+Git-Flow Maven Plugin
+---------------------
 
 The Maven plugin for Vincent Driessen's [successful Git branching model](http://nvie.com/posts/a-successful-git-branching-model/).
 
@@ -13,7 +14,7 @@ You perform commands by invoking goals like this:
 mvn flow:[goal] -N
 ```
 
-# Prerequisites
+### Prerequisites
 
 You will need to have some software installed:
 
@@ -25,7 +26,7 @@ You will need to have some software installed:
   key authenticated git connection instead of a password based have a look at [SSH Key erzeugen](https://wiki.gebit.de/display/GIT/SSH+Key+erzeugen).
 
 
-# Usage
+### Usage
 
 Typical steps for implementing a feature in a feature branches
 
@@ -62,6 +63,6 @@ Make sure your local master branch is not behind the remote, before executing.
 
 
 
-# Issues and Suggestions
+### Issues and Suggestions
 
 If you have issues or improvement suggestions, please use our [JIRA](https://jira.gebit.de/secure/CreateIssue!Default.jspa?pid=10511)

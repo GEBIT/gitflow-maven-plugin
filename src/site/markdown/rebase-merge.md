@@ -1,9 +1,10 @@
-# Merge vs. Rebase for feature branches
+Merge vs. Rebase for feature branches
+-------------------------------------
 
 With gitflow-maven-plugin you can use both rebase and merge based workflow for feature branches. The difference is what
 to do to pull in changes from the upstream branch (typically the development branch "master").
 
-## Rebase based workflow
+### Rebase based workflow
 
 In a rebase based workflow you use `mvn flow:feature-rebase -N` to update your feature branch. At this point the current
 commit from your upstream branch is taken and all your changes are rebased on it. There are extra steps to make sure
@@ -39,7 +40,7 @@ In this state you are ready to finish your feature.
 Rebasing prevents haven a "subway-map-like-history". Also, a conflict once resolved will never again make any problems.
 You can even later rebase a feature again on another branch, which is handy for backports.
 
-## Merge based workflow
+### Merge based workflow
 
 In a merge based workflow you would merge the upstream branch into the feature branch from time to time. Every such
 merge will create a new merge commit. Any changes neccessary for the merge will be attributed to this commit.
@@ -54,7 +55,8 @@ However, there are a lot of downsides to using merges:
 * You cannot easily apply the series of commits into another branch (to backport something)
 * Reverting merges may have unintended side effects
 
-# Use rebase whenever possible
+Use rebase whenever possible
+----------------------------
 
 For this reason we *strongly* advise to use only rebases and never merges. The only exceptin is an automatic merge
 commit which is added when finishing a branch (see `git merge --no-ff`). This commit is designed to mark the commits

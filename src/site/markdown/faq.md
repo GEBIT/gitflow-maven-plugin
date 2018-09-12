@@ -1,4 +1,5 @@
-# When do I start a maintenance branch
+When do I start a maintenance branch?
+-------------------------------------
 
 Maintenance branches are always started on demand only using
 
@@ -33,7 +34,8 @@ Enter explicit tag name: myproject-x.y.z
 This will produce a buildjob in Jenkins, which you can then use to release off this hotfix branch
 
 
-# I want a release `x.y` next week, but I don't want any unwanted changes to sneak in.
+I want a release `x.y` next week, but I don't want any unwanted changes to sneak in.
+------------------------------------------------------------------------------------
 
 You would start by creating a release/maintenance branch off the current development branch:
 * Checkout your development branch:
@@ -63,7 +65,8 @@ And set the next version to `x.(y+1)-SNAPSHOT`
 
 The release itself will come from the `maintenance/x.y` branch. When you're ready release it as `x.y.0`.
 
-# We do not know if a release is actually THE release, because QA takes some time.
+We do not know if a release is actually THE release, because QA takes some time.
+--------------------------------------------------------------------------------
 
 When a release is produced, that version number is "burned" (otherwise you would never be sure which version you actually mean). So in this case you need to produce a release which might not be the final one. You may use [build promotion|https://jira.gebit.de/browse/GBLD-215] to archive the release in Nexus, though.
 
@@ -73,7 +76,8 @@ When a release is produced, that version number is "burned" (otherwise you would
 * When the final release is accepted, make sure it is published ([GBLD-215|https://jira.gebit.de/browse/GBLD-215])
 * Any hotfix is produced on the same branch, i.e. if your release is `x.y.z.r`, the first hotfix is `x.y.z.(r+1)`
 
-# I want to mix integration builds and releases in some uniform and monotonous version numbering, e.g. for deployment
+I want to mix integration builds and releases in some uniform and monotonous version numbering, e.g. for deployment
+-------------------------------------------------------------------------------------------------------------------
 
 As integration builds and releases are produced from the same buildjob, you can use the build number for a uniform an monotonous versioning. For this we provide a Paramater in the Buildjob called `BUILD_DEPLOY_VERSION` (see [GBLD-218|https://jira.gebit.de/browse/GBLD-218]).
 
@@ -90,9 +94,9 @@ Example:
 * This candidate was not accepted.
 * You produced an integration build `1.2.3.1-I44` yielding `1.2.3.1.44` after the first release candidate
 * Now, with build `45` you produce the second candidate release as `1.2.3.1.45`.
-** The development version is incremented to `1.2.3.2-SNAPSHOT`
+	* The development version is incremented to `1.2.3.2-SNAPSHOT`
 * The next integration build would be `1.2.3.2-I46`
 * The second candidate was accepted, so you publish it in nexus ([GBLD-215|https://jira.gebit.de/browse/GBLD-215])
 * After a week, a hotfix is necessary.
-** No integration build has run yet
-** You directly produce it as `1.2.3.2` yielding `1.2.3.2.46` for deployment
+	* No integration build has run yet
+	* You directly produce it as `1.2.3.2` yielding `1.2.3.2.46` for deployment
