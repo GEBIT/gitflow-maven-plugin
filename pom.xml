@@ -23,7 +23,7 @@
 	<artifactId>gitflow-maven-plugin</artifactId>
 	<packaging>maven-plugin</packaging>
 	<name>gitflow-maven-plugin</name>
-	<version>2.1.1-SNAPSHOT</version>
+	<version>2.1.1</version>
 
 	<parent>
 		<groupId>de.gebit.build</groupId>
@@ -71,7 +71,7 @@
 	<properties>
 		<project.build-name>gitflow-maven-plugin</project.build-name>
 		<version.property>version.gitflow-maven-plugin</version.property>
-		<version.gitflow-maven-plugin>2.1.1-SNAPSHOT</version.gitflow-maven-plugin>
+		<version.gitflow-maven-plugin>2.1.1</version.gitflow-maven-plugin>
 
 		<!-- The Project JIRA ID -->
 		<project.jira>GBLD</project.jira>
