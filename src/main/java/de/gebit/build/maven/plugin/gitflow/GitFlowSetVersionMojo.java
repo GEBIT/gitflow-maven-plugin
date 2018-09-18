@@ -50,6 +50,7 @@ public class GitFlowSetVersionMojo extends AbstractGitFlowMojo {
         getMavenLog().info("Starting set version process");
         // set git flow configuration
         initGitFlowConfig();
+        checkCentralBranchConfig();
 
         if (newVersion == null) {
             if (settings.isInteractiveMode()) {

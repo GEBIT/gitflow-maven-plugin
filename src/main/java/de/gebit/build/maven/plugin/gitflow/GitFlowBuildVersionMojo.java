@@ -46,6 +46,7 @@ public class GitFlowBuildVersionMojo extends AbstractGitFlowMojo {
         getMavenLog().info("Starting build version process");
         // set git flow configuration
         initGitFlowConfig();
+        checkCentralBranchConfig();
 
         // get current project version from pom
         final String currentVersion = getCurrentProjectVersion();

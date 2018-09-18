@@ -64,6 +64,7 @@ public class GitFlowCheckMojo extends AbstractGitFlowMojo {
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         // set git flow configuration
         initGitFlowConfig();
+        checkCentralBranchConfig();
 
         // check for git executable
         boolean tempFailures = false;
