@@ -51,6 +51,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * </pre>
  * <p>
  * Example:
+ *
  * <pre>
  * mvn -N flow:feature-rebase
  * </pre>
@@ -63,8 +64,8 @@ import org.codehaus.plexus.util.cli.CommandLineException;
 public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
 
     /**
-     * Controls whether a merge of the development branch instead of a rebase on
-     * the development branch is performed.
+     * Controls whether a merge of the development branch instead of a rebase on the
+     * development branch is performed.
      *
      * @since 1.3.0
      */
@@ -72,9 +73,9 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
     private boolean updateWithMerge = false;
 
     /**
-     * This property applies mainly to <code>feature-finish</code>, but if it is
-     * set a merge at this point would make a later rebase impossible. So we use
-     * this property to decide wheter a warning needs to be issued.
+     * This property applies mainly to <code>feature-finish</code>, but if it is set
+     * a merge at this point would make a later rebase impossible. So we use this
+     * property to decide wheter a warning needs to be issued.
      *
      * @since 1.3.0
      */
@@ -82,13 +83,22 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
     private boolean rebaseWithoutVersionChange = false;
 
     /**
-     * If fast forward pushes on feature branches are not allowed, the remote
-     * branch is deleted before pushing the rebased branch.
+     * If fast forward pushes on feature branches are not allowed, the remote branch
+     * is deleted before pushing the rebased branch.
      *
      * @since 1.5.11
      */
     @Parameter(property = "deleteRemoteBranchOnRebase", defaultValue = "false")
     private boolean deleteRemoteBranchOnRebase = false;
+
+    /**
+     * Whether to squash a commit with correction of version for new modules and
+     * single feature commit.
+     *
+     * @since 2.1.2
+     */
+    @Parameter(property = "squashNewModuleVersionFixCommit", defaultValue = "false")
+    private boolean squashNewModuleVersionFixCommit = false;
 
     /** {@inheritDoc} */
     @Override
@@ -120,6 +130,8 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
             }
         }
         if (!continueOnCleanInstall) {
+            String baseBranch;
+            String oldFeatureVersion;
             if (featureBranchName == null) {
                 // check uncommitted changes
                 checkUncommittedChanges();
@@ -140,7 +152,7 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
                         new GitFlowFailureInfo("Remote and local feature branches '{0}' diverge.",
                                 "Rebase or merge the changes in local feature branch '{0}' first.", "'git rebase'"));
 
-                String baseBranch = gitFeatureBranchBaseBranch(featureBranchName);
+                baseBranch = gitFeatureBranchBaseBranch(featureBranchName);
                 getMavenLog().info("Base branch of feature branch is '" + baseBranch + "'");
                 // use integration branch?
                 String integrationBranch = gitFlowConfig.getIntegrationBranchPrefix() + baseBranch;
@@ -209,11 +221,15 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
                         throw new GitFlowFailureException("Feature rebase aborted by user.", null);
                     }
                 }
-
+                oldFeatureVersion = getCurrentProjectVersion();
+                gitSetBranchLocalConfig(featureBranchName, "oldFeatureVersion", oldFeatureVersion);
                 rebaseFeatureBranchOnTopOfBaseBranch(featureBranchName, baseBranch, confirmedUpdateWithMerge);
             } else {
                 continueFeatureRebase(confirmedUpdateWithMerge);
+                baseBranch = gitFeatureBranchBaseBranch(featureBranchName);
+                oldFeatureVersion = gitGetBranchLocalConfig(featureBranchName, "oldFeatureVersion");
             }
+            fixupModuleParents(featureBranchName, baseBranch, oldFeatureVersion);
             finilizeFeatureRebase(featureBranchName);
         } else {
             getMavenLog().info("Restart after failed feaure project installation detected");
@@ -420,6 +436,26 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
         }
     }
 
+    private void fixupModuleParents(String featureBranch, String baseBranch, String oldVersion)
+            throws MojoFailureException, CommandLineException {
+        String newVersion = getCurrentProjectVersion();
+        if (!newVersion.equals(oldVersion)) {
+            getLog().info("Ensure consistent version in all modules");
+            String issueNumber = getFeatureIssueNumber(featureBranch);
+            String featureFinishMessage = substituteWithIssueNumber(commitMessages.getFeatureNewModulesMessage(),
+                    issueNumber);
+            boolean amend = false;
+            if (squashNewModuleVersionFixCommit) {
+                int featureCommits = gitGetDistanceToAncestor(featureBranch, baseBranch);
+                String baseCommit = gitBranchPoint(baseBranch, featureBranch);
+                boolean hasVersionChangeCommit = (gitVersionChangeCommitOnFeatureBranch(featureBranch,
+                        baseCommit) != null);
+                amend = (featureCommits == (hasVersionChangeCommit ? 2 : 1));
+            }
+            mvnFixupVersions(newVersion, oldVersion, featureFinishMessage, amend);
+        }
+    }
+
     private void finilizeFeatureRebase(String featureBranch) throws MojoFailureException, CommandLineException {
         String tempFeatureBranch = createTempFeatureBranchName(featureBranch);
         if (gitBranchExists(tempFeatureBranch)) {
@@ -439,5 +475,6 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
         gitRemoveBranchLocalConfig(featureBranch, "newBaseVersion");
         gitRemoveBranchLocalConfig(featureBranch, "newStartCommitMessage");
         gitRemoveBranchLocalConfig(featureBranch, "newVersionChangeCommit");
+        gitRemoveBranchLocalConfig(featureBranch, "oldFeatureVersion");
     }
 }

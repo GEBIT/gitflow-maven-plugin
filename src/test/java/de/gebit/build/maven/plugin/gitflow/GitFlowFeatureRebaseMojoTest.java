@@ -9,11 +9,13 @@
 package de.gebit.build.maven.plugin.gitflow;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Properties;
@@ -21,6 +23,7 @@ import java.util.Set;
 
 import org.apache.maven.execution.MavenExecutionResult;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
+import org.codehaus.plexus.util.FileUtils;
 import org.eclipse.jgit.api.CheckoutCommand.Stage;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.junit.After;
@@ -62,6 +65,9 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
     private static final String INTEGRATION_MAINTENANCE_BRANCH = "integration/" + MAINTENANCE_BRANCH;
 
     private static final String COMMIT_MESSAGE_SET_VERSION = BasicConstants.EXISTING_FEATURE_VERSION_COMMIT_MESSAGE;
+
+    private static final String COMMIT_MESSAGE_FIXUP_VERSION = BasicConstants.EXISTING_FEATURE_ISSUE
+            + ": updating versions for new modules on feature branch";
 
     private static final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
 
@@ -2048,6 +2054,232 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
                 COMMIT_MESSAGE_FEATURE_TESTFILE, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_MASTER_TESTFILE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "breakpoint");
+    }
+
+    @Test
+    public void testExecuteWithNewFeatureModuleAndChangedMasterVersion() throws Exception {
+        // set up
+        final String NEW_MASTER_VERSION = "7.6.5-SNAPSHOT";
+        final String NEW_FEATURE_VERSION = "7.6.5-" + BasicConstants.EXISTING_FEATURE_ISSUE + "-SNAPSHOT";
+        final String COMMIT_MESSAGE_MASTER_VERSION_UPDATE = "MASTER: update project version";
+        final String COMMIT_MESSAGE_NEW_FEATURE_MODULE = "FEATURE: added module";
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        replaceVersion(TestProjects.BASIC.version, NEW_MASTER_VERSION);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_MASTER_VERSION_UPDATE);
+        git.push(repositorySet);
+        git.switchToBranch(repositorySet, FEATURE_BRANCH);
+        createNewModule(FEATURE_VERSION);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_NEW_FEATURE_MODULE);
+        git.push(repositorySet);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, FEATURE_BRANCH, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FIXUP_VERSION,
+                COMMIT_MESSAGE_NEW_FEATURE_MODULE, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_MASTER_VERSION_UPDATE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_FEATURE_VERSION);
+        assertParentVersionsInPom(new File(repositorySet.getWorkingDirectory(), "module"), NEW_FEATURE_VERSION);
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.commitId(repositorySet, "HEAD^^");
+
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
+        assertEquals(NEW_MASTER_VERSION, branchConfig.getProperty("baseVersion"));
+        assertEquals(COMMIT_MESSAGE_SET_VERSION, branchConfig.getProperty("startCommitMessage"));
+        assertEquals(EXPECTED_VERSION_CHANGE_COMMIT, branchConfig.getProperty("versionChangeCommit"));
+    }
+
+    @Test
+    public void testExecuteWithNewFeatureModuleAndChangedMasterVersionAndSquashNewModuleVersionFixCommitTrue()
+            throws Exception {
+        // set up
+        final String NEW_MASTER_VERSION = "7.6.5-SNAPSHOT";
+        final String NEW_FEATURE_VERSION = "7.6.5-" + BasicConstants.EXISTING_FEATURE_ISSUE + "-SNAPSHOT";
+        final String COMMIT_MESSAGE_MASTER_VERSION_UPDATE = "MASTER: update project version";
+        final String COMMIT_MESSAGE_NEW_FEATURE_MODULE = "FEATURE: added module";
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        replaceVersion(TestProjects.BASIC.version, NEW_MASTER_VERSION);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_MASTER_VERSION_UPDATE);
+        git.push(repositorySet);
+        git.switchToBranch(repositorySet, FEATURE_BRANCH);
+        createNewModule(FEATURE_VERSION);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_NEW_FEATURE_MODULE);
+        git.push(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("squashNewModuleVersionFixCommit", "true");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, FEATURE_BRANCH, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_NEW_FEATURE_MODULE,
+                COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_MASTER_VERSION_UPDATE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_FEATURE_VERSION);
+        assertParentVersionsInPom(new File(repositorySet.getWorkingDirectory(), "module"), NEW_FEATURE_VERSION);
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.commitId(repositorySet, "HEAD^");
+
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
+        assertEquals(NEW_MASTER_VERSION, branchConfig.getProperty("baseVersion"));
+        assertEquals(COMMIT_MESSAGE_SET_VERSION, branchConfig.getProperty("startCommitMessage"));
+        assertEquals(EXPECTED_VERSION_CHANGE_COMMIT, branchConfig.getProperty("versionChangeCommit"));
+    }
+
+    @Test
+    public void testExecuteWithNewFeatureModuleAndCommitAndChangedMasterVersionAndSquashNewModuleVersionFixCommitTrue()
+            throws Exception {
+        // set up
+        final String NEW_MASTER_VERSION = "7.6.5-SNAPSHOT";
+        final String NEW_FEATURE_VERSION = "7.6.5-" + BasicConstants.EXISTING_FEATURE_ISSUE + "-SNAPSHOT";
+        final String COMMIT_MESSAGE_MASTER_VERSION_UPDATE = "MASTER: update project version";
+        final String COMMIT_MESSAGE_NEW_FEATURE_MODULE = "FEATURE: added module";
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        replaceVersion(TestProjects.BASIC.version, NEW_MASTER_VERSION);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_MASTER_VERSION_UPDATE);
+        git.push(repositorySet);
+        git.switchToBranch(repositorySet, FEATURE_BRANCH);
+        createNewModule(FEATURE_VERSION);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_NEW_FEATURE_MODULE);
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("squashNewModuleVersionFixCommit", "true");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, FEATURE_BRANCH, FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FIXUP_VERSION,
+                GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_NEW_FEATURE_MODULE, COMMIT_MESSAGE_SET_VERSION,
+                COMMIT_MESSAGE_MASTER_VERSION_UPDATE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_FEATURE_VERSION);
+        assertParentVersionsInPom(new File(repositorySet.getWorkingDirectory(), "module"), NEW_FEATURE_VERSION);
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.commitId(repositorySet, "HEAD^^^");
+
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
+        assertEquals(NEW_MASTER_VERSION, branchConfig.getProperty("baseVersion"));
+        assertEquals(COMMIT_MESSAGE_SET_VERSION, branchConfig.getProperty("startCommitMessage"));
+        assertEquals(EXPECTED_VERSION_CHANGE_COMMIT, branchConfig.getProperty("versionChangeCommit"));
+    }
+
+    @Test
+    public void testExecuteWithNewFeatureModuleAndChangedMasterVersionAndUpdateWithMerge() throws Exception {
+        // set up
+        final String NEW_MASTER_VERSION = "7.6.5-SNAPSHOT";
+        final String COMMIT_MESSAGE_MASTER_VERSION_UPDATE = "MASTER: update project version";
+        final String COMMIT_MESSAGE_NEW_FEATURE_MODULE = "FEATURE: added module";
+        final String USED_FEATURE_BRANCH = BasicConstants.FEATURE_WITHOUT_VERSION_BRANCH;
+        final String USED_COMMIT_MESSAGE_FIXUP_VERSION = BasicConstants.FEATURE_WITHOUT_VERSION_ISSUE
+                + ": updating versions for new modules on feature branch";
+        final String USED_COMMIT_MESSAGE_MARGE = TestProjects.BASIC.jiraProject + "-NONE: Merge branch "
+                + MASTER_BRANCH + " into " + USED_FEATURE_BRANCH;
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        replaceVersion(TestProjects.BASIC.version, NEW_MASTER_VERSION);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_MASTER_VERSION_UPDATE);
+        git.push(repositorySet);
+        git.switchToBranch(repositorySet, USED_FEATURE_BRANCH);
+        createNewModule(BasicConstants.FEATURE_WITHOUT_VERSION_VERSION);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_NEW_FEATURE_MODULE);
+        git.push(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.updateWithMerge", "true");
+        userProperties.setProperty("flow.rebaseWithoutVersionChange", "false");
+        userProperties.setProperty("squashNewModuleVersionFixCommit", "true");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, USED_FEATURE_BRANCH);
+
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, USED_FEATURE_BRANCH, USED_FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, USED_FEATURE_BRANCH, USED_COMMIT_MESSAGE_FIXUP_VERSION,
+                USED_COMMIT_MESSAGE_MARGE, COMMIT_MESSAGE_NEW_FEATURE_MODULE, COMMIT_MESSAGE_MASTER_VERSION_UPDATE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_MASTER_VERSION);
+        assertParentVersionsInPom(new File(repositorySet.getWorkingDirectory(), "module"), NEW_MASTER_VERSION);
+
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH,
+                USED_FEATURE_BRANCH);
+        assertNull(branchConfig.getProperty("versionChangeCommit"));
+    }
+
+    @Test
+    public void testExecuteWithNewFeatureModuleAndChangedMasterVersionAndWithoutFeatureVersion() throws Exception {
+        // set up
+        final String NEW_MASTER_VERSION = "7.6.5-SNAPSHOT";
+        final String COMMIT_MESSAGE_MASTER_VERSION_UPDATE = "MASTER: update project version";
+        final String COMMIT_MESSAGE_NEW_FEATURE_MODULE = "FEATURE: added module";
+        final String USED_COMMIT_MESSAGE_FIXUP_VERSION = BasicConstants.FEATURE_WITHOUT_VERSION_ISSUE
+                + ": updating versions for new modules on feature branch";
+        final String USED_FEATURE_BRANCH = BasicConstants.FEATURE_WITHOUT_VERSION_BRANCH;
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        replaceVersion(TestProjects.BASIC.version, NEW_MASTER_VERSION);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_MASTER_VERSION_UPDATE);
+        git.push(repositorySet);
+        git.switchToBranch(repositorySet, USED_FEATURE_BRANCH);
+        createNewModule(BasicConstants.FEATURE_WITHOUT_VERSION_VERSION);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_NEW_FEATURE_MODULE);
+        git.push(repositorySet);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, USED_FEATURE_BRANCH);
+
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, USED_FEATURE_BRANCH, USED_FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, USED_FEATURE_BRANCH, USED_COMMIT_MESSAGE_FIXUP_VERSION,
+                COMMIT_MESSAGE_NEW_FEATURE_MODULE, COMMIT_MESSAGE_MASTER_VERSION_UPDATE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_MASTER_VERSION);
+        assertParentVersionsInPom(new File(repositorySet.getWorkingDirectory(), "module"), NEW_MASTER_VERSION);
+
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH,
+                USED_FEATURE_BRANCH);
+        assertNull(branchConfig.getProperty("versionChangeCommit"));
+    }
+
+    private void createNewModule(String version) throws IOException {
+        File workingDir = repositorySet.getWorkingDirectory();
+        File moduleDir = new File(workingDir, "module");
+        moduleDir.mkdir();
+        FileUtils.fileWrite(new File(moduleDir, "pom.xml"),
+                "<project xmlns=\"http://maven.apache.org/POM/4.0.0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
+                        + "       xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd\">\n"
+                        + "       <modelVersion>4.0.0</modelVersion>\n" + "       <parent>\n"
+                        + "               <groupId>de.gebit.build.maven.test</groupId>\n"
+                        + "               <artifactId>basic-project</artifactId>\n" + "               <version>"
+                        + version + "</version>\n" + "       </parent>\n" + "       <artifactId>module</artifactId>\n"
+                        + "</project>\n");
+        File pom = new File(workingDir, "pom.xml");
+        String pomContents = FileUtils.fileRead(pom);
+        pomContents = pomContents.replaceAll("</project>",
+                "\t<modules><module>module</module></modules>\n\t<packaging>pom</packaging>\n</project>");
+        FileUtils.fileWrite(pom, pomContents);
+    }
+
+    private void replaceVersion(String oldVersion, String newVersion) throws IOException {
+        File pom = new File(repositorySet.getWorkingDirectory(), "pom.xml");
+        String pomContents = FileUtils.fileRead(pom);
+        pomContents = pomContents.replaceAll("<version>" + oldVersion + "</version>",
+                "<version>" + newVersion + "</version>");
+        pomContents = pomContents.replaceAll("<version.build>" + oldVersion + "</version.build>",
+                "<version.build>" + newVersion + "</version.build>");
+        FileUtils.fileWrite(pom, pomContents);
     }
 
 }

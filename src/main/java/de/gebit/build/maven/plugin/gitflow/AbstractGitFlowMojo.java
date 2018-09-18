@@ -839,7 +839,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Remove all central branch configs for passed branch (usually after branch was deleted).
+     * Remove all central branch configs for passed branch (usually after branch was
+     * deleted).
      *
      * @param branchName
      *            the name of the branch
@@ -3014,9 +3015,9 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      *
      * @param version
      *            the correct version
-     * @param issueNumber
-     *            all versions that contains this issueNumber will be replaced with
-     *            correct version
+     * @param uniqueVersionPart
+     *            all versions that contains this unique part (e.g. issueNumber)
+     *            will be replaced with correct version
      * @param message
      *            the message for correction commit if <code>amend=false</code>
      * @param amend
@@ -3025,14 +3026,14 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws MojoFailureException
      * @throws CommandLineException
      */
-    protected void mvnFixupVersions(final String version, final String issueNumber, final String message, boolean amend)
-            throws MojoFailureException, CommandLineException {
+    protected void mvnFixupVersions(final String version, final String uniqueVersionPart, final String message,
+            boolean amend) throws MojoFailureException, CommandLineException {
         if (tychoBuild) {
             // not supported
         } else {
             executeMvnCommand(XML_EDITOR_MAVEN_PLUGIN_SET_GOAL, "-N", "-DtargetFile=**/pom.xml",
                     "-DexcludeFile=**/resources/**/pom.xml,**/target/**/pom.xml",
-                    "-Dxpath=/project/parent/version[contains(text(),'" + issueNumber + "')]/text()",
+                    "-Dxpath=/project/parent/version[contains(text(),'" + uniqueVersionPart + "')]/text()",
                     "-Dreplacement=" + version, "-DfailIfNoMatch=false");
             CommandResult result;
             if (amend) {

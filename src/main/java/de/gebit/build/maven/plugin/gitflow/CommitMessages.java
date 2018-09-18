@@ -23,6 +23,7 @@ package de.gebit.build.maven.plugin.gitflow;
  */
 public class CommitMessages {
     private String featureStartMessage;
+    private String featureNewModulesMessage;
     private String featureFinishMessage;
 
     private String epicStartMessage;
@@ -58,6 +59,7 @@ public class CommitMessages {
 
     public CommitMessages() {
         featureStartMessage = "updating versions for feature branch";
+        featureNewModulesMessage = "updating versions for new modules on feature branch";
         featureFinishMessage = "updating versions for development branch";
 
         epicStartMessage = "updating versions for epic branch";
@@ -92,6 +94,21 @@ public class CommitMessages {
      */
     public void setFeatureStartMessage(String aFeatureStartMessage) {
         this.featureStartMessage = aFeatureStartMessage;
+    }
+
+    /**
+     * @return the featureNewModulesMessage
+     */
+    public String getFeatureNewModulesMessage() {
+        return featureNewModulesMessage;
+    }
+
+    /**
+     * @param aFeatureNewModulesMessage
+     *            the featureNewModulesMessage to set
+     */
+    public void setFeatureNewModulesMessage(String aFeatureNewModulesMessage) {
+        this.featureNewModulesMessage = aFeatureNewModulesMessage;
     }
 
     /**

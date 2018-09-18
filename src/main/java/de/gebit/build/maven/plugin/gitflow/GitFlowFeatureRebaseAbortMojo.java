@@ -61,6 +61,7 @@ public class GitFlowFeatureRebaseAbortMojo extends AbstractGitFlowFeatureMojo {
             gitRemoveBranchLocalConfig(featureBranch, "newBaseVersion");
             gitRemoveBranchLocalConfig(featureBranch, "newStartCommitMessage");
             gitRemoveBranchLocalConfig(featureBranch, "newVersionChangeCommit");
+            gitRemoveBranchLocalConfig(featureBranch, "oldFeatureVersion");
             String tempFeatureBranch = createTempFeatureBranchName(featureBranch);
             if (gitBranchExists(tempFeatureBranch)) {
                 getLog().info("Deleting temporary branch used for feature rebase.");

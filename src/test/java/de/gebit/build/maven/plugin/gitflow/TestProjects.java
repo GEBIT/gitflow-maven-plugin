@@ -713,8 +713,7 @@ public class TestProjects {
         public static final String FEATURE_WITHOUT_VERSION_ISSUE = BASIC.jiraProject + "-109";
         public static final String FEATURE_WITHOUT_VERSION_NAME = FEATURE_WITHOUT_VERSION_ISSUE + "-without-version";
         public static final String FEATURE_WITHOUT_VERSION_BRANCH = "feature/" + FEATURE_WITHOUT_VERSION_NAME;
-        public static final String FEATURE_WITHOUT_VERSION_VERSION = TestProjects.BASIC.releaseVersion + "-"
-                + FEATURE_WITHOUT_VERSION_ISSUE + "-SNAPSHOT";
+        public static final String FEATURE_WITHOUT_VERSION_VERSION = TestProjects.BASIC.version;
         public static final String FEATURE_WITHOUT_VERSION_VERSION_COMMIT_MESSAGE = FEATURE_WITHOUT_VERSION_ISSUE
                 + ": updating versions for feature branch";
 
@@ -783,8 +782,7 @@ public class TestProjects {
                 + "-without-version-on-epic";
         public static final String FEATURE_WITHOUT_VERSION_ON_EPIC_BRANCH = "feature/"
                 + FEATURE_WITHOUT_VERSION_ON_EPIC_NAME;
-        public static final String FEATURE_WITHOUT_VERSION_ON_EPIC_VERSION = TestProjects.BASIC.releaseVersion + "-"
-                + FEATURE_WITHOUT_VERSION_ON_EPIC_ISSUE + "-SNAPSHOT";
+        public static final String FEATURE_WITHOUT_VERSION_ON_EPIC_VERSION = EXISTING_EPIC_VERSION;
         public static final String FEATURE_WITHOUT_VERSION_ON_EPIC_VERSION_COMMIT_MESSAGE = FEATURE_WITHOUT_VERSION_ON_EPIC_ISSUE
                 + ": updating versions for feature branch";
 
@@ -793,8 +791,7 @@ public class TestProjects {
                 + "-without-vers-on-epic-without-vers";
         public static final String FEATURE_WITHOUT_VERSION_ON_EPIC_WITHOUT_VERSION_BRANCH = "feature/"
                 + FEATURE_WITHOUT_VERSION_ON_EPIC_WITHOUT_VERSION_NAME;
-        public static final String FEATURE_WITHOUT_VERSION_ON_EPIC_WITHOUT_VERSION_VERSION = TestProjects.BASIC.releaseVersion
-                + "-" + FEATURE_WITHOUT_VERSION_ON_EPIC_WITHOUT_VERSION_ISSUE + "-SNAPSHOT";
+        public static final String FEATURE_WITHOUT_VERSION_ON_EPIC_WITHOUT_VERSION_VERSION = TestProjects.BASIC.version;
         public static final String FEATURE_WITHOUT_VERSION_ON_EPIC_WITHOUT_VERSION_VERSION_COMMIT_MESSAGE = FEATURE_WITHOUT_VERSION_ON_EPIC_WITHOUT_VERSION_ISSUE
                 + ": updating versions for feature branch";
     }
