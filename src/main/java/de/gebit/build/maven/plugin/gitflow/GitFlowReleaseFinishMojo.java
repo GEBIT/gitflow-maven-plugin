@@ -199,12 +199,6 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
     }
 
     @Override
-    protected boolean isProcessAdditionalVersionCommands() {
-        throw new IllegalStateException(
-                "release-finish does not process additional version commands for release version.");
-    }
-
-    @Override
     protected String getCurrentGoal() {
         return "release-finish";
     }
@@ -222,7 +216,7 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
             if (!isReleaseBranch(currentBranch)) {
                 throw new GitFlowFailureException("Current branch '" + currentBranch + "' is not a release branch.",
                         "Please switch to the release branch that you want to finish in order to proceed.",
-                        "'git checkout BRANCH' to switch to the release branch");
+                        "'git checkout INTERNAL' to switch to the release branch");
             }
             getMavenLog().info("Release branch to be finished is '" + currentBranch + "'");
             String developmentBranch = gitGetBranchCentralConfig(currentBranch, BranchConfigKeys.BASE_BRANCH);

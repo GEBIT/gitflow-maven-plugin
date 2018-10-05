@@ -72,15 +72,6 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
     @Parameter(property = "pushReleaseBranch", required = false)
     private boolean pushReleaseBranch;
 
-    /**
-     * Wheahter to process additional version commands after setting version for
-     * release. The default is <code>false</code>.
-     *
-     * @since 2.0.1
-     */
-    @Parameter(property = "processAdditionalVersionCommands", required = false)
-    private boolean processAdditionalVersionCommands;
-
     @Override
     protected boolean isSkipTestProject() {
         throw new IllegalStateException("release-start does not test the project.");
@@ -144,11 +135,6 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
     @Override
     protected String getDevelopmentVersion() {
         throw new IllegalStateException("release-start does not set the next development version project.");
-    }
-
-    @Override
-    protected boolean isProcessAdditionalVersionCommands() {
-        return processAdditionalVersionCommands;
     }
 
     @Override

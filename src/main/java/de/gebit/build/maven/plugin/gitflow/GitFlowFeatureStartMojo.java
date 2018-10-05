@@ -210,7 +210,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
                 getLog().info("Added feature issue number to project version: " + version);
                 if (!currentVersion.equals(version)) {
                     getMavenLog().info("Setting version '" + version + "' for project on feature branch...");
-                    mvnSetVersions(version, "On feature branch: ", featureBranchName);
+                    mvnSetVersions(version, CommandContext.VERSION, "On feature branch: ", featureBranchName);
                     gitCommit(featureStartMessage);
                     versionChangeCommit = getCurrentCommit();
                 } else {
@@ -288,15 +288,13 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
      * {@link AbstractGitFlowMojo#commandsAfterVersion}.
      */
     @Override
-    protected List<String> getCommandsAfterVersion(boolean processAdditionalCommands) throws MojoFailureException {
+    protected List<String> getCommandsAfterVersion(CommandContext commandPolicy) throws MojoFailureException {
         if (StringUtils.isEmpty(commandsAfterFeatureVersion)) {
-            return super.getCommandsAfterVersion(processAdditionalCommands);
+            return super.getCommandsAfterVersion(commandPolicy);
         }
         List<String> result = new ArrayList<String>();
         result.add(commandsAfterFeatureVersion);
-        if (processAdditionalCommands) {
-            result.addAll(getAdditionalVersionCommands());
-        }
+        result.addAll(getAdditionalVersionCommands(commandPolicy));
         return result;
     }
 

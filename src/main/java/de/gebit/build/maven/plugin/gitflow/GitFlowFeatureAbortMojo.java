@@ -65,7 +65,7 @@ public class GitFlowFeatureAbortMojo extends AbstractGitFlowFeatureMojo {
                     new GitFlowFailureInfo(
                             "In non-interactive mode 'mvn flow:feature-abort' can be executed only on a feature branch.",
                             "Please switch to a feature branch first or run in interactive mode.",
-                            "'git checkout BRANCH' to switch to the feature branch",
+                            "'git checkout INTERNAL' to switch to the feature branch",
                             "'mvn flow:feature-abort' to run in interactive mode"));
             getLog().info("Aborting feature on selected feature branch: " + featureBranchName);
         } else {

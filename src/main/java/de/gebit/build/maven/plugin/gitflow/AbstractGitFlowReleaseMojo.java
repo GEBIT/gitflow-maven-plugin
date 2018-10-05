@@ -93,11 +93,6 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
     protected abstract String getDevelopmentVersion();
 
     /**
-     * The mojo provides this flag from a configuration property.
-     */
-    protected abstract boolean isProcessAdditionalVersionCommands();
-
-    /**
      * The name of maven goal that is being executed currently.
      */
     protected abstract String getCurrentGoal();
@@ -237,7 +232,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
 
         if (!version.equals(currentVersion)) {
             getMavenLog().info("Setting release version '" + version + "' for project on release branch...");
-            mvnSetVersions(version, isProcessAdditionalVersionCommands() ? "On release branch: " : null);
+            mvnSetVersions(version, CommandContext.RELEASE, "On release branch: ");
             gitCommit(commitMessages.getReleaseStartMessage());
         }
 
@@ -271,7 +266,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         if (!isReleaseBranch(releaseBranch)) {
             throw new GitFlowFailureException("Current branch '" + releaseBranch + "' is not a release branch.",
                     "Please switch to the release branch that you want to finish in order to proceed.",
-                    "'git checkout BRANCH' to switch to the release branch");
+                    "'git checkout INTERNAL' to switch to the release branch");
         }
 
         // get current project version from pom
@@ -461,7 +456,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
         getMavenLog().info("Setting next development version '" + nextSnapshotVersion
                 + "' for project on development branch...");
-        mvnSetVersions(nextSnapshotVersion, "Next development version: ");
+        mvnSetVersions(nextSnapshotVersion, CommandContext.VERSION, "Next development version: ");
 
         // git commit -a -m updating for next development version
         gitCommit(commitMessages.getReleaseFinishMessage());

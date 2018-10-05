@@ -602,7 +602,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
                     new GitFlowFailureInfo(
                             "In non-interactive mode 'mvn flow:feature-finish' can be executed only on a feature branch.",
                             "Please switch to a feature branch first or run in interactive mode.",
-                            "'git checkout BRANCH' to switch to the feature branch",
+                            "'git checkout INTERNAL' to switch to the feature branch",
                             "'mvn flow:feature-finish' to run in interactive mode"));
             getLog().info("Finishing feature on selected feature branch: " + featureBranch);
 
@@ -643,7 +643,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
             String featureFinishMessage = substituteWithIssueNumber(commitMessages.getFeatureFinishMessage(),
                     issueNumber);
             getMavenLog().info("Setting base version '" + baseVersion + "' for project on feature branch...");
-            mvnSetVersions(baseVersion, null, baseBranch);
+            mvnSetVersions(baseVersion, CommandContext.INTERNAL, null, baseBranch);
             gitCommit(featureFinishMessage);
         } else {
             getLog().info("Project version on feature branch is same as project version on base branch. "

@@ -76,7 +76,7 @@ public class GitFlowSetVersionMojo extends AbstractGitFlowMojo {
 
         getMavenLog().info("Setting version '" + newVersion + "' for project on current branch...");
         // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
-        mvnSetVersions(newVersion, "");
+        mvnSetVersions(newVersion, CommandContext.VERSION, "");
         getMavenLog().info("Set version process finished");
     }
 }

@@ -2967,7 +2967,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws CommandLineException
      */
     protected void mvnSetVersions(final String version) throws MojoFailureException, CommandLineException {
-        mvnSetVersions(version, null);
+        mvnSetVersions(version, CommandContext.VERSION, null);
     }
 
     /**
@@ -2982,14 +2982,14 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws MojoFailureException
      * @throws CommandLineException
      */
-    protected void mvnSetVersions(final String version, String promptPrefix)
+    protected void mvnSetVersions(final String version, final CommandContext commandContext, String promptPrefix)
             throws MojoFailureException, CommandLineException {
-        mvnSetVersions(version, promptPrefix, null, false);
+        mvnSetVersions(version, commandContext, promptPrefix, null, false);
     }
 
-    protected void mvnSetVersions(final String version, String promptPrefix, String targetBranch)
+    protected void mvnSetVersions(final String version, final CommandContext commandContext, String promptPrefix, String targetBranch)
             throws MojoFailureException, CommandLineException {
-        mvnSetVersions(version, promptPrefix, null, false, targetBranch);
+        mvnSetVersions(version, commandContext, promptPrefix, null, false, targetBranch);
     }
 
     /**
@@ -3004,9 +3004,9 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws MojoFailureException
      * @throws CommandLineException
      */
-    protected void mvnSetVersions(final String version, String promptPrefix, String branchWithAdditionalVersionInfo,
+    protected void mvnSetVersions(final String version, final CommandContext commandContext, String promptPrefix, String branchWithAdditionalVersionInfo,
             boolean sameBaseVersion) throws MojoFailureException, CommandLineException {
-        mvnSetVersions(version, promptPrefix, branchWithAdditionalVersionInfo, sameBaseVersion, null);
+        mvnSetVersions(version, commandContext, promptPrefix, branchWithAdditionalVersionInfo, sameBaseVersion, null);
     }
 
     /**
@@ -3054,13 +3054,15 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      *
      * @param version
      *            New version to set.
+     * @param contexts
+     *            The current command policy
      * @param promptPrefix
      *            Specify a prompt prefix. A value <code>!= null</code> triggers
      *            processing of {@link #additionalVersionCommands}
      * @throws MojoFailureException
      * @throws CommandLineException
      */
-    protected void mvnSetVersions(final String version, String promptPrefix, String branchWithAdditionalVersionInfo,
+    protected void mvnSetVersions(final String version, final CommandContext commandContext, String promptPrefix, String branchWithAdditionalVersionInfo,
             boolean sameBaseVersion, String targetBranch) throws MojoFailureException, CommandLineException {
         BranchCentralConfigChanges branchConfigChanges = new BranchCentralConfigChanges();
         String currentBranch = branchWithAdditionalVersionInfo;
@@ -3071,8 +3073,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                 // we are on a detached commit
             }
         }
-        boolean processAdditionalCommands = (promptPrefix != null);
-        if (processAdditionalCommands && additionalVersionCommands != null) {
+        if (additionalVersionCommands != null) {
             StringSearchInterpolator interpolator = new StringSearchInterpolator("@{", "}");
             interpolator.addValueSource(new PropertiesBasedValueSource(getProject().getProperties()));
             Properties properties = new Properties();
@@ -3082,6 +3083,9 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             // process additional commands/parameters
             for (int i = 0; i < additionalVersionCommands.length; i++) {
                 GitFlowParameter parameter = additionalVersionCommands[i];
+                if (!parameter.getCommandContexts().contains(commandContext)) {
+                    continue;
+                }
                 if (!parameter.isEnabled()) {
                     continue;
                 }
@@ -3159,7 +3163,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             executeMvnCommand(OutputMode.PROGRESS, VERSIONS_MAVEN_PLUGIN_SET_GOAL, "-DnewVersion=" + version,
                     "-DgenerateBackupPoms=false");
         }
-        for (String command : getCommandsAfterVersion(processAdditionalCommands)) {
+        for (String command : getCommandsAfterVersion(commandContext)) {
             try {
                 command = normilizeWhitespaces(command.replaceAll("\\@\\{version\\}", version));
                 executeMvnCommand(OutputMode.PROGRESS, CommandLineUtils.translateCommandline(command));
@@ -3202,6 +3206,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             for (int i = 0; i < additionalMavenCommands.length; i++) {
                 GitFlowParameter parameter = additionalMavenCommands[i];
                 if (!parameter.isEnabled()) {
+                    getLog().debug("Skipping disabled parameter: " + parameter);
                     continue;
                 }
                 if (!parameter.isEnabledByPrompt() && parameter.getProperty() != null
@@ -3281,6 +3286,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         List<String> result = new ArrayList<String>();
         for (GitFlowParameter parameter : additionalMavenCommands) {
             if (!parameter.isEnabled()) {
+                getLog().debug("Skipping disabled command: " + parameter);
                 continue;
             }
             if (parameter.isEnabledByPrompt() && !"true".equals(parameter.getValue())
@@ -3322,17 +3328,23 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         return result;
     }
 
-    protected List<String> getAdditionalVersionCommands() throws MojoFailureException {
+    protected List<String> getAdditionalVersionCommands(CommandContext commandContext) throws MojoFailureException {
         if (additionalVersionCommands == null || additionalVersionCommands.length == 0) {
             return Collections.emptyList();
         }
         List<String> result = new ArrayList<String>();
         for (GitFlowParameter parameter : additionalVersionCommands) {
+            if (!parameter.getCommandContexts().contains(commandContext)) {
+                getLog().debug("Command not enabled for " + commandContext + ": " + parameter);
+                continue;
+            }
             if (!parameter.isEnabled()) {
+                getLog().debug("Command not enabled: " + parameter);
                 continue;
             }
             if (parameter.isEnabledByPrompt() && !"true".equals(parameter.getValue())
                     && !"yes".equals(parameter.getValue())) {
+                getLog().debug("Command disabled by prompt: " + parameter);
                 continue;
             }
 
@@ -3358,14 +3370,12 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      *
      * @return a new unmodifiable list with the command.
      */
-    protected List<String> getCommandsAfterVersion(boolean processAdditionalCommands) throws MojoFailureException {
+    protected List<String> getCommandsAfterVersion(CommandContext commandContext) throws MojoFailureException {
         List<String> result = new ArrayList<String>();
         if (!StringUtils.isEmpty(commandsAfterVersion)) {
             result.add(commandsAfterVersion);
         }
-        if (processAdditionalCommands) {
-            result.addAll(getAdditionalVersionCommands());
-        }
+        result.addAll(getAdditionalVersionCommands(commandContext));
         return result;
     }
 

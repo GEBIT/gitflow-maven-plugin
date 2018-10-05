@@ -92,7 +92,7 @@ public class GitFlowReleaseAbortMojo extends AbstractGitFlowMojo {
                     throw new GitFlowFailureException(
                             "More than one release branch exists. Cannot abort release from non-release branch.",
                             "Please switch to a release branch first in order to proceed.",
-                            "'git checkout BRANCH' to switch to the release branch");
+                            "'git checkout INTERNAL' to switch to the release branch");
                 }
                 releaseBranch = releaseBranches.get(0);
             }

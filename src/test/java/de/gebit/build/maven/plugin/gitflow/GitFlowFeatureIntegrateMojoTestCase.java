@@ -136,7 +136,7 @@ public class GitFlowFeatureIntegrateMojoTestCase extends AbstractGitFlowMojoTest
         assertGitFlowFailureException(result,
                 "'mvn flow:feature-integrate' can be executed only on the feature branch "
                         + "that should be integrated into another feature branch.",
-                "Please switch to a feature branch first.", "'git checkout BRANCH' to switch to the feature branch");
+                "Please switch to a feature branch first.", "'git checkout INTERNAL' to switch to the feature branch");
     }
 
     @Test

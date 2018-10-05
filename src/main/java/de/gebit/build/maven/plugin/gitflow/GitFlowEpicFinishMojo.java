@@ -89,7 +89,7 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
                             new GitFlowFailureInfo(
                                     "In non-interactive mode 'mvn flow:epic-finish' can be executed only on an epic branch.",
                                     "Please switch to an epic branch first or run in interactive mode.",
-                                    "'git checkout BRANCH' to switch to the epic branch",
+                                    "'git checkout INTERNAL' to switch to the epic branch",
                                     "'mvn flow:epic-finish' to run in interactive mode"));
                     getLog().info("Finishing epic on selected epic branch: " + epicBranchName);
                     gitEnsureLocalBranchIsUpToDateIfExists(epicBranchName,
@@ -164,7 +164,7 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
                         String epicFinishMessage = substituteWithIssueNumber(commitMessages.getEpicFinishMessage(),
                                 issueNumber);
                         getMavenLog().info("Setting base version '" + baseVersion + "' for project on epic branch...");
-                        mvnSetVersions(baseVersion, null, baseBranch);
+                        mvnSetVersions(baseVersion, CommandContext.INTERNAL, null, baseBranch);
                         gitCommit(epicFinishMessage);
 
                         gitCheckout(baseBranch);

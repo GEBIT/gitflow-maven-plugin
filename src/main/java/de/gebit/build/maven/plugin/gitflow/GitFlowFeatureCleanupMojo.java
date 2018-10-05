@@ -132,7 +132,7 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
                                     "In non-interactive mode 'mvn flow:feature-rebase-cleanup' can be executed only on "
                                             + "a feature branch.",
                                     "Please switch to a feature branch first or run in interactive mode.",
-                                    "'git checkout BRANCH' to switch to the feature branch",
+                                    "'git checkout INTERNAL' to switch to the feature branch",
                                     "'mvn flow:feature-rebase-cleanup' to run in interactive mode"));
                     getLog().info("Cleaning up feature on selected feature branch: " + featureBranchName);
                     gitEnsureLocalBranchIsUpToDateIfExists(featureBranchName, new GitFlowFailureInfo(

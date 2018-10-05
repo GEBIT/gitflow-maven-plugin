@@ -68,7 +68,7 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
                             new GitFlowFailureInfo(
                                     "In non-interactive mode 'mvn flow:epic-update' can be executed only on an epic branch.",
                                     "Please switch to an epic branch first or run in interactive mode.",
-                                    "'git checkout BRANCH' to switch to the epic branch",
+                                    "'git checkout INTERNAL' to switch to the epic branch",
                                     "'mvn flow:epic-update' to run in interactive mode"));
                     getLog().info("Updating epic on selected epic branch: " + epicBranchName);
                     gitEnsureLocalBranchIsUpToDateIfExists(epicBranchName,

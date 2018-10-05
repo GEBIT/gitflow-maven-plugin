@@ -8,6 +8,9 @@
 //
 package de.gebit.build.maven.plugin.gitflow;
 
+import java.util.Arrays;
+import java.util.EnumSet;
+
 import org.apache.maven.plugins.annotations.Parameter;
 
 /**
@@ -23,6 +26,16 @@ public class GitFlowParameter {
      */
     @Parameter(required = false)
     protected String prompt;
+
+    /**
+     * Explicit command contexts for a command. The command is executed only if
+     * used in one of the specified contexts. By default only for normal version
+     * changes.
+     * 
+     * @since 2.1.2
+     */
+    @Parameter(required = false)
+    protected CommandContext[] contexts = new CommandContext[] { CommandContext.VERSION };
 
     /**
      * Can be bound to a variable to control whether it is being executed or not. Any non-empty value that is neither
@@ -117,6 +130,21 @@ public class GitFlowParameter {
      */
     public void setValue(String aValue) {
         this.value = aValue;
+    }
+
+    /**
+     * @return an EnumSet of enabled command contexts.
+     * @since 2.1.2
+     */
+    public EnumSet<CommandContext> getCommandContexts() {
+        switch (contexts.length) {
+        case 0:
+            return EnumSet.noneOf(CommandContext.class);
+        case 1:
+            return EnumSet.<CommandContext>of(contexts[0]);
+        default:
+            return EnumSet.<CommandContext>of(contexts[0], Arrays.copyOfRange(contexts, 1, contexts.length));
+        }
     }
 
     /**

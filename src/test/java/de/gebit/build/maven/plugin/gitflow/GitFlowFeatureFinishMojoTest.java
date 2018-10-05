@@ -478,7 +478,7 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertGitFlowFailureException(result,
                 "In non-interactive mode 'mvn flow:feature-finish' can be executed only on a feature branch.",
                 "Please switch to a feature branch first or run in interactive mode.",
-                "'git checkout BRANCH' to switch to the feature branch",
+                "'git checkout INTERNAL' to switch to the feature branch",
                 "'mvn flow:feature-finish' to run in interactive mode");
 
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);

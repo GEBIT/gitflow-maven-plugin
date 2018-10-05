@@ -96,7 +96,7 @@ public class GitFlowHotfixStartMojo extends AbstractGitFlowMojo {
         // execute if version changed
         if (!version.equals(currentVersion)) {
             // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
-            mvnSetVersions(version, null);
+            mvnSetVersions(version, CommandContext.INTERNAL, null);
 
             // git commit -a -m updating versions for hotfix
             gitCommit(commitMessages.getHotfixStartMessage());
