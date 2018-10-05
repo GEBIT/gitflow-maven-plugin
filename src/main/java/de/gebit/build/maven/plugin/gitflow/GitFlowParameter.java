@@ -34,7 +34,7 @@ public class GitFlowParameter {
      * 
      * @since 2.1.2
      */
-    @Parameter(required = false)
+    @Parameter(required = false, defaultValue = "VERSION")
     protected CommandContext[] contexts = new CommandContext[] { CommandContext.VERSION };
 
     /**
@@ -42,7 +42,7 @@ public class GitFlowParameter {
      * <code>'no'</code> nor <code>'false'</code> will be interpreted as true.
      */
     @Parameter(required = false, defaultValue = "true")
-    protected String enabled;
+    protected String enabled = "true";
 
     /**
      * If set the prompt is interpreted as a yes/no answer which controls enablement.
@@ -158,6 +158,7 @@ public class GitFlowParameter {
     public String toString() {
         StringBuilder result = new StringBuilder();
         result.append("GitFlowParameter(");
+        result.append("Contexts=").append(contexts).append(",");
         if (prompt != null) { 
             result.append("Prompt=").append(prompt).append(",");
         }
