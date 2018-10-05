@@ -83,6 +83,7 @@
 								</gitFlowConfig>
 								<additionalVersionCommands>
 									<additionalVersionCommand>
+										<contexts>${flow.additionalVersionCommands.contexts}</contexts>
 										<prompt>Enter the version of the ${project.upstream} project to reference</prompt>
 										<defaultValue></defaultValue>
 										<enabled>${version.upstream.property}</enabled>
@@ -119,6 +120,7 @@
 								</gitFlowConfig>
 								<additionalVersionCommands>
 									<additionalVersionCommand>
+										<contexts>${flow.additionalVersionCommands.contexts}</contexts>
 										<prompt>Enter the version of the ${project.upstream} project to reference</prompt>
 										<defaultValue>${version.upstream}</defaultValue>
 										<enabled>${version.upstream.property}</enabled>
@@ -160,6 +162,7 @@
 								</gitFlowConfig>
 								<additionalVersionCommands>
 									<additionalVersionCommand>
+										<contexts>${flow.additionalVersionCommands.contexts}</contexts>
 										<prompt>Enter the version of the ${project.upstream} project to reference</prompt>
 										<defaultValue>${version.upstream}</defaultValue>
 										<enabled>${version.upstream.property}</enabled>
@@ -198,6 +201,7 @@
 								</gitFlowConfig>
 								<additionalVersionCommands>
 									<additionalVersionCommand>
+										<contexts>${flow.additionalVersionCommands.contexts}</contexts>
 										<prompt></prompt>
 										<defaultValue>${version.upstream}</defaultValue>
 										<enabled>${version.upstream.property}</enabled>
@@ -233,6 +237,7 @@
 								</gitFlowConfig>
 								<additionalVersionCommands>
 									<additionalVersionCommand>
+										<contexts>${flow.additionalVersionCommands.contexts}</contexts>
 										<prompt>Should property version.test-parent-pom be updated to project version?</prompt>
 										<enabled>true</enabled>
 										<enabledByPrompt>true</enabledByPrompt>
@@ -273,6 +278,7 @@
 								</gitFlowConfig>
 								<additionalVersionCommands>
 									<additionalVersionCommand>
+										<contexts>${flow.additionalVersionCommands.contexts}</contexts>
 										<prompt>${avc.prompt}</prompt>
 										<defaultValue>${avc.defaultValue}</defaultValue>
 										<enabled>true</enabled>

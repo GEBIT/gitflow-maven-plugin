@@ -42,7 +42,7 @@ public class GitFlowParameter {
      * <code>'no'</code> nor <code>'false'</code> will be interpreted as true.
      */
     @Parameter(required = false, defaultValue = "true")
-    protected String enabled = "true";
+    protected String enabled;
 
     /**
      * If set the prompt is interpreted as a yes/no answer which controls enablement.
@@ -158,7 +158,7 @@ public class GitFlowParameter {
     public String toString() {
         StringBuilder result = new StringBuilder();
         result.append("GitFlowParameter(");
-        result.append("Contexts=").append(contexts).append(",");
+        result.append("Contexts=").append(Arrays.asList(contexts)).append(",");
         if (prompt != null) { 
             result.append("Prompt=").append(prompt).append(",");
         }

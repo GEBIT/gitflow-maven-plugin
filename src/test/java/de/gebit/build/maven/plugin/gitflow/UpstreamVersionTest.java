@@ -469,7 +469,7 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
                 .thenReturn(RELEASE_VERSION);
         Properties userProperties = new Properties();
         userProperties.setProperty("version.upstream", NEW_UPSTREAM_VERSION);
-        userProperties.setProperty("flow.processAdditionalVersionCommands", "true");
+        userProperties.setProperty("flow.additionalVersionCommands.contexts", "VERSION,INTERNAL,RELEASE");
         // test
         executeMojoInteractive(GOAL_RELEASE_START, userProperties);
         // verify
@@ -505,7 +505,7 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
         when(promptControllerMock.prompt(PROMPT_UPSTREAM_VERSION_ON_RELEASE_START_BRANCH, EXPECTED_UPSTREAM_VERSION))
                 .thenReturn(NEW_UPSTREAM_VERSION);
         Properties userProperties = new Properties();
-        userProperties.setProperty("flow.processAdditionalVersionCommands", "true");
+        userProperties.setProperty("flow.additionalVersionCommands.contexts", "VERSION,INTERNAL,RELEASE");
         // test
         executeMojoInteractive(GOAL_RELEASE_START, userProperties);
         // verify
@@ -540,7 +540,7 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
         Properties userProperties = new Properties();
         userProperties.setProperty("releaseVersion", RELEASE_VERSION);
         userProperties.setProperty("version.upstream", NEW_UPSTREAM_VERSION);
-        userProperties.setProperty("flow.processAdditionalVersionCommands", "true");
+        userProperties.setProperty("flow.additionalVersionCommands.contexts", "VERSION,INTERNAL,RELEASE");
         // test
         executeMojoInBatchMode(GOAL_RELEASE_START, userProperties);
         // verify
@@ -570,7 +570,7 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
         final String EXPECTED_DEVELOPMENT_COMMIT = git.currentCommit(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("releaseVersion", RELEASE_VERSION);
-        userProperties.setProperty("flow.processAdditionalVersionCommands", "true");
+        userProperties.setProperty("flow.additionalVersionCommands.contexts", "VERSION,INTERNAL,RELEASE");
         // test
         executeMojoInBatchMode(GOAL_RELEASE_START, userProperties);
         // verify
@@ -769,7 +769,7 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
         Properties userProperties = new Properties();
         userProperties.setProperty("keepBranch", "true");
         userProperties.setProperty("version.upstream", NEW_UPSTREAM_VERSION);
-        userProperties.setProperty("flow.processAdditionalVersionCommands", "true");
+        userProperties.setProperty("flow.additionalVersionCommands.contexts", "VERSION,INTERNAL,RELEASE");
         // test
         executeMojoInteractive(GOAL_RELEASE, userProperties);
         // verify
@@ -809,7 +809,7 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
                 .thenReturn(OTHER_UPSTREAM_VERSION);
         Properties userProperties = new Properties();
         userProperties.setProperty("keepBranch", "true");
-        userProperties.setProperty("flow.processAdditionalVersionCommands", "true");
+        userProperties.setProperty("flow.additionalVersionCommands.contexts", "VERSION,INTERNAL,RELEASE");
         // test
         executeMojoInteractive(GOAL_RELEASE, userProperties);
         // verify
@@ -876,7 +876,7 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("keepBranch", "true");
         userProperties.setProperty("releaseVersion", RELEASE_VERSION);
         userProperties.setProperty("version.upstream", NEW_UPSTREAM_VERSION);
-        userProperties.setProperty("flow.processAdditionalVersionCommands", "true");
+        userProperties.setProperty("flow.additionalVersionCommands.contexts", "VERSION,INTERNAL,RELEASE");
         // test
         executeMojoInBatchMode(GOAL_RELEASE, userProperties);
         // verify
@@ -907,7 +907,7 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
         Properties userProperties = new Properties();
         userProperties.setProperty("keepBranch", "true");
         userProperties.setProperty("releaseVersion", RELEASE_VERSION);
-        userProperties.setProperty("flow.processAdditionalVersionCommands", "true");
+        userProperties.setProperty("flow.additionalVersionCommands.contexts", "VERSION,INTERNAL,RELEASE");
         // test
         executeMojoInBatchMode(GOAL_RELEASE, userProperties);
         // verify
