@@ -125,4 +125,33 @@ public class GitFlowParameter {
     public String getValue() {
         return value;
     }
+
+    @Override
+    public String toString() {
+        StringBuilder result = new StringBuilder();
+        result.append("GitFlowParameter(");
+        if (prompt != null) { 
+            result.append("Prompt=").append(prompt).append(",");
+        }
+        if (enabled != null) {
+            result.append("Enabled=").append(enabled).append(",");
+        }
+        if (enabledByPrompt) {
+            result.append("enabledByPrompt,");
+        }
+        if (defaultValue != null) {
+            result.append("defaultValue=").append(defaultValue).append(",");
+        }
+        if (property != null) {
+            result.append("property=").append(property).append(",");
+        }
+        if (command != null) {
+            result.append("command=").append(command).append(",");
+        }
+        if (value != null) {
+            result.append("value=").append(value).append(",");
+        }
+        result.append(")");
+        return result.toString();
+    }
 }
