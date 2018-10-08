@@ -66,6 +66,7 @@
 				<activeByDefault>false</activeByDefault>
 			</activation>
 			<properties>
+				<flow.additionalVersionCommands.contexts>VERSION</flow.additionalVersionCommands.contexts>
 				<flow.commandsAfterVersion>version-stamper:stamp -N</flow.commandsAfterVersion>
 			</properties>
 			<build>
@@ -102,6 +103,7 @@
 				<activeByDefault>false</activeByDefault>
 			</activation>
 			<properties>
+				<flow.additionalVersionCommands.contexts>VERSION</flow.additionalVersionCommands.contexts>
 				<flow.commandsAfterVersion>version-stamper:stamp
 					-N</flow.commandsAfterVersion>
 			</properties>
@@ -141,6 +143,7 @@
 				<activeByDefault>false</activeByDefault>
 			</activation>
 			<properties>
+				<flow.additionalVersionCommands.contexts>VERSION</flow.additionalVersionCommands.contexts>
 				<flow.commandsAfterVersion>version-stamper:stamp -N</flow.commandsAfterVersion>
 
 				<version.upstream.property>version.upstream.build</version.upstream.property>
@@ -182,6 +185,7 @@
 				<activeByDefault>false</activeByDefault>
 			</activation>
 			<properties>
+				<flow.additionalVersionCommands.contexts>VERSION</flow.additionalVersionCommands.contexts>
 				<flow.commandsAfterVersion>version-stamper:stamp -N</flow.commandsAfterVersion>
 
 				<version.upstream.property>version.upstream.build</version.upstream.property>
@@ -221,6 +225,7 @@
 				<activeByDefault>false</activeByDefault>
 			</activation>
 			<properties>
+				<flow.additionalVersionCommands.contexts>VERSION</flow.additionalVersionCommands.contexts>
 				<flow.commandsAfterVersion>version-stamper:stamp -N</flow.commandsAfterVersion>
 			</properties>
 			<build>
@@ -256,6 +261,7 @@
 				<activeByDefault>false</activeByDefault>
 			</activation>
 			<properties>
+				<flow.additionalVersionCommands.contexts>VERSION</flow.additionalVersionCommands.contexts>
 				<flow.commandsAfterVersion>version-stamper:stamp -N</flow.commandsAfterVersion>
 				<interpolation.cycle>@{${interpolation.cycle.property}}</interpolation.cycle>
 				<interpolation.cycle.property>interpolation.cycle</interpolation.cycle.property>
