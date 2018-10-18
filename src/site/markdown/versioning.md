@@ -14,9 +14,15 @@ The qualifier part marks a build as one of:
 
 * `-SNAPSHOT` is a temporary snapshot build off the tip of a branch triggered by any change. It should not be referenced by downstream projects, as it can introduce breaking changes at any time. Snapshot builds are not archived and regularly purged.
 * `-Ixxxx` is an integration build, which is also regularly built, but in a much lower frequency (like weekly) or on demand. An integration build can be referenced by downstream projects and will be kept available for some time (guaranteed 6 weeks, see the linked issues of https://jira.gebit.de/browse/GBLD-14 for details). Downstream projects should regularly update to the latest `I-Build` to track development in the upstream project. The upside to a `-SNAPSHOT` build is that the dependency is stable for some time and the project chooses at which time the upstream dependency is updated.
-{note}
+
+---
+
+**Note:**
+
 Integration builds are mostly suited for library/framework projects (which someone uses). In customer projects you could use it, too (e.g. for producing a site or a test build, as integration builds also create tags), but *NEVER* as a production release.
-{note}
+
+---
+
 * No qualifier is a regular release build. Those builds are usually shipped and will be permanently archived.
 
 ### Special kinds of builds to consider:
