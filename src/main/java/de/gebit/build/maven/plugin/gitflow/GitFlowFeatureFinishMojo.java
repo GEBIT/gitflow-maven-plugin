@@ -46,7 +46,7 @@ import de.gebit.build.maven.plugin.gitflow.steps.StepsUtil;
  * <p>
  * Example:
  * <pre>
- * mvn flow:feature-finish -N [-⁠Dflow.allowFF=true|false] [-⁠Dflow.rebase=true|false] [-⁠D...]
+ * mvn flow:feature-finish -N [-Dflow.allowFF=true|false] [-Dflow.rebase=true|false] [-D...]
  * </pre>
  *
  * @see GitFlowFeatureStartMojo

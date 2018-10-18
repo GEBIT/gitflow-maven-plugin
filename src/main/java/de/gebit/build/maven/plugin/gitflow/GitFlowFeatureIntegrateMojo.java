@@ -43,7 +43,7 @@ import de.gebit.build.maven.plugin.gitflow.steps.StepsUtil;
  * <p>
  * Example:
  * <pre>
- * mvn -N flow:feature-integrate [-⁠DfeatureName=XXXX] [-⁠Dflow.keepFeatureBranch=true|false] [-⁠Dflow.installProject=true|false]
+ * mvn -N flow:feature-integrate [-DfeatureName=XXXX] [-Dflow.keepFeatureBranch=true|false] [-Dflow.installProject=true|false]
  * </pre>
  * @author Volodymyr Medvid
  * @since 2.1.0

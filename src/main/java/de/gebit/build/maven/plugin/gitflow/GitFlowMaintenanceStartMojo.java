@@ -31,7 +31,7 @@ import de.gebit.build.maven.plugin.gitflow.ExtendedPrompter.SelectOption;
  * <p>
  * Example:
  * <pre>
- * mvn flow:maintenance-start [-⁠DmaintenanceVersion=X.Y] [-⁠DfirstMaintenanceVersion=X.Y.Z-SNAPSHOT]
+ * mvn flow:maintenance-start [-DmaintenanceVersion=X.Y] [-DfirstMaintenanceVersion=X.Y.Z-SNAPSHOT]
  * </pre>
  *
  * @author Erwin Tratar

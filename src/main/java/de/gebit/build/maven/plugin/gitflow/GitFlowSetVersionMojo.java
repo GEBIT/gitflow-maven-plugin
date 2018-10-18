@@ -29,7 +29,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * <p>
  * Example:
  * <pre>
- * mvn flow:set-version [-⁠DnewVersion=XXXX]
+ * mvn flow:set-version [-DnewVersion=XXXX]
  * </pre>
  * @author Erwin Tratar
  */

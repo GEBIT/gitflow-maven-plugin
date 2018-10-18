@@ -34,7 +34,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * <p>
  * Example:
  * <pre>
- * mvn flow:epic-start [-⁠DepicName=XXXX] [-⁠DjobBuild=true|false] [-⁠Dflow.installProject=true|false] [-⁠D...]
+ * mvn flow:epic-start [-DepicName=XXXX] [-DjobBuild=true|false] [-Dflow.installProject=true|false] [-D...]
  * </pre>
  *
  * @author Volodymyr Medvid

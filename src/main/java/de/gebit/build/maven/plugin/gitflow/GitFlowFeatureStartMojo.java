@@ -37,14 +37,14 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * issue pattern). The changes will be committed in a single commit.
  * <p>
  * You may skip changing the version by specifying
- * <code>-⁠DskipFeatureVersion=true</code>.
+ * <code>-DskipFeatureVersion=true</code>.
  * <p>
  * Use <code>-DjobBuild=true</code> to automatically create build jobs for the
  * feature branch.
  * <p>
  * Example:
  * <pre>
- * mvn flow:feature-start [-⁠DfeatureName=XXXX] [-⁠DjobBuild=true|false][-⁠Dflow.installProject=true|false] [-⁠D...]
+ * mvn flow:feature-start [-DfeatureName=XXXX] [-DjobBuild=true|false][-Dflow.installProject=true|false] [-D...]
  * </pre>
  *
  * @see GitFlowFeatureAbortMojo
