@@ -4,6 +4,7 @@ Git-Flow Maven Plugin
 The Maven plugin for Vincent Driessen's [successful Git branching model](http://nvie.com/posts/a-successful-git-branching-model/).
 
 We use a modified branching model with some specialities:
+
 * Support for maintenance branches
 * Support for epic branches
 * Automatic version changes for feature branches
@@ -11,7 +12,7 @@ We use a modified branching model with some specialities:
 You perform commands by invoking goals like this:
 
 ```
-mvn flow:[goal] -N
+mvn flow:[goal]
 ```
 
 ### Prerequisites
@@ -64,11 +65,14 @@ mvn flow:feature-start -DjobBuild=true
 mvn flow:feature-rebase -N
 ```
 
+The `-N` option is needed for rare cases where a module in an upstream project is removed, that is still used in the 
+current project before the rebase. If you don't specify `-N` yo will get errors about missing dependencies.
+
 
 + Finish a feature by merging (rebasing upon) into the upstream branch:
 
 ```
-mvn flow:feature-finish -N
+mvn flow:feature-finish
 ```
 
 Make sure your local master branch is not behind the remote, before executing.
