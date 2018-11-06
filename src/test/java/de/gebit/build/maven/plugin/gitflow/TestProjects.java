@@ -361,6 +361,9 @@ public class TestProjects {
         executeFeatureStart(testCase, repositorySet, WithUpstreamConstants.FEATURE_NAME,
                 WithUpstreamConstants.EXPECTED_UPSTREAM_VERSION, WithUpstreamConstants.NEW_UPSTREAM_VERSION);
         git.switchToBranch(repositorySet, "master");
+        executeFeatureStart(testCase, repositorySet, WithUpstreamConstants.FEATURE_WITH_OLD_UPSTREAM_NAME,
+                WithUpstreamConstants.EXPECTED_UPSTREAM_VERSION, "");
+        git.switchToBranch(repositorySet, "master");
         executeFeatureStartWithoutVersionChange(testCase, repositorySet,
                 WithUpstreamConstants.FEATURE_WITHOUT_VERSION_NAME);
         git.switchToBranch(repositorySet, "master");
@@ -798,20 +801,31 @@ public class TestProjects {
 
     public interface WithUpstreamConstants {
         // feature
-        public static final String FEATURE_ISSUE = BASIC.jiraProject + "-101";
+        public static final String FEATURE_ISSUE = WITH_UPSTREAM.jiraProject + "-101";
         public static final String FEATURE_NAME = FEATURE_ISSUE;
         public static final String FEATURE_BRANCH = "feature/" + FEATURE_NAME;
-        public static final String FEATURE_VERSION = TestProjects.BASIC.releaseVersion + "-" + FEATURE_ISSUE
+        public static final String FEATURE_VERSION = TestProjects.WITH_UPSTREAM.releaseVersion + "-" + FEATURE_ISSUE
                 + "-SNAPSHOT";
         public static final String FEATURE_VERSION_COMMIT_MESSAGE = FEATURE_ISSUE
                 + ": updating versions for feature branch";
 
-        public static final String FEATURE_WITHOUT_VERSION_ISSUE = BASIC.jiraProject + "-102";
+        public static final String FEATURE_WITHOUT_VERSION_ISSUE = WITH_UPSTREAM.jiraProject + "-102";
         public static final String FEATURE_WITHOUT_VERSION_NAME = FEATURE_WITHOUT_VERSION_ISSUE + "-without-version";
         public static final String FEATURE_WITHOUT_VERSION_BRANCH = "feature/" + FEATURE_WITHOUT_VERSION_NAME;
 
+        public static final String FEATURE_WITH_OLD_UPSTREAM_ISSUE = WITH_UPSTREAM.jiraProject + "-103";
+        public static final String FEATURE_WITH_OLD_UPSTREAM_NAME = FEATURE_WITH_OLD_UPSTREAM_ISSUE;
+        public static final String FEATURE_WITH_OLD_UPSTREAM_BRANCH = "feature/" + FEATURE_WITH_OLD_UPSTREAM_NAME;
+        public static final String FEATURE_WITH_OLD_UPSTREAM_VERSION = TestProjects.WITH_UPSTREAM.releaseVersion + "-"
+                + FEATURE_WITH_OLD_UPSTREAM_ISSUE + "-SNAPSHOT";
+        public static final String FEATURE_WITH_OLD_UPSTREAM_VERSION_COMMIT_MESSAGE = FEATURE_WITH_OLD_UPSTREAM_ISSUE
+                + ": updating versions for feature branch";
+
         public static final String EXPECTED_UPSTREAM_VERSION = "1.0.0";
         public static final String NEW_UPSTREAM_VERSION = "2.0.0";
+        public static final String UPSTREAM_FEATURE_VERSION = EXPECTED_UPSTREAM_VERSION + "-"
+                + FEATURE_WITH_OLD_UPSTREAM_ISSUE + "-SNAPSHOT";
+        public static final String UPSTREAM_FEATURE_RELATIVE_PATH = "upstream-pom-" + UPSTREAM_FEATURE_VERSION + ".xml";
 
         // release
         public static final String EXISTING_RELEASE_VERSION = "50.1.0";

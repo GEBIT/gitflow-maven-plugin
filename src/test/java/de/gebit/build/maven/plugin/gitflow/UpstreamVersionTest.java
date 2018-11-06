@@ -23,6 +23,7 @@ import java.util.Properties;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.io.ModelParseException;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
+import org.codehaus.plexus.util.FileUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -39,6 +40,8 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
     private static final String GOAL_FEATURE_START = "feature-start";
 
     private static final String GOAL_FEATURE_REBASE = "feature-rebase";
+
+    private static final String GOAL_FEATURE_FINISH = "feature-finish";
 
     private static final String GOAL_RELEASE_START = "release-start";
 
@@ -931,4 +934,36 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
         assertVersions(RELEASE_VERSION, EXPECTED_UPSTREAM_VERSION);
     }
 
+    @Test
+    public void testExecuteFeatureFinishAfterChangedParentVersion_GBLD514() throws Exception {
+        // set up
+        final String USED_FEATURE_BRANCH = WithUpstreamConstants.FEATURE_WITH_OLD_UPSTREAM_BRANCH;
+        final String COMMIT_MESSAGE_UPSTREAM_UPDATE = "update parent version";
+        final String COMMIT_MESSAGE_MERGE = TestProjects.WITH_UPSTREAM.jiraProject + "-NONE: Merge branch "
+                + USED_FEATURE_BRANCH;
+        git.switchToBranch(repositorySet, USED_FEATURE_BRANCH);
+
+        File pom = new File(repositorySet.getWorkingDirectory(), "pom.xml");
+        String pomContents = FileUtils.fileRead(pom);
+        pomContents = pomContents.replaceAll("<version>1.0.0</version>",
+                "<version>" + WithUpstreamConstants.UPSTREAM_FEATURE_VERSION + "</version>");
+        pomContents = pomContents.replaceAll("<relativePath>upstream-pom-1.0.0.xml</relativePath>",
+                "<relativePath>" + WithUpstreamConstants.UPSTREAM_FEATURE_RELATIVE_PATH + "</relativePath>");
+        FileUtils.fileWrite(pom, pomContents);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_UPSTREAM_UPDATE);
+        git.createAndCommitTestfile(repositorySet, "feature-testfile.txt", COMMIT_MESSAGE_FEATURE_TESTFILE);
+        git.push(repositorySet);
+        // test
+        executeMojoInteractive(GOAL_FEATURE_FINISH);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, USED_FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, USED_FEATURE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE,
+                COMMIT_MESSAGE_FEATURE_TESTFILE, COMMIT_MESSAGE_UPSTREAM_UPDATE);
+        assertVersions(PROJECT_VERSION, WithUpstreamConstants.UPSTREAM_FEATURE_VERSION);
+    }
 }

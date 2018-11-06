@@ -232,7 +232,7 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
             fixupModuleParents(featureBranchName, baseBranch, oldFeatureVersion);
             finilizeFeatureRebase(featureBranchName);
         } else {
-            getMavenLog().info("Restart after failed feaure project installation detected");
+            getMavenLog().info("Restart after failed feature project installation detected");
             checkUncommittedChanges();
         }
 

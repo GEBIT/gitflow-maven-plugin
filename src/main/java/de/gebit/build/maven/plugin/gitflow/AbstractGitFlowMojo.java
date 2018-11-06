@@ -3032,7 +3032,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             // not supported
         } else {
             executeMvnCommand(XML_EDITOR_MAVEN_PLUGIN_SET_GOAL, "-N", "-DtargetFile=**/pom.xml",
-                    "-DexcludeFile=**/resources/**/pom.xml,**/target/**/pom.xml",
+                    "-DexcludeFile=pom.xml,**/resources/**/pom.xml,**/target/**/pom.xml",
                     "-Dxpath=/project/parent/version[contains(text(),'" + uniqueVersionPart + "')]/text()",
                     "-Dreplacement=" + version, "-DfailIfNoMatch=false");
             CommandResult result;
