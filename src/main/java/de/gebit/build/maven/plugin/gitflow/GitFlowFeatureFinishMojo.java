@@ -21,6 +21,7 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
+import de.gebit.build.maven.plugin.gitflow.ExtendedPrompter.SelectOption;
 import de.gebit.build.maven.plugin.gitflow.steps.Breakpoint;
 import de.gebit.build.maven.plugin.gitflow.steps.FeatureFinishBreakpoint;
 import de.gebit.build.maven.plugin.gitflow.steps.FeatureFinishStep;
@@ -38,13 +39,14 @@ import de.gebit.build.maven.plugin.gitflow.steps.StepsUtil;
  * is <code>true</code>), pushes the development branch to remote and finally
  * deletes the feature branch.
  * <p>
- * Make sure your local development branch is not
- * behind the remote, before executing.
+ * Make sure your local development branch is not behind the remote, before
+ * executing.
  * <p>
  * If <code>flow.rebase</code> is <code>true</code>, rebases the feature branch
  * on top of the development branch before finishing.
  * <p>
  * Example:
+ *
  * <pre>
  * mvn flow:feature-finish -N [-Dflow.allowFF=true|false] [-Dflow.rebase=true|false] [-D...]
  * </pre>
@@ -257,17 +259,28 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
                 if (rebase) {
                     tempStepParameters = rebaseBeforeMerge(tempStepParameters);
                 } else {
-                    boolean confirmed = getPrompter().promptConfirmation(
-                            "Base branch '" + baseBranch + "' has changes that are not yet included in feature branch "
-                                    + "'" + featureBranch + "'. If you continue it will be tryed to merge the changes. "
-                                    + "But it is strongly recomended to run 'mvn flow:feature-rebase' first and then "
-                                    + "run 'mvn flow:feature-finish' again. Are you sure you want to continue?",
-                            false, false);
-                    if (!confirmed) {
-                        throw new GitFlowFailureException("Base branch '" + baseBranch
-                                + "' has changes that are not yet included in feature branch '" + featureBranch + "'.",
-                                "Rebase the feature branch first in order to proceed.",
-                                "'mvn flow:feature-rebase' to rebase the feature branch");
+                    List<SelectOption> options = Arrays.asList(
+                            new SelectOption("r", null, "Rebase feature branch and continue feature finish process"),
+                            new SelectOption("m", null,
+                                    "(NOT RECOMMENDED) Continue feature finish process by trying "
+                                            + "to merge feature branch into the base branch"),
+                            new SelectOption("a", null, "Abort feature finish process"));
+                    SelectOption selectedOption = getPrompter().promptToSelectOption(
+                            "Base branch '" + baseBranch + "' has changes that are not yet included in feature branch '"
+                                    + featureBranch + "'." + LS + "" + "You have following options:",
+                            "Select how you want to continue:", options, "a",
+                            new GitFlowFailureInfo(
+                                    "Base branch '" + baseBranch
+                                            + "' has changes that are not yet included in feature branch '"
+                                            + featureBranch + "'.",
+                                    "Rebase the feature branch first in order to proceed.",
+                                    "'mvn flow:feature-rebase' to rebase the feature branch"));
+                    if ("r".equalsIgnoreCase(selectedOption.getKey())) {
+                        tempStepParameters = rebaseBeforeMerge(tempStepParameters);
+                    } else if ("m".equalsIgnoreCase(selectedOption.getKey())) {
+                        // NOP
+                    } else {
+                        throw new GitFlowFailureException("Feature finish aborted by user.", null);
                     }
                 }
             }

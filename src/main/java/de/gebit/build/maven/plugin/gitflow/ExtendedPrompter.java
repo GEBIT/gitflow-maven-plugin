@@ -180,8 +180,8 @@ public class ExtendedPrompter implements Prompter {
     }
 
     /**
-     * Prompts for a value if interactive mode is enabled. Propmts in a loop
-     * until non-empty value is entered.<br>
+     * Prompts for a value if interactive mode is enabled. Propmts in a loop until
+     * non-empty value is entered.<br>
      * In case of batch mode an {@link GitFlowFailureException} will be thrown.
      *
      * @param promptMessage
@@ -198,11 +198,11 @@ public class ExtendedPrompter implements Prompter {
     }
 
     /**
-     * Prompts for a value if interactive mode is enabled. Propmts in a loop
-     * until non-empty value is entered. If a non-empty init value provided it
-     * will be returned without prompting.<br>
-     * In case of batch mode an {@link GitFlowFailureException} will be thrown
-     * if no non-empty init value provided.
+     * Prompts for a value if interactive mode is enabled. Propmts in a loop until
+     * non-empty value is entered. If a non-empty init value provided it will be
+     * returned without prompting.<br>
+     * In case of batch mode an {@link GitFlowFailureException} will be thrown if no
+     * non-empty init value provided.
      *
      * @param promptMessage
      *            the message to be shown in prompt
@@ -221,11 +221,11 @@ public class ExtendedPrompter implements Prompter {
     }
 
     /**
-     * Prompts for a value if interactive mode is enabled. Propmts in a loop
-     * until non-empty value is entered. If a non-empty init value provided it
-     * will be returned without prompting.<br>
-     * In case of batch mode an {@link GitFlowFailureException} will be thrown
-     * if no non-empty init value provided.
+     * Prompts for a value if interactive mode is enabled. Propmts in a loop until
+     * non-empty value is entered. If a non-empty init value provided it will be
+     * returned without prompting.<br>
+     * In case of batch mode an {@link GitFlowFailureException} will be thrown if no
+     * non-empty init value provided.
      *
      * @param promptMessage
      *            the message to be shown in prompt
@@ -234,8 +234,7 @@ public class ExtendedPrompter implements Prompter {
      * @param initValue
      *            the init value (can be <code>null</code>)
      * @param defaultValue
-     *            the default value to be used in prompt (can be
-     *            <code>null</code>)
+     *            the default value to be used in prompt (can be <code>null</code>)
      * @return a non-empty value
      * @throws GitFlowFailureException
      *             in case of empty init value in batch mode or error while
@@ -247,11 +246,11 @@ public class ExtendedPrompter implements Prompter {
     }
 
     /**
-     * Prompts for a value if interactive mode is enabled. Propmts in a loop
-     * until non-empty value is entered. If a non-empty init value provided it
-     * will be returned without prompting.<br>
-     * In case of batch mode an {@link GitFlowFailureException} will be thrown
-     * if no non-empty init value provided.
+     * Prompts for a value if interactive mode is enabled. Propmts in a loop until
+     * non-empty value is entered. If a non-empty init value provided it will be
+     * returned without prompting.<br>
+     * In case of batch mode an {@link GitFlowFailureException} will be thrown if no
+     * non-empty init value provided.
      *
      * @param promptMessage
      *            the message to be shown in prompt
@@ -260,8 +259,7 @@ public class ExtendedPrompter implements Prompter {
      * @param initValue
      *            the init value (can be <code>null</code>)
      * @param defaultValue
-     *            the default value to be used in prompt (can be
-     *            <code>null</code>)
+     *            the default value to be used in prompt (can be <code>null</code>)
      * @param possibleValues
      *            the possible values (can be <code>null</code>)
      * @return a non-empty value
@@ -276,8 +274,8 @@ public class ExtendedPrompter implements Prompter {
     }
 
     /**
-     * Prompts for a value if interactive mode is enabled. Propmts in a loop
-     * until non-empty valid value is entered.<br>
+     * Prompts for a value if interactive mode is enabled. Propmts in a loop until
+     * non-empty valid value is entered.<br>
      * In case of batch mode an {@link GitFlowFailureException} will be thrown.
      *
      * @param promptMessage
@@ -296,11 +294,11 @@ public class ExtendedPrompter implements Prompter {
     }
 
     /**
-     * Prompts for a value if interactive mode is enabled. Propmts in a loop
-     * until non-empty valid value is entered. If a valid init value provided it
-     * will be returned without prompting.<br>
-     * In case of batch mode an {@link GitFlowFailureException} will be thrown
-     * if no valid init value provided.
+     * Prompts for a value if interactive mode is enabled. Propmts in a loop until
+     * non-empty valid value is entered. If a valid init value provided it will be
+     * returned without prompting.<br>
+     * In case of batch mode an {@link GitFlowFailureException} will be thrown if no
+     * valid init value provided.
      *
      * @param promptMessage
      *            the message to be shown in prompt
@@ -321,11 +319,11 @@ public class ExtendedPrompter implements Prompter {
     }
 
     /**
-     * Prompts for a value if interactive mode is enabled. Propmts in a loop
-     * until non-emptyvalue is entered. If a non-empty init value provided it
-     * will be returned without prompting.<br>
-     * In case of batch mode an {@link GitFlowFailureException} will be thrown
-     * if no non-empty init value provided.
+     * Prompts for a value if interactive mode is enabled. Propmts in a loop until
+     * non-emptyvalue is entered. If a non-empty init value provided it will be
+     * returned without prompting.<br>
+     * In case of batch mode an {@link GitFlowFailureException} will be thrown if no
+     * non-empty init value provided.
      *
      * @param promptMessage
      *            the message to be shown in prompt
@@ -348,11 +346,11 @@ public class ExtendedPrompter implements Prompter {
     }
 
     /**
-     * Prompts for a value if interactive mode is enabled. Propmts in a loop
-     * until non-empty valid value is entered. If a valid init value provided it
-     * will be returned without prompting.<br>
-     * In case of batch mode an {@link GitFlowFailureException} will be thrown
-     * if no valid init value provided.
+     * Prompts for a value if interactive mode is enabled. Propmts in a loop until
+     * non-empty valid value is entered. If a valid init value provided it will be
+     * returned without prompting.<br>
+     * In case of batch mode an {@link GitFlowFailureException} will be thrown if no
+     * valid init value provided.
      *
      * @param promptMessage
      *            the message to be shown in prompt
@@ -378,11 +376,11 @@ public class ExtendedPrompter implements Prompter {
     }
 
     /**
-     * Prompts for a value if interactive mode is enabled. Propmts in a loop
-     * until non-empty valid value is entered. If a valid init value provided it
-     * will be returned without prompting.<br>
-     * In case of batch mode an {@link GitFlowFailureException} will be thrown
-     * if no valid init value provided.
+     * Prompts for a value if interactive mode is enabled. Propmts in a loop until
+     * non-empty valid value is entered. If a valid init value provided it will be
+     * returned without prompting.<br>
+     * In case of batch mode an {@link GitFlowFailureException} will be thrown if no
+     * valid init value provided.
      *
      * @param promptMessage
      *            the message to be shown in prompt
@@ -391,8 +389,7 @@ public class ExtendedPrompter implements Prompter {
      * @param initValue
      *            the init value (can be <code>null</code>)
      * @param defaultValue
-     *            the default value to be used in prompt (can be
-     *            <code>null</code>)
+     *            the default value to be used in prompt (can be <code>null</code>)
      * @param validator
      *            the optional validator to validate the non-empty value
      * @return a non-empty valid value
@@ -406,11 +403,11 @@ public class ExtendedPrompter implements Prompter {
     }
 
     /**
-     * Prompts for a value if interactive mode is enabled. Propmts in a loop
-     * until non-empty valid value is entered. If a valid init value provided it
-     * will be returned without prompting.<br>
-     * In case of batch mode an {@link GitFlowFailureException} will be thrown
-     * if no valid init value provided.
+     * Prompts for a value if interactive mode is enabled. Propmts in a loop until
+     * non-empty valid value is entered. If a valid init value provided it will be
+     * returned without prompting.<br>
+     * In case of batch mode an {@link GitFlowFailureException} will be thrown if no
+     * valid init value provided.
      *
      * @param promptMessage
      *            the message to be shown in prompt
@@ -419,8 +416,7 @@ public class ExtendedPrompter implements Prompter {
      * @param initValue
      *            the init value (can be <code>null</code>)
      * @param defaultValue
-     *            the default value to be used in prompt (can be
-     *            <code>null</code>)
+     *            the default value to be used in prompt (can be <code>null</code>)
      * @param possibleValues
      *            the possible values (can be <code>null</code>)
      * @param validator
@@ -438,11 +434,11 @@ public class ExtendedPrompter implements Prompter {
     }
 
     /**
-     * Prompts for a value if interactive mode is enabled. Propmts in a loop
-     * until non-empty valid value is entered. If a valid init value provided it
-     * will be returned without prompting.<br>
-     * In case of batch mode an {@link GitFlowFailureException} will be thrown
-     * if no valid init value provided.
+     * Prompts for a value if interactive mode is enabled. Propmts in a loop until
+     * non-empty valid value is entered. If a valid init value provided it will be
+     * returned without prompting.<br>
+     * In case of batch mode an {@link GitFlowFailureException} will be thrown if no
+     * valid init value provided.
      *
      * @param promptMessage
      *            the message to be shown in prompt
@@ -451,8 +447,7 @@ public class ExtendedPrompter implements Prompter {
      * @param initValue
      *            the init value (can be <code>null</code>)
      * @param defaultValue
-     *            the default value to be used in prompt (can be
-     *            <code>null</code>)
+     *            the default value to be used in prompt (can be <code>null</code>)
      * @param possibleValues
      *            the possible values (can be <code>null</code>)
      * @param validator
@@ -547,9 +542,9 @@ public class ExtendedPrompter implements Prompter {
     }
 
     /**
-     * Prompts for an optional value if interactive mode is enabled. Entered
-     * empty value will be accepted. If a non-empty init value provided it will
-     * be returned without prompting.<br>
+     * Prompts for an optional value if interactive mode is enabled. Entered empty
+     * value will be accepted. If a non-empty init value provided it will be
+     * returned without prompting.<br>
      * In case of batch mode non-empty init value or <code>null</code> will be
      * returned.
      *
@@ -584,8 +579,8 @@ public class ExtendedPrompter implements Prompter {
     }
 
     /**
-     * Prompts for a confirmation with yes/no options. The batchModeValue will
-     * be returned in batch mode.
+     * Prompts for a confirmation with yes/no options. The batchModeValue will be
+     * returned in batch mode.
      *
      * @param promptMessage
      *            the message to be shown in prompt
@@ -606,8 +601,8 @@ public class ExtendedPrompter implements Prompter {
 
     /**
      * Prompts for a confirmation with yes/no options. A
-     * {@link GitFlowFailureException} with batchModeErrorMessage will be thrown
-     * in batch mode.
+     * {@link GitFlowFailureException} with batchModeErrorMessage will be thrown in
+     * batch mode.
      *
      * @param promptMessage
      *            the message to be shown in prompt
@@ -627,10 +622,9 @@ public class ExtendedPrompter implements Prompter {
     }
 
     /**
-     * Prompts for a confirmation with yes/no options. If a non-null
-     * batchModeValue provided than this value will be returned in batch mode.
-     * Otherwise a {@link GitFlowFailureException} with batchModeErrorMessage
-     * will be thrown.
+     * Prompts for a confirmation with yes/no options. If a non-null batchModeValue
+     * provided than this value will be returned in batch mode. Otherwise a
+     * {@link GitFlowFailureException} with batchModeErrorMessage will be thrown.
      *
      * @param promptMessage
      *            the message to be shown in prompt
@@ -638,8 +632,8 @@ public class ExtendedPrompter implements Prompter {
      *            the deafult answer for confirmation (no default answer if
      *            <code>null</code>)
      * @param batchModeValue
-     *            the answer to be returned if batch mode active (exception will
-     *            be thrown if <code>null</code> in batch mode)
+     *            the answer to be returned if batch mode active (exception will be
+     *            thrown if <code>null</code> in batch mode)
      * @param batchModeErrorMessage
      *            the error message to be used in exception in batch mode
      * @return <code>true</code> in case of positive answer, otherwise
@@ -684,17 +678,17 @@ public class ExtendedPrompter implements Prompter {
      * {@link GitFlowFailureException} will be thrown.
      *
      * @param promptMessagePrefix
-     *            the message prefix that will be shown in prompt before the
-     *            list of possible values (can be <code>null</code>)
+     *            the message prefix that will be shown in prompt before the list of
+     *            possible values (can be <code>null</code>)
      * @param promptMessageSuffix
-     *            the message suffix that will be shown in prompt after the list
-     *            of possible values (can be <code>null</code>)
+     *            the message suffix that will be shown in prompt after the list of
+     *            possible values (can be <code>null</code>)
      * @param possibleValues
      *            the list of possible values (should be not not empty)
      * @return the selected value
      * @throws GitFlowFailureException
-     *             in case of active batch mode, empty list of possible values
-     *             or error while prompting
+     *             in case of active batch mode, empty list of possible values or
+     *             error while prompting
      */
     public String promptToSelectFromOrderedList(String promptMessagePrefix, String promptMessageSuffix,
             List<String> possibleValues) throws GitFlowFailureException {
@@ -704,23 +698,22 @@ public class ExtendedPrompter implements Prompter {
     /**
      * Propmpts to select a value from the passed list of possible values by
      * entering a value number. If batch mode is active a
-     * {@link GitFlowFailureException} with batchModeErrorMessage will be
-     * thrown.
+     * {@link GitFlowFailureException} with batchModeErrorMessage will be thrown.
      *
      * @param promptMessagePrefix
-     *            the message prefix that will be shown in prompt before the
-     *            list of possible values (can be <code>null</code>)
+     *            the message prefix that will be shown in prompt before the list of
+     *            possible values (can be <code>null</code>)
      * @param promptMessageSuffix
-     *            the message suffix that will be shown in prompt after the list
-     *            of possible values (can be <code>null</code>)
+     *            the message suffix that will be shown in prompt after the list of
+     *            possible values (can be <code>null</code>)
      * @param possibleValues
      *            the list of possible values (should be not not empty)
      * @param batchModeErrorMessage
      *            the error message to be used in exception in batch mode
      * @return the selected value
      * @throws GitFlowFailureException
-     *             in case of active batch mode, empty list of possible values
-     *             or error while prompting
+     *             in case of active batch mode, empty list of possible values or
+     *             error while prompting
      */
     public String promptToSelectFromOrderedList(String promptMessagePrefix, String promptMessageSuffix,
             List<String> possibleValues, GitFlowFailureInfo batchModeErrorMessage) throws GitFlowFailureException {
@@ -732,23 +725,22 @@ public class ExtendedPrompter implements Prompter {
     /**
      * Propmpts to select a value from the passed list of possible values by
      * entering a value number. If batch mode is active a
-     * {@link GitFlowFailureException} with batchModeErrorMessage will be
-     * thrown.
+     * {@link GitFlowFailureException} with batchModeErrorMessage will be thrown.
      *
      * @param promptMessagePrefix
-     *            the message prefix that will be shown in prompt before the
-     *            list of possible values (can be <code>null</code>)
+     *            the message prefix that will be shown in prompt before the list of
+     *            possible values (can be <code>null</code>)
      * @param promptMessageSuffix
-     *            the message suffix that will be shown in prompt after the list
-     *            of possible values (can be <code>null</code>)
+     *            the message suffix that will be shown in prompt after the list of
+     *            possible values (can be <code>null</code>)
      * @param possibleValues
      *            the list of possible values (should be not not empty)
      * @param batchModeErrorMessage
      *            the error message to be used in exception in batch mode
      * @return the selected value
      * @throws GitFlowFailureException
-     *             in case of active batch mode, empty list of possible values
-     *             or error while prompting
+     *             in case of active batch mode, empty list of possible values or
+     *             error while prompting
      */
     public String promptToSelectFromOrderedList(String promptMessagePrefix, String promptMessageSuffix,
             String[] possibleValues, GitFlowFailureInfo batchModeErrorMessage) throws GitFlowFailureException {
@@ -852,6 +844,12 @@ public class ExtendedPrompter implements Prompter {
 
     public SelectOption promptToSelectOption(String promptMessagePrefix, String promptMessageSuffix,
             List<SelectOption> options, GitFlowFailureInfo batchModeErrorMessage) throws GitFlowFailureException {
+        return promptToSelectOption(promptMessagePrefix, promptMessageSuffix, options, null, batchModeErrorMessage);
+    }
+
+    public SelectOption promptToSelectOption(String promptMessagePrefix, String promptMessageSuffix,
+            List<SelectOption> options, String defaultOptionKey, GitFlowFailureInfo batchModeErrorMessage)
+            throws GitFlowFailureException {
         if (interactiveMode) {
             if (options == null || options.size() == 0) {
                 throw new GitFlowFailureException("Empty list of possible options provided for user selection",
@@ -873,7 +871,12 @@ public class ExtendedPrompter implements Prompter {
                 promptMessage.append(promptMessageSuffix);
             }
             try {
-                String answer = prompt(promptMessage.toString(), optionKeys);
+                String answer;
+                if (StringUtils.isBlank(defaultOptionKey)) {
+                    answer = prompt(promptMessage.toString(), optionKeys);
+                } else {
+                    answer = prompt(promptMessage.toString(), optionKeys, defaultOptionKey);
+                }
                 return optionsByKey.get(answer);
             } catch (PrompterException e) {
                 throw new GitFlowFailureException(e,
