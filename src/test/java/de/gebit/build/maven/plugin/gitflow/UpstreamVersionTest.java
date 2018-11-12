@@ -9,8 +9,8 @@
 package de.gebit.build.maven.plugin.gitflow;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.anyString;
-import static org.mockito.Mockito.eq;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
@@ -23,7 +23,6 @@ import java.util.Properties;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.io.ModelParseException;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
-import org.codehaus.plexus.util.FileUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -31,6 +30,7 @@ import org.junit.Test;
 import de.gebit.build.maven.plugin.gitflow.TestProjects.WithUpstreamConstants;
 import de.gebit.build.maven.plugin.gitflow.jgit.GitExecution;
 import de.gebit.build.maven.plugin.gitflow.jgit.RepositorySet;
+import de.gebit.xmlxpath.XML;
 
 /**
  * @author Volodymyr Medvid
@@ -944,12 +944,10 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
         git.switchToBranch(repositorySet, USED_FEATURE_BRANCH);
 
         File pom = new File(repositorySet.getWorkingDirectory(), "pom.xml");
-        String pomContents = FileUtils.fileRead(pom);
-        pomContents = pomContents.replaceAll("<version>1.0.0</version>",
-                "<version>" + WithUpstreamConstants.UPSTREAM_FEATURE_VERSION + "</version>");
-        pomContents = pomContents.replaceAll("<relativePath>upstream-pom-1.0.0.xml</relativePath>",
-                "<relativePath>" + WithUpstreamConstants.UPSTREAM_FEATURE_RELATIVE_PATH + "</relativePath>");
-        FileUtils.fileWrite(pom, pomContents);
+        XML pomXML = XML.load(pom);
+        pomXML.setValue("/project/parent/version", WithUpstreamConstants.UPSTREAM_FEATURE_VERSION);
+        pomXML.setValue("/project/parent/relativePath", WithUpstreamConstants.UPSTREAM_FEATURE_RELATIVE_PATH);
+        pomXML.store();
         git.commitAll(repositorySet, COMMIT_MESSAGE_UPSTREAM_UPDATE);
         git.createAndCommitTestfile(repositorySet, "feature-testfile.txt", COMMIT_MESSAGE_FEATURE_TESTFILE);
         git.push(repositorySet);

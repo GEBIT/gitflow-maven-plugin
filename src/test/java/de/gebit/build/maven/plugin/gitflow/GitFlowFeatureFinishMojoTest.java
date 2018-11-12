@@ -345,7 +345,7 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         assertParentVersionsInPom(new File(repositorySet.getWorkingDirectory(), "module"), TestProjects.BASIC.version);
     }
 
-    public void createNewModule() throws IOException {
+    private void createNewModule() throws IOException {
         File workingDir = repositorySet.getWorkingDirectory();
         File moduleDir = new File(workingDir, "module");
         moduleDir.mkdir();

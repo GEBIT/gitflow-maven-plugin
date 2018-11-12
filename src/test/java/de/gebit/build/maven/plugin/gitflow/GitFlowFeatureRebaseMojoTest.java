@@ -33,6 +33,7 @@ import org.junit.Test;
 import de.gebit.build.maven.plugin.gitflow.TestProjects.BasicConstants;
 import de.gebit.build.maven.plugin.gitflow.jgit.GitExecution;
 import de.gebit.build.maven.plugin.gitflow.jgit.RepositorySet;
+import de.gebit.xmlxpath.XML;
 
 /**
  * @author Volodymyr Medvid
@@ -2064,7 +2065,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         final String COMMIT_MESSAGE_MASTER_VERSION_UPDATE = "MASTER: update project version";
         final String COMMIT_MESSAGE_NEW_FEATURE_MODULE = "FEATURE: added module";
         git.switchToBranch(repositorySet, MASTER_BRANCH);
-        replaceVersion(TestProjects.BASIC.version, NEW_MASTER_VERSION);
+        replaceProjectVersion(NEW_MASTER_VERSION);
         git.commitAll(repositorySet, COMMIT_MESSAGE_MASTER_VERSION_UPDATE);
         git.push(repositorySet);
         git.switchToBranch(repositorySet, FEATURE_BRANCH);
@@ -2102,7 +2103,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         final String COMMIT_MESSAGE_MASTER_VERSION_UPDATE = "MASTER: update project version";
         final String COMMIT_MESSAGE_NEW_FEATURE_MODULE = "FEATURE: added module";
         git.switchToBranch(repositorySet, MASTER_BRANCH);
-        replaceVersion(TestProjects.BASIC.version, NEW_MASTER_VERSION);
+        replaceProjectVersion(NEW_MASTER_VERSION);
         git.commitAll(repositorySet, COMMIT_MESSAGE_MASTER_VERSION_UPDATE);
         git.push(repositorySet);
         git.switchToBranch(repositorySet, FEATURE_BRANCH);
@@ -2142,7 +2143,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         final String COMMIT_MESSAGE_MASTER_VERSION_UPDATE = "MASTER: update project version";
         final String COMMIT_MESSAGE_NEW_FEATURE_MODULE = "FEATURE: added module";
         git.switchToBranch(repositorySet, MASTER_BRANCH);
-        replaceVersion(TestProjects.BASIC.version, NEW_MASTER_VERSION);
+        replaceProjectVersion(NEW_MASTER_VERSION);
         git.commitAll(repositorySet, COMMIT_MESSAGE_MASTER_VERSION_UPDATE);
         git.push(repositorySet);
         git.switchToBranch(repositorySet, FEATURE_BRANCH);
@@ -2187,7 +2188,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         final String USED_COMMIT_MESSAGE_MARGE = TestProjects.BASIC.jiraProject + "-NONE: Merge branch "
                 + MASTER_BRANCH + " into " + USED_FEATURE_BRANCH;
         git.switchToBranch(repositorySet, MASTER_BRANCH);
-        replaceVersion(TestProjects.BASIC.version, NEW_MASTER_VERSION);
+        replaceProjectVersion(NEW_MASTER_VERSION);
         git.commitAll(repositorySet, COMMIT_MESSAGE_MASTER_VERSION_UPDATE);
         git.push(repositorySet);
         git.switchToBranch(repositorySet, USED_FEATURE_BRANCH);
@@ -2227,7 +2228,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
                 + ": updating versions for new modules on feature branch";
         final String USED_FEATURE_BRANCH = BasicConstants.FEATURE_WITHOUT_VERSION_BRANCH;
         git.switchToBranch(repositorySet, MASTER_BRANCH);
-        replaceVersion(TestProjects.BASIC.version, NEW_MASTER_VERSION);
+        replaceProjectVersion(NEW_MASTER_VERSION);
         git.commitAll(repositorySet, COMMIT_MESSAGE_MASTER_VERSION_UPDATE);
         git.push(repositorySet);
         git.switchToBranch(repositorySet, USED_FEATURE_BRANCH);
@@ -2272,14 +2273,12 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         FileUtils.fileWrite(pom, pomContents);
     }
 
-    private void replaceVersion(String oldVersion, String newVersion) throws IOException {
+    private void replaceProjectVersion(String newVersion) throws IOException {
         File pom = new File(repositorySet.getWorkingDirectory(), "pom.xml");
-        String pomContents = FileUtils.fileRead(pom);
-        pomContents = pomContents.replaceAll("<version>" + oldVersion + "</version>",
-                "<version>" + newVersion + "</version>");
-        pomContents = pomContents.replaceAll("<version.build>" + oldVersion + "</version.build>",
-                "<version.build>" + newVersion + "</version.build>");
-        FileUtils.fileWrite(pom, pomContents);
+        XML pomXML = XML.load(pom);
+        pomXML.setValue("/project/version", newVersion);
+        pomXML.setValue("/project/properties/version.build", newVersion);
+        pomXML.store();
     }
 
 }
