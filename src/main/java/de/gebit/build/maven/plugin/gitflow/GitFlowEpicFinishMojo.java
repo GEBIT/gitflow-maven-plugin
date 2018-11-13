@@ -164,7 +164,7 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
                         String epicFinishMessage = substituteWithIssueNumber(commitMessages.getEpicFinishMessage(),
                                 issueNumber);
                         getMavenLog().info("Setting base version '" + baseVersion + "' for project on epic branch...");
-                        mvnSetVersions(baseVersion, CommandContext.INTERNAL, null, baseBranch);
+                        mvnSetVersions(baseVersion, GitFlowAction.EPIC_FINISH, null, baseBranch);
                         gitCommit(epicFinishMessage);
 
                         gitCheckout(baseBranch);

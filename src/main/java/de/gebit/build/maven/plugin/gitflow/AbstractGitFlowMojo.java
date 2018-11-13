@@ -2963,50 +2963,20 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      *
      * @param version
      *            New version to set.
-     * @throws MojoFailureException
-     * @throws CommandLineException
-     */
-    protected void mvnSetVersions(final String version) throws MojoFailureException, CommandLineException {
-        mvnSetVersions(version, CommandContext.VERSION, null);
-    }
-
-    /**
-     * Executes 'set' goal of versions-maven-plugin or 'set-version' of
-     * tycho-versions-plugin in case it is tycho build.
-     *
-     * @param version
-     *            New version to set.
      * @param promptPrefix
      *            Specify a prompt prefix. A value <code>!= null</code> triggers
      *            processing of {@link #additionalVersionCommands}
      * @throws MojoFailureException
      * @throws CommandLineException
      */
-    protected void mvnSetVersions(final String version, final CommandContext commandContext, String promptPrefix)
+    protected void mvnSetVersions(final String version, GitFlowAction aGitFlowAction, String promptPrefix)
             throws MojoFailureException, CommandLineException {
-        mvnSetVersions(version, commandContext, promptPrefix, null, false);
+        mvnSetVersions(version, aGitFlowAction, promptPrefix, null, false, null);
     }
 
-    protected void mvnSetVersions(final String version, final CommandContext commandContext, String promptPrefix, String targetBranch)
-            throws MojoFailureException, CommandLineException {
-        mvnSetVersions(version, commandContext, promptPrefix, null, false, targetBranch);
-    }
-
-    /**
-     * Executes 'set' goal of versions-maven-plugin or 'set-version' of
-     * tycho-versions-plugin in case it is tycho build.
-     *
-     * @param version
-     *            New version to set.
-     * @param promptPrefix
-     *            Specify a prompt prefix. A value <code>!= null</code> triggers
-     *            processing of {@link #additionalVersionCommands}
-     * @throws MojoFailureException
-     * @throws CommandLineException
-     */
-    protected void mvnSetVersions(final String version, final CommandContext commandContext, String promptPrefix, String branchWithAdditionalVersionInfo,
-            boolean sameBaseVersion) throws MojoFailureException, CommandLineException {
-        mvnSetVersions(version, commandContext, promptPrefix, branchWithAdditionalVersionInfo, sameBaseVersion, null);
+    protected void mvnSetVersions(final String version, GitFlowAction aGitFlowAction, String promptPrefix,
+            String targetBranch) throws MojoFailureException, CommandLineException {
+        mvnSetVersions(version, aGitFlowAction, promptPrefix, null, false, targetBranch);
     }
 
     /**
@@ -3053,16 +3023,24 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * tycho-versions-plugin in case it is tycho build.
      *
      * @param version
-     *            New version to set.
-     * @param contexts
-     *            The current command policy
+     *            The new version to set.
+     * @param aGitFlowAction
+     *            The gitflow action in which context the version will be set.
      * @param promptPrefix
-     *            Specify a prompt prefix. A value <code>!= null</code> triggers
-     *            processing of {@link #additionalVersionCommands}
+     *            The prefix for the prompt that will be used if no prompt hint for
+     *            the gitflow action will be found.
+     * @param branchWithAdditionalVersionInfo
+     *            The branch where additional version parameters stored. Usually
+     *            <code>null</code>.
+     * @param sameBaseVersion
+     *            <code>true</code> if the version on base branch not changed.
+     * @param targetBranch
+     *            The target branch for the gitflow action.
      * @throws MojoFailureException
      * @throws CommandLineException
      */
-    protected void mvnSetVersions(final String version, final CommandContext commandContext, String promptPrefix, String branchWithAdditionalVersionInfo,
+    protected void mvnSetVersions(final String version, GitFlowAction aGitFlowAction,
+            String promptPrefix, String branchWithAdditionalVersionInfo,
             boolean sameBaseVersion, String targetBranch) throws MojoFailureException, CommandLineException {
         BranchCentralConfigChanges branchConfigChanges = new BranchCentralConfigChanges();
         String currentBranch = branchWithAdditionalVersionInfo;
@@ -3083,7 +3061,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             // process additional commands/parameters
             for (int i = 0; i < additionalVersionCommands.length; i++) {
                 GitFlowParameter parameter = additionalVersionCommands[i];
-                if (!parameter.getCommandContexts().contains(commandContext)) {
+                if (!parameter.getCommandContexts().contains(aGitFlowAction.getCommandContext())) {
                     continue;
                 }
                 if (!parameter.isEnabled()) {
@@ -3096,15 +3074,6 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                     if (parameter.getPrompt() != null) {
                         String value = null;
 
-                        String prompt;
-                        try {
-                            prompt = promptPrefix + interpolator.interpolate(parameter.getPrompt());
-                        } catch (InterpolationException e) {
-                            throw new GitFlowFailureException(e,
-                                    "Expression cycle detected in additionalVersionCommand parameter 'prompt'. "
-                                            + "Versions can't be updated.",
-                                    "Please modify the parameter value to avoid cylces.");
-                        }
                         try {
                             String defaultValue = parameter.getDefaultValue() != null
                                     ? interpolator.interpolate(parameter.getDefaultValue())
@@ -3114,6 +3083,30 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                                         BranchConfigKeys.PREFIX_ADDITIONAL_VERSION_PARAM + i);
                             }
                             if (value == null) {
+                                String prompt;
+                                try {
+                                    prompt = interpolator.interpolate(parameter.getPrompt());
+                                } catch (InterpolationException e) {
+                                    throw new GitFlowFailureException(e,
+                                            "Expression cycle detected in additionalVersionCommand parameter 'prompt'. "
+                                                    + "Versions can't be updated.",
+                                            "Please modify the parameter value to avoid cylces.");
+                                }
+                                String hint = parameter.getPromptHint(aGitFlowAction);
+                                if (hint != null) {
+                                    try {
+                                        hint = interpolator.interpolate(hint);
+                                    } catch (InterpolationException e) {
+                                        throw new GitFlowFailureException(e,
+                                                "Expression cycle detected in additionalVersionCommand parameter "
+                                                        + "'promptHints' for gitflow action '" + aGitFlowAction + "'. "
+                                                        + "Versions can't be updated.",
+                                                "Please modify the parameter value to avoid cylces.");
+                                    }
+                                    prompt += LS + hint + LS + "Enter the version:";
+                                } else {
+                                    prompt = promptPrefix + prompt;
+                                }
                                 if (defaultValue != null) {
                                     value = getPrompter().promptValue(prompt, defaultValue);
                                 } else {
@@ -3163,7 +3156,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             executeMvnCommand(OutputMode.PROGRESS, VERSIONS_MAVEN_PLUGIN_SET_GOAL, "-DnewVersion=" + version,
                     "-DgenerateBackupPoms=false");
         }
-        for (String command : getCommandsAfterVersion(commandContext)) {
+        for (String command : getCommandsAfterVersion(aGitFlowAction.getCommandContext())) {
             try {
                 command = normilizeWhitespaces(command.replaceAll("\\@\\{version\\}", version));
                 executeMvnCommand(OutputMode.PROGRESS, CommandLineUtils.translateCommandline(command));

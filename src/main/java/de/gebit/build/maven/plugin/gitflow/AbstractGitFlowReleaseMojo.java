@@ -232,7 +232,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
 
         if (!version.equals(currentVersion)) {
             getMavenLog().info("Setting release version '" + version + "' for project on release branch...");
-            mvnSetVersions(version, CommandContext.RELEASE, "On release branch: ");
+            mvnSetVersions(version, GitFlowAction.RELEASE_START, "On release branch: ");
             gitCommit(commitMessages.getReleaseStartMessage());
         }
 
@@ -456,7 +456,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
         getMavenLog().info("Setting next development version '" + nextSnapshotVersion
                 + "' for project on development branch...");
-        mvnSetVersions(nextSnapshotVersion, CommandContext.VERSION, "Next development version: ");
+        mvnSetVersions(nextSnapshotVersion, GitFlowAction.RELEASE_FINISH, "Next development version: ");
 
         // git commit -a -m updating for next development version
         gitCommit(commitMessages.getReleaseFinishMessage());

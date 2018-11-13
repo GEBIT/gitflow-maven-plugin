@@ -210,7 +210,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
                 getLog().info("Added feature issue number to project version: " + version);
                 if (!currentVersion.equals(version)) {
                     getMavenLog().info("Setting version '" + version + "' for project on feature branch...");
-                    mvnSetVersions(version, CommandContext.VERSION, "On feature branch: ", featureBranchName);
+                    mvnSetVersions(version, GitFlowAction.FEATURE_START, "On feature branch: ", featureBranchName);
                     gitCommit(featureStartMessage);
                     versionChangeCommit = getCurrentCommit();
                 } else {

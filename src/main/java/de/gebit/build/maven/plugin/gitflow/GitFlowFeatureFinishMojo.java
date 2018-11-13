@@ -656,7 +656,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
             String featureFinishMessage = substituteWithIssueNumber(commitMessages.getFeatureFinishMessage(),
                     issueNumber);
             getMavenLog().info("Setting base version '" + baseVersion + "' for project on feature branch...");
-            mvnSetVersions(baseVersion, CommandContext.INTERNAL, null, baseBranch);
+            mvnSetVersions(baseVersion, GitFlowAction.FEATURE_FINISH, null, baseBranch);
             gitCommit(featureFinishMessage);
         } else {
             getLog().info("Project version on feature branch is same as project version on base branch. "

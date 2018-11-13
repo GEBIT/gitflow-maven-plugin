@@ -20,6 +20,8 @@
 		<version.upstream.onlySnapshots>true</version.upstream.onlySnapshots>
 		<version.upstream>3.3.3-default</version.upstream>
 		<version.upstream.property.update>${version.upstream.property}</version.upstream.property.update>
+
+		<avc.stdPrompt>Enter the version of the ${project.upstream} project to reference.</avc.stdPrompt>
 	</properties>
 	<modules>
 		<module>module1</module>
@@ -85,7 +87,7 @@
 								<additionalVersionCommands>
 									<additionalVersionCommand>
 										<contexts>${flow.additionalVersionCommands.contexts}</contexts>
-										<prompt>Enter the version of the ${project.upstream} project to reference</prompt>
+										<prompt>${avc.stdPrompt}</prompt>
 										<defaultValue></defaultValue>
 										<enabled>${version.upstream.property}</enabled>
 										<command>version-stamper:stamp -N -DonlySnapshots=${version.upstream.onlySnapshots} -Dversion.property=${version.upstream.property.update} -DversionValue=@{value}</command>
@@ -123,7 +125,7 @@
 								<additionalVersionCommands>
 									<additionalVersionCommand>
 										<contexts>${flow.additionalVersionCommands.contexts}</contexts>
-										<prompt>Enter the version of the ${project.upstream} project to reference</prompt>
+										<prompt>${avc.stdPrompt}</prompt>
 										<defaultValue>${version.upstream}</defaultValue>
 										<enabled>${version.upstream.property}</enabled>
 										<property>version.upstream</property>
@@ -166,7 +168,7 @@
 								<additionalVersionCommands>
 									<additionalVersionCommand>
 										<contexts>${flow.additionalVersionCommands.contexts}</contexts>
-										<prompt>Enter the version of the ${project.upstream} project to reference</prompt>
+										<prompt>${avc.stdPrompt}</prompt>
 										<defaultValue>${version.upstream}</defaultValue>
 										<enabled>${version.upstream.property}</enabled>
 										<property>version.upstream</property>

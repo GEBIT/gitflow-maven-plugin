@@ -22,16 +22,26 @@ public class GitFlowParameter {
     /**
      * User prompt text. If not set only the command is executed. Can contain the {@literal @}{version} placeholder
      * which is replaced by the selected feature version as well as any project property with the {@literal @}{property}
-     *syntax.
+     * syntax.
      */
     @Parameter(required = false)
     protected String prompt;
 
     /**
+     * Hints for the user prompt text for different gitflow actions. Can contain the {@literal @}{version} placeholder
+     * which is replaced by the version to be set as well as any project property with the {@literal @}{property}
+     * syntax.
+     *
+     * @since 2.1.4
+     */
+    @Parameter
+    protected ParameterPromptHints promptHints;
+
+    /**
      * Explicit command contexts for a command. The command is executed only if
      * used in one of the specified contexts. By default only for normal version
      * changes.
-     * 
+     *
      * @since 2.1.2
      */
     @Parameter(required = false, defaultValue = "VERSION")
@@ -154,13 +164,48 @@ public class GitFlowParameter {
         return value;
     }
 
+    /**
+     * Get the hint for the user prompt text for the passed gitflow action.
+     *
+     * @return The hint for the passed gitflow action.
+     */
+    public String getPromptHint(GitFlowAction aGitFlowAction) {
+        if (promptHints != null) {
+            switch (aGitFlowAction) {
+            case FEATURE_START:
+                return promptHints.getFeatureStart();
+            case FEATURE_REBASE:
+                return promptHints.getFeatureRebase();
+            case FEATURE_FINISH:
+                return promptHints.getFeatureFinish();
+            case EPIC_START:
+                return promptHints.getEpicStart();
+            case EPIC_FINISH:
+                return promptHints.getEpicFinish();
+            case MAINTENANCE_START:
+                return promptHints.getMaintenanceStart();
+            case RELEASE_START:
+                return promptHints.getReleaseStart();
+            case RELEASE_FINISH:
+                return promptHints.getReleaseFinish();
+
+            default:
+                break;
+            }
+        }
+        return null;
+    }
+
     @Override
     public String toString() {
         StringBuilder result = new StringBuilder();
         result.append("GitFlowParameter(");
         result.append("Contexts=").append(Arrays.asList(contexts)).append(",");
-        if (prompt != null) { 
+        if (prompt != null) {
             result.append("Prompt=").append(prompt).append(",");
+        }
+        if (promptHints != null) {
+            result.append("promptHints=").append(promptHints).append(",");
         }
         if (enabled != null) {
             result.append("Enabled=").append(enabled).append(",");

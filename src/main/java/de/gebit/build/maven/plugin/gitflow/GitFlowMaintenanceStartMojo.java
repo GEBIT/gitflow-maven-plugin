@@ -245,7 +245,8 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
         if (!currentVersion.equals(branchFirstVersion)) {
             getMavenLog()
                     .info("Setting first version '" + branchFirstVersion + "' for project on maintenance branch...");
-            mvnSetVersions(branchFirstVersion, CommandContext.VERSION, "On maintenance branch: ", maintenanceBranch);
+            mvnSetVersions(branchFirstVersion, GitFlowAction.MAINTENANCE_START, "On maintenance branch: ",
+                    maintenanceBranch);
             gitCommit(commitMessages.getMaintenanceStartMessage());
         }
 

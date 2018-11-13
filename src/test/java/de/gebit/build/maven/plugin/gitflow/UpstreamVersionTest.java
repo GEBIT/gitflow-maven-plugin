@@ -81,16 +81,50 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
 
     private static final String OTHER_UPSTREAM_VERSION = "2.1.0";
 
-    private static final String PROMPT_UPSTREAM_VERSION = "Enter the version of the Test Parent Pom project to reference";
+    private static final String PROMPT_UPSTREAM_VERSION_PREFIX = "Enter the version of the Test Parent Pom project to reference.";
 
-    private static final String PROMPT_UPSTREAM_VERSION_ON_FEATURE_BRANCH = "On feature branch: "
-            + PROMPT_UPSTREAM_VERSION;
+    private static final String PROMPT_UPSTREAM_VERSION_SUFFIX = "Enter the version:";
 
-    private static final String PROMPT_UPSTREAM_VERSION_ON_RELEASE_START_BRANCH = "On release branch: "
-            + PROMPT_UPSTREAM_VERSION;
+    private static final String PROMPT_UPSTREAM_VERSION_FEATURE_START = PROMPT_UPSTREAM_VERSION_PREFIX + LS + "Hints:\n"
+            + "- if you have corresponding feature branch for Test Parent Pom, enter its feature branch version\n"
+            + "- if you want to reference in your feature branch a specific version of Test Parent Pom, then enter the version you want to use\n"
+            + "- in other case enter the current version of Test Parent Pom on development branch" + LS
+            + PROMPT_UPSTREAM_VERSION_SUFFIX;
 
-    private static final String PROMPT_UPSTREAM_VERSION_ON_RELEASE_FINISH_BRANCH = "Next development version: "
-            + PROMPT_UPSTREAM_VERSION;
+    private static final String PROMPT_UPSTREAM_VERSION_FEATURE_REBASE = PROMPT_UPSTREAM_VERSION_PREFIX + LS
+            + "Hints:\n"
+            + "- if you have corresponding feature branch for Test Parent Pom, enter its current feature branch version (ensure the upstream project was rebased before)\n"
+            + "- if you reference in your feature branch a specific version of Test Parent Pom, then enter the version you want to use\n"
+            + "- in other case enter the current version of Test Parent Pom on development branch" + LS
+            + PROMPT_UPSTREAM_VERSION_SUFFIX;
+
+    // private static final String PROMPT_UPSTREAM_VERSION_FEATURE_FINISH =
+    // PROMPT_UPSTREAM_VERSION_PREFIX + LS + "Hints:\n"
+    // + "- if you referenced in your feature branch a specific version of
+    // ${project.upstream}, enter the version you want to use now on development
+    // branch\n"
+    // + "- in other case enter the current version of ${project.upstream} on
+    // development branch" + LS
+    // + PROMPT_UPSTREAM_VERSION_SUFFIX;
+
+    private static final String PROMPT_UPSTREAM_VERSION_RELEASE_START = PROMPT_UPSTREAM_VERSION_PREFIX + LS + "Hints:\n"
+            + "- if you released Test Parent Pom before, enter its release version\n"
+            + "- if the project references a specific non-snapshot version of Test Parent Pom, enter this version\n"
+            + "- do not enter SNAPSHOT and I-Build versions here!" + LS + PROMPT_UPSTREAM_VERSION_SUFFIX;
+
+    private static final String PROMPT_UPSTREAM_VERSION_RELEASE_FINISH = PROMPT_UPSTREAM_VERSION_PREFIX + LS
+            + "Hints:\n"
+            + "- if you want to reference in your development branch a specific version of Test Parent Pom, then enter the version you want to use\n"
+            + "- in other case enter the current version of Test Parent Pom on development branch" + LS
+            + PROMPT_UPSTREAM_VERSION_SUFFIX;
+
+    // private static final String PROMPT_UPSTREAM_VERSION_ON_RELEASE_START_BRANCH =
+    // "On release branch: "
+    // + PROMPT_UPSTREAM_VERSION_PREFIX;
+    //
+    // private static final String PROMPT_UPSTREAM_VERSION_ON_RELEASE_FINISH_BRANCH
+    // = "Next development version: "
+    // + PROMPT_UPSTREAM_VERSION_PREFIX;
 
     private static final String PROMPT_RELEASE_VERSION = ExecutorHelper.RELEASE_START_PROMPT_RELEASE_VERSION;
 
@@ -161,13 +195,13 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
                 + "-SNAPSHOT";
         when(promptControllerMock.prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME))
                 .thenReturn(USED_FEATURE_NAME);
-        when(promptControllerMock.prompt(PROMPT_UPSTREAM_VERSION_ON_FEATURE_BRANCH, EXPECTED_UPSTREAM_VERSION))
+        when(promptControllerMock.prompt(PROMPT_UPSTREAM_VERSION_FEATURE_START, EXPECTED_UPSTREAM_VERSION))
                 .thenReturn(NEW_UPSTREAM_VERSION);
         // test
         executeMojoInteractive(GOAL_FEATURE_START);
         // verify
         verify(promptControllerMock).prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME);
-        verify(promptControllerMock).prompt(PROMPT_UPSTREAM_VERSION_ON_FEATURE_BRANCH, EXPECTED_UPSTREAM_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_UPSTREAM_VERSION_FEATURE_START, EXPECTED_UPSTREAM_VERSION);
         verifyNoMoreInteractions(promptControllerMock);
 
         assertVersions(EXPECTED_FEATURE_VERSION, NEW_UPSTREAM_VERSION);
@@ -232,12 +266,12 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
         git.switchToBranch(repositorySet, FEATURE_BRANCH);
         git.createAndCommitTestfile(repositorySet, "feature-testfile.txt", COMMIT_MESSAGE_FEATURE_TESTFILE);
         git.push(repositorySet);
-        when(promptControllerMock.prompt(PROMPT_UPSTREAM_VERSION_ON_FEATURE_BRANCH, NEW_UPSTREAM_VERSION))
+        when(promptControllerMock.prompt(PROMPT_UPSTREAM_VERSION_FEATURE_REBASE, NEW_UPSTREAM_VERSION))
                 .thenReturn(OTHER_UPSTREAM_VERSION);
         // test
         executeMojoInteractive(GOAL_FEATURE_REBASE);
         // verify
-        verify(promptControllerMock).prompt(PROMPT_UPSTREAM_VERSION_ON_FEATURE_BRANCH, NEW_UPSTREAM_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_UPSTREAM_VERSION_FEATURE_REBASE, NEW_UPSTREAM_VERSION);
         verifyNoMoreInteractions(promptControllerMock);
         final String EXPECTED_VERSION_CHANGE_COMMIT = git.commitId(repositorySet, "HEAD^");
 
@@ -356,12 +390,12 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
         git.commitAll(repositorySet, "added module4 and changed version");
         git.push(repositorySet);
         git.switchToBranch(repositorySet, FEATURE_BRANCH);
-        when(promptControllerMock.prompt(PROMPT_UPSTREAM_VERSION_ON_FEATURE_BRANCH, NEW_UPSTREAM_VERSION))
+        when(promptControllerMock.prompt(PROMPT_UPSTREAM_VERSION_FEATURE_REBASE, NEW_UPSTREAM_VERSION))
                 .thenReturn(OTHER_UPSTREAM_VERSION);
         // test
         executeMojoInteractive(GOAL_FEATURE_REBASE);
         // verify
-        verify(promptControllerMock).prompt(PROMPT_UPSTREAM_VERSION_ON_FEATURE_BRANCH, NEW_UPSTREAM_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_UPSTREAM_VERSION_FEATURE_REBASE, NEW_UPSTREAM_VERSION);
         verifyNoMoreInteractions(promptControllerMock);
         final String EXPECTED_VERSION_CHANGE_COMMIT = git.commitId(repositorySet, "HEAD~2");
 
@@ -505,7 +539,7 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
         final String EXPECTED_DEVELOPMENT_COMMIT = git.currentCommit(repositorySet);
         when(promptControllerMock.prompt(PROMPT_RELEASE_VERSION, CALCULATED_RELEASE_VERSION))
                 .thenReturn(RELEASE_VERSION);
-        when(promptControllerMock.prompt(PROMPT_UPSTREAM_VERSION_ON_RELEASE_START_BRANCH, EXPECTED_UPSTREAM_VERSION))
+        when(promptControllerMock.prompt(PROMPT_UPSTREAM_VERSION_RELEASE_START, EXPECTED_UPSTREAM_VERSION))
                 .thenReturn(NEW_UPSTREAM_VERSION);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.additionalVersionCommands.contexts", "VERSION,INTERNAL,RELEASE");
@@ -513,7 +547,7 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
         executeMojoInteractive(GOAL_RELEASE_START, userProperties);
         // verify
         verify(promptControllerMock).prompt(PROMPT_RELEASE_VERSION, CALCULATED_RELEASE_VERSION);
-        verify(promptControllerMock).prompt(PROMPT_UPSTREAM_VERSION_ON_RELEASE_START_BRANCH, EXPECTED_UPSTREAM_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_UPSTREAM_VERSION_RELEASE_START, EXPECTED_UPSTREAM_VERSION);
         verifyNoMoreInteractions(promptControllerMock);
 
         git.assertClean(repositorySet);
@@ -639,15 +673,14 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
         git.createAndCommitTestfile(repositorySet);
         when(promptControllerMock.prompt(PROMPT_NEXT_DEVELOPMENT_VERSION,
                 WithUpstreamConstants.EXISTING_RELEASE_NEW_DEVELOPMENT_VERSION)).thenReturn(OTHER_DEVELOPMENT_VERSION);
-        when(promptControllerMock.prompt(PROMPT_UPSTREAM_VERSION_ON_RELEASE_FINISH_BRANCH, EXPECTED_UPSTREAM_VERSION))
+        when(promptControllerMock.prompt(PROMPT_UPSTREAM_VERSION_RELEASE_FINISH, EXPECTED_UPSTREAM_VERSION))
                 .thenReturn(NEW_UPSTREAM_VERSION);
         // test
         executeMojoInteractive(GOAL_RELEASE_FINISH);
         // verify
         verify(promptControllerMock).prompt(PROMPT_NEXT_DEVELOPMENT_VERSION,
                 WithUpstreamConstants.EXISTING_RELEASE_NEW_DEVELOPMENT_VERSION);
-        verify(promptControllerMock).prompt(PROMPT_UPSTREAM_VERSION_ON_RELEASE_FINISH_BRANCH,
-                EXPECTED_UPSTREAM_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_UPSTREAM_VERSION_RELEASE_FINISH, EXPECTED_UPSTREAM_VERSION);
         verifyNoMoreInteractions(promptControllerMock);
 
         git.assertClean(repositorySet);
@@ -804,11 +837,11 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
         // set up
         when(promptControllerMock.prompt(PROMPT_RELEASE_VERSION, CALCULATED_RELEASE_VERSION))
                 .thenReturn(RELEASE_VERSION);
-        when(promptControllerMock.prompt(PROMPT_UPSTREAM_VERSION_ON_RELEASE_START_BRANCH, EXPECTED_UPSTREAM_VERSION))
+        when(promptControllerMock.prompt(PROMPT_UPSTREAM_VERSION_RELEASE_START, EXPECTED_UPSTREAM_VERSION))
                 .thenReturn(NEW_UPSTREAM_VERSION);
         when(promptControllerMock.prompt(PROMPT_NEXT_DEVELOPMENT_VERSION, CALCULATED_NEW_DEVELOPMENT_VERSION))
                 .thenReturn(OTHER_DEVELOPMENT_VERSION);
-        when(promptControllerMock.prompt(eq(PROMPT_UPSTREAM_VERSION_ON_RELEASE_FINISH_BRANCH), anyString()))
+        when(promptControllerMock.prompt(eq(PROMPT_UPSTREAM_VERSION_RELEASE_FINISH), anyString()))
                 .thenReturn(OTHER_UPSTREAM_VERSION);
         Properties userProperties = new Properties();
         userProperties.setProperty("keepBranch", "true");
@@ -817,9 +850,9 @@ public class UpstreamVersionTest extends AbstractGitFlowMojoTestCase {
         executeMojoInteractive(GOAL_RELEASE, userProperties);
         // verify
         verify(promptControllerMock).prompt(PROMPT_RELEASE_VERSION, CALCULATED_RELEASE_VERSION);
-        verify(promptControllerMock).prompt(PROMPT_UPSTREAM_VERSION_ON_RELEASE_START_BRANCH, EXPECTED_UPSTREAM_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_UPSTREAM_VERSION_RELEASE_START, EXPECTED_UPSTREAM_VERSION);
         verify(promptControllerMock).prompt(PROMPT_NEXT_DEVELOPMENT_VERSION, CALCULATED_NEW_DEVELOPMENT_VERSION);
-        verify(promptControllerMock).prompt(eq(PROMPT_UPSTREAM_VERSION_ON_RELEASE_FINISH_BRANCH), anyString());
+        verify(promptControllerMock).prompt(eq(PROMPT_UPSTREAM_VERSION_RELEASE_FINISH), anyString());
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);

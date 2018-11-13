@@ -47,7 +47,7 @@ public class GitFlowSetVersionMojoTest extends AbstractGitFlowMojoTestCase {
 
     private static final String PROMPT_NEW_VERSION = "What is the new version?";
 
-    private static final String PROMPT_UPSTREAM_VERSION = "Enter the version of the Test Parent Pom project to reference";
+    private static final String PROMPT_UPSTREAM_VERSION = "Enter the version of the Test Parent Pom project to reference.";
 
     private static final String PROMPT_ENABLE_UPDATE = "Should property version.test-parent-pom be updated to project version?";
 

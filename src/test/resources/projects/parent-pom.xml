@@ -117,6 +117,51 @@
 				<flow.pushReleaseBranch>false</flow.pushReleaseBranch>
 				<flow.deleteRemoteBranchOnRebase>false</flow.deleteRemoteBranchOnRebase>
 				<flow.additionalVersionCommands.contexts>VERSION</flow.additionalVersionCommands.contexts>
+
+				<flow.upstreamVersionPromptHint.featureStart><![CDATA[
+Hints:
+- if you have corresponding feature branch for ${project.upstream}, enter its feature branch version
+- if you want to reference in your feature branch a specific version of ${project.upstream}, then enter the version you want to use
+- in other case enter the current version of ${project.upstream} on development branch
+                ]]></flow.upstreamVersionPromptHint.featureStart>
+                <flow.upstreamVersionPromptHint.featureRebase><![CDATA[
+Hints:
+- if you have corresponding feature branch for ${project.upstream}, enter its current feature branch version (ensure the upstream project was rebased before)
+- if you reference in your feature branch a specific version of ${project.upstream}, then enter the version you want to use
+- in other case enter the current version of ${project.upstream} on development branch
+                ]]></flow.upstreamVersionPromptHint.featureRebase>
+                <flow.upstreamVersionPromptHint.featureFinish><![CDATA[
+Hints:
+- if you referenced in your feature branch a specific version of ${project.upstream}, enter the version you want to use now on development branch
+- in other case enter the current version of ${project.upstream} on development branch
+                ]]></flow.upstreamVersionPromptHint.featureFinish>
+                <flow.upstreamVersionPromptHint.epicStart><![CDATA[
+Hints:
+- if you have corresponding epic branch for ${project.upstream}, enter its epic branch version
+- if you want to reference in your epic branch a specific version of ${project.upstream}, then enter the version you want to use
+- in other case enter the current version of ${project.upstream} on development branch
+                ]]></flow.upstreamVersionPromptHint.epicStart>
+                <flow.upstreamVersionPromptHint.epicFinish><![CDATA[
+Hints:
+- if you referenced in your epic branch a specific version of ${project.upstream}, enter the version you want to use now on development branch
+- in other case enter the current version of ${project.upstream} on development branch
+                ]]></flow.upstreamVersionPromptHint.epicFinish>
+                <flow.upstreamVersionPromptHint.maintenanceStart><![CDATA[
+Hints:
+- if you want to reference in your maintenance branch a specific version of ${project.upstream}, then enter the version you want to use
+- in other case enter the current version of ${project.upstream} on development branch
+                ]]></flow.upstreamVersionPromptHint.maintenanceStart>
+                <flow.upstreamVersionPromptHint.releaseStart><![CDATA[
+Hints:
+- if you released ${project.upstream} before, enter its release version
+- if the project references a specific non-snapshot version of ${project.upstream}, enter this version
+- do not enter SNAPSHOT and I-Build versions here!
+                ]]></flow.upstreamVersionPromptHint.releaseStart>
+                <flow.upstreamVersionPromptHint.releaseFinish><![CDATA[
+Hints:
+- if you want to reference in your development branch a specific version of ${project.upstream}, then enter the version you want to use
+- in other case enter the current version of ${project.upstream} on development branch
+                ]]></flow.upstreamVersionPromptHint.releaseFinish>
 			</properties>
 			<build>
 				<pluginManagement>
@@ -184,11 +229,21 @@
 								<additionalVersionCommands>
 									<additionalVersionCommand>
 										<contexts>${flow.additionalVersionCommands.contexts}</contexts>
-										<prompt>Enter the version of the ${project.upstream} project to reference</prompt>
+										<prompt>Enter the version of the ${project.upstream} project to reference.</prompt>
 										<defaultValue>${version.upstream}</defaultValue>
 										<enabled>${version.upstream.property}</enabled>
 										<property>version.upstream</property>
 										<command>version-stamper:stamp -N -Dversion.property=${version.upstream.property.update} -DversionValue=@{value}</command>
+										<promptHints>
+										    <featureStart>${flow.upstreamVersionPromptHint.featureStart}</featureStart>
+										    <featureRebase>${flow.upstreamVersionPromptHint.featureRebase}</featureRebase>
+										    <featureFinish>${flow.upstreamVersionPromptHint.featureFinish}</featureFinish>
+										    <epicStart>${flow.upstreamVersionPromptHint.epicStart}</epicStart>
+										    <epicFinish>${flow.upstreamVersionPromptHint.epicFinish}</epicFinish>
+										    <maintenanceStart>${flow.upstreamVersionPromptHint.maintenanceStart}</maintenanceStart>
+                                            <releaseStart>${flow.upstreamVersionPromptHint.releaseStart}</releaseStart>
+                                            <releaseFinish>${flow.upstreamVersionPromptHint.releaseFinish}</releaseFinish>
+										</promptHints>
 									</additionalVersionCommand>
 								</additionalVersionCommands>
 							</configuration>

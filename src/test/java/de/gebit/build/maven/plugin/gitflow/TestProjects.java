@@ -14,8 +14,10 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Properties;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.codehaus.plexus.components.interactivity.Prompter;
 import org.eclipse.jgit.api.CreateBranchCommand.SetupUpstreamMode;
@@ -34,6 +36,10 @@ import de.gebit.build.maven.plugin.gitflow.jgit.RepositorySet;
 public class TestProjects {
 
     private static final Logger LOG = LoggerFactory.getLogger(TestProjects.class);
+
+    protected static final String LS = AbstractGitFlowMojoTestCase.LS;
+
+    private static final String INITIALIZED_FILENAME = "initialized";
 
     /**
      * The base directory for all projects.
@@ -135,27 +141,57 @@ public class TestProjects {
     public static synchronized void prepareRepositoryIfNotExisting(File gitRepoDir) throws Exception {
         if (!gitRepoDir.exists()) {
             gitRepoDir.mkdirs();
-            prepareRepository(gitRepoDir, BASIC);
-            prepareRepository(gitRepoDir, WITH_UPSTREAM);
         }
+        prepareRepository(gitRepoDir, BASIC);
+        prepareRepository(gitRepoDir, WITH_UPSTREAM);
     }
 
     private static void prepareRepository(File repoDir, TestProjectData project) throws Exception {
-        String projectName = project.artifactId;
-        LOG.info("Creating repositories for project '" + projectName + "'.");
-        long ms = System.currentTimeMillis();
-        GitExecution git = new GitExecution(repoDir.getAbsoluteFile(), null);
-        try (RepositorySet repositorySet = git.createGitRepositorySet(project.basedir)) {
-            MyTestCase tc = new MyTestCase();
+        String basedirName = project.basedir.getName();
+        File repoBasedir = new File(repoDir.getAbsoluteFile(), basedirName);
+        File tempInitializedFile = new File(repoBasedir, INITIALIZED_FILENAME);
+        if (!tempInitializedFile.exists()) {
+            cleanupDir(repoBasedir);
+            String projectName = project.artifactId;
+            LOG.info("Creating repositories for project '" + projectName + "'.");
+            long ms = System.currentTimeMillis();
+            GitExecution git = new GitExecution(repoDir.getAbsoluteFile(), null);
+            try (RepositorySet repositorySet = git.createGitRepositorySet(project.basedir)) {
+                MyTestCase tc = new MyTestCase();
+                try {
+                    tc.setUpAbstractGitFlowMojoTestCase();
+                    initRepository(project, git, repositorySet, tc);
+                    tempInitializedFile.createNewFile();
+                } finally {
+                    tc.tearDownAbstractGitFlowMojoTestCase();
+                }
+            } catch (Throwable e) {
+                LOG.warn("Repositories for project '" + projectName + "' couldn't be created! ["
+                        + ((System.currentTimeMillis() - ms) / 1000) + "s]", e);
+                throw e;
+            }
+            LOG.info("Repositories for project '" + projectName + "' created. ["
+                    + ((System.currentTimeMillis() - ms) / 1000) + "s]");
+        }
+    }
+
+    private static void cleanupDir(File repoBasedir) throws IOException {
+        int maxTries = 10;
+        while (repoBasedir.exists()) {
             try {
-                tc.setUpAbstractGitFlowMojoTestCase();
-                initRepository(project, git, repositorySet, tc);
-            } finally {
-                tc.tearDownAbstractGitFlowMojoTestCase();
+                FileUtils.deleteDirectory(repoBasedir);
+            } catch (IOException ex) {
+                // wait some time
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException exc) {
+                    Thread.currentThread().interrupt();
+                }
+                if (maxTries-- <= 0) {
+                    throw ex;
+                }
             }
         }
-        LOG.info("Repositories for project '" + projectName + "' created. ["
-                + ((System.currentTimeMillis() - ms) / 1000) + "s]");
     }
 
     private static void initRepository(TestProjectData project, GitExecution git, RepositorySet repositorySet,
@@ -393,8 +429,12 @@ public class TestProjects {
 
     private static void executeFeatureStart(AbstractGitFlowMojoTestCase testCase, RepositorySet repositorySet,
             String featureName, String expectedUpstreamDefaultVersion, String newUpstreamVersion) throws Exception {
-        final String PROMPT_UPSTREAM_VERSION_ON_FEATURE_BRANCH = "On feature branch: Enter the version of the Test "
-                + "Parent Pom project to reference";
+        final String PROMPT_UPSTREAM_VERSION_ON_FEATURE_BRANCH = "Enter the version of the Test Parent Pom project to reference." + LS
+                + "Hints:\n"
+                + "- if you have corresponding feature branch for Test Parent Pom, enter its feature branch version\n"
+                + "- if you want to reference in your feature branch a specific version of Test Parent Pom, then enter the version you want to use\n"
+                + "- in other case enter the current version of Test Parent Pom on development branch" + LS
+                + "Enter the version:";
         Properties userProperties = new Properties();
         userProperties.setProperty("featureName", featureName);
         Prompter promptControllerMock = mock(Prompter.class);

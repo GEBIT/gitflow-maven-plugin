@@ -89,7 +89,7 @@ public class GitFlowBuildVersionMojo extends AbstractGitFlowMojo {
         String version = buildVersionPrefix + buildVersion;
         getMavenLog().info("Setting version '" + version + "' for project on current branch...");
         // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
-        mvnSetVersions(version, CommandContext.VERSION, "");
+        mvnSetVersions(version, GitFlowAction.BUILD_VERSION, "");
         getMavenLog().info("Build version process finished");
     }
 }
