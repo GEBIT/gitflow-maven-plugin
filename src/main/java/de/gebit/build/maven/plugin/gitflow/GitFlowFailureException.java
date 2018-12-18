@@ -20,6 +20,7 @@ public class GitFlowFailureException extends MojoFailureException {
     private String problem;
     private String solutionProposal;
     private String[] stepsToContinue;
+    private boolean resetCause = false;
 
     public GitFlowFailureException(String aProblem, String aSolutionProposal, String... aStepsToContinue) {
         this(null, aProblem, aSolutionProposal, aStepsToContinue);
@@ -79,6 +80,18 @@ public class GitFlowFailureException extends MojoFailureException {
 
     public String[] getStepsToContinue() {
         return stepsToContinue;
+    }
+
+    public void resetCause() {
+        resetCause = true;
+    }
+
+    @Override
+    public synchronized Throwable getCause() {
+        if (resetCause) {
+            return null;
+        }
+        return super.getCause();
     }
 
 }

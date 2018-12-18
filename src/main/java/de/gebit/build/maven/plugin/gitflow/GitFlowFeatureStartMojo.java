@@ -250,8 +250,15 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
                 throw new GitFlowFailureException(e,
                         "Failed to install the project on feature branch after feature start."
                                 + (reason != null ? "\nReason: " + reason : ""),
-                        "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
-                                + "'mvn flow:feature-start' again in order to continue.");
+                        "Please solve the problems on project, add and commit your changes and run "
+                                + "'mvn flow:feature-start' again in order to continue.\n"
+                                + "Do NOT push the feature branch!\nAlternatively you can use property "
+                                + "'-Dflow.installProject=false' while running "
+                                + "'mvn flow:feature-start' to skip the project installation.",
+                        "'git add' and 'git commit' to commit your changes",
+                        "'mvn flow:feature-start' to continue feature start process after problem solving",
+                        "or 'mvn flow:feature-start -Dflow.installProject=false' to continue by skipping the project "
+                                + "installation");
             }
         }
         gitRemoveBranchLocalConfig(featureBranchName, "breakpoint");

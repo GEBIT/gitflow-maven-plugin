@@ -396,6 +396,9 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             }
             getLog().info(getExceptionMessagePrefix(false) + message + getExceptionMessageSuffix(false, null));
             decorateExceptionMessage(e, isTerminalColorEnabled(), copyLogFile());
+            if (e instanceof GitFlowFailureException) {
+                ((GitFlowFailureException) e).resetCause();
+            }
             throw e;
         } finally {
             closeExternalLog();

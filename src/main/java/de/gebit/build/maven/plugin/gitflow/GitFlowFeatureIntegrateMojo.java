@@ -353,11 +353,17 @@ public class GitFlowFeatureIntegrateMojo extends AbstractGitFlowFeatureMojo {
                     reason = ((GitFlowFailureException) e).getProblem();
                 }
                 throw new GitFlowFailureException(e,
-                        "Failed to install the project on integrated feature branch '" + targetFeatureBranch
-                                + "' after feature integration." + (reason != null ? "\nReason: " + reason : ""),
-                        "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
+                        "Failed to install the project on integrated feature branch after feature integration."
+                                + (reason != null ? "\nReason: " + reason : ""),
+                        "Please solve the problems on project, add and commit your changes and run "
                                 + "'mvn flow:feature-integrate' again in order to continue.\n"
-                                + "Do NOT push the integrated feature branch!");
+                                + "Do NOT push the feature branch!\nAlternatively you can use property "
+                                + "'-Dflow.installProject=false' while running "
+                                + "'mvn flow:feature-integrate' to skip the project installation.",
+                        "'git add' and 'git commit' to commit your changes",
+                        "'mvn flow:feature-integrate' to continue feature integration process after problem solving",
+                        "or 'mvn flow:feature-integrate -Dflow.installProject=false' to continue by skipping the project "
+                                + "installation");
             }
         }
         return stepParameters;

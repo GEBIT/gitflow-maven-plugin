@@ -206,8 +206,15 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
                 throw new GitFlowFailureException(e,
                         "Failed to install the project on epic branch after epic start."
                                 + (reason != null ? "\nReason: " + reason : ""),
-                        "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
-                                + "'mvn flow:epic-start' again in order to continue.");
+                        "Please solve the problems on project, add and commit your changes and run "
+                                + "'mvn flow:epic-start' again in order to continue.\n"
+                                + "Do NOT push the feature branch!\nAlternatively you can use property "
+                                + "'-Dflow.installProject=false' while running "
+                                + "'mvn flow:epic-start' to skip the project installation.",
+                        "'git add' and 'git commit' to commit your changes",
+                        "'mvn flow:epic-start' to continue epic start process after problem solving",
+                        "or 'mvn flow:epic-start -Dflow.installProject=false' to continue by skipping the project "
+                                + "installation");
             }
         }
         gitRemoveBranchLocalConfig(epicBranchName, "breakpoint");
