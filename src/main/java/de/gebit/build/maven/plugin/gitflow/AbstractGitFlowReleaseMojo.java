@@ -278,6 +278,10 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         final String currentVersion = getCurrentProjectVersion();
 
         String nextSnapshotVersion = getDevelopmentVersion();
+        if (nextSnapshotVersion == null && isAllowSameVersion()) {
+            // next development version = release version
+            nextSnapshotVersion = currentVersion;
+        }
         if (nextSnapshotVersion == null) {
             // get next snapshot version
             getLog().info("Property 'developmentVersion' not provided. Trying to calculate it from released project "
