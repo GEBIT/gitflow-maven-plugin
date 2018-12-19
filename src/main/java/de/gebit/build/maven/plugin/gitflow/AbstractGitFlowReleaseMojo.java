@@ -97,6 +97,11 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
      */
     protected abstract String getCurrentGoal();
 
+    /**
+     * The mojo provides this flag from a configuration property.
+     */
+    protected abstract boolean isAllowSameVersion();
+
     protected boolean isInstallProject() {
         return installProject;
     }
@@ -250,8 +255,8 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
     }
 
     /**
-     * Perfom the steps to finish a release. Must be called on a release branch.
-     * It will merge the branch either to development/production or maintenance,
+     * Perfom the steps to finish a release. Must be called on a release branch. It
+     * will merge the branch either to development/production or maintenance,
      * depending on configuration and branch point.
      *
      * @throws MojoExecutionException
@@ -300,6 +305,18 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
             if (!settings.isInteractiveMode()) {
                 getLog().info("Using calculated next development version for development branch in batch mode.");
             }
+        }
+
+        if (!isAllowSameVersion() && currentVersion.equals(nextSnapshotVersion)) {
+            throw new GitFlowFailureException(
+                    "Failed to finish release process because the next develompent version is same as release version.",
+                    "Run 'mvn flow:" + getCurrentGoal() + "' and define a development version different from release "
+                            + "version.\nOr use property '-Dflow.allowSameVersion=true' to explicitly allow same "
+                            + "versions.",
+                    "'mvn flow:" + getCurrentGoal() + " -DdevelopmentVersion=X.Y.Z-SNAPSHOT' to predefine next "
+                            + "development version different from the release version",
+                    "'mvn flow:" + getCurrentGoal()
+                            + " -Dflow.allowSameVersion=true' to explicitly allow same versions");
         }
 
         if (!isSkipTestProject()) {
@@ -453,13 +470,17 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         gitRemoveBranchLocalConfig(releaseBranch, "releaseCommit");
         gitRemoveBranchLocalConfig(releaseBranch, "nextSnapshotVersion");
 
-        // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
-        getMavenLog().info("Setting next development version '" + nextSnapshotVersion
-                + "' for project on development branch...");
-        mvnSetVersions(nextSnapshotVersion, GitFlowAction.RELEASE_FINISH, "Next development version: ");
+        String currentVersion = getCurrentProjectVersion();
 
-        // git commit -a -m updating for next development version
-        gitCommit(commitMessages.getReleaseFinishMessage());
+        if (!nextSnapshotVersion.equals(currentVersion)) {
+            // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
+            getMavenLog().info(
+                    "Setting next development version '" + nextSnapshotVersion + "' for project on development branch...");
+            mvnSetVersions(nextSnapshotVersion, GitFlowAction.RELEASE_FINISH, "Next development version: ");
+
+            // git commit -a -m updating for next development version
+            gitCommit(commitMessages.getReleaseFinishMessage());
+        }
 
         if (!isDetachReleaseCommit() && installProject) {
             getMavenLog().info("Installing the project...");

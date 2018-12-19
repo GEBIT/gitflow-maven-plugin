@@ -35,6 +35,8 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
 
     private static final String GOAL = "release-finish";
 
+    private static final String RELEASE_VERSION = BasicConstants.RELEASE_WITH_PRODUCTION_VERSION;
+
     private static final String RELEASE_BRANCH = BasicConstants.RELEASE_WITH_PRODUCTION_BRANCH;
 
     private static final String NEW_DEVELOPMENT_VERSION = BasicConstants.RELEASE_WITH_PRODUCTION_NEW_DEVELOPMENT_VERSION;
@@ -49,7 +51,7 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
 
     private static final String MAINTENANCE_PRODUCTION_BRANCH = PRODUCTION_BRANCH + "-" + MAINTENANCE_BRANCH;
 
-    private static final String RELEASE_TAG = "gitflow-tests-" + BasicConstants.RELEASE_WITH_PRODUCTION_VERSION;
+    private static final String RELEASE_TAG = "gitflow-tests-" + RELEASE_VERSION;
 
     private static final String RELEASE_MAINTENANCE_TAG = "gitflow-tests-"
             + BasicConstants.RELEASE_WITH_PRODUCTION_ON_MAINTENANCE_VERSION;
@@ -1655,6 +1657,70 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
                 "There is a conflict of merging branch '" + PRODUCTION_BRANCH + "' into branch '" + OTHER_BRANCH
                         + "'. After such a conflict can't be automatically proceeded.",
                 "Please consult a gitflow expert on how to fix this!");
+    }
+
+    @Test
+    public void testExecuteWithSameReleaseAndDevelopmentVersion() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        userProperties.setProperty("flow.skipTestProject", "false");
+        userProperties.setProperty("developmentVersion", RELEASE_VERSION);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertGitFlowFailureException(result,
+                "Failed to finish release process because the next develompent version is same as release version.",
+                "Run 'mvn flow:release-finish' and define a development version different from release version.\n"
+                        + "Or use property '-Dflow.allowSameVersion=true' to explicitly allow same versions.",
+                "'mvn flow:release-finish -DdevelopmentVersion=X.Y.Z-SNAPSHOT' to predefine next development version "
+                        + "different from the release version",
+                "'mvn flow:release-finish -Dflow.allowSameVersion=true' to explicitly allow same versions");
+
+        git.assertCurrentBranch(repositorySet, RELEASE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, RELEASE_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE,
+                COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, PRODUCTION_BRANCH, PRODUCTION_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, PRODUCTION_BRANCH);
+        git.assertLocalTags(repositorySet);
+        git.assertRemoteTags(repositorySet);
+        assertDefaultDeployGoalNotExecuted();
+        assertMavenCommandNotExecuted("clean verify");
+        assertMavenCommandNotExecuted("clean test");
+        git.assertRemoteFileExists(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
+    }
+
+    @Test
+    public void testExecuteWithSameReleaseAndDevelopmentVersionAndAllowSameVersionTrue() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        userProperties.setProperty("developmentVersion", RELEASE_VERSION);
+        userProperties.setProperty("flow.allowSameVersion", "true");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
+        git.assertLocalTags(repositorySet, RELEASE_TAG);
+        git.assertRemoteTags(repositorySet, RELEASE_TAG);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, PRODUCTION_BRANCH, PRODUCTION_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, PRODUCTION_BRANCH, COMMIT_MESSAGE_MERGE_INTO_PRODUCTION,
+                GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH,
+                COMMIT_MESSAGE_MERGE_INTO_PRODUCTION, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE,
+                COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), RELEASE_VERSION);
+        assertDefaultDeployGoalExecuted();
+        assertMavenCommandNotExecuted("clean verify");
+        assertMavenCommandNotExecuted("clean test");
+        assertConfigCleanedUpForMaster();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
     }
 
 }

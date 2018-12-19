@@ -135,6 +135,14 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
     @Parameter(property = "detachReleaseCommit", required = false, defaultValue = "false")
     private boolean detachReleaseCommit;
 
+    /**
+     * Explicitly allow to have the next development version same as release version.
+     *
+     * @since 2.1.5
+     */
+    @Parameter(property = "flow.allowSameVersion", required = false, defaultValue = "false")
+    private boolean allowSameVersion;
+
     @Override
     protected boolean isSkipTestProject() {
         return skipTestProject;
@@ -198,6 +206,11 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
     @Override
     protected boolean isPushReleaseBranch() {
         return pushReleaseBranch;
+    }
+
+    @Override
+    protected boolean isAllowSameVersion() {
+        return allowSameVersion;
     }
 
     @Override
