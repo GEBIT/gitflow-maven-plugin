@@ -38,8 +38,10 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * @author Erwin Tratar
  * @since 1.5.11
  */
-@Mojo(name = "feature-rebase-cleanup", aggregator = true)
+@Mojo(name = GitFlowFeatureCleanupMojo.GOAL, aggregator = true)
 public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
+
+    static final String GOAL = "feature-rebase-cleanup";
 
     private static final GitFlowFailureInfo ERROR_REBASE_CONFLICTS = new GitFlowFailureInfo(
             "Automatic rebase after interaction failed beacause of conflicts.",
@@ -255,17 +257,7 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
                     reason = ((GitFlowFailureException) e).getProblem();
                 }
                 throw new GitFlowFailureException(e,
-                        "Failed to install the project on feature branch after cleanup."
-                                + (reason != null ? "\nReason: " + reason : ""),
-                        "Please solve the problems on project, add and commit your changes and run "
-                                + "'mvn flow:feature-rebase-cleanup' again in order to continue.\n"
-                                + "Do NOT push the feature branch!\nAlternatively you can use property "
-                                + "'-Dflow.installProject=false' while running "
-                                + "'mvn flow:feature-rebase-cleanup' to skip the project installation.",
-                        "'git add' and 'git commit' to commit your changes",
-                        "'mvn flow:feature-rebase-cleanup' to continue feature cleanup process after problem solving",
-                        "or 'mvn flow:feature-rebase-cleanup -Dflow.installProject=false' to continue by skipping the project "
-                                + "installation");
+                        FailureInfoHelper.installProjectFailure(GOAL, featureBranchName, "feature cleanup", reason));
             }
         }
         gitRemoveBranchLocalConfig(featureBranchName, "breakpoint");

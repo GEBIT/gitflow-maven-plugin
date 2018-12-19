@@ -60,8 +60,10 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * @since 1.3.1
  * @see GitFlowFeatureRebaseAbortMojo
  */
-@Mojo(name = "feature-rebase", aggregator = true)
+@Mojo(name = GitFlowFeatureRebaseMojo.GOAL, aggregator = true)
 public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
+
+    static final String GOAL = "feature-rebase";
 
     /**
      * Controls whether a merge of the development branch instead of a rebase on the
@@ -249,17 +251,7 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
                     reason = ((GitFlowFailureException) e).getProblem();
                 }
                 throw new GitFlowFailureException(e,
-                        "Failed to install the project on feature branch after rebase."
-                                + (reason != null ? "\nReason: " + reason : ""),
-                        "Please solve the problems on project, add and commit your changes and run "
-                                + "'mvn flow:feature-rebase' again in order to continue.\n"
-                                + "Do NOT push the feature branch!\nAlternatively you can use property "
-                                + "'-Dflow.installProject=false' while running "
-                                + "'mvn flow:feature-rebase' to skip the project installation.",
-                        "'git add' and 'git commit' to commit your changes",
-                        "'mvn flow:feature-rebase' to continue feature rebase process after problem solving",
-                        "or 'mvn flow:feature-rebase -Dflow.installProject=false' to continue by skipping the project "
-                                + "installation");
+                        FailureInfoHelper.installProjectFailure(GOAL, featureBranchName, "feature rebase", reason));
             }
         }
         gitRemoveBranchLocalConfig(featureBranchName, "breakpoint");

@@ -33,8 +33,10 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * </pre>
  * @author Erwin Tratar
  */
-@Mojo(name = "set-version", aggregator = true)
+@Mojo(name = GitFlowSetVersionMojo.GOAL, aggregator = true)
 public class GitFlowSetVersionMojo extends AbstractGitFlowMojo {
+
+    static final String GOAL = "set-version";
 
     /**
      * Specifies a specific (complete) version to update the project to.

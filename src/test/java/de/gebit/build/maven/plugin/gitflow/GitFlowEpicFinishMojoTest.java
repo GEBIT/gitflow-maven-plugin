@@ -1847,10 +1847,7 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 promptControllerMock);
         // verify
         verifyZeroInteractions(promptControllerMock);
-        assertGitFlowFailureException(result,
-                "Failed to install the project on base branch '" + MASTER_BRANCH + "' after epic finish.",
-                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
-                        + "'mvn flow:epic-finish' again in order to continue.");
+        assertInstallProjectFailureException(result, GOAL, MASTER_BRANCH, "epic finish");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertExistingLocalBranches(repositorySet, EPIC_BRANCH);
@@ -1879,10 +1876,7 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
                 promptControllerMock);
         verifyZeroInteractions(promptControllerMock);
-        assertGitFlowFailureException(result,
-                "Failed to install the project on base branch '" + MASTER_BRANCH + "' after epic finish.",
-                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
-                        + "'mvn flow:epic-finish' again in order to continue.");
+        assertInstallProjectFailureException(result, GOAL, MASTER_BRANCH, "epic finish");
         git.assertBranchLocalConfigValue(repositorySet, MASTER_BRANCH, "breakpoint", "epicFinish.cleanInstall");
         git.assertBranchLocalConfigValue(repositorySet, MASTER_BRANCH, "breakpointEpicBranch", EPIC_BRANCH);
         repositorySet.getLocalRepoGit().rm().addFilepattern("src/main/java/InvalidJavaFile.java").call();
@@ -1917,10 +1911,7 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
                 promptControllerMock);
         verifyZeroInteractions(promptControllerMock);
-        assertGitFlowFailureException(result,
-                "Failed to install the project on base branch '" + MASTER_BRANCH + "' after epic finish.",
-                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
-                        + "'mvn flow:epic-finish' again in order to continue.");
+        assertInstallProjectFailureException(result, GOAL, MASTER_BRANCH, "epic finish");
         git.assertBranchLocalConfigValue(repositorySet, MASTER_BRANCH, "breakpoint", "epicFinish.cleanInstall");
         git.assertBranchLocalConfigValue(repositorySet, MASTER_BRANCH, "breakpointEpicBranch", EPIC_BRANCH);
         userProperties.setProperty("flow.installProject", "false");

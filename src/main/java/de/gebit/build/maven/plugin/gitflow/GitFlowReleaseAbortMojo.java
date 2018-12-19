@@ -32,8 +32,10 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * @see GitFlowReleaseAbortMojo
  * @since 1.3.1
  */
-@Mojo(name = "release-abort", aggregator = true)
+@Mojo(name = GitFlowReleaseAbortMojo.GOAL, aggregator = true)
 public class GitFlowReleaseAbortMojo extends AbstractGitFlowMojo {
+
+    static final String GOAL = "release-abort";
 
     /** {@inheritDoc} */
     @Override

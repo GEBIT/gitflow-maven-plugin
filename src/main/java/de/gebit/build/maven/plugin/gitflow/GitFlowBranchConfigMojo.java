@@ -20,8 +20,10 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * @author Erwin Tratar
  * @since 1.4.0
  */
-@Mojo(name = "branch-config", aggregator = true)
+@Mojo(name = GitFlowBranchConfigMojo.GOAL, aggregator = true)
 public class GitFlowBranchConfigMojo extends AbstractGitFlowMojo {
+
+    static final String GOAL = "branch-config";
 
     /**
      * Set the property name to specify. If not set in interactive mode you will be

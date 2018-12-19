@@ -26,7 +26,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import de.gebit.build.maven.plugin.gitflow.TestProjects.BasicConstants;
-import de.gebit.build.maven.plugin.gitflow.jgit.RepositorySet;;
+import de.gebit.build.maven.plugin.gitflow.jgit.RepositorySet;
 
 /**
  * @author Volodymyr Medvid
@@ -479,12 +479,7 @@ public class GitFlowFeatureIntegrateMojoTestCase extends AbstractGitFlowMojoTest
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        assertGitFlowFailureException(result,
-                "Failed to install the project on integrated feature branch '" + TARGET_FEATURE_BRANCH
-                        + "' after feature integration.",
-                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
-                        + "'mvn flow:feature-integrate' again in order to continue.\n"
-                        + "Do NOT push the integrated feature branch!");
+        assertInstallProjectFailureException(result, GOAL, TARGET_FEATURE_BRANCH, "feature integration");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, TARGET_FEATURE_BRANCH);
         git.assertMissingLocalBranches(repositorySet, TMP_SOURCE_FEATURE_BRANCH);
@@ -514,12 +509,7 @@ public class GitFlowFeatureIntegrateMojoTestCase extends AbstractGitFlowMojoTest
         userProperties.setProperty("flow.installProject", "true");
         userProperties.setProperty("featureName", TARGET_FEATURE_NAME);
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
-        assertGitFlowFailureException(result,
-                "Failed to install the project on integrated feature branch '" + TARGET_FEATURE_BRANCH
-                        + "' after feature integration.",
-                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
-                        + "'mvn flow:feature-integrate' again in order to continue.\n"
-                        + "Do NOT push the integrated feature branch!");
+        assertInstallProjectFailureException(result, GOAL, TARGET_FEATURE_BRANCH, "feature integration");
         git.assertBranchLocalConfigValue(repositorySet, TARGET_FEATURE_BRANCH, "breakpoint",
                 "featureIntegrate.cleanInstall");
         git.assertBranchLocalConfigValue(repositorySet, TARGET_FEATURE_BRANCH, "sourceFeatureBranch",
@@ -555,12 +545,7 @@ public class GitFlowFeatureIntegrateMojoTestCase extends AbstractGitFlowMojoTest
         userProperties.setProperty("flow.installProject", "true");
         userProperties.setProperty("featureName", TARGET_FEATURE_NAME);
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
-        assertGitFlowFailureException(result,
-                "Failed to install the project on integrated feature branch '" + TARGET_FEATURE_BRANCH
-                        + "' after feature integration.",
-                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
-                        + "'mvn flow:feature-integrate' again in order to continue.\n"
-                        + "Do NOT push the integrated feature branch!");
+        assertInstallProjectFailureException(result, GOAL, TARGET_FEATURE_BRANCH, "feature integration");
         git.assertBranchLocalConfigValue(repositorySet, TARGET_FEATURE_BRANCH, "breakpoint",
                 "featureIntegrate.cleanInstall");
         git.assertBranchLocalConfigValue(repositorySet, TARGET_FEATURE_BRANCH, "sourceFeatureBranch",

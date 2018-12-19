@@ -1968,10 +1968,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
                 promptControllerMock);
         // verify
         verifyZeroInteractions(promptControllerMock);
-        assertGitFlowFailureException(result, "Failed to install the project on feature branch after rebase.",
-                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
-                        + "'mvn flow:feature-rebase' again in order to continue.\n"
-                        + "Do NOT push the feature branch!");
+        assertInstallProjectFailureException(result, GOAL, FEATURE_BRANCH, "feature rebase");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
 
@@ -1999,10 +1996,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
                 promptControllerMock);
         verifyZeroInteractions(promptControllerMock);
-        assertGitFlowFailureException(result, "Failed to install the project on feature branch after rebase.",
-                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
-                        + "'mvn flow:feature-rebase' again in order to continue.\n"
-                        + "Do NOT push the feature branch!");
+        assertInstallProjectFailureException(result, GOAL, FEATURE_BRANCH, "feature rebase");
         git.assertBranchLocalConfigValue(repositorySet, FEATURE_BRANCH, "breakpoint", "featureRebase.cleanInstall");
         repositorySet.getLocalRepoGit().rm().addFilepattern("src/main/java/InvalidJavaFile.java").call();
         git.commitAll(repositorySet, COMMIT_MESSAGE_INVALID_JAVA_FILE_REMOVED);
@@ -2035,10 +2029,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
                 promptControllerMock);
         verifyZeroInteractions(promptControllerMock);
-        assertGitFlowFailureException(result, "Failed to install the project on feature branch after rebase.",
-                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
-                        + "'mvn flow:feature-rebase' again in order to continue.\n"
-                        + "Do NOT push the feature branch!");
+        assertInstallProjectFailureException(result, GOAL, FEATURE_BRANCH, "feature rebase");
         git.assertBranchLocalConfigValue(repositorySet, FEATURE_BRANCH, "breakpoint", "featureRebase.cleanInstall");
         userProperties.setProperty("flow.installProject", "false");
         // test

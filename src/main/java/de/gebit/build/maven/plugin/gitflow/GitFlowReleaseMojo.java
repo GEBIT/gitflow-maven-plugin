@@ -30,8 +30,10 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * @see GitFlowReleaseFinishMojo
  * @since 1.2.0
  */
-@Mojo(name = "release", aggregator = true)
+@Mojo(name = GitFlowReleaseMojo.GOAL, aggregator = true)
 public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
+
+    static final String GOAL = "release";
 
     /** Whether to skip tagging the release in Git. */
     @Parameter(property = "skipTag", defaultValue = "false")
@@ -230,7 +232,7 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
 
     @Override
     protected String getCurrentGoal() {
-        return "release";
+        return GOAL;
     }
 
     /** {@inheritDoc} */

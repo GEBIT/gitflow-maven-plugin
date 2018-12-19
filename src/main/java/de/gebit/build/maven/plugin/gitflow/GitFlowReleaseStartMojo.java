@@ -35,8 +35,10 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * @see GitFlowReleaseFinishMojo
  * @see GitFlowReleaseAbortMojo
  */
-@Mojo(name = "release-start", aggregator = true)
+@Mojo(name = GitFlowReleaseStartMojo.GOAL, aggregator = true)
 public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
+
+    static final String GOAL = "release-start";
 
     /**
      * Whether to use the same name of the release branch for every release.
@@ -139,7 +141,7 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
 
     @Override
     protected String getCurrentGoal() {
-        return "release-start";
+        return GOAL;
     }
 
     /** {@inheritDoc} */

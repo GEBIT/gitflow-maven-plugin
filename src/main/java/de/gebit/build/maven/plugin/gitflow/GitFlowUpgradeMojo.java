@@ -33,8 +33,10 @@ import de.gebit.build.maven.plugin.gitflow.ExtendedPrompter.SelectOption;
  * @author Volodymyr Medvid
  * @since 2.1.0
  */
-@Mojo(name = "upgrade", aggregator = true)
+@Mojo(name = GitFlowUpgradeMojo.GOAL, aggregator = true)
 public class GitFlowUpgradeMojo extends AbstractGitFlowMojo {
+
+    static final String GOAL = "upgrade";
 
     @Parameter(property = "featureNamePattern")
     protected String featureNamePattern;

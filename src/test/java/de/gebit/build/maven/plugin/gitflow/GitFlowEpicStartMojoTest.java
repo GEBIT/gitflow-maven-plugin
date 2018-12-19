@@ -1138,9 +1138,7 @@ public class GitFlowEpicStartMojoTest extends AbstractGitFlowMojoTestCase {
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        assertGitFlowFailureException(result, "Failed to install the project on epic branch after epic start.",
-                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
-                        + "'mvn flow:epic-start' again in order to continue.");
+        assertInstallProjectFailureException(result, GOAL, EPIC_BRANCH, "epic start");
         assertVersionsInPom(repositorySet.getWorkingDirectory(), EPIC_BRANCH_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
@@ -1167,9 +1165,7 @@ public class GitFlowEpicStartMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("epicName", EPIC_NAME);
         userProperties.setProperty("flow.installProject", "true");
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
-        assertGitFlowFailureException(result, "Failed to install the project on epic branch after epic start.",
-                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
-                        + "'mvn flow:epic-start' again in order to continue.");
+        assertInstallProjectFailureException(result, GOAL, EPIC_BRANCH, "epic start");
         git.assertBranchLocalConfigValue(repositorySet, EPIC_BRANCH, "breakpoint", "epicStart.cleanInstall");
         final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
         repositorySet.getLocalRepoGit().rm().addFilepattern("src/main/java/InvalidJavaFile.java").call();
@@ -1202,9 +1198,7 @@ public class GitFlowEpicStartMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("epicName", EPIC_NAME);
         userProperties.setProperty("flow.installProject", "true");
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
-        assertGitFlowFailureException(result, "Failed to install the project on epic branch after epic start.",
-                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
-                        + "'mvn flow:epic-start' again in order to continue.");
+        assertInstallProjectFailureException(result, GOAL, EPIC_BRANCH, "epic start");
         git.assertBranchLocalConfigValue(repositorySet, EPIC_BRANCH, "breakpoint", "epicStart.cleanInstall");
         final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
         userProperties.setProperty("flow.installProject", "false");

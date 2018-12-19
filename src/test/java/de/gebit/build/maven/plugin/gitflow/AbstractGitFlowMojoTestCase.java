@@ -181,8 +181,8 @@ public abstract class AbstractGitFlowMojoTestCase {
     }
 
     /**
-     * Executes mojo (with default configurations) for passed goal for a project
-     * in passed basedir.
+     * Executes mojo (with default configurations) for passed goal for a project in
+     * passed basedir.
      *
      * @param basedir
      *            the basedir of the project which goal should be executed for
@@ -198,10 +198,9 @@ public abstract class AbstractGitFlowMojoTestCase {
     }
 
     /**
-     * Executes mojo for passed goal for a project in passed basedir. If a
-     * command line for external execution of git or maven commands will be used
-     * than {@link org.codehaus.plexus.util.cli.CommandLineException} will be
-     * thrown.
+     * Executes mojo for passed goal for a project in passed basedir. If a command
+     * line for external execution of git or maven commands will be used than
+     * {@link org.codehaus.plexus.util.cli.CommandLineException} will be thrown.
      *
      * @param basedir
      *            the basedir of the project which goal should be executed for
@@ -217,9 +216,9 @@ public abstract class AbstractGitFlowMojoTestCase {
 
     /**
      * Executes mojo in inetractive mode for passed goal for a project in passed
-     * basedir. If a command line for external execution of git or maven
-     * commands will be used than
-     * {@link org.codehaus.plexus.util.cli.CommandLineException} will be thrown.
+     * basedir. If a command line for external execution of git or maven commands
+     * will be used than {@link org.codehaus.plexus.util.cli.CommandLineException}
+     * will be thrown.
      *
      * @param basedir
      *            the basedir of the project which goal should be executed for
@@ -235,8 +234,8 @@ public abstract class AbstractGitFlowMojoTestCase {
     }
 
     /**
-     * Executes mojo (with default configurations) for passed goal for a project
-     * in passed basedir.
+     * Executes mojo (with default configurations) for passed goal for a project in
+     * passed basedir.
      *
      * @param basedir
      *            the basedir of the project which goal should be executed for
@@ -254,8 +253,8 @@ public abstract class AbstractGitFlowMojoTestCase {
     }
 
     /**
-     * Executes mojo (with default configurations) for passed goal for a project
-     * in passed basedir.
+     * Executes mojo (with default configurations) for passed goal for a project in
+     * passed basedir.
      *
      * @param basedir
      *            the basedir of the project which goal should be executed for
@@ -274,8 +273,8 @@ public abstract class AbstractGitFlowMojoTestCase {
     }
 
     /**
-     * Executes mojo (with default configurations) for passed goal for a project
-     * in passed basedir.
+     * Executes mojo (with default configurations) for passed goal for a project in
+     * passed basedir.
      *
      * @param basedir
      *            the basedir of the project which goal should be executed for
@@ -300,8 +299,8 @@ public abstract class AbstractGitFlowMojoTestCase {
      * @param basedir
      *            the basedir of the project which goal should be executed for
      * @param useProfileWithDefaults
-     *            the flag determines if profile with plugin default
-     *            configurations should be active
+     *            the flag determines if profile with plugin default configurations
+     *            should be active
      * @param goal
      *            the flow goal to be executed (without 'flow' prefix)
      * @param properties
@@ -322,8 +321,8 @@ public abstract class AbstractGitFlowMojoTestCase {
      * @param basedir
      *            the basedir of the project which goal should be executed for
      * @param useProfileWithDefaults
-     *            the flag determines if profile with plugin default
-     *            configurations should be active
+     *            the flag determines if profile with plugin default configurations
+     *            should be active
      * @param goal
      *            the flow goal to be executed (without 'flow' prefix)
      * @param properties
@@ -340,8 +339,8 @@ public abstract class AbstractGitFlowMojoTestCase {
     }
 
     /**
-     * Executes mojo (with default configurations) for passed goal for a project
-     * in passed basedir.
+     * Executes mojo (with default configurations) for passed goal for a project in
+     * passed basedir.
      *
      * @param basedir
      *            the basedir of the project which goal should be executed for
@@ -360,8 +359,8 @@ public abstract class AbstractGitFlowMojoTestCase {
     }
 
     /**
-     * Executes mojo (with default configurations) for passed goal for a project
-     * in passed basedir.
+     * Executes mojo (with default configurations) for passed goal for a project in
+     * passed basedir.
      *
      * @param basedir
      *            the basedir of the project which goal should be executed for
@@ -381,8 +380,8 @@ public abstract class AbstractGitFlowMojoTestCase {
     }
 
     /**
-     * Executes mojo (with default configurations) for passed goal for a project
-     * in passed basedir.
+     * Executes mojo (with default configurations) for passed goal for a project in
+     * passed basedir.
      *
      * @param basedir
      *            the basedir of the project which goal should be executed for
@@ -403,8 +402,8 @@ public abstract class AbstractGitFlowMojoTestCase {
     }
 
     /**
-     * Executes mojo (with default configurations) for passed goal for a project
-     * in passed basedir.
+     * Executes mojo (with default configurations) for passed goal for a project in
+     * passed basedir.
      *
      * @param basedir
      *            the basedir of the project which goal should be executed for
@@ -433,8 +432,8 @@ public abstract class AbstractGitFlowMojoTestCase {
      * @param goal
      *            the flow goal to be executed (without 'flow' prefix)
      * @param useProfileWithDefaults
-     *            the flag determines if profile with plugin default
-     *            configurations should be active
+     *            the flag determines if profile with plugin default configurations
+     *            should be active
      * @param properties
      *            the user properties to be used while maven execution
      * @param promptController
@@ -481,8 +480,8 @@ public abstract class AbstractGitFlowMojoTestCase {
      * @param goal
      *            the flow goal to be executed (without 'flow' prefix)
      * @param useProfileWithDefaults
-     *            the flag determines if profile with plugin default
-     *            configurations should be active
+     *            the flag determines if profile with plugin default configurations
+     *            should be active
      * @param properties
      *            the user properties to be used while maven execution
      * @param promptController
@@ -658,8 +657,8 @@ public abstract class AbstractGitFlowMojoTestCase {
     }
 
     /**
-     * Asserts that the project version and the value of the version.build
-     * property in pom.xml file equals to passed expected version.
+     * Asserts that the project version and the value of the version.build property
+     * in pom.xml file equals to passed expected version.
      *
      * @param projectPath
      *            the path to the maven project
@@ -679,8 +678,8 @@ public abstract class AbstractGitFlowMojoTestCase {
     }
 
     /**
-     * Asserts that the project version and the value of the version.build
-     * property in pom.xml file equals to passed expected version.
+     * Asserts that the project version and the value of the version.build property
+     * in pom.xml file equals to passed expected version.
      *
      * @param workingPom
      *            the model of the pom.xml file
@@ -693,8 +692,8 @@ public abstract class AbstractGitFlowMojoTestCase {
     }
 
     /**
-     * Asserts that the project version in pom.xml file equals to passed
-     * expected version.
+     * Asserts that the project version in pom.xml file equals to passed expected
+     * version.
      *
      * @param projectPath
      *            the path to the maven project
@@ -714,8 +713,8 @@ public abstract class AbstractGitFlowMojoTestCase {
     }
 
     /**
-     * Asserts that the project version in pom.xml file equals to passed
-     * expected version.
+     * Asserts that the project version in pom.xml file equals to passed expected
+     * version.
      *
      * @param workingPom
      *            the model of the pom.xml file
@@ -762,8 +761,8 @@ public abstract class AbstractGitFlowMojoTestCase {
     }
 
     /**
-     * Asserts that the value of the version.build property in pom.xml file
-     * equals to passed expected version.
+     * Asserts that the value of the version.build property in pom.xml file equals
+     * to passed expected version.
      *
      * @param projectPath
      *            the path to the maven project
@@ -782,8 +781,8 @@ public abstract class AbstractGitFlowMojoTestCase {
     }
 
     /**
-     * Asserts that the value of the version.build property in pom.xml file
-     * equals to passed expected version.
+     * Asserts that the value of the version.build property in pom.xml file equals
+     * to passed expected version.
      *
      * @param workingPom
      *            the model of the pom.xml file
@@ -836,10 +835,9 @@ public abstract class AbstractGitFlowMojoTestCase {
     }
 
     /**
-     * Asserts that the site for the project was deployed. The site deployment
-     * and this test works only if the distribution management configuration for
-     * site is copied from parent-pom.xml to the pom.xml file of the test
-     * project.
+     * Asserts that the site for the project was deployed. The site deployment and
+     * this test works only if the distribution management configuration for site is
+     * copied from parent-pom.xml to the pom.xml file of the test project.
      *
      * @param projectPath
      *            the path to the maven project
@@ -952,8 +950,8 @@ public abstract class AbstractGitFlowMojoTestCase {
      *            the message of expected exception or <code>null</code> if
      *            exception message shouldn't be checked
      * @param regex
-     *            <code>true</code> if <code>expectedExceptionMessage</code> is
-     *            a regular exprssion that should be matched
+     *            <code>true</code> if <code>expectedExceptionMessage</code> is a
+     *            regular exprssion that should be matched
      */
     protected void assertExceptionOnMavenExecution(MavenExecutionResult mavenExecutionResult,
             Class<? extends Throwable> expectedExceptionClass, String expectedExceptionMessage, boolean regex) {
@@ -1008,14 +1006,14 @@ public abstract class AbstractGitFlowMojoTestCase {
     }
 
     /**
-     * Asserts that the passed maven execution result consists of failure
-     * exception with passed message.
+     * Asserts that the passed maven execution result consists of failure exception
+     * with passed message.
      *
      * @param mavenExecutionResult
      *            the maven execution result to be tested
      * @param expectedMessage
-     *            the expected message of failure exception or <code>null</code>
-     *            if exception message shouldn't be checked
+     *            the expected message of failure exception or <code>null</code> if
+     *            exception message shouldn't be checked
      */
     protected void assertMavenExecutionException(MavenExecutionResult mavenExecutionResult, String expectedMessage) {
         assertExceptionOnMavenExecution(mavenExecutionResult, MojoExecutionException.class, expectedMessage, false);
@@ -1082,5 +1080,24 @@ public abstract class AbstractGitFlowMojoTestCase {
 
     protected static String prepareSquashMessage(String squashCommitMessage) {
         return squashCommitMessage.replace("\\n", "\n");
+    }
+
+    protected void assertInstallProjectFailureException(MavenExecutionResult mavenExecutionResult, String goal,
+            String branch, String process) {
+        assertInstallProjectFailureException(mavenExecutionResult, goal, branch, process, null);
+    }
+
+    protected void assertInstallProjectFailureException(MavenExecutionResult mavenExecutionResult, String goal,
+            String branch, String process, String reason) {
+        String expectedProblem = "Failed to install the project on branch '" + branch + "' after " + process + "."
+                + (reason != null ? "\nReason: " + reason : "");
+        String expectedSolutionProposal = "Please solve the problems on project, add and commit your changes and run "
+                + "'mvn flow:" + goal + "' again in order to continue.\nDo NOT push the branch!\n"
+                + "Alternatively you can use property '-Dflow.installProject=false' while running 'mvn flow:" + goal
+                + "' to skip the project installation.";
+        String[] expectedSteps = new String[] { "'git add' and 'git commit' to commit your changes",
+                "'mvn flow:" + goal + "' to continue " + process + " process after problem solving", "or 'mvn flow:"
+                        + goal + " -Dflow.installProject=false' to continue by skipping the project installation" };
+        assertGitFlowFailureException(mavenExecutionResult, expectedProblem, expectedSolutionProposal, expectedSteps);
     }
 }

@@ -1473,10 +1473,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
                 promptControllerMock);
         // verify
         verifyZeroInteractions(promptControllerMock);
-        assertGitFlowFailureException(result, "Failed to install the project on feature branch after cleanup.",
-                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
-                        + "'mvn flow:feature-rebase-cleanup' again in order to continue.\n"
-                        + "Do NOT push the feature branch!");
+        assertInstallProjectFailureException(result, GOAL, FEATURE_BRANCH, "feature cleanup");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
 
@@ -1509,10 +1506,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
                 promptControllerMock);
         verifyZeroInteractions(promptControllerMock);
-        assertGitFlowFailureException(result, "Failed to install the project on feature branch after cleanup.",
-                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
-                        + "'mvn flow:feature-rebase-cleanup' again in order to continue.\n"
-                        + "Do NOT push the feature branch!");
+        assertInstallProjectFailureException(result, GOAL, FEATURE_BRANCH, "feature cleanup");
         git.assertBranchLocalConfigValue(repositorySet, FEATURE_BRANCH, "breakpoint", "featureCleanup.cleanInstall");
         repositorySet.getLocalRepoGit().rm().addFilepattern("src/main/java/InvalidJavaFile.java").call();
         git.commitAll(repositorySet, COMMIT_MESSAGE_INVALID_JAVA_FILE_REMOVED);
@@ -1549,10 +1543,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
                 promptControllerMock);
         verifyZeroInteractions(promptControllerMock);
-        assertGitFlowFailureException(result, "Failed to install the project on feature branch after cleanup.",
-                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
-                        + "'mvn flow:feature-rebase-cleanup' again in order to continue.\n"
-                        + "Do NOT push the feature branch!");
+        assertInstallProjectFailureException(result, GOAL, FEATURE_BRANCH, "feature cleanup");
         git.assertBranchLocalConfigValue(repositorySet, FEATURE_BRANCH, "breakpoint", "featureCleanup.cleanInstall");
         userProperties.setProperty("flow.installProject", "false");
         // test

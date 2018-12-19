@@ -54,8 +54,10 @@ import de.gebit.build.maven.plugin.gitflow.steps.StepsUtil;
  * @see GitFlowFeatureStartMojo
  * @author Volodymyr Medvid
  */
-@Mojo(name = "feature-finish", aggregator = true)
+@Mojo(name = GitFlowFeatureFinishMojo.GOAL, aggregator = true)
 public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
+
+    static final String GOAL = "feature-finish";
 
     /** Whether to keep feature branch after finish. */
     @Parameter(property = "keepFeatureBranch", defaultValue = "false")
@@ -569,17 +571,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
                     reason = ((GitFlowFailureException) e).getProblem();
                 }
                 throw new GitFlowFailureException(e,
-                        "Failed to install the project on base branch after feature finish."
-                                + (reason != null ? "\nReason: " + reason : ""),
-                        "Please solve the problems on project, add and commit your changes and run "
-                                + "'mvn flow:feature-finish' again in order to continue.\n"
-                                + "Do NOT push the feature branch!\nAlternatively you can use property "
-                                + "'-Dflow.installProject=false' while running "
-                                + "'mvn flow:feature-finish' to skip the project installation.",
-                        "'git add' and 'git commit' to commit your changes",
-                        "'mvn flow:feature-finish' to continue feature finish process after problem solving",
-                        "or 'mvn flow:feature-finish -Dflow.installProject=false' to continue by skipping the project "
-                                + "installation");
+                        FailureInfoHelper.installProjectFailure(GOAL, baseBranch, "feature finish", reason));
             }
         }
         return stepParameters;

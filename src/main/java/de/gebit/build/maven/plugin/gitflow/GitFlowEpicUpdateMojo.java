@@ -30,8 +30,10 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * @see GitFlowEpicStartMojo
  * @since 2.0.0
  */
-@Mojo(name = "epic-update", aggregator = true)
+@Mojo(name = GitFlowEpicUpdateMojo.GOAL, aggregator = true)
 public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
+
+    static final String GOAL = "epic-update";
 
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
@@ -193,17 +195,7 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
                     reason = ((GitFlowFailureException) e).getProblem();
                 }
                 throw new GitFlowFailureException(e,
-                        "Failed to install the project on epic branch after epic update."
-                                + (reason != null ? "\nReason: " + reason : ""),
-                        "Please solve the problems on project, add and commit your changes and run "
-                                + "'mvn flow:epic-update' again in order to continue.\n"
-                                + "Do NOT push the feature branch!\nAlternatively you can use property "
-                                + "'-Dflow.installProject=false' while running "
-                                + "'mvn flow:epic-update' to skip the project installation.",
-                        "'git add' and 'git commit' to commit your changes",
-                        "'mvn flow:epic-update' to continue epic update process after problem solving",
-                        "or 'mvn flow:epic-update -Dflow.installProject=false' to continue by skipping the project "
-                                + "installation");
+                        FailureInfoHelper.installProjectFailure(GOAL, epicBranchName, "epic update", reason));
             }
         }
         gitRemoveBranchLocalConfig(epicBranchName, "breakpoint");

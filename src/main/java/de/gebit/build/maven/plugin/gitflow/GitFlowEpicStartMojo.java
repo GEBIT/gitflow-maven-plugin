@@ -43,8 +43,10 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * @see GitFlowEpicFinishMojo
  * @since 2.0.0
  */
-@Mojo(name = "epic-start", aggregator = true)
+@Mojo(name = GitFlowEpicStartMojo.GOAL, aggregator = true)
 public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
+
+    static final String GOAL = "epic-start";
 
     /**
      * A natual language description of the <code>epicNamePattern</code> which
@@ -204,17 +206,7 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
                     reason = ((GitFlowFailureException) e).getProblem();
                 }
                 throw new GitFlowFailureException(e,
-                        "Failed to install the project on epic branch after epic start."
-                                + (reason != null ? "\nReason: " + reason : ""),
-                        "Please solve the problems on project, add and commit your changes and run "
-                                + "'mvn flow:epic-start' again in order to continue.\n"
-                                + "Do NOT push the feature branch!\nAlternatively you can use property "
-                                + "'-Dflow.installProject=false' while running "
-                                + "'mvn flow:epic-start' to skip the project installation.",
-                        "'git add' and 'git commit' to commit your changes",
-                        "'mvn flow:epic-start' to continue epic start process after problem solving",
-                        "or 'mvn flow:epic-start -Dflow.installProject=false' to continue by skipping the project "
-                                + "installation");
+                        FailureInfoHelper.installProjectFailure(GOAL, epicBranchName, "epic start", reason));
             }
         }
         gitRemoveBranchLocalConfig(epicBranchName, "breakpoint");

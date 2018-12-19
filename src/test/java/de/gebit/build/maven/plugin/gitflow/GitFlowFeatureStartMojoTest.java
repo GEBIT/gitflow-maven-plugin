@@ -340,16 +340,18 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteWithLocalChangesInInteractiveModeAndAnswerYes() throws Exception {
         // set up
         git.createAndCommitTestfile(repositorySet);
-        when(promptControllerMock.prompt("Local branch '" + MASTER_BRANCH + "' can't be used as base branch for feature"
-                + " bacause it is ahead of remote branch. Create a branch based of remote branch?",
+        when(promptControllerMock.prompt(
+                "Local branch '" + MASTER_BRANCH + "' can't be used as base branch for feature"
+                        + " bacause it is ahead of remote branch. Create a branch based of remote branch?",
                 Arrays.asList("y", "n"), "y")).thenReturn("y");
         when(promptControllerMock.prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME))
                 .thenReturn(FEATURE_NAME);
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
         // verify
-        verify(promptControllerMock).prompt("Local branch '" + MASTER_BRANCH + "' can't be used as base branch for "
-                + "feature bacause it is ahead of remote branch. Create a branch based of remote branch?",
+        verify(promptControllerMock).prompt(
+                "Local branch '" + MASTER_BRANCH + "' can't be used as base branch for "
+                        + "feature bacause it is ahead of remote branch. Create a branch based of remote branch?",
                 Arrays.asList("y", "n"), "y");
         verify(promptControllerMock).prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME);
         verifyNoMoreInteractions(promptControllerMock);
@@ -367,15 +369,17 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteWithLocalChangesInInteractiveModeAndAnswerNo() throws Exception {
         // set up
         git.createAndCommitTestfile(repositorySet);
-        when(promptControllerMock.prompt("Local branch '" + MASTER_BRANCH + "' can't be used as base branch for feature"
-                + " bacause it is ahead of remote branch. Create a branch based of remote branch?",
+        when(promptControllerMock.prompt(
+                "Local branch '" + MASTER_BRANCH + "' can't be used as base branch for feature"
+                        + " bacause it is ahead of remote branch. Create a branch based of remote branch?",
                 Arrays.asList("y", "n"), "y")).thenReturn("n");
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
                 promptControllerMock);
         // verify
-        verify(promptControllerMock).prompt("Local branch '" + MASTER_BRANCH + "' can't be used as base branch for "
-                + "feature bacause it is ahead of remote branch. Create a branch based of remote branch?",
+        verify(promptControllerMock).prompt(
+                "Local branch '" + MASTER_BRANCH + "' can't be used as base branch for "
+                        + "feature bacause it is ahead of remote branch. Create a branch based of remote branch?",
                 Arrays.asList("y", "n"), "y");
         verifyNoMoreInteractions(promptControllerMock);
         assertGitFlowFailureException(result, "The feature start process aborted by user.", null);
@@ -395,8 +399,7 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertGitFlowFailureException(result, "Remote branch is ahead of the local branch '" + MASTER_BRANCH + "'.",
                 "Pull changes on remote branch to the local branch in order to proceed or run feature start in "
                         + "interactive mode.",
-                "'git pull' to pull changes into local branch",
-                "'mvn flow:feature-start' to run in interactive mode");
+                "'git pull' to pull changes into local branch", "'mvn flow:feature-start' to run in interactive mode");
         assertNoChanges();
     }
 
@@ -489,8 +492,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         assertGitFlowFailureException(result, "Local and remote branches '" + MASTER_BRANCH + "' diverge.",
                 "Rebase or merge the changes in local branch in order to proceed or run feature start in "
-                        + "interactive mode.", "'git pull' to merge changes in local branch",
-                "'mvn flow:feature-start' to run in interactive mode");
+                        + "interactive mode.",
+                "'git pull' to merge changes in local branch", "'mvn flow:feature-start' to run in interactive mode");
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         git.assertClean(repositorySet);
         assertNoChangesInRepositoriesExceptCommitedTestfile();
@@ -503,8 +506,9 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         final String REMOTE_TESTFILE_NAME = "remote_testfile.txt";
         git.createAndCommitTestfile(repositorySet);
         git.remoteCreateTestfile(repositorySet, REMOTE_TESTFILE_NAME, COMMIT_MESSAGE_REMOTE_TESTFILE);
-        when(promptControllerMock.prompt("Local branch '" + MASTER_BRANCH + "' can't be used as base branch for feature"
-                + " bacause the local and remote branches diverge. Create a branch based of remote branch?",
+        when(promptControllerMock.prompt(
+                "Local branch '" + MASTER_BRANCH + "' can't be used as base branch for feature"
+                        + " bacause the local and remote branches diverge. Create a branch based of remote branch?",
                 Arrays.asList("y", "n"), "y")).thenReturn("y");
         when(promptControllerMock.prompt(ExecutorHelper.FEATURE_START_PROMPT_FEATURE_BRANCH_NAME))
                 .thenReturn(FEATURE_NAME);
@@ -535,8 +539,9 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         git.createAndCommitTestfile(repositorySet);
         final String COMMIT_MESSAGE_REMOTE_TESTFILE = "REMOTE: Unit test dummy file commit";
         git.remoteCreateTestfile(repositorySet, "remote_testfile.txt", COMMIT_MESSAGE_REMOTE_TESTFILE);
-        when(promptControllerMock.prompt("Local branch '" + MASTER_BRANCH + "' can't be used as base branch for feature"
-                + " bacause the local and remote branches diverge. Create a branch based of remote branch?",
+        when(promptControllerMock.prompt(
+                "Local branch '" + MASTER_BRANCH + "' can't be used as base branch for feature"
+                        + " bacause the local and remote branches diverge. Create a branch based of remote branch?",
                 Arrays.asList("y", "n"), "y")).thenReturn("n");
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
@@ -639,8 +644,7 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertGitFlowFailureException(result, "Remote branch is ahead of the local branch '" + MASTER_BRANCH + "'.",
                 "Pull changes on remote branch to the local branch in order to proceed or run feature start in "
                         + "interactive mode.",
-                "'git pull' to pull changes into local branch",
-                "'mvn flow:feature-start' to run in interactive mode");
+                "'git pull' to pull changes into local branch", "'mvn flow:feature-start' to run in interactive mode");
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
@@ -666,8 +670,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         git.setOnline(repositorySet);
         assertGitFlowFailureException(result, "Local and remote branches '" + MASTER_BRANCH + "' diverge.",
                 "Rebase or merge the changes in local branch in order to proceed or run feature start in "
-                        + "interactive mode.", "'git pull' to merge changes in local branch",
-                        "'mvn flow:feature-start' to run in interactive mode");
+                        + "interactive mode.",
+                "'git pull' to merge changes in local branch", "'mvn flow:feature-start' to run in interactive mode");
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
@@ -1824,11 +1828,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        assertGitFlowFailureException(result,
-                "Failed to install the project on feature branch after feature start.\n"
-                        + "Reason: Trying to install the project but parameter \"installProjectGoals\" is empty.",
-                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
-                        + "'mvn flow:feature-start' again in order to continue.");
+        assertInstallProjectFailureException(result, GOAL, FEATURE_BRANCH, "feature start",
+                "Trying to install the project but parameter \"installProjectGoals\" is empty.");
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
@@ -1850,11 +1851,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        assertGitFlowFailureException(result,
-                "Failed to install the project on feature branch after feature start.\n"
-                        + "Reason: Failed to parse value of parameter \"installProjectGoals\" [clean \"instal]",
-                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
-                        + "'mvn flow:feature-start' again in order to continue.");
+        assertInstallProjectFailureException(result, GOAL, FEATURE_BRANCH, "feature start",
+                "Failed to parse value of parameter \"installProjectGoals\" [clean \"instal]");
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
@@ -1876,10 +1874,7 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        assertGitFlowFailureException(result,
-                "Failed to install the project on feature branch after feature start.",
-                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
-                        + "'mvn flow:feature-start' again in order to continue.");
+        assertInstallProjectFailureException(result, GOAL, FEATURE_BRANCH, "feature start");
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
@@ -1904,9 +1899,7 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        assertGitFlowFailureException(result, "Failed to install the project on feature branch after feature start.",
-                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
-                        + "'mvn flow:feature-start' again in order to continue.");
+        assertInstallProjectFailureException(result, GOAL, FEATURE_BRANCH, "feature start");
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
@@ -1933,9 +1926,7 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("featureName", FEATURE_NAME);
         userProperties.setProperty("flow.installProject", "true");
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
-        assertGitFlowFailureException(result, "Failed to install the project on feature branch after feature start.",
-                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
-                        + "'mvn flow:feature-start' again in order to continue.");
+        assertInstallProjectFailureException(result, GOAL, FEATURE_BRANCH, "feature start");
         git.assertBranchLocalConfigValue(repositorySet, FEATURE_BRANCH, "breakpoint", "featureStart.cleanInstall");
         final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
         repositorySet.getLocalRepoGit().rm().addFilepattern("src/main/java/InvalidJavaFile.java").call();
@@ -1968,9 +1959,7 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("featureName", FEATURE_NAME);
         userProperties.setProperty("flow.installProject", "true");
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
-        assertGitFlowFailureException(result, "Failed to install the project on feature branch after feature start.",
-                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
-                        + "'mvn flow:feature-start' again in order to continue.");
+        assertInstallProjectFailureException(result, GOAL, FEATURE_BRANCH, "feature start");
         git.assertBranchLocalConfigValue(repositorySet, FEATURE_BRANCH, "breakpoint", "featureStart.cleanInstall");
         final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
         userProperties.setProperty("flow.installProject", "false");

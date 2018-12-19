@@ -2405,10 +2405,7 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 promptControllerMock);
         // verify
         verifyZeroInteractions(promptControllerMock);
-        assertGitFlowFailureException(result,
-                "Failed to install the project on base branch '" + MASTER_BRANCH + "' after feature finish.",
-                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
-                        + "'mvn flow:feature-finish' again in order to continue.\nDo NOT push the base branch!");
+        assertInstallProjectFailureException(result, GOAL, MASTER_BRANCH, "feature finish");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
@@ -2436,10 +2433,7 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
                 promptControllerMock);
         verifyZeroInteractions(promptControllerMock);
-        assertGitFlowFailureException(result,
-                "Failed to install the project on base branch '" + MASTER_BRANCH + "' after feature finish.",
-                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
-                        + "'mvn flow:feature-finish' again in order to continue.\nDo NOT push the base branch!");
+        assertInstallProjectFailureException(result, GOAL, MASTER_BRANCH, "feature finish");
         git.assertBranchLocalConfigValue(repositorySet, MASTER_BRANCH, "breakpoint", "featureFinish.cleanInstall");
         git.assertBranchLocalConfigValue(repositorySet, MASTER_BRANCH, "breakpointFeatureBranch", FEATURE_BRANCH);
         repositorySet.getLocalRepoGit().rm().addFilepattern("src/main/java/InvalidJavaFile.java").call();
@@ -2473,10 +2467,7 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
                 promptControllerMock);
         verifyZeroInteractions(promptControllerMock);
-        assertGitFlowFailureException(result,
-                "Failed to install the project on base branch '" + MASTER_BRANCH + "' after feature finish.",
-                "Please fix the problems on project and commit or use parameter 'installProject=false' and run "
-                        + "'mvn flow:feature-finish' again in order to continue.\nDo NOT push the base branch!");
+        assertInstallProjectFailureException(result, GOAL, MASTER_BRANCH, "feature finish");
         git.assertBranchLocalConfigValue(repositorySet, MASTER_BRANCH, "breakpoint", "featureFinish.cleanInstall");
         git.assertBranchLocalConfigValue(repositorySet, MASTER_BRANCH, "breakpointFeatureBranch", FEATURE_BRANCH);
         userProperties.setProperty("flow.installProject", "false");

@@ -37,8 +37,10 @@ import de.gebit.build.maven.plugin.gitflow.ExtendedPrompter.SelectOption;
  * @author Erwin Tratar
  * @since 1.5.3
  */
-@Mojo(name = "maintenance-start", aggregator = true)
+@Mojo(name = GitFlowMaintenanceStartMojo.GOAL, aggregator = true)
 public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
+
+    static final String GOAL = "maintenance-start";
 
     /**
      * The release version to create the maintenance branch from.

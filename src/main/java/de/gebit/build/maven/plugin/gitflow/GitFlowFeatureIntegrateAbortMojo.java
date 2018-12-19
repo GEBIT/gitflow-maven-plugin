@@ -25,8 +25,10 @@ import de.gebit.build.maven.plugin.gitflow.steps.FeatureIntegrateBreakpoint;
  * @see GitFlowFeatureIntegrateMojo
  * @since 2.1.0
  */
-@Mojo(name = "feature-integrate-abort", aggregator = true)
+@Mojo(name = GitFlowFeatureIntegrateAbortMojo.GOAL, aggregator = true)
 public class GitFlowFeatureIntegrateAbortMojo extends AbstractGitFlowFeatureMojo {
+
+    static final String GOAL = "feature-integrate-abort";
 
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {

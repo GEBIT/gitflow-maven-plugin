@@ -34,8 +34,10 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * @author Aleksandr Mashchenko
  *
  */
-@Mojo(name = "hotfix-finish", aggregator = true)
+@Mojo(name = GitFlowHotfixFinishMojo.GOAL, aggregator = true)
 public class GitFlowHotfixFinishMojo extends AbstractGitFlowMojo {
+
+    static final String GOAL = "hotfix-finish";
 
     /** Whether to skip tagging the hotfix in Git. */
     @Parameter(property = "skipTag", defaultValue = "false")
