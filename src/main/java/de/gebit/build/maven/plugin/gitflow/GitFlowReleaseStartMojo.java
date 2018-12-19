@@ -140,6 +140,11 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
     }
 
     @Override
+    protected boolean isAllowSameVersion() {
+        throw new IllegalStateException("release-start does not use property allowSameVersion.");
+    }
+
+    @Override
     protected String getCurrentGoal() {
         return GOAL;
     }

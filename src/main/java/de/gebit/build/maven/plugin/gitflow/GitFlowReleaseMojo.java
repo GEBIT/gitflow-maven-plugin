@@ -154,6 +154,14 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
     @Parameter(property = "sameBranchName", defaultValue = "false")
     private boolean sameBranchName = false;
 
+    /**
+     * Explicitly allow to have the next development version same as release version.
+     *
+     * @since 2.1.5
+     */
+    @Parameter(property = "flow.allowSameVersion", required = false, defaultValue = "false")
+    private boolean allowSameVersion;
+
     @Override
     protected boolean isSkipTestProject() {
         return skipTestProject;
@@ -228,6 +236,11 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
     @Override
     protected boolean isInstallProject() {
         return false;
+    }
+
+    @Override
+    protected boolean isAllowSameVersion() {
+        return allowSameVersion;
     }
 
     @Override

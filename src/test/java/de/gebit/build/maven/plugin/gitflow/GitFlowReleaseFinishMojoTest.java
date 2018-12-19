@@ -1873,10 +1873,10 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertLocalTags(repositorySet, RELEASE_MAINTENANCE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_MAINTENANCE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
-        git.assertCommitHeadLinesInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
-                COMMIT_MESSAGE_MERGE_RELEASE_INTO_MAINTENANCE, COMMIT_MESSAGE_MAINTENANCE,
-                GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_RELEASE_START_SET_VERSION,
-                COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
+        git.assertCommitHeadLinesInLocalBranch(repositorySet, MAINTENANCE_BRANCH,
+                COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION, COMMIT_MESSAGE_MERGE_RELEASE_INTO_MAINTENANCE,
+                COMMIT_MESSAGE_MAINTENANCE, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE,
+                COMMIT_MESSAGE_RELEASE_START_SET_VERSION, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_ON_MAINTENANCE_VERSION);
         assertDefaultDeployGoalExecuted();
         assertConfigCleanedUpForMaintenance();
@@ -1951,9 +1951,9 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertLocalTags(repositorySet, RELEASE_MAINTENANCE_TAG);
         git.assertRemoteTags(repositorySet, RELEASE_MAINTENANCE_TAG);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
-        git.assertCommitHeadLinesInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
-                COMMIT_MESSAGE_MERGE_RELEASE_INTO_MAINTENANCE, COMMIT_MESSAGE_MERGE_REMOTE_MAINTENANCE,
-                COMMIT_MESSAGE_LOCAL, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE,
+        git.assertCommitHeadLinesInLocalBranch(repositorySet, MAINTENANCE_BRANCH,
+                COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION, COMMIT_MESSAGE_MERGE_RELEASE_INTO_MAINTENANCE,
+                COMMIT_MESSAGE_MERGE_REMOTE_MAINTENANCE, COMMIT_MESSAGE_LOCAL, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE,
                 COMMIT_MESSAGE_RELEASE_START_SET_VERSION, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_ON_MAINTENANCE_VERSION);
         assertDefaultDeployGoalExecuted();
@@ -2074,6 +2074,66 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertBranchLocalConfigValue(repositorySet, RELEASE_BRANCH, "nextSnapshotVersion", NEW_DEVELOPMENT_VERSION);
         git.assertBranchLocalConfigValue(repositorySet, RELEASE_BRANCH, "releaseTag", RELEASE_TAG);
         git.assertBranchLocalConfigValue(repositorySet, MASTER_BRANCH, "releaseBranch", RELEASE_BRANCH);
+    }
+
+    @Test
+    public void testExecuteWithSameReleaseAndDevelopmentVersion() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.skipTestProject", "false");
+        userProperties.setProperty("developmentVersion", RELEASE_VERSION);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertGitFlowFailureException(result,
+                "Failed to finish release process because the next develompent version is same as release version.",
+                "Run 'mvn flow:release-finish' and define a development version different from release version.\n"
+                        + "Or use property '-Dflow.allowSameVersion=true' to explicitly allow same versions.",
+                "'mvn flow:release-finish -DdevelopmentVersion=X.Y.Z-SNAPSHOT' to predefine next development version "
+                        + "different from the release version",
+                "'mvn flow:release-finish -Dflow.allowSameVersion=true' to explicitly allow same versions");
+
+        git.assertCurrentBranch(repositorySet, RELEASE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, RELEASE_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE,
+                COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
+        git.assertLocalTags(repositorySet);
+        git.assertRemoteTags(repositorySet);
+        assertDefaultDeployGoalNotExecuted();
+        assertMavenCommandNotExecuted("clean verify");
+        assertMavenCommandNotExecuted("clean test");
+        git.assertRemoteFileExists(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
+    }
+
+    @Test
+    public void testExecuteWithSameReleaseAndDevelopmentVersionAndAllowSameVersionTrue() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("developmentVersion", RELEASE_VERSION);
+        userProperties.setProperty("flow.allowSameVersion", "true");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
+        git.assertLocalTags(repositorySet, RELEASE_TAG);
+        git.assertRemoteTags(repositorySet, RELEASE_TAG);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE,
+                COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), RELEASE_VERSION);
+        assertDefaultDeployGoalExecuted();
+        assertMavenCommandNotExecuted("clean verify");
+        assertMavenCommandNotExecuted("clean test");
+        assertConfigCleanedUpForMaster();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
     }
 
 }
