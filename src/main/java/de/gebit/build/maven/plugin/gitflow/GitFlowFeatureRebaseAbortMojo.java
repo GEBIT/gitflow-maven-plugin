@@ -51,6 +51,8 @@ public class GitFlowFeatureRebaseAbortMojo extends AbstractGitFlowFeatureMojo {
             gitMergeAbort();
             getMavenLog().info("Switching to feature branch '" + featureBranch + "'");
             gitCheckout(featureBranch);
+            gitRemoveBranchLocalConfig(featureBranch, "oldFeatureVersion");
+            gitRemoveBranchLocalConfig(featureBranch, "breakpoint");
         } else {
             if (!getPrompter().promptConfirmation("You have a rebase in process on your current branch. "
                     + "Are you sure you want to abort the feature rebase process?", true, true)) {
@@ -64,6 +66,8 @@ public class GitFlowFeatureRebaseAbortMojo extends AbstractGitFlowFeatureMojo {
             gitRemoveBranchLocalConfig(featureBranch, "newStartCommitMessage");
             gitRemoveBranchLocalConfig(featureBranch, "newVersionChangeCommit");
             gitRemoveBranchLocalConfig(featureBranch, "oldFeatureVersion");
+            gitRemoveBranchLocalConfig(featureBranch, "breakpoint");
+            gitRemoveBranchLocalConfig(featureBranch, "rebasedWithoutVersionChangeCommit");
             String tempFeatureBranch = createTempFeatureBranchName(featureBranch);
             if (gitBranchExists(tempFeatureBranch)) {
                 getLog().info("Deleting temporary branch used for feature rebase.");

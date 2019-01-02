@@ -92,6 +92,16 @@ public class ExecutorHelper {
         return testCase.executeMojoWithResult(repositorySet.getWorkingDirectory(), "feature-rebase", userProperties);
     }
 
+    public static MavenExecutionResult executeFeatureFinishWithResult(AbstractGitFlowMojoTestCase testCase,
+            RepositorySet repositorySet) throws Exception {
+        return executeFeatureFinishWithResult(testCase, repositorySet, new Properties());
+    }
+
+    public static MavenExecutionResult executeFeatureFinishWithResult(AbstractGitFlowMojoTestCase testCase,
+            RepositorySet repositorySet, Properties userProperties) throws Exception {
+        return testCase.executeMojoWithResult(repositorySet.getWorkingDirectory(), "feature-finish", userProperties);
+    }
+
     public static MavenExecutionResult executeFeatureIntegrateWithResult(AbstractGitFlowMojoTestCase testCase,
             RepositorySet repositorySet, Properties userProperties) throws Exception {
         return testCase.executeMojoWithResult(repositorySet.getWorkingDirectory(), "feature-integrate", userProperties);

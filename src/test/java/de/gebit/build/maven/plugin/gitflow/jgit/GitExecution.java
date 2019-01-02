@@ -1002,7 +1002,7 @@ public class GitExecution {
             String configName) {
         String value = getConfigValue(repositorySet, configSection, configSubsection, configName);
         assertNotNull("git config [section='" + configSection + "', subsection='" + configSubsection + "', name='"
-                + configName + "'] found but not expected", value);
+                + configName + "'] not found but expected", value);
     }
 
     /**

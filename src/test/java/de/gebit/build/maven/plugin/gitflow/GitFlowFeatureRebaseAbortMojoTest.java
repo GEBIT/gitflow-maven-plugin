@@ -88,6 +88,15 @@ public class GitFlowFeatureRebaseAbortMojoTest extends AbstractGitFlowMojoTestCa
                 "No rebase of feature branch or merge into feature branch detected. Nothing to abort.", null);
     }
 
+    private void assertMissingAllLocalConfigValuesForBranch(String branch) {
+        git.assertBranchLocalConfigValueMissing(repositorySet, branch, "newBaseVersion");
+        git.assertBranchLocalConfigValueMissing(repositorySet, branch, "newStartCommitMessage");
+        git.assertBranchLocalConfigValueMissing(repositorySet, branch, "newVersionChangeCommit");
+        git.assertBranchLocalConfigValueMissing(repositorySet, branch, "oldFeatureVersion");
+        git.assertBranchLocalConfigValueMissing(repositorySet, branch, "breakpoint");
+        git.assertBranchLocalConfigValueMissing(repositorySet, branch, "rebasedWithoutVersionChangeCommit");
+    }
+
     @Test
     public void testExecuteReabseOntoInProcess() throws Exception {
         // set up
@@ -97,6 +106,7 @@ public class GitFlowFeatureRebaseAbortMojoTest extends AbstractGitFlowMojoTestCa
         git.assertBranchLocalConfigValueExists(repositorySet, FEATURE_BRANCH, "newBaseVersion");
         git.assertBranchLocalConfigValueExists(repositorySet, FEATURE_BRANCH, "newStartCommitMessage");
         git.assertBranchLocalConfigValueExists(repositorySet, FEATURE_BRANCH, "newVersionChangeCommit");
+        git.assertBranchLocalConfigValueExists(repositorySet, FEATURE_BRANCH, "oldFeatureVersion");
         git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH, TMP_FEATURE_BRANCH);
         when(promptControllerMock.prompt(PROMPT_REBASE_ABORT, Arrays.asList("y", "n"), "y")).thenReturn("y");
         // test
@@ -114,10 +124,7 @@ public class GitFlowFeatureRebaseAbortMojoTest extends AbstractGitFlowMojoTestCa
         assertEquals(COMMIT_MESSAGE_SET_VERSION, branchConfig.getProperty("startCommitMessage"));
         assertEquals(EXPECTED_VERSION_CHANGE_COMMIT, branchConfig.getProperty("versionChangeCommit"));
 
-        git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "newBaseVersion");
-        git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "newStartCommitMessage");
-        git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "newVersionChangeCommit");
-
+        assertMissingAllLocalConfigValuesForBranch(FEATURE_BRANCH);
     }
 
     private String createDivergentFeatureAndMasterWithConflicts() throws Exception, IOException, GitAPIException {
@@ -147,6 +154,7 @@ public class GitFlowFeatureRebaseAbortMojoTest extends AbstractGitFlowMojoTestCa
         git.assertBranchLocalConfigValueExists(repositorySet, FEATURE_BRANCH, "newBaseVersion");
         git.assertBranchLocalConfigValueExists(repositorySet, FEATURE_BRANCH, "newStartCommitMessage");
         git.assertBranchLocalConfigValueExists(repositorySet, FEATURE_BRANCH, "newVersionChangeCommit");
+        git.assertBranchLocalConfigValueExists(repositorySet, FEATURE_BRANCH, "oldFeatureVersion");
         git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH, TMP_FEATURE_BRANCH);
         when(promptControllerMock.prompt(PROMPT_REBASE_ABORT, Arrays.asList("y", "n"), "y")).thenReturn("n");
         // test
@@ -161,6 +169,7 @@ public class GitFlowFeatureRebaseAbortMojoTest extends AbstractGitFlowMojoTestCa
         git.assertBranchLocalConfigValueExists(repositorySet, FEATURE_BRANCH, "newBaseVersion");
         git.assertBranchLocalConfigValueExists(repositorySet, FEATURE_BRANCH, "newStartCommitMessage");
         git.assertBranchLocalConfigValueExists(repositorySet, FEATURE_BRANCH, "newVersionChangeCommit");
+        git.assertBranchLocalConfigValueExists(repositorySet, FEATURE_BRANCH, "oldFeatureVersion");
     }
 
     @Test
@@ -174,6 +183,7 @@ public class GitFlowFeatureRebaseAbortMojoTest extends AbstractGitFlowMojoTestCa
         git.assertBranchLocalConfigValueMissing(repositorySet, USED_FEATURE_BRANCH, "newBaseVersion");
         git.assertBranchLocalConfigValueMissing(repositorySet, USED_FEATURE_BRANCH, "newStartCommitMessage");
         git.assertBranchLocalConfigValueMissing(repositorySet, USED_FEATURE_BRANCH, "newVersionChangeCommit");
+        git.assertBranchLocalConfigValueExists(repositorySet, USED_FEATURE_BRANCH, "oldFeatureVersion");
         git.assertExistingLocalBranches(repositorySet, USED_FEATURE_BRANCH);
         git.assertMissingLocalBranches(repositorySet, USED_TMP_FEATURE_BRANCH);
         when(promptControllerMock.prompt(PROMPT_REBASE_ABORT, Arrays.asList("y", "n"), "y")).thenReturn("y");
@@ -194,10 +204,7 @@ public class GitFlowFeatureRebaseAbortMojoTest extends AbstractGitFlowMojoTestCa
                 branchConfig.getProperty("startCommitMessage"));
         assertEquals(null, branchConfig.getProperty("versionChangeCommit"));
 
-        git.assertBranchLocalConfigValueMissing(repositorySet, USED_FEATURE_BRANCH, "newBaseVersion");
-        git.assertBranchLocalConfigValueMissing(repositorySet, USED_FEATURE_BRANCH, "newStartCommitMessage");
-        git.assertBranchLocalConfigValueMissing(repositorySet, USED_FEATURE_BRANCH, "newVersionChangeCommit");
-
+        assertMissingAllLocalConfigValuesForBranch(USED_FEATURE_BRANCH);
     }
 
     @Test
@@ -211,6 +218,7 @@ public class GitFlowFeatureRebaseAbortMojoTest extends AbstractGitFlowMojoTestCa
         git.assertBranchLocalConfigValueMissing(repositorySet, USED_FEATURE_BRANCH, "newBaseVersion");
         git.assertBranchLocalConfigValueMissing(repositorySet, USED_FEATURE_BRANCH, "newStartCommitMessage");
         git.assertBranchLocalConfigValueMissing(repositorySet, USED_FEATURE_BRANCH, "newVersionChangeCommit");
+        git.assertBranchLocalConfigValueExists(repositorySet, USED_FEATURE_BRANCH, "oldFeatureVersion");
         git.assertExistingLocalBranches(repositorySet, USED_FEATURE_BRANCH);
         git.assertMissingLocalBranches(repositorySet, USED_TMP_FEATURE_BRANCH);
         when(promptControllerMock.prompt(PROMPT_REBASE_ABORT, Arrays.asList("y", "n"), "y")).thenReturn("n");
@@ -227,6 +235,7 @@ public class GitFlowFeatureRebaseAbortMojoTest extends AbstractGitFlowMojoTestCa
         git.assertBranchLocalConfigValueMissing(repositorySet, USED_FEATURE_BRANCH, "newBaseVersion");
         git.assertBranchLocalConfigValueMissing(repositorySet, USED_FEATURE_BRANCH, "newStartCommitMessage");
         git.assertBranchLocalConfigValueMissing(repositorySet, USED_FEATURE_BRANCH, "newVersionChangeCommit");
+        git.assertBranchLocalConfigValueExists(repositorySet, USED_FEATURE_BRANCH, "oldFeatureVersion");
     }
 
     @Test
@@ -242,6 +251,7 @@ public class GitFlowFeatureRebaseAbortMojoTest extends AbstractGitFlowMojoTestCa
         git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "newBaseVersion");
         git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "newStartCommitMessage");
         git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "newVersionChangeCommit");
+        git.assertBranchLocalConfigValueExists(repositorySet, FEATURE_BRANCH, "oldFeatureVersion");
         git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
         git.assertMissingLocalBranches(repositorySet, TMP_FEATURE_BRANCH);
         when(promptControllerMock.prompt(PROMPT_MERGE_ABORT, Arrays.asList("y", "n"), "y")).thenReturn("y");
@@ -260,10 +270,7 @@ public class GitFlowFeatureRebaseAbortMojoTest extends AbstractGitFlowMojoTestCa
         assertEquals(COMMIT_MESSAGE_SET_VERSION, branchConfig.getProperty("startCommitMessage"));
         assertEquals(EXPECTED_VERSION_CHANGE_COMMIT, branchConfig.getProperty("versionChangeCommit"));
 
-        git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "newBaseVersion");
-        git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "newStartCommitMessage");
-        git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "newVersionChangeCommit");
-
+        assertMissingAllLocalConfigValuesForBranch(FEATURE_BRANCH);
     }
 
     @Test
@@ -279,6 +286,7 @@ public class GitFlowFeatureRebaseAbortMojoTest extends AbstractGitFlowMojoTestCa
         git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "newBaseVersion");
         git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "newStartCommitMessage");
         git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "newVersionChangeCommit");
+        git.assertBranchLocalConfigValueExists(repositorySet, FEATURE_BRANCH, "oldFeatureVersion");
         git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
         git.assertMissingLocalBranches(repositorySet, TMP_FEATURE_BRANCH);
         when(promptControllerMock.prompt(PROMPT_MERGE_ABORT, Arrays.asList("y", "n"), "y")).thenReturn("n");
@@ -295,6 +303,219 @@ public class GitFlowFeatureRebaseAbortMojoTest extends AbstractGitFlowMojoTestCa
         git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "newBaseVersion");
         git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "newStartCommitMessage");
         git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "newVersionChangeCommit");
+        git.assertBranchLocalConfigValueExists(repositorySet, FEATURE_BRANCH, "oldFeatureVersion");
+    }
+
+    @Test
+    public void testExecuteReabseInProcessOnFeatureFinish() throws Exception {
+        // set up
+        final String EXPECTED_VERSION_CHANGE_COMMIT = createDivergentFeatureAndMasterWithConflicts(FEATURE_BRANCH);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("rebase", "true");
+        MavenExecutionResult result = ExecutorHelper.executeFeatureFinishWithResult(this, repositorySet,
+                userProperties);
+        assertTrue("an exception expected because of rebase conflict", result.hasExceptions());
+        git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "newBaseVersion");
+        git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "newStartCommitMessage");
+        git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "newVersionChangeCommit");
+        git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "oldFeatureVersion");
+        git.assertBranchLocalConfigValueExists(repositorySet, FEATURE_BRANCH, "breakpoint");
+        git.assertBranchLocalConfigValueExists(repositorySet, FEATURE_BRANCH, "rebasedWithoutVersionChangeCommit");
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        when(promptControllerMock.prompt(PROMPT_REBASE_ABORT, Arrays.asList("y", "n"), "y")).thenReturn("y");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_REBASE_ABORT, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
+
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
+        assertEquals(PROJECT_VERSION, branchConfig.getProperty("baseVersion"));
+        assertEquals(COMMIT_MESSAGE_SET_VERSION, branchConfig.getProperty("startCommitMessage"));
+        assertEquals(EXPECTED_VERSION_CHANGE_COMMIT, branchConfig.getProperty("versionChangeCommit"));
+
+        assertMissingAllLocalConfigValuesForBranch(FEATURE_BRANCH);
+    }
+
+    @Test
+    public void testExecuteReabseInProcessOnFeatureFinishAndPromptAnswerNo() throws Exception {
+        // set up
+        final String EXPECTED_VERSION_CHANGE_COMMIT = createDivergentFeatureAndMasterWithConflicts(FEATURE_BRANCH);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("rebase", "true");
+        MavenExecutionResult result = ExecutorHelper.executeFeatureFinishWithResult(this, repositorySet,
+                userProperties);
+        assertTrue("an exception expected because of rebase conflict", result.hasExceptions());
+        git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "newBaseVersion");
+        git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "newStartCommitMessage");
+        git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "newVersionChangeCommit");
+        git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "oldFeatureVersion");
+        git.assertBranchLocalConfigValueExists(repositorySet, FEATURE_BRANCH, "breakpoint");
+        git.assertBranchLocalConfigValueExists(repositorySet, FEATURE_BRANCH, "rebasedWithoutVersionChangeCommit");
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        when(promptControllerMock.prompt(PROMPT_REBASE_ABORT, Arrays.asList("y", "n"), "y")).thenReturn("n");
+        // test
+        result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_REBASE_ABORT, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
+        assertGitFlowFailureException(result, "Aborting feature rebase process aborted by user.", null);
+
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
+        assertEquals(PROJECT_VERSION, branchConfig.getProperty("baseVersion"));
+        assertEquals(COMMIT_MESSAGE_SET_VERSION, branchConfig.getProperty("startCommitMessage"));
+        assertEquals(EXPECTED_VERSION_CHANGE_COMMIT, branchConfig.getProperty("versionChangeCommit"));
+
+        git.assertBranchLocalConfigValueExists(repositorySet, FEATURE_BRANCH, "breakpoint");
+        git.assertBranchLocalConfigValueExists(repositorySet, FEATURE_BRANCH, "rebasedWithoutVersionChangeCommit");
+    }
+
+    @Test
+    public void testExecuteReabseInProcessOnFeatureFinishWithoutFeatureVersion() throws Exception {
+        // set up
+        final String USED_FEATURE_BRANCH = BasicConstants.FEATURE_WITHOUT_VERSION_BRANCH;
+        createDivergentFeatureAndMasterWithConflicts(USED_FEATURE_BRANCH);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("rebase", "true");
+        MavenExecutionResult result = ExecutorHelper.executeFeatureFinishWithResult(this, repositorySet,
+                userProperties);
+        assertTrue("an exception expected because of rebase conflict", result.hasExceptions());
+        git.assertBranchLocalConfigValueMissing(repositorySet, USED_FEATURE_BRANCH, "newBaseVersion");
+        git.assertBranchLocalConfigValueMissing(repositorySet, USED_FEATURE_BRANCH, "newStartCommitMessage");
+        git.assertBranchLocalConfigValueMissing(repositorySet, USED_FEATURE_BRANCH, "newVersionChangeCommit");
+        git.assertBranchLocalConfigValueMissing(repositorySet, USED_FEATURE_BRANCH, "oldFeatureVersion");
+        git.assertBranchLocalConfigValueExists(repositorySet, USED_FEATURE_BRANCH, "breakpoint");
+        git.assertBranchLocalConfigValueMissing(repositorySet, USED_FEATURE_BRANCH, "rebasedWithoutVersionChangeCommit");
+        git.assertExistingLocalBranches(repositorySet, USED_FEATURE_BRANCH);
+        when(promptControllerMock.prompt(PROMPT_REBASE_ABORT, Arrays.asList("y", "n"), "y")).thenReturn("y");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_REBASE_ABORT, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
+        git.assertCurrentBranch(repositorySet, USED_FEATURE_BRANCH);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), PROJECT_VERSION);
+
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH,
+                USED_FEATURE_BRANCH);
+        assertEquals(PROJECT_VERSION, branchConfig.getProperty("baseVersion"));
+        assertEquals(BasicConstants.FEATURE_WITHOUT_VERSION_VERSION_COMMIT_MESSAGE,
+                branchConfig.getProperty("startCommitMessage"));
+        assertEquals(null, branchConfig.getProperty("versionChangeCommit"));
+
+        assertMissingAllLocalConfigValuesForBranch(USED_FEATURE_BRANCH);
+    }
+
+    @Test
+    public void testExecuteReabseInProcessOnFeatureFinishWithoutFeatureVersionAndPromptAnswerNo() throws Exception {
+        // set up
+        final String USED_FEATURE_BRANCH = BasicConstants.FEATURE_WITHOUT_VERSION_BRANCH;
+        createDivergentFeatureAndMasterWithConflicts(USED_FEATURE_BRANCH);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("rebase", "true");
+        MavenExecutionResult result = ExecutorHelper.executeFeatureFinishWithResult(this, repositorySet,
+                userProperties);
+        assertTrue("an exception expected because of rebase conflict", result.hasExceptions());
+        git.assertBranchLocalConfigValueMissing(repositorySet, USED_FEATURE_BRANCH, "newBaseVersion");
+        git.assertBranchLocalConfigValueMissing(repositorySet, USED_FEATURE_BRANCH, "newStartCommitMessage");
+        git.assertBranchLocalConfigValueMissing(repositorySet, USED_FEATURE_BRANCH, "newVersionChangeCommit");
+        git.assertBranchLocalConfigValueMissing(repositorySet, USED_FEATURE_BRANCH, "oldFeatureVersion");
+        git.assertBranchLocalConfigValueExists(repositorySet, USED_FEATURE_BRANCH, "breakpoint");
+        git.assertBranchLocalConfigValueMissing(repositorySet, USED_FEATURE_BRANCH, "rebasedWithoutVersionChangeCommit");
+        git.assertExistingLocalBranches(repositorySet, USED_FEATURE_BRANCH);
+        when(promptControllerMock.prompt(PROMPT_REBASE_ABORT, Arrays.asList("y", "n"), "y")).thenReturn("n");
+        // test
+        result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_REBASE_ABORT, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
+        assertGitFlowFailureException(result, "Aborting feature rebase process aborted by user.", null);
+
+        git.assertExistingLocalBranches(repositorySet, USED_FEATURE_BRANCH);
+
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH,
+                USED_FEATURE_BRANCH);
+        assertEquals(PROJECT_VERSION, branchConfig.getProperty("baseVersion"));
+        assertEquals(BasicConstants.FEATURE_WITHOUT_VERSION_VERSION_COMMIT_MESSAGE,
+                branchConfig.getProperty("startCommitMessage"));
+        assertEquals(null, branchConfig.getProperty("versionChangeCommit"));
+
+        git.assertBranchLocalConfigValueExists(repositorySet, USED_FEATURE_BRANCH, "breakpoint");
+        git.assertBranchLocalConfigValueMissing(repositorySet, USED_FEATURE_BRANCH, "rebasedWithoutVersionChangeCommit");
+    }
+
+    @Test
+    public void testExecuteMergeInProcessOnFeatureFinish() throws Exception {
+        // set up
+        final String EXPECTED_VERSION_CHANGE_COMMIT = createDivergentFeatureAndMasterWithConflicts(FEATURE_BRANCH);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("rebase", "true");
+        userProperties.setProperty("flow.updateWithMerge", "true");
+        MavenExecutionResult result = ExecutorHelper.executeFeatureFinishWithResult(this, repositorySet,
+                userProperties);
+        assertTrue("an exception expected because of rebase conflict", result.hasExceptions());
+        git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "newBaseVersion");
+        git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "newStartCommitMessage");
+        git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "newVersionChangeCommit");
+        git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "oldFeatureVersion");
+        git.assertBranchLocalConfigValueExists(repositorySet, FEATURE_BRANCH, "breakpoint");
+        git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "rebasedWithoutVersionChangeCommit");
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        when(promptControllerMock.prompt(PROMPT_MERGE_ABORT, Arrays.asList("y", "n"), "y")).thenReturn("y");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MERGE_ABORT, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
+        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
+
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
+        assertEquals(PROJECT_VERSION, branchConfig.getProperty("baseVersion"));
+        assertEquals(COMMIT_MESSAGE_SET_VERSION, branchConfig.getProperty("startCommitMessage"));
+        assertEquals(EXPECTED_VERSION_CHANGE_COMMIT, branchConfig.getProperty("versionChangeCommit"));
+
+        assertMissingAllLocalConfigValuesForBranch(FEATURE_BRANCH);
+    }
+
+    @Test
+    public void testExecuteMergeInProcessOnFeatureFinishAndPromptAnswerNo() throws Exception {
+        // set up
+        final String EXPECTED_VERSION_CHANGE_COMMIT = createDivergentFeatureAndMasterWithConflicts(FEATURE_BRANCH);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("rebase", "true");
+        userProperties.setProperty("flow.updateWithMerge", "true");
+        MavenExecutionResult result = ExecutorHelper.executeFeatureFinishWithResult(this, repositorySet,
+                userProperties);
+        assertTrue("an exception expected because of rebase conflict", result.hasExceptions());
+        git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "newBaseVersion");
+        git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "newStartCommitMessage");
+        git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "newVersionChangeCommit");
+        git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "oldFeatureVersion");
+        git.assertBranchLocalConfigValueExists(repositorySet, FEATURE_BRANCH, "breakpoint");
+        git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "rebasedWithoutVersionChangeCommit");
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+        when(promptControllerMock.prompt(PROMPT_MERGE_ABORT, Arrays.asList("y", "n"), "y")).thenReturn("n");
+        // test
+        result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MERGE_ABORT, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
+        assertGitFlowFailureException(result, "Aborting feature rebase process aborted by user.", null);
+
+        git.assertExistingLocalBranches(repositorySet, FEATURE_BRANCH);
+
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
+        assertEquals(PROJECT_VERSION, branchConfig.getProperty("baseVersion"));
+        assertEquals(COMMIT_MESSAGE_SET_VERSION, branchConfig.getProperty("startCommitMessage"));
+        assertEquals(EXPECTED_VERSION_CHANGE_COMMIT, branchConfig.getProperty("versionChangeCommit"));
+
+        git.assertBranchLocalConfigValueExists(repositorySet, FEATURE_BRANCH, "breakpoint");
+        git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "rebasedWithoutVersionChangeCommit");
     }
 
 }
