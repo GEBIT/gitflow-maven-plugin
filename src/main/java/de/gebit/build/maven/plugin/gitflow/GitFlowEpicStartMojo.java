@@ -53,7 +53,7 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
      * is used to print an error message. If not specified the pattern is
      * printed in the error message as is, which can be hard to understand.
      */
-    @Parameter(property = "epicNamePatternDescription", required = false)
+    @Parameter(property = "flow.epicNamePatternDescription", required = false)
     protected String epicNamePatternDescription;
 
     /**

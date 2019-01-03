@@ -74,7 +74,7 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
      * @since 1.3.0
      * @since 1.5.9
      */
-    @Parameter(defaultValue = "${releaseBranchFilter}", required = false)
+    @Parameter(property = "flow.releaseBranchFilter")
     protected String releaseBranchFilter;
 
     /**
@@ -83,7 +83,7 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
      *
      * @since 1.5.9
      */
-    @Parameter(defaultValue = "${releaseVersionLimit}", required = false)
+    @Parameter(property = "flow.releaseVersionLimit")
     protected Integer releaseVersionLimit;
 
     /** {@inheritDoc} */

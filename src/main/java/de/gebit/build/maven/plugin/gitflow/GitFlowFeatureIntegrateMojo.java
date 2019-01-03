@@ -55,7 +55,7 @@ public class GitFlowFeatureIntegrateMojo extends AbstractGitFlowFeatureMojo {
     static final String GOAL = "feature-integrate";
 
     /** Whether to keep feature branch after in. */
-    @Parameter(property = "keepFeatureBranch", defaultValue = "false")
+    @Parameter(property = "flow.keepFeatureBranch", defaultValue = "false")
     private boolean keepFeatureBranch = false;
 
     /**
@@ -69,7 +69,7 @@ public class GitFlowFeatureIntegrateMojo extends AbstractGitFlowFeatureMojo {
      * Whether to squash a commit with correction of version for new modules and
      * single feature commit.
      */
-    @Parameter(property = "squashNewModuleVersionFixCommit", defaultValue = "false")
+    @Parameter(property = "flow.squashNewModuleVersionFixCommit", defaultValue = "false")
     private boolean squashNewModuleVersionFixCommit = false;
 
     private final List<Step<FeatureIntegrateBreakpoint, FeatureIntegrateStepParameters>> allProcessSteps = Arrays

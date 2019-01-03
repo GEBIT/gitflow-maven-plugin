@@ -38,7 +38,7 @@ public class GitFlowUpgradeMojo extends AbstractGitFlowMojo {
 
     static final String GOAL = "upgrade";
 
-    @Parameter(property = "featureNamePattern")
+    @Parameter(property = "flow.featureNamePattern")
     protected String featureNamePattern;
 
     @Override

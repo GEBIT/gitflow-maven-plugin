@@ -50,7 +50,6 @@
 							<groupId>de.gebit.build.maven</groupId>
 							<artifactId>gitflow-maven-plugin</artifactId>
 							<configuration>
-								<commandsAfterVersion>${flow.commandsAfterVersion}</commandsAfterVersion>
 								<tychoBuild>${flow.tychoBuild}</tychoBuild>
 								<gitFlowConfig>
 									<noProduction>true</noProduction>
@@ -78,7 +77,6 @@
 							<groupId>de.gebit.build.maven</groupId>
 							<artifactId>gitflow-maven-plugin</artifactId>
 							<configuration>
-								<commandsAfterVersion>${flow.commandsAfterVersion}</commandsAfterVersion>
 								<tychoBuild>${flow.tychoBuild}</tychoBuild>
 								<gitFlowConfig>
 									<noProduction>true</noProduction>
@@ -106,8 +104,7 @@
 			</activation>
 			<properties>
 				<flow.additionalVersionCommands.contexts>VERSION</flow.additionalVersionCommands.contexts>
-				<flow.commandsAfterVersion>version-stamper:stamp
-					-N</flow.commandsAfterVersion>
+				<flow.commandsAfterVersion>version-stamper:stamp -N</flow.commandsAfterVersion>
 			</properties>
 			<build>
 				<pluginManagement>
@@ -116,7 +113,6 @@
 							<groupId>de.gebit.build.maven</groupId>
 							<artifactId>gitflow-maven-plugin</artifactId>
 							<configuration>
-								<commandsAfterVersion>${flow.commandsAfterVersion}</commandsAfterVersion>
 								<tychoBuild>${flow.tychoBuild}</tychoBuild>
 								<gitFlowConfig>
 									<noProduction>true</noProduction>
@@ -159,7 +155,6 @@
 							<groupId>de.gebit.build.maven</groupId>
 							<artifactId>gitflow-maven-plugin</artifactId>
 							<configuration>
-								<commandsAfterVersion>${flow.commandsAfterVersion}</commandsAfterVersion>
 								<tychoBuild>${flow.tychoBuild}</tychoBuild>
 								<gitFlowConfig>
 									<noProduction>true</noProduction>
@@ -199,7 +194,6 @@
 							<groupId>de.gebit.build.maven</groupId>
 							<artifactId>gitflow-maven-plugin</artifactId>
 							<configuration>
-								<commandsAfterVersion>${flow.commandsAfterVersion}</commandsAfterVersion>
 								<tychoBuild>${flow.tychoBuild}</tychoBuild>
 								<gitFlowConfig>
 									<noProduction>true</noProduction>
@@ -237,7 +231,6 @@
 							<groupId>de.gebit.build.maven</groupId>
 							<artifactId>gitflow-maven-plugin</artifactId>
 							<configuration>
-								<commandsAfterVersion>${flow.commandsAfterVersion}</commandsAfterVersion>
 								<gitFlowConfig>
 									<noProduction>true</noProduction>
 									<developmentBranch>master</developmentBranch>
@@ -279,7 +272,6 @@
 							<groupId>de.gebit.build.maven</groupId>
 							<artifactId>gitflow-maven-plugin</artifactId>
 							<configuration>
-								<commandsAfterVersion>${flow.commandsAfterVersion}</commandsAfterVersion>
 								<gitFlowConfig>
 									<noProduction>true</noProduction>
 									<developmentBranch>master</developmentBranch>

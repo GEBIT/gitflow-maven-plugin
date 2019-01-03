@@ -95,7 +95,7 @@ public class GitFlowFeatureFinishWithPreRebaseMojoTest extends AbstractGitFlowMo
     public void setUp() throws Exception {
         repositorySet = git.useGitRepositorySet(TestProjects.BASIC, FEATURE_BRANCH);
         userProperties = new Properties();
-        userProperties.setProperty("rebase", "true");
+        userProperties.setProperty("flow.rebase", "true");
     }
 
     @After

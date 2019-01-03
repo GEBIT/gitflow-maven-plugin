@@ -32,7 +32,7 @@ public abstract class AbstractGitFlowFeatureMojo extends AbstractGitFlowMojo {
      *
      * @since 1.3.0
      */
-    @Parameter(property = "featureNamePattern", required = false)
+    @Parameter(property = "flow.featureNamePattern")
     protected String featureNamePattern;
 
     /**

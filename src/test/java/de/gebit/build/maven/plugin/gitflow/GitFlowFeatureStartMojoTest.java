@@ -1041,7 +1041,7 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         Properties userProperties = new Properties();
         userProperties.setProperty("featureName", FEATURE_NAME);
         userProperties.setProperty("flow.installProject", "true");
-        userProperties.setProperty("installProjectGoals", "validate -DskipTests");
+        userProperties.setProperty("flow.installProjectGoals", "validate -DskipTests");
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
@@ -1071,7 +1071,7 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         Properties userProperties = new Properties();
         userProperties.setProperty("featureName", FEATURE_NAME);
         userProperties.setProperty("flow.installProject", "true");
-        userProperties.setProperty("installProjectGoals", "validate -DskipTests");
+        userProperties.setProperty("flow.installProjectGoals", "validate -DskipTests");
         userProperties.setProperty("flow.installProjectOptions", "-T 4");
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
@@ -1855,7 +1855,7 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         Properties userProperties = new Properties();
         userProperties.setProperty("featureName", FEATURE_NAME);
         userProperties.setProperty("flow.installProject", "true");
-        userProperties.setProperty("installProjectGoals", "");
+        userProperties.setProperty("flow.installProjectGoals", "");
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
@@ -1878,7 +1878,7 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         Properties userProperties = new Properties();
         userProperties.setProperty("featureName", FEATURE_NAME);
         userProperties.setProperty("flow.installProject", "true");
-        userProperties.setProperty("installProjectGoals", "clean \"instal");
+        userProperties.setProperty("flow.installProjectGoals", "clean \"instal");
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
@@ -1902,7 +1902,7 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         Properties userProperties = new Properties();
         userProperties.setProperty("featureName", FEATURE_NAME);
         userProperties.setProperty("flow.installProject", "true");
-        userProperties.setProperty("installProjectGoals", "nonExistingGoal");
+        userProperties.setProperty("flow.installProjectGoals", "nonExistingGoal");
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify

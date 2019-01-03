@@ -66,7 +66,7 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
      *
      * @since 1.3.0
      */
-    @Parameter(property = "updateWithMerge", defaultValue = "false")
+    @Parameter(property = "flow.updateWithMerge", defaultValue = "false")
     private boolean updateWithMerge = false;
 
     /**
@@ -75,7 +75,7 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
      *
      * @since 1.5.11
      */
-    @Parameter(property = "deleteRemoteBranchOnRebase", defaultValue = "false")
+    @Parameter(property = "flow.deleteRemoteBranchOnRebase", defaultValue = "false")
     private boolean deleteRemoteBranchOnRebase = false;
 
     /**

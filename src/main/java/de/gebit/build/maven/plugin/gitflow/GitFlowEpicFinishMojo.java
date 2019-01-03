@@ -39,11 +39,11 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
     static final String GOAL = "epic-finish";
 
     /** Whether to keep epic branch after finish. */
-    @Parameter(property = "keepEpicBranch", defaultValue = "false")
+    @Parameter(property = "flow.keepEpicBranch", defaultValue = "false")
     private boolean keepEpicBranch = false;
 
     /** Whether to skip calling Maven test goal before merging the branch. */
-    @Parameter(property = "skipTestProject", defaultValue = "false")
+    @Parameter(property = "flow.skipTestProject", defaultValue = "false")
     private boolean skipTestProject = false;
 
     /**
@@ -52,7 +52,7 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
      *
      * @since 2.0.0
      */
-    @Parameter(property = "allowFF", defaultValue = "false")
+    @Parameter(property = "flow.allowFF", defaultValue = "false")
     private boolean allowFF = false;
 
     @Override

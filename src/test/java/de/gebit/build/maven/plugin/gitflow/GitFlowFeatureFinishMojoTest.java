@@ -328,7 +328,7 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1"))).thenReturn("1");
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.featureBranchPrefix", BasicConstants.SINGLE_FEATURE_BRANCH_PREFIX);
-        userProperties.setProperty("squashNewModuleVersionFixCommit", "true");
+        userProperties.setProperty("flow.squashNewModuleVersionFixCommit", "true");
 
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
@@ -391,7 +391,7 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1"))).thenReturn("1");
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.featureBranchPrefix", BasicConstants.SINGLE_FEATURE_BRANCH_PREFIX);
-        userProperties.setProperty("squashNewModuleVersionFixCommit", "true");
+        userProperties.setProperty("flow.squashNewModuleVersionFixCommit", "true");
 
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
@@ -511,7 +511,7 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.skipTestProject", "false");
-        userProperties.setProperty("testProjectGoals", "validate -DskipTests");
+        userProperties.setProperty("flow.testProjectGoals", "validate -DskipTests");
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
@@ -545,7 +545,7 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.skipTestProject", "false");
-        userProperties.setProperty("testProjectGoals", "validate -DskipTests");
+        userProperties.setProperty("flow.testProjectGoals", "validate -DskipTests");
         userProperties.setProperty("flow.testProjectOptions", "-T 4");
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
@@ -1672,7 +1672,7 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.switchToBranch(repositorySet, FEATURE_BRANCH);
         mockupPromptMessageWithoutRebase("a");
         Properties userProperties = new Properties();
-        userProperties.setProperty("allowFF", "true");
+        userProperties.setProperty("flow.allowFF", "true");
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
                 promptControllerMock);
@@ -1700,7 +1700,7 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.switchToBranch(repositorySet, FEATURE_BRANCH);
         mockupPromptMessageWithoutRebase("r");
         Properties userProperties = new Properties();
-        userProperties.setProperty("allowFF", "true");
+        userProperties.setProperty("flow.allowFF", "true");
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
@@ -2429,7 +2429,7 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
         Properties userProperties = new Properties();
-        userProperties.setProperty("allowFF", "true");
+        userProperties.setProperty("flow.allowFF", "true");
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify

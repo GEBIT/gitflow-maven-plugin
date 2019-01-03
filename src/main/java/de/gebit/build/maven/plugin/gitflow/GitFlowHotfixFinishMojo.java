@@ -52,7 +52,7 @@ public class GitFlowHotfixFinishMojo extends AbstractGitFlowMojo {
      *
      * @since 1.0.5
      */
-    @Parameter(property = "skipTestProject", defaultValue = "false")
+    @Parameter(property = "flow.skipTestProject", defaultValue = "false")
     private boolean skipTestProject = false;
 
     /** {@inheritDoc} */

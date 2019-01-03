@@ -1818,7 +1818,7 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
         Properties userProperties = new Properties();
-        userProperties.setProperty("allowFF", "true");
+        userProperties.setProperty("flow.allowFF", "true");
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify

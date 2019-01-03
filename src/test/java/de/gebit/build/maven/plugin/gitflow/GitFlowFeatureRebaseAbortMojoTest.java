@@ -311,7 +311,7 @@ public class GitFlowFeatureRebaseAbortMojoTest extends AbstractGitFlowMojoTestCa
         // set up
         final String EXPECTED_VERSION_CHANGE_COMMIT = createDivergentFeatureAndMasterWithConflicts(FEATURE_BRANCH);
         Properties userProperties = new Properties();
-        userProperties.setProperty("rebase", "true");
+        userProperties.setProperty("flow.rebase", "true");
         MavenExecutionResult result = ExecutorHelper.executeFeatureFinishWithResult(this, repositorySet,
                 userProperties);
         assertTrue("an exception expected because of rebase conflict", result.hasExceptions());
@@ -344,7 +344,7 @@ public class GitFlowFeatureRebaseAbortMojoTest extends AbstractGitFlowMojoTestCa
         // set up
         final String EXPECTED_VERSION_CHANGE_COMMIT = createDivergentFeatureAndMasterWithConflicts(FEATURE_BRANCH);
         Properties userProperties = new Properties();
-        userProperties.setProperty("rebase", "true");
+        userProperties.setProperty("flow.rebase", "true");
         MavenExecutionResult result = ExecutorHelper.executeFeatureFinishWithResult(this, repositorySet,
                 userProperties);
         assertTrue("an exception expected because of rebase conflict", result.hasExceptions());
@@ -380,7 +380,7 @@ public class GitFlowFeatureRebaseAbortMojoTest extends AbstractGitFlowMojoTestCa
         final String USED_FEATURE_BRANCH = BasicConstants.FEATURE_WITHOUT_VERSION_BRANCH;
         createDivergentFeatureAndMasterWithConflicts(USED_FEATURE_BRANCH);
         Properties userProperties = new Properties();
-        userProperties.setProperty("rebase", "true");
+        userProperties.setProperty("flow.rebase", "true");
         MavenExecutionResult result = ExecutorHelper.executeFeatureFinishWithResult(this, repositorySet,
                 userProperties);
         assertTrue("an exception expected because of rebase conflict", result.hasExceptions());
@@ -416,7 +416,7 @@ public class GitFlowFeatureRebaseAbortMojoTest extends AbstractGitFlowMojoTestCa
         final String USED_FEATURE_BRANCH = BasicConstants.FEATURE_WITHOUT_VERSION_BRANCH;
         createDivergentFeatureAndMasterWithConflicts(USED_FEATURE_BRANCH);
         Properties userProperties = new Properties();
-        userProperties.setProperty("rebase", "true");
+        userProperties.setProperty("flow.rebase", "true");
         MavenExecutionResult result = ExecutorHelper.executeFeatureFinishWithResult(this, repositorySet,
                 userProperties);
         assertTrue("an exception expected because of rebase conflict", result.hasExceptions());
@@ -453,7 +453,7 @@ public class GitFlowFeatureRebaseAbortMojoTest extends AbstractGitFlowMojoTestCa
         // set up
         final String EXPECTED_VERSION_CHANGE_COMMIT = createDivergentFeatureAndMasterWithConflicts(FEATURE_BRANCH);
         Properties userProperties = new Properties();
-        userProperties.setProperty("rebase", "true");
+        userProperties.setProperty("flow.rebase", "true");
         userProperties.setProperty("flow.updateWithMerge", "true");
         MavenExecutionResult result = ExecutorHelper.executeFeatureFinishWithResult(this, repositorySet,
                 userProperties);
@@ -487,7 +487,7 @@ public class GitFlowFeatureRebaseAbortMojoTest extends AbstractGitFlowMojoTestCa
         // set up
         final String EXPECTED_VERSION_CHANGE_COMMIT = createDivergentFeatureAndMasterWithConflicts(FEATURE_BRANCH);
         Properties userProperties = new Properties();
-        userProperties.setProperty("rebase", "true");
+        userProperties.setProperty("flow.rebase", "true");
         userProperties.setProperty("flow.updateWithMerge", "true");
         MavenExecutionResult result = ExecutorHelper.executeFeatureFinishWithResult(this, repositorySet,
                 userProperties);

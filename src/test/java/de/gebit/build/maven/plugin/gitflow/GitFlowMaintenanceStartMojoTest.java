@@ -240,7 +240,7 @@ public class GitFlowMaintenanceStartMojoTest extends AbstractGitFlowMojoTestCase
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
         Properties userProperties = new Properties();
-        userProperties.setProperty("releaseVersionLimit", "2");
+        userProperties.setProperty("flow.releaseVersionLimit", "2");
         when(promptControllerMock.prompt(PROMPT_SELECTING_RELEASE_TWO_TAGS, Arrays.asList("0", "1", "2", "T")))
                 .thenReturn("0");
         when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION))
@@ -269,7 +269,7 @@ public class GitFlowMaintenanceStartMojoTest extends AbstractGitFlowMojoTestCase
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
         Properties userProperties = new Properties();
-        userProperties.setProperty("releaseVersionLimit", "2");
+        userProperties.setProperty("flow.releaseVersionLimit", "2");
         when(promptControllerMock.prompt(PROMPT_SELECTING_RELEASE_TWO_TAGS, Arrays.asList("0", "1", "2", "T")))
                 .thenReturn("0");
         when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION))
@@ -914,7 +914,7 @@ public class GitFlowMaintenanceStartMojoTest extends AbstractGitFlowMojoTestCase
         git.push(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.installProject", "true");
-        userProperties.setProperty("installProjectGoals", "install -DskipTests");
+        userProperties.setProperty("flow.installProjectGoals", "install -DskipTests");
         when(promptControllerMock.prompt(PROMPT_SELECTING_RELEASE_NO_TAGS, Arrays.asList("0", "T"))).thenReturn("0");
         when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION))
                 .thenReturn(MAINTENANCE_VERSION);

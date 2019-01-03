@@ -2102,7 +2102,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         git.commitAll(repositorySet, COMMIT_MESSAGE_NEW_FEATURE_MODULE);
         git.push(repositorySet);
         Properties userProperties = new Properties();
-        userProperties.setProperty("squashNewModuleVersionFixCommit", "true");
+        userProperties.setProperty("flow.squashNewModuleVersionFixCommit", "true");
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
@@ -2143,7 +2143,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
         Properties userProperties = new Properties();
-        userProperties.setProperty("squashNewModuleVersionFixCommit", "true");
+        userProperties.setProperty("flow.squashNewModuleVersionFixCommit", "true");
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
@@ -2189,7 +2189,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.updateWithMerge", "true");
         userProperties.setProperty("flow.rebaseWithoutVersionChange", "false");
-        userProperties.setProperty("squashNewModuleVersionFixCommit", "true");
+        userProperties.setProperty("flow.squashNewModuleVersionFixCommit", "true");
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify

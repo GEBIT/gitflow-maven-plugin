@@ -71,7 +71,7 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
      *
      * @since 1.3.0
      */
-    @Parameter(property = "updateWithMerge", defaultValue = "false")
+    @Parameter(property = "flow.updateWithMerge", defaultValue = "false")
     private boolean updateWithMerge = false;
 
     /**
@@ -81,7 +81,7 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
      *
      * @since 1.3.0
      */
-    @Parameter(property = "rebaseWithoutVersionChange", defaultValue = "false")
+    @Parameter(property = "flow.rebaseWithoutVersionChange", defaultValue = "false")
     private boolean rebaseWithoutVersionChange = false;
 
     /**
@@ -90,7 +90,7 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
      *
      * @since 1.5.11
      */
-    @Parameter(property = "deleteRemoteBranchOnRebase", defaultValue = "false")
+    @Parameter(property = "flow.deleteRemoteBranchOnRebase", defaultValue = "false")
     private boolean deleteRemoteBranchOnRebase = false;
 
     /**
@@ -99,7 +99,7 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
      *
      * @since 2.1.2
      */
-    @Parameter(property = "squashNewModuleVersionFixCommit", defaultValue = "false")
+    @Parameter(property = "flow.squashNewModuleVersionFixCommit", defaultValue = "false")
     private boolean squashNewModuleVersionFixCommit = false;
 
     /** {@inheritDoc} */

@@ -60,7 +60,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
     static final String GOAL = "feature-finish";
 
     /** Whether to keep feature branch after finish. */
-    @Parameter(property = "keepFeatureBranch", defaultValue = "false")
+    @Parameter(property = "flow.keepFeatureBranch", defaultValue = "false")
     private boolean keepFeatureBranch = false;
 
     /**
@@ -68,7 +68,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
      *
      * @since 1.0.5
      */
-    @Parameter(property = "skipTestProject", defaultValue = "false")
+    @Parameter(property = "flow.skipTestProject", defaultValue = "false")
     private boolean skipTestProject = false;
 
     /**
@@ -84,7 +84,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
      *
      * @since 1.3.0
      */
-    @Parameter(property = "rebaseWithoutVersionChange", defaultValue = "false")
+    @Parameter(property = "flow.rebaseWithoutVersionChange", defaultValue = "false")
     private boolean rebaseWithoutVersionChange = false;
 
     /**
@@ -93,7 +93,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
      *
      * @since 2.0.0
      */
-    @Parameter(property = "allowFF", defaultValue = "false")
+    @Parameter(property = "flow.allowFF", defaultValue = "false")
     private boolean allowFF = false;
 
     /**
@@ -102,7 +102,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
      *
      * @since 2.0.1
      */
-    @Parameter(property = "rebase", defaultValue = "false")
+    @Parameter(property = "flow.rebase", defaultValue = "false")
     private boolean rebase = false;
 
     /**
@@ -112,7 +112,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
      *
      * @since 2.0.1
      */
-    @Parameter(property = "updateWithMerge", defaultValue = "false")
+    @Parameter(property = "flow.updateWithMerge", defaultValue = "false")
     private boolean updateWithMerge = false;
 
     /**
@@ -121,7 +121,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
      *
      * @since 2.1.0
      */
-    @Parameter(property = "squashNewModuleVersionFixCommit", defaultValue = "false")
+    @Parameter(property = "flow.squashNewModuleVersionFixCommit", defaultValue = "false")
     private boolean squashNewModuleVersionFixCommit = false;
 
     private final List<Step<FeatureFinishBreakpoint, FeatureFinishStepParameters>> allProcessSteps = Arrays.asList(

@@ -71,7 +71,7 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
      *
      * @since 1.5.0
      */
-    @Parameter(property = "pushReleaseBranch", required = false)
+    @Parameter(property = "flow.pushReleaseBranch", defaultValue = "false")
     private boolean pushReleaseBranch;
 
     @Override

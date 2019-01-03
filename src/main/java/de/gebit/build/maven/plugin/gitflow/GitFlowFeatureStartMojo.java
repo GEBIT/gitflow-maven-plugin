@@ -65,15 +65,15 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
     private boolean skipFeatureVersion = false;
 
     /**
-     * Additional maven commands/goals after the feature version has been
-     * updated. Will be committed together with the version change. Can contain
-     * an {@literal @}{version} placeholder which will be replaced with the new
-     * version before execution. If empty the <code>commandsAfterVersion</code>
+     * Additional maven commands/goals after the feature version has been updated.
+     * Will be committed together with the version change. Can contain an
+     * {@literal @}{version} placeholder which will be replaced with the new version
+     * before execution. If empty the <code>flow.commandsAfterVersion</code>
      * property is used.
      *
      * @since 1.3.2
      */
-    @Parameter(property = "commandsAfterFeatureVersion", defaultValue = "")
+    @Parameter(property = "flow.commandsAfterFeatureVersion", defaultValue = "")
     protected String commandsAfterFeatureVersion;
 
     /**
@@ -83,7 +83,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
      *
      * @since 1.3.1
      */
-    @Parameter(property = "featureNamePatternDescription", required = false)
+    @Parameter(property = "flow.featureNamePatternDescription", required = false)
     protected String featureNamePatternDescription;
 
     /**

@@ -83,7 +83,6 @@
 
 				<flow.skipFeatureVersion>false</flow.skipFeatureVersion>
 				<flow.commandsAfterVersion>version-stamper:stamp -N</flow.commandsAfterVersion>
-				<flow.commandsAfterFeatureVersion>version-stamper:stamp -N</flow.commandsAfterFeatureVersion>
 				<flow.featureNamePattern>^((?:${project.jira})-\d+)(?:-[^\s]*)?$</flow.featureNamePattern>
 				<flow.featureNamePatternDescription>A feature name must start with the project's JIRA issue key, e.g. ${project.jira}-[number][-optional-short-description]</flow.featureNamePatternDescription>
 				<flow.featureStartMessage>@{key}: updating versions for feature branch</flow.featureStartMessage>
@@ -100,22 +99,14 @@
 
 				<flow.noProduction>true</flow.noProduction>
 				<flow.productionBranch>latest</flow.productionBranch>
-				<flow.push>true</flow.push>
+				<flow.pushRemote>${flow.push}</flow.pushRemote>
 				<flow.fetchRemote>true</flow.fetchRemote>
 				<flow.skipTestProject>true</flow.skipTestProject>
-				<flow.skipDeployProject>false</flow.skipDeployProject>
 				<flow.installProject>false</flow.installProject>
-				<flow.keepFeatureBranch>false</flow.keepFeatureBranch>
-				<flow.keepEpicBranch>false</flow.keepEpicBranch>
 				<flow.rebaseWithoutVersionChange>true</flow.rebaseWithoutVersionChange>
-				<flow.updateWithMerge>false</flow.updateWithMerge>
-				<flow.allowSnapshots>false</flow.allowSnapshots>
 				<flow.copyProperties>altDeploymentRepository,maven.repo.local</flow.copyProperties>
 				<flow.releaseMergeNoFF>false</flow.releaseMergeNoFF>
-				<flow.releaseMergeProductionNoFF>true</flow.releaseMergeProductionNoFF>
 				<flow.releaseGoals>validate</flow.releaseGoals>
-				<flow.pushReleaseBranch>false</flow.pushReleaseBranch>
-				<flow.deleteRemoteBranchOnRebase>false</flow.deleteRemoteBranchOnRebase>
 				<flow.additionalVersionCommands.contexts>VERSION</flow.additionalVersionCommands.contexts>
 
 				<flow.upstreamVersionPromptHint.featureStart><![CDATA[
@@ -174,33 +165,10 @@ Hints:
 								<sameBranchName>${flow.sameBranchName}</sameBranchName>
 								<skipTag>${flow.skipTag}</skipTag>
 
-								<commandsAfterVersion>${flow.commandsAfterVersion}</commandsAfterVersion>
-								<commandsAfterFeatureVersion>${flow.commandsAfterFeatureVersion}</commandsAfterFeatureVersion>
-								<fetchRemote>${flow.fetchRemote}</fetchRemote>
-								<pushRemote>${flow.push}</pushRemote>
-								<pushReleaseBranch>${flow.pushReleaseBranch}</pushReleaseBranch>
-								<keepFeatureBranch>${flow.keepFeatureBranch}</keepFeatureBranch>
-								<keepEpicBranch>${flow.keepEpicBranch}</keepEpicBranch>
-								<skipTestProject>${flow.skipTestProject}</skipTestProject>
-								<skipDeployProject>${flow.skipDeployProject}</skipDeployProject>
-								<installProject>${flow.installProject}</installProject>
-								<releaseGoals>${flow.releaseGoals}</releaseGoals>
-								<rebaseWithoutVersionChange>${flow.rebaseWithoutVersionChange}</rebaseWithoutVersionChange>
-								<releaseMergeNoFF>${flow.releaseMergeNoFF}</releaseMergeNoFF>
-								<releaseMergeProductionNoFF>${flow.releaseMergeProductionNoFF}</releaseMergeProductionNoFF>
-								<updateWithMerge>${flow.updateWithMerge}</updateWithMerge>
-								<featureNamePattern>${flow.featureNamePattern}</featureNamePattern>
-								<featureNamePatternDescription>${flow.featureNamePatternDescription}</featureNamePatternDescription>
-								<epicNamePattern>${flow.epicNamePattern}</epicNamePattern>
-								<epicNamePatternDescription>${flow.epicNamePatternDescription}</epicNamePatternDescription>
-								<releaseBranchFilter>${flow.releaseBranchFilter}</releaseBranchFilter>
-								<allowSnapshots>${flow.allowSnapshots}</allowSnapshots>
 								<printTestOutput>true</printTestOutput>
 								<printInstallOutput>true</printInstallOutput>
 								<statusBeforeCheck>true</statusBeforeCheck>
-								<copyProperties>${flow.copyProperties}</copyProperties>
 								<tychoBuild>${flow.tychoBuild}</tychoBuild>
-								<deleteRemoteBranchOnRebase>${flow.deleteRemoteBranchOnRebase}</deleteRemoteBranchOnRebase>
 								<gitFlowConfig>
 									<noProduction>${flow.noProduction}</noProduction>
 									<productionBranch>${flow.productionBranch}</productionBranch>

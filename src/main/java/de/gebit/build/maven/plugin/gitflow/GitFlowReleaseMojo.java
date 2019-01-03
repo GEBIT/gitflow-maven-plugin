@@ -44,7 +44,7 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
      *
      * @since 1.0.5
      */
-    @Parameter(property = "skipTestProject", defaultValue = "false")
+    @Parameter(property = "flow.skipTestProject", defaultValue = "false")
     private boolean skipTestProject = false;
 
     /**
@@ -53,7 +53,7 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
      * @since 1.3.0
      * @since 1.4.1
      */
-    @Parameter(property = "skipDeployProject", defaultValue = "false")
+    @Parameter(property = "flow.skipDeployProject", defaultValue = "false")
     private boolean skipDeployProject = false;
 
     /**
@@ -61,7 +61,7 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
      *
      * @since 1.2.3
      */
-    @Parameter(property = "releaseMergeNoFF", defaultValue = "true")
+    @Parameter(property = "flow.releaseMergeNoFF", defaultValue = "true")
     private boolean releaseMergeNoFF = true;
 
     /**
@@ -70,7 +70,7 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
      *
      * @since 1.5.0
      */
-    @Parameter(property = "releaseMergeProductionNoFF", defaultValue = "true")
+    @Parameter(property = "flow.releaseMergeProductionNoFF", defaultValue = "true")
     private boolean releaseMergeProductionNoFF = true;
 
     /**
@@ -81,7 +81,7 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
      * @since 1.3.0
      * @since 1.3.9 you can specify multiple entries
      */
-    @Parameter(property = "releaseGoals", defaultValue = "${releaseGoals}")
+    @Parameter(property = "flow.releaseGoals")
     private String[] releaseGoals;
 
     /**

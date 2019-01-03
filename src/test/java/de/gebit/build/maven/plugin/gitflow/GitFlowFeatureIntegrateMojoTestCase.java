@@ -709,7 +709,7 @@ public class GitFlowFeatureIntegrateMojoTestCase extends AbstractGitFlowMojoTest
         git.push(repositorySet);
         prepareTargetFeature();
         userProperties.setProperty("featureName", TARGET_FEATURE_NAME);
-        userProperties.setProperty("squashNewModuleVersionFixCommit", "true");
+        userProperties.setProperty("flow.squashNewModuleVersionFixCommit", "true");
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
@@ -753,7 +753,7 @@ public class GitFlowFeatureIntegrateMojoTestCase extends AbstractGitFlowMojoTest
         git.commitAll(repositorySet, COMMIT_MESSAGE_NEW_MODULE);
         git.push(repositorySet);
         userProperties.setProperty("featureName", TARGET_FEATURE_NAME);
-        userProperties.setProperty("squashNewModuleVersionFixCommit", "true");
+        userProperties.setProperty("flow.squashNewModuleVersionFixCommit", "true");
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify

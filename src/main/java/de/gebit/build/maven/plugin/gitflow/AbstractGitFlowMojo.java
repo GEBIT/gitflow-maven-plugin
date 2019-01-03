@@ -156,7 +156,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      *
      * @since 1.0.5
      */
-    @Parameter(property = "installProject", defaultValue = "false")
+    @Parameter(property = "flow.installProject", defaultValue = "false")
     protected boolean installProject = false;
 
     /**
@@ -164,7 +164,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      *
      * @since 1.2.2
      */
-    @Parameter(property = "allowSnapshots", defaultValue = "false")
+    @Parameter(property = "flow.allowSnapshots", defaultValue = "false")
     protected boolean allowSnapshots = false;
 
     /**
@@ -172,7 +172,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      *
      * @since 1.3.0
      */
-    @Parameter(property = "fetchRemote", defaultValue = "true")
+    @Parameter(property = "flow.fetchRemote", defaultValue = "true")
     protected boolean fetchRemote;
 
     /**
@@ -180,7 +180,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      *
      * @since 1.3.0
      */
-    @Parameter(property = "pushRemote", defaultValue = "true")
+    @Parameter(property = "flow.pushRemote", defaultValue = "true")
     protected boolean pushRemote;
 
     /**
@@ -191,7 +191,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      *
      * @since 1.3.0
      */
-    @Parameter(property = "commandsAfterVersion", defaultValue = "")
+    @Parameter(property = "flow.commandsAfterVersion", defaultValue = "")
     protected String commandsAfterVersion;
 
     /**
@@ -200,7 +200,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      *
      * @since 1.3.0
      */
-    @Parameter(property = "printTestOutput", required = false, defaultValue = "false")
+    @Parameter(property = "flow.printTestOutput", defaultValue = "false")
     private boolean printTestOutput;
 
     /**
@@ -209,7 +209,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      *
      * @since 1.3.0
      */
-    @Parameter(property = "printInstallOutput", required = false, defaultValue = "false")
+    @Parameter(property = "flow.printInstallOutput", defaultValue = "false")
     private boolean printInstallOutput;
 
     /**
@@ -228,7 +228,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      *
      * @since 1.3.6
      */
-    @Parameter(property = "statusBeforeCheck", required = false, defaultValue = "false")
+    @Parameter(property = "flow.statusBeforeCheck", defaultValue = "false")
     private boolean statusBeforeCheck;
 
     /**
@@ -245,7 +245,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      *
      * @since 1.3.9
      */
-    @Parameter(property = "copyProperties", required = false)
+    @Parameter(property = "flow.copyProperties")
     private String[] copyProperties;
 
     /**
@@ -293,7 +293,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      *
      * @since 2.0.0
      */
-    @Parameter(property = "epicNamePattern", required = false)
+    @Parameter(property = "flow.epicNamePattern", required = false)
     protected String epicNamePattern;
 
     /**
@@ -328,7 +328,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      *
      * @since 2.0.4
      */
-    @Parameter(property = "testProjectGoals", defaultValue = "clean verify")
+    @Parameter(property = "flow.testProjectGoals", defaultValue = "clean verify")
     protected String testProjectGoals;
 
     /**
@@ -337,7 +337,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      *
      * @since 2.0.4
      */
-    @Parameter(property = "installProjectGoals", defaultValue = "clean install")
+    @Parameter(property = "flow.installProjectGoals", defaultValue = "clean install")
     protected String installProjectGoals;
 
     /**
