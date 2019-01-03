@@ -23,7 +23,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * @author Erwin Tratar
  * @since 1.4.0
  */
-@Mojo(name = GitFlowBranchConfigMojo.GOAL, aggregator = true)
+@Mojo(name = GitFlowBranchConfigMojo.GOAL, aggregator = true, threadSafe = true)
 public class GitFlowBranchConfigMojo extends AbstractGitFlowMojo {
 
     static final String GOAL = "branch-config";

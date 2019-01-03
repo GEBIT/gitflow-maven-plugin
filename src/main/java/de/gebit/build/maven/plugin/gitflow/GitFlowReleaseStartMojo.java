@@ -35,7 +35,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * @see GitFlowReleaseFinishMojo
  * @see GitFlowReleaseAbortMojo
  */
-@Mojo(name = GitFlowReleaseStartMojo.GOAL, aggregator = true)
+@Mojo(name = GitFlowReleaseStartMojo.GOAL, aggregator = true, threadSafe = true)
 public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
 
     static final String GOAL = "release-start";

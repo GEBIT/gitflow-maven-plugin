@@ -54,7 +54,7 @@ import de.gebit.build.maven.plugin.gitflow.steps.StepsUtil;
  * @see GitFlowFeatureStartMojo
  * @author Volodymyr Medvid
  */
-@Mojo(name = GitFlowFeatureFinishMojo.GOAL, aggregator = true)
+@Mojo(name = GitFlowFeatureFinishMojo.GOAL, aggregator = true, threadSafe = true)
 public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
 
     static final String GOAL = "feature-finish";

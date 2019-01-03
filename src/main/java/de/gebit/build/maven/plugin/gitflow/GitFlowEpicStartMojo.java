@@ -43,7 +43,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * @see GitFlowEpicFinishMojo
  * @since 2.0.0
  */
-@Mojo(name = GitFlowEpicStartMojo.GOAL, aggregator = true)
+@Mojo(name = GitFlowEpicStartMojo.GOAL, aggregator = true, threadSafe = true)
 public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
 
     static final String GOAL = "epic-start";

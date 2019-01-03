@@ -48,7 +48,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * @author Erwin Tratar
  * @since 1.5.6
  */
-@Mojo(name = GitFlowCheckMojo.GOAL, aggregator = true, defaultPhase = LifecyclePhase.VALIDATE)
+@Mojo(name = GitFlowCheckMojo.GOAL, aggregator = true, defaultPhase = LifecyclePhase.VALIDATE, threadSafe = true)
 public class GitFlowCheckMojo extends AbstractGitFlowMojo {
 
     static final String GOAL = "check";

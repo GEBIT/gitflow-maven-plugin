@@ -31,7 +31,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * @see GitFlowFeatureStartMojo
  * @since 1.3.1
  */
-@Mojo(name = GitFlowFeatureAbortMojo.GOAL, aggregator = true)
+@Mojo(name = GitFlowFeatureAbortMojo.GOAL, aggregator = true, threadSafe = true)
 public class GitFlowFeatureAbortMojo extends AbstractGitFlowFeatureMojo {
 
     static final String GOAL = "feature-abort";

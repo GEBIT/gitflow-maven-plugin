@@ -21,7 +21,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * @see GitFlowFeatureRebaseMojo
  * @since 2.0.1
  */
-@Mojo(name = GitFlowFeatureRebaseAbortMojo.GOAL, aggregator = true)
+@Mojo(name = GitFlowFeatureRebaseAbortMojo.GOAL, aggregator = true, threadSafe = true)
 public class GitFlowFeatureRebaseAbortMojo extends AbstractGitFlowFeatureMojo {
 
     static final String GOAL = "feature-rebase-abort";

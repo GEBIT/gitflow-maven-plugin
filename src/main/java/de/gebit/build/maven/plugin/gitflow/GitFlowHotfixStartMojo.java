@@ -30,7 +30,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * @author Aleksandr Mashchenko
  *
  */
-@Mojo(name = GitFlowHotfixStartMojo.GOAL, aggregator = true)
+@Mojo(name = GitFlowHotfixStartMojo.GOAL, aggregator = true, threadSafe = true)
 public class GitFlowHotfixStartMojo extends AbstractGitFlowMojo {
 
     static final String GOAL = "hotfix-start";

@@ -37,7 +37,7 @@ import de.gebit.build.maven.plugin.gitflow.ExtendedPrompter.SelectOption;
  * @author Erwin Tratar
  * @since 1.5.3
  */
-@Mojo(name = GitFlowMaintenanceStartMojo.GOAL, aggregator = true)
+@Mojo(name = GitFlowMaintenanceStartMojo.GOAL, aggregator = true, threadSafe = true)
 public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
 
     static final String GOAL = "maintenance-start";

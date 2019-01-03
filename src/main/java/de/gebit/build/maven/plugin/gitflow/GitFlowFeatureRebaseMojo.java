@@ -60,7 +60,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * @since 1.3.1
  * @see GitFlowFeatureRebaseAbortMojo
  */
-@Mojo(name = GitFlowFeatureRebaseMojo.GOAL, aggregator = true)
+@Mojo(name = GitFlowFeatureRebaseMojo.GOAL, aggregator = true, threadSafe = true)
 public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
 
     static final String GOAL = "feature-rebase";

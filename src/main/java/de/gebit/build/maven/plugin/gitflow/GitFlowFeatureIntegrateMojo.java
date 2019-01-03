@@ -49,7 +49,7 @@ import de.gebit.build.maven.plugin.gitflow.steps.StepsUtil;
  * @since 2.1.0
  * @see GitFlowFeatureIntegrateAbortMojo
  */
-@Mojo(name = GitFlowFeatureIntegrateMojo.GOAL, aggregator = true)
+@Mojo(name = GitFlowFeatureIntegrateMojo.GOAL, aggregator = true, threadSafe = true)
 public class GitFlowFeatureIntegrateMojo extends AbstractGitFlowFeatureMojo {
 
     static final String GOAL = "feature-integrate";

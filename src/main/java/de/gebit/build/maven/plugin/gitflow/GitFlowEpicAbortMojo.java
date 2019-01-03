@@ -25,7 +25,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * @see GitFlowEpicStartMojo
  * @since 2.0.0
  */
-@Mojo(name = GitFlowEpicAbortMojo.GOAL, aggregator = true)
+@Mojo(name = GitFlowEpicAbortMojo.GOAL, aggregator = true, threadSafe = true)
 public class GitFlowEpicAbortMojo extends AbstractGitFlowEpicMojo {
 
     static final String GOAL = "epic-abort";

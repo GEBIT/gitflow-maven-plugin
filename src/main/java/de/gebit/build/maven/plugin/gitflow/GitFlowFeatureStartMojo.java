@@ -50,7 +50,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * @see GitFlowFeatureAbortMojo
  * @see GitFlowFeatureFinishMojo
  */
-@Mojo(name = GitFlowFeatureStartMojo.GOAL, aggregator = true)
+@Mojo(name = GitFlowFeatureStartMojo.GOAL, aggregator = true, threadSafe = true)
 public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
 
     static final String GOAL = "feature-start";

@@ -38,7 +38,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * @author Erwin Tratar
  * @since 1.5.11
  */
-@Mojo(name = GitFlowFeatureCleanupMojo.GOAL, aggregator = true)
+@Mojo(name = GitFlowFeatureCleanupMojo.GOAL, aggregator = true, threadSafe = true)
 public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
 
     static final String GOAL = "feature-rebase-cleanup";

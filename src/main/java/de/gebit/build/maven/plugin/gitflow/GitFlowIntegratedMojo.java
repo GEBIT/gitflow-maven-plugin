@@ -31,7 +31,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * @since 1.5.10
  * @author Erwin Tratar
  */
-@Mojo(name = GitFlowIntegratedMojo.GOAL, aggregator = true)
+@Mojo(name = GitFlowIntegratedMojo.GOAL, aggregator = true, threadSafe = true)
 public class GitFlowIntegratedMojo extends AbstractGitFlowMojo {
 
     static final String GOAL = "integrated";

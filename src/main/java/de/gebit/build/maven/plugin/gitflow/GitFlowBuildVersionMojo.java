@@ -28,7 +28,7 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  *
  * @author Erwin Tratar
  */
-@Mojo(name = GitFlowBuildVersionMojo.GOAL, aggregator = true)
+@Mojo(name = GitFlowBuildVersionMojo.GOAL, aggregator = true, threadSafe = true)
 public class GitFlowBuildVersionMojo extends AbstractGitFlowMojo {
 
     static final String GOAL = "build-version";
