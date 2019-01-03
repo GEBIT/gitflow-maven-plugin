@@ -1071,16 +1071,18 @@ public class GitExecution {
         git.checkout().setName(configBranch).setStartPoint("origin/" + configBranch).setCreateBranch(true).call();
         Properties properties = new Properties();
         File branchPropertyFile = new File(repositorySet.getClonedRemoteWorkingDirectory(), branch);
-        try (FileInputStream fis = new FileInputStream(branchPropertyFile)) {
-            properties.load(new FileInputStream(branchPropertyFile));
+        if (branchPropertyFile.exists()) {
+            try (FileInputStream fis = new FileInputStream(branchPropertyFile)) {
+                properties.load(fis);
+            }
+            properties.remove(configName);
+            try (FileOutputStream fos = new FileOutputStream(branchPropertyFile)) {
+                properties.store(fos, null);
+            }
+            git.add().addFilepattern(".").call();
+            git.commit().setMessage(COMMIT_MESSAGE_REMOVE_CENTRAL_BRANCH_CONFIG).call();
+            git.push().call();
         }
-        properties.remove(configName);
-        try (FileOutputStream fos = new FileOutputStream(branchPropertyFile)) {
-            properties.store(new FileOutputStream(branchPropertyFile), null);
-        }
-        git.add().addFilepattern(".").call();
-        git.commit().setMessage(COMMIT_MESSAGE_REMOVE_CENTRAL_BRANCH_CONFIG).call();
-        git.push().call();
         git.checkout().setName(oldBranch).call();
     }
 
@@ -1097,12 +1099,16 @@ public class GitExecution {
         File branchPropertyFile = new File(repositorySet.getClonedRemoteWorkingDirectory(), branch);
         if (branchPropertyFile.exists()) {
             try (FileInputStream fis = new FileInputStream(branchPropertyFile)) {
-                properties.load(new FileInputStream(branchPropertyFile));
+                properties.load(fis);
             }
         }
         properties.setProperty(configName, value);
+        File branchPropertyParentDir = branchPropertyFile.getParentFile();
+        if (!branchPropertyParentDir.exists()) {
+            branchPropertyParentDir.mkdirs();
+        }
         try (FileOutputStream fos = new FileOutputStream(branchPropertyFile)) {
-            properties.store(new FileOutputStream(branchPropertyFile), null);
+            properties.store(fos, null);
         }
         git.add().addFilepattern(".").call();
         git.commit().setMessage(COMMIT_MESSAGE_SET_CENTRAL_BRANCH_CONFIG).call();
@@ -1411,9 +1417,19 @@ public class GitExecution {
 
     private List<String> commitMessagesInBranch(Git git, String branch, boolean headLinesOnly)
             throws GitAPIException, IOException {
+        return commitMessagesInBranch(git, branch, headLinesOnly, Integer.MAX_VALUE);
+    }
+
+    private List<String> commitMessagesInBranch(Git git, String branch, boolean headLinesOnly, int limit)
+            throws GitAPIException, IOException {
         List<String> commitMessages = new ArrayList<String>();
         List<RevCommit> commits = readCommits(git, branch);
+        int count = limit;
         for (RevCommit commit : commits) {
+            if (count <= 0) {
+                break;
+            }
+            count--;
             commitMessages.add(headLinesOnly ? commit.getShortMessage().trim() : commit.getFullMessage().trim());
         }
         return commitMessages;
@@ -1431,6 +1447,73 @@ public class GitExecution {
                         + " repository are different from expected.",
                 Arrays.toString(expected.toArray(new String[expected.size()])),
                 Arrays.toString(actual.toArray(new String[actual.size()])));
+    }
+
+    /**
+     * Asserts that last commits in the log of passed branch in local repository
+     * consists of passed expected commit messages.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param branch
+     *            the branch to be checked
+     * @param expectedLastCommitMessages
+     *            the expected last commit messages
+     * @throws GitAPIException
+     *             if an error occurs on git command execution
+     * @throws IOException
+     *             in case of an I/O error
+     */
+    public void assertLastCommitsInLocalBranch(RepositorySet repositorySet, String branch,
+            String... expectedLastCommitMessages) throws GitAPIException, IOException {
+        if (expectedLastCommitMessages != null && expectedLastCommitMessages.length > 0) {
+            List<String> commitMessages = commitMessagesInBranch(repositorySet.getLocalRepoGit(), branch, false,
+                    expectedLastCommitMessages.length);
+            assertCommitMessages(expectedLastCommitMessages, commitMessages, branch, "local");
+        }
+    }
+
+    /**
+     * Asserts that last commits in the log of passed branch in remote repository
+     * consists of passed expected commit messages.
+     *
+     * @param repositorySet
+     *            the repository to be used
+     * @param branch
+     *            the branch to be checked
+     * @param expectedLastCommitMessages
+     *            the expected last commit messages
+     * @throws GitAPIException
+     *             if an error occurs on git command execution
+     * @throws IOException
+     *             in case of an I/O error
+     */
+    public void assertLastCommitsInRemoteBranch(RepositorySet repositorySet, String branch,
+            String... expectedLastCommitMessages) throws GitAPIException, IOException {
+        if (expectedLastCommitMessages != null && expectedLastCommitMessages.length > 0) {
+            List<String> commitMessages = commitMessagesInBranch(repositorySet.getRemoteRepoGit(), branch, false,
+                    expectedLastCommitMessages.length);
+            assertCommitMessages(expectedLastCommitMessages, commitMessages, branch, "remote");
+        }
+    }
+
+    public void assertLastCommitsInRemoteBranchMissing(RepositorySet repositorySet, String branch,
+            String... expectedLastCommitMessages) throws GitAPIException, IOException {
+        if (expectedLastCommitMessages != null && expectedLastCommitMessages.length > 0) {
+            List<String> commitMessages = commitMessagesInBranch(repositorySet.getRemoteRepoGit(), branch, false,
+                    expectedLastCommitMessages.length);
+            assertCommitMessagesMissing(expectedLastCommitMessages, commitMessages, branch, "remote");
+        }
+    }
+
+    private void assertCommitMessagesMissing(String[] expectedCommitMessages, List<String> commitMessages,
+            String branch, String repoName) {
+        for (String expectedCommitMessage : expectedCommitMessages) {
+            assertFalse(
+                    "Last commit messages in branch '" + branch + "' of " + repoName
+                            + " repository contain commit message '" + expectedCommitMessage + "'",
+                    commitMessages.contains(expectedCommitMessage));
+        }
     }
 
     /**

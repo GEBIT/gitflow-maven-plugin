@@ -8,6 +8,9 @@
  */
 package de.gebit.build.maven.plugin.gitflow;
 
+import java.util.LinkedList;
+import java.util.List;
+
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
@@ -60,6 +63,15 @@ public class GitFlowBranchConfigMojo extends AbstractGitFlowMojo {
     @Parameter(property = "removeAllForBranch")
     private String removeAllForBranch;
 
+    /**
+     * Clean-up branch-config. Remove branch specific properties for not existing
+     * branches. If specified, other parameters are ignored.
+     *
+     * @since 2.1.5
+     */
+    @Parameter(property = "flow.cleanup", defaultValue = "false", readonly = true)
+    private boolean cleanup;
+
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
@@ -67,11 +79,13 @@ public class GitFlowBranchConfigMojo extends AbstractGitFlowMojo {
         // set git flow configuration
         initGitFlowConfig();
 
-        if (removeAllForBranch != null && !removeAllForBranch.trim().isEmpty()) {
+        if (cleanup) {
+            cleanupBranchConfig();
+        } else if (removeAllForBranch != null && !removeAllForBranch.trim().isEmpty()) {
             if (gitBranchExists(removeAllForBranch) || gitRemoteBranchExists(removeAllForBranch)) {
                 if (!getPrompter().promptConfirmation(
-                        "The branch '" + removeAllForBranch + "' exists. Are you sure you want to remove all properties "
-                                + "for existing branch?",
+                        "The branch '" + removeAllForBranch
+                                + "' exists. Are you sure you want to remove all properties " + "for existing branch?",
                         false,
                         new GitFlowFailureInfo(
                                 "The branch '" + removeAllForBranch + "' exists. All properties for an "
@@ -109,5 +123,51 @@ public class GitFlowBranchConfigMojo extends AbstractGitFlowMojo {
             }
         }
         getMavenLog().info("Branch config process finished");
+    }
+
+    private void cleanupBranchConfig() throws MojoFailureException, CommandLineException {
+        getMavenLog().info("Clean-up branch configs");
+        if (!fetchRemote) {
+            throw new GitFlowFailureException("Clean-up of branch configs can be executed only if fetchRemote=true.",
+                    null);
+        }
+        if (!pushRemote) {
+            throw new GitFlowFailureException("Clean-up of branch configs can be executed only if pushRemote=true.",
+                    null);
+        }
+        BranchCentralConfigChanges changes = new BranchCentralConfigChanges();
+        gitFetchOnce();
+        List<String> configuredBranches = getConfiguredBranches();
+        List<String> existingBranches = gitAllBranches("");
+        for (String configuredBranch : configuredBranches) {
+            if (!existingBranches.contains(configuredBranch)) {
+                if (changes.isEmpty()) {
+                    getMavenLog().info("List of orphaned branch configs:");
+                }
+                getMavenLog().info(" - " + configuredBranch);
+                changes.removeAllForBranch(configuredBranch);
+            }
+        }
+        if (!changes.isEmpty()) {
+            boolean confirmed = getPrompter().promptConfirmation(
+                    "Do you realy want to remove all orphaned branch configs listed above?", true, true);
+            if (confirmed) {
+                gitApplyBranchCentralConfigChanges(changes, "clean-up orphaned branch configs");
+                getMavenLog().info("All orphaned branch configs listed above were removed.");
+            } else {
+                throw new GitFlowFailureException("Clean-up of branch configs aborted by user.", null);
+            }
+        } else {
+            getMavenLog().info("No orphaned branch configs found. Nothing to clean-up.");
+        }
+    }
+
+    private List<String> getConfiguredBranches() throws MojoFailureException, CommandLineException {
+        List<String> branches = new LinkedList<>();
+        CentralBranchConfigCache configCache = getCentralBranchConfigCache();
+        for (BranchType branchType : BranchType.values()) {
+            branches.addAll(configCache.getBranches(branchType));
+        }
+        return branches;
     }
 }
