@@ -1041,12 +1041,43 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         Properties userProperties = new Properties();
         userProperties.setProperty("featureName", FEATURE_NAME);
         userProperties.setProperty("flow.installProject", "true");
-        userProperties.setProperty("installProjectGoals", "install -DskipTests");
+        userProperties.setProperty("installProjectGoals", "validate -DskipTests");
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
         assertFeatureStartedCorrectly();
-        assertMavenCommandExecuted("install -DskipTests");
+        assertMavenCommandExecuted("validate -DskipTests");
+        assertMavenCommandNotExecuted("clean install");
+    }
+
+    @Test
+    public void testExecuteInstallProjectTrueAndInstallProjectOptionsSet() throws Exception {
+        // set up
+        Properties userProperties = new Properties();
+        userProperties.setProperty("featureName", FEATURE_NAME);
+        userProperties.setProperty("flow.installProject", "true");
+        userProperties.setProperty("flow.installProjectOptions", "-T 4");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertFeatureStartedCorrectly();
+        assertMavenCommandExecuted("clean install -T 4");
+        assertMavenCommandNotExecuted("clean install");
+    }
+
+    @Test
+    public void testExecuteInstallProjectTrueAndInstallProjectGoalsAndOptionsSet() throws Exception {
+        // set up
+        Properties userProperties = new Properties();
+        userProperties.setProperty("featureName", FEATURE_NAME);
+        userProperties.setProperty("flow.installProject", "true");
+        userProperties.setProperty("installProjectGoals", "validate -DskipTests");
+        userProperties.setProperty("flow.installProjectOptions", "-T 4");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertFeatureStartedCorrectly();
+        assertMavenCommandExecuted("validate -DskipTests -T 4");
         assertMavenCommandNotExecuted("clean install");
     }
 
@@ -1852,7 +1883,8 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
         assertInstallProjectFailureException(result, GOAL, FEATURE_BRANCH, "feature start",
-                "Failed to parse value of parameter \"installProjectGoals\" [clean \"instal]");
+                "Failed to parse maven command [clean \"instal] created from parameters \"installProjectGoals\" and "
+                        + "\"installProjectOptions\"");
         assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);

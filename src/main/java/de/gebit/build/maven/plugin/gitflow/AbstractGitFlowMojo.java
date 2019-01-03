@@ -340,6 +340,24 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     @Parameter(property = "installProjectGoals", defaultValue = "clean install")
     protected String installProjectGoals;
 
+    /**
+     * Maven options (separated by space) to be used with testProjectGoals while
+     * testing project.
+     *
+     * @since 2.1.5
+     */
+    @Parameter(property = "flow.testProjectOptions")
+    protected String testProjectOptions;
+
+    /**
+     * Maven options (separated by space) to be used with installProjectGoals while
+     * installing project.
+     *
+     * @since 2.1.5
+     */
+    @Parameter(property = "flow.installProjectOptions")
+    protected String installProjectOptions;
+
     private ExtendedPrompter extendedPrompter;
 
     private CentralBranchConfigCache centralBranchConfigCache;
@@ -3043,9 +3061,9 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws MojoFailureException
      * @throws CommandLineException
      */
-    protected void mvnSetVersions(final String version, GitFlowAction aGitFlowAction,
-            String promptPrefix, String branchWithAdditionalVersionInfo,
-            boolean sameBaseVersion, String targetBranch) throws MojoFailureException, CommandLineException {
+    protected void mvnSetVersions(final String version, GitFlowAction aGitFlowAction, String promptPrefix,
+            String branchWithAdditionalVersionInfo, boolean sameBaseVersion, String targetBranch)
+            throws MojoFailureException, CommandLineException {
         BranchCentralConfigChanges branchConfigChanges = new BranchCentralConfigChanges();
         String currentBranch = branchWithAdditionalVersionInfo;
         if (currentBranch == null) {
@@ -3384,16 +3402,23 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected void mvnCleanVerify() throws MojoFailureException, CommandLineException {
         getLog().info("Testing the project.");
-        if (StringUtils.isBlank(testProjectGoals)) {
+        String mvnCommand = testProjectGoals;
+        if (StringUtils.isBlank(mvnCommand)) {
             throw new GitFlowFailureException("Trying to test the project but parameter \"testProjectGoals\" is empty.",
                     "Please specify goals in parameter \"testProjectGoals\" or skip test project execution.");
         }
+        if (!StringUtils.isBlank(testProjectOptions)) {
+            if (!mvnCommand.endsWith(" ")) {
+                mvnCommand += " ";
+            }
+            mvnCommand += testProjectOptions;
+        }
         String[] goals;
         try {
-            goals = CommandLineUtils.translateCommandline(testProjectGoals);
+            goals = CommandLineUtils.translateCommandline(mvnCommand);
         } catch (Exception exc) {
-            throw new GitFlowFailureException(exc,
-                    "Failed to parse value of parameter \"testProjectGoals\" [" + testProjectGoals + "]", null);
+            throw new GitFlowFailureException(exc, "Failed to parse maven command [" + mvnCommand
+                    + "] created from parameters \"testProjectGoals\" and \"testProjectOptions\"", null);
         }
         executeMvnCommand(printTestOutput ? OutputMode.FULL : OutputMode.PROGRESS, goals);
     }
@@ -3406,17 +3431,24 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected void mvnCleanInstall() throws MojoFailureException, CommandLineException {
         getLog().info("Installing the project.");
-        if (StringUtils.isBlank(installProjectGoals)) {
+        String mvnCommand = installProjectGoals;
+        if (StringUtils.isBlank(mvnCommand)) {
             throw new GitFlowFailureException(
                     "Trying to install the project but parameter \"installProjectGoals\" is empty.",
                     "Please specify goals in parameter \"installProjectGoals\" or skip install project execution.");
         }
+        if (!StringUtils.isBlank(installProjectOptions)) {
+            if (!mvnCommand.endsWith(" ")) {
+                mvnCommand += " ";
+            }
+            mvnCommand += installProjectOptions;
+        }
         String[] goals;
         try {
-            goals = CommandLineUtils.translateCommandline(installProjectGoals);
+            goals = CommandLineUtils.translateCommandline(mvnCommand);
         } catch (Exception exc) {
-            throw new GitFlowFailureException(exc,
-                    "Failed to parse value of parameter \"installProjectGoals\" [" + installProjectGoals + "]", null);
+            throw new GitFlowFailureException(exc, "Failed to parse maven command [" + mvnCommand
+                    + "] created from parameters \"installProjectGoals\" and \"installProjectOptions\"", null);
         }
         executeMvnCommand(printInstallOutput ? OutputMode.FULL : OutputMode.PROGRESS, goals);
     }

@@ -506,6 +506,58 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     @Test
+    public void testExecuteSkipTestProjectFalseAndTestProjectGoalsSet() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.skipTestProject", "false");
+        userProperties.setProperty("testProjectGoals", "validate -DskipTests");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertFeatureFinishedCorrectly();
+        assertMavenCommandExecuted("validate -DskipTests");
+        assertMavenCommandNotExecuted("clean verify");
+        assertMavenCommandNotExecuted("clean test");
+    }
+
+    @Test
+    public void testExecuteSkipTestProjectFalseAndTestProjectOptionsSet() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.skipTestProject", "false");
+        userProperties.setProperty("flow.testProjectOptions", "-T 4");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertFeatureFinishedCorrectly();
+        assertMavenCommandExecuted("clean verify -T 4");
+        assertMavenCommandNotExecuted("clean verify");
+        assertMavenCommandNotExecuted("clean test");
+    }
+
+    @Test
+    public void testExecuteSkipTestProjectFalseAndTestProjectGoalsAndOptionsSet() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.skipTestProject", "false");
+        userProperties.setProperty("testProjectGoals", "validate -DskipTests");
+        userProperties.setProperty("flow.testProjectOptions", "-T 4");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertFeatureFinishedCorrectly();
+        assertMavenCommandExecuted("validate -DskipTests -T 4");
+        assertMavenCommandNotExecuted("clean verify");
+        assertMavenCommandNotExecuted("clean test");
+    }
+
+    @Test
     public void testExecuteTychoBuildAndSkipTestProjectFalse() throws Exception {
         // set up
         git.createAndCommitTestfile(repositorySet);
