@@ -40,7 +40,7 @@ public class GitFlowIntegratedMojo extends AbstractGitFlowMojo {
      * Specifies an integration branch to update. If not provided a default is
      * computed using {@link GitFlowConfig#getIntegrationBranchPrefix()}.
      */
-    @Parameter(property = "integrationBranch", defaultValue = "${integrationBranch}", required = false)
+    @Parameter(property = "integrationBranch", readonly = true)
     private String integrationBranch;
 
     /** {@inheritDoc} */

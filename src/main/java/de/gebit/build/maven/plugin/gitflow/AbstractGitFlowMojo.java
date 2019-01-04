@@ -218,7 +218,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      *
      * @since 1.3.0
      */
-    @Parameter(property = "printReleaseOutput", required = false, defaultValue = "true")
+    @Parameter(property = "printReleaseOutput", defaultValue = "true")
     private boolean printReleaseOutput;
 
     /**
@@ -273,7 +273,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     @Parameter(defaultValue = "${project}", readonly = true)
     private MavenProject project;
 
-    @Parameter(defaultValue = "${session}")
+    @Parameter(defaultValue = "${session}", readonly = true)
     private MavenSession session;
 
     /** Default prompter. */
@@ -293,7 +293,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      *
      * @since 2.0.0
      */
-    @Parameter(property = "flow.epicNamePattern", required = false)
+    @Parameter(property = "flow.epicNamePattern")
     protected String epicNamePattern;
 
     /**

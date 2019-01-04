@@ -43,7 +43,7 @@ public class GitFlowSetVersionMojo extends AbstractGitFlowMojo {
      *
      * @since 1.3.0
      */
-    @Parameter(property = "newVersion", defaultValue = "${newVersion}", required = false)
+    @Parameter(property = "newVersion", readonly = true)
     private String newVersion;
 
     /** {@inheritDoc} */

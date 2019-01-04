@@ -47,7 +47,7 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
      *
      * @since 1.3.0
      */
-    @Parameter(defaultValue = "${releaseVersion}", required = false)
+    @Parameter(property = "releaseVersion", readonly = true)
     protected String releaseVersion;
 
     /**
@@ -55,7 +55,7 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
      *
      * @since 1.5.3
      */
-    @Parameter(defaultValue = "${maintenanceVersion}", required = false)
+    @Parameter(property = "maintenanceVersion", readonly = true)
     protected String maintenanceVersion;
 
     /**
@@ -63,7 +63,7 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
      *
      * @since 1.5.3
      */
-    @Parameter(defaultValue = "${firstMaintenanceVersion}", required = false)
+    @Parameter(property = "firstMaintenanceVersion", readonly = true)
     protected String firstMaintenanceVersion;
 
     /**

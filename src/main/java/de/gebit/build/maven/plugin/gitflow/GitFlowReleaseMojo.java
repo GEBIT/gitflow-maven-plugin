@@ -91,7 +91,7 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
      *
      * @since 1.5.10
      */
-    @Parameter(property = "deployReplacement", defaultValue = "${deployReplacement}")
+    @Parameter(property = "deployReplacement")
     private String deployReplacement;
 
     /**
@@ -102,7 +102,7 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
      *
      * @since 1.3.10
      */
-    @Parameter(property = "developmentVersion", required = false)
+    @Parameter(property = "developmentVersion", readonly = true)
     private String developmentVersion;
 
     /**
@@ -112,7 +112,7 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
      *
      * @since 1.3.10
      */
-    @Parameter(property = "releaseVersion", required = false)
+    @Parameter(property = "releaseVersion", readonly = true)
     private String releaseVersion;
 
     /**
@@ -128,7 +128,7 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
      *
      * @since 1.3.11
      */
-    @Parameter(property = "detachReleaseCommit", required = false, defaultValue = "false")
+    @Parameter(property = "detachReleaseCommit", defaultValue = "false")
     private boolean detachReleaseCommit;
 
     /**
@@ -159,7 +159,7 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
      *
      * @since 2.1.5
      */
-    @Parameter(property = "flow.allowSameVersion", required = false, defaultValue = "false")
+    @Parameter(property = "flow.allowSameVersion", defaultValue = "false")
     private boolean allowSameVersion;
 
     @Override

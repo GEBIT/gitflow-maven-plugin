@@ -34,7 +34,7 @@ public class GitFlowBranchConfigMojo extends AbstractGitFlowMojo {
      *
      * @since 1.4.0
      */
-    @Parameter(property = "propertyName")
+    @Parameter(property = "propertyName", readonly = true)
     private String propertyName;
 
     /**
@@ -43,7 +43,7 @@ public class GitFlowBranchConfigMojo extends AbstractGitFlowMojo {
      *
      * @since 1.4.0
      */
-    @Parameter(property = "propertyValue")
+    @Parameter(property = "propertyValue", readonly = true)
     private String propertyValue;
 
     /**
@@ -51,7 +51,7 @@ public class GitFlowBranchConfigMojo extends AbstractGitFlowMojo {
      *
      * @since 1.4.0
      */
-    @Parameter(property = "branchName")
+    @Parameter(property = "branchName", readonly = true)
     private String branchName;
 
     /**
@@ -60,7 +60,7 @@ public class GitFlowBranchConfigMojo extends AbstractGitFlowMojo {
      *
      * @since 2.1.0
      */
-    @Parameter(property = "removeAllForBranch")
+    @Parameter(property = "removeAllForBranch", readonly = true)
     private String removeAllForBranch;
 
     /**

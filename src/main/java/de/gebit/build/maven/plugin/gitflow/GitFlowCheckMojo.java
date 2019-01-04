@@ -59,7 +59,7 @@ public class GitFlowCheckMojo extends AbstractGitFlowMojo {
     @Component(role = ArtifactRepositoryLayout.class)
     private ArtifactRepositoryLayout artifactRepositoryLayout;
 
-    @Parameter(required = false, defaultValue = "${project.distributionManagement.repository.id}|${project.distributionManagement.repository.url},${project.distributionManagement.snapshotRepository.id}|${project.distributionManagement.snapshotRepository.url}")
+    @Parameter(defaultValue = "${project.distributionManagement.repository.id}|${project.distributionManagement.repository.url},${project.distributionManagement.snapshotRepository.id}|${project.distributionManagement.snapshotRepository.url}")
     private Repository[] deploymentRepositories;
 
     /** {@inheritDoc} */

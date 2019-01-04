@@ -62,7 +62,7 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
      *
      * @since 1.3.10
      */
-    @Parameter(property = "releaseVersion", required = false)
+    @Parameter(property = "releaseVersion", readonly = true)
     private String releaseVersion;
 
     /**

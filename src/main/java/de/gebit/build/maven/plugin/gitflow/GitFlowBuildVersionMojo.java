@@ -39,7 +39,7 @@ public class GitFlowBuildVersionMojo extends AbstractGitFlowMojo {
      *
      * @since 1.3.0
      */
-    @Parameter(property = "buildVersion", defaultValue = "${buildVersion}", required = false)
+    @Parameter(property = "buildVersion", readonly = true)
     private String buildVersion;
 
     /** {@inheritDoc} */

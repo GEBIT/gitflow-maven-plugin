@@ -62,7 +62,7 @@ public class GitFlowFeatureIntegrateMojo extends AbstractGitFlowFeatureMojo {
      * The target feature name which the current feature branch will be integrated
      * into.
      */
-    @Parameter(property = "featureName", defaultValue = "${featureName}", required = false, readonly = true)
+    @Parameter(property = "featureName", readonly = true)
     protected String featureName;
 
     /**

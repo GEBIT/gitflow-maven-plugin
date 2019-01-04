@@ -83,7 +83,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
      *
      * @since 1.3.1
      */
-    @Parameter(property = "flow.featureNamePatternDescription", required = false)
+    @Parameter(property = "flow.featureNamePatternDescription")
     protected String featureNamePatternDescription;
 
     /**
@@ -91,7 +91,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
      *
      * @since 1.5.14
      */
-    @Parameter(property = "featureName", defaultValue = "${featureName}", required = false, readonly = true)
+    @Parameter(property = "featureName", readonly = true)
     protected String featureName;
 
     /**
@@ -99,7 +99,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
      *
      * @since 2.0.1
      */
-    @Parameter(property = "jobBuild", required = false, readonly = true)
+    @Parameter(property = "jobBuild", readonly = true)
     protected boolean jobBuild = false;
 
     /** {@inheritDoc} */
