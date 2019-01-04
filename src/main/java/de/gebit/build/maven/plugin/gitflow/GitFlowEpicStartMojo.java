@@ -115,7 +115,7 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
                         public ValidationResult validate(String value) {
                             if (!validateEpicName(value)) {
                                 String invalidMessage;
-                                if (epicNamePatternDescription != null) {
+                                if (StringUtils.isNotEmpty(epicNamePatternDescription)) {
                                     invalidMessage = "The epic name '" + value + "' is invalid. "
                                             + epicNamePatternDescription;
                                 } else {
@@ -230,7 +230,7 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
     }
 
     private boolean validateEpicName(String anEpicName) {
-        if (epicNamePattern == null) {
+        if (StringUtils.isEmpty(epicNamePattern)) {
             return true;
         }
         return anEpicName.matches(epicNamePattern);
@@ -249,7 +249,7 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
      */
     private String extractIssueNumberFromEpicName(String anEpicName) {
         String issueNumber = anEpicName;
-        if (epicNamePattern != null) {
+        if (StringUtils.isNotEmpty(epicNamePattern)) {
             // extract the issue number only
             Matcher m = Pattern.compile(epicNamePattern).matcher(anEpicName);
             if (m.matches()) {

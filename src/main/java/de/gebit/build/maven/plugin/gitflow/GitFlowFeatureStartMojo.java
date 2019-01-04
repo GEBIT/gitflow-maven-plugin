@@ -150,7 +150,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
                         public ValidationResult validate(String value) {
                             if (!validateFeatureName(value)) {
                                 String invalidMessage;
-                                if (featureNamePatternDescription != null) {
+                                if (StringUtils.isNotEmpty(featureNamePatternDescription)) {
                                     invalidMessage = "The feature name '" + value + "' is invalid. "
                                             + featureNamePatternDescription;
                                 } else {
@@ -302,7 +302,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
      * any.
      */
     protected boolean validateFeatureName(String aFeatureName) {
-        if (featureNamePattern == null) {
+        if (StringUtils.isEmpty(featureNamePattern)) {
             return true;
         }
         return aFeatureName != null && aFeatureName.matches(featureNamePattern);

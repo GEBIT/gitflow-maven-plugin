@@ -1616,7 +1616,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         getLog().info("Looking for release tags.");
 
         String gitResult = executeGitCommandReturn("tag", "--sort=-v:refname", "-l",
-                tagPrefix + (pattern != null ? pattern : "*"));
+                tagPrefix + (StringUtils.isNotEmpty(pattern) ? pattern : "*"));
         if (gitResult.trim().isEmpty()) {
             return new ArrayList<>();
         }
