@@ -14,6 +14,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Properties;
@@ -30,6 +31,7 @@ import org.junit.Test;
 import de.gebit.build.maven.plugin.gitflow.TestProjects.BasicConstants;
 import de.gebit.build.maven.plugin.gitflow.jgit.GitExecution;
 import de.gebit.build.maven.plugin.gitflow.jgit.RepositorySet;
+import de.gebit.xmlxpath.XML;
 
 /**
  * @author Volodymyr Medvid
@@ -58,6 +60,9 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
     private static final String INTEGRATION_MAINTENANCE_BRANCH = "integration/" + MAINTENANCE_BRANCH;
 
     private static final String COMMIT_MESSAGE_SET_VERSION = BasicConstants.EXISTING_EPIC_VERSION_COMMIT_MESSAGE;
+
+    private static final String COMMIT_MESSAGE_FIX_NEW_MODULES = BasicConstants.EXISTING_EPIC_ISSUE
+            + ": updating versions for new modules on epic branch";
 
     private static final String COMMIT_MESSAGE_MASTER_TESTFILE = "MASTER: Unit test dummy file commit";
 
@@ -1763,6 +1768,172 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), EPIC_VERSION);
 
         git.assertBranchLocalConfigValueMissing(repositorySet, EPIC_BRANCH, "breakpoint");
+    }
+
+    @Test
+    public void testExecuteNewModuleOnMaster() throws Exception {
+        // set up
+        final String COMMIT_MESSAGE_NEW_MASTER_MODULE = "MASTER: added module";
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        createNewModule("module", TestProjects.BASIC.version);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_NEW_MASTER_MODULE);
+        git.push(repositorySet);
+        git.switchToBranch(repositorySet, EPIC_BRANCH);
+        git.createAndCommitTestfile(repositorySet, "epic_testfile.txt", COMMIT_MESSAGE_EPIC_TESTFILE);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_NEW_MASTER_MODULE);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, EPIC_BRANCH, EPIC_BRANCH);
+        git.assertCommitHeadLinesInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_EPIC_TESTFILE,
+                COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_NEW_MASTER_MODULE, COMMIT_MESSAGE_MARGE,
+                COMMIT_MESSAGE_FIX_NEW_MODULES);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), EPIC_VERSION);
+        assertParentVersionsInPom(new File(repositorySet.getWorkingDirectory(), "module"), EPIC_VERSION);
+    }
+
+    @Test
+    public void testExecuteEpicWithoutVersionAndNewModuleOnMaster() throws Exception {
+        // set up
+        final String USED_EPIC_BRANCH = BasicConstants.EPIC_WITHOUT_VERSION_BRANCH;
+        final String USED_COMMIT_MESSAGE_MARGE = TestProjects.BASIC.jiraProject + "-NONE: Merge branch " + MASTER_BRANCH
+                + " into " + USED_EPIC_BRANCH;
+        final String COMMIT_MESSAGE_NEW_MASTER_MODULE = "MASTER: added module";
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        createNewModule("module", TestProjects.BASIC.version);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_NEW_MASTER_MODULE);
+        git.push(repositorySet);
+        git.switchToBranch(repositorySet, USED_EPIC_BRANCH);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, USED_EPIC_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_NEW_MASTER_MODULE);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, USED_EPIC_BRANCH, USED_EPIC_BRANCH);
+        git.assertCommitHeadLinesInLocalBranch(repositorySet, USED_EPIC_BRANCH,
+                BasicConstants.EPIC_WITHOUT_VERSION_COMMIT_MESSAGE_TESTFILE, COMMIT_MESSAGE_NEW_MASTER_MODULE,
+                USED_COMMIT_MESSAGE_MARGE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+        assertParentVersionsInPom(new File(repositorySet.getWorkingDirectory(), "module"), TestProjects.BASIC.version);
+    }
+
+    @Test
+    public void testExecuteNewVersionOnMaster() throws Exception {
+        // set up
+        final String NEW_MASTER_VERSION = "4.5.6-SNAPSHOT";
+        final String NEW_EPIC_VERSION = "4.5.6-" + BasicConstants.EXISTING_EPIC_ISSUE + "-SNAPSHOT";
+        final String COMMIT_MESSAGE_NEW_MASTER_VERSION = "MASTER: new version";
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        setVersionForSingleProjectPom(NEW_MASTER_VERSION);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_NEW_MASTER_VERSION);
+        git.push(repositorySet);
+        git.switchToBranch(repositorySet, EPIC_BRANCH);
+        git.createAndCommitTestfile(repositorySet, "epic_testfile.txt", COMMIT_MESSAGE_EPIC_TESTFILE);
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        verifyZeroInteractions(promptControllerMock);
+        assertGitFlowFailureExceptionRegEx(result, EXPECTED_MERGE_CONFLICT_MESSAGE_PATTERN);
+        git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
+        git.assertMergeInProcess(repositorySet, "pom.xml");
+        repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath("pom.xml").call();
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_MASTER_VERSION);
+        setVersionForSingleProjectPom(NEW_EPIC_VERSION);
+        repositorySet.getLocalRepoGit().add().addFilepattern("pom.xml").call();
+        when(promptControllerMock.prompt(PROMPT_MERGE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("y");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MERGE_CONTINUE, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_NEW_MASTER_VERSION);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, EPIC_BRANCH, EPIC_BRANCH);
+        git.assertCommitHeadLinesInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_EPIC_TESTFILE,
+                COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_NEW_MASTER_VERSION, COMMIT_MESSAGE_MARGE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_EPIC_VERSION);
+    }
+
+    @Test
+    public void testExecuteNewModuleOnEpicAndNewVersionOnMaster() throws Exception {
+        // set up
+        final String NEW_MASTER_VERSION = "4.5.6-SNAPSHOT";
+        final String NEW_EPIC_VERSION = "4.5.6-" + BasicConstants.EXISTING_EPIC_ISSUE + "-SNAPSHOT";
+        final String COMMIT_MESSAGE_NEW_MASTER_VERSION = "MASTER: new version";
+        final String COMMIT_MESSAGE_NEW_EPIC_MODULE = "EPIC: added module";
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        setVersionForSingleProjectPom(NEW_MASTER_VERSION);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_NEW_MASTER_VERSION);
+        git.push(repositorySet);
+        git.switchToBranch(repositorySet, EPIC_BRANCH);
+        createNewModule("module", EPIC_VERSION);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_NEW_EPIC_MODULE);
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        verifyZeroInteractions(promptControllerMock);
+        assertGitFlowFailureExceptionRegEx(result, EXPECTED_MERGE_CONFLICT_MESSAGE_PATTERN);
+        git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
+        git.assertMergeInProcess(repositorySet, "pom.xml");
+        repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath("pom.xml").call();
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_MASTER_VERSION);
+        setVersionForSingleProjectPom(NEW_EPIC_VERSION);
+        repositorySet.getLocalRepoGit().add().addFilepattern("pom.xml").call();
+        when(promptControllerMock.prompt(PROMPT_MERGE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("y");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MERGE_CONTINUE, Arrays.asList("y", "n"), "y");
+        verifyNoMoreInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_NEW_MASTER_VERSION);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, EPIC_BRANCH, EPIC_BRANCH);
+        git.assertCommitHeadLinesInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_NEW_EPIC_MODULE,
+                COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_NEW_MASTER_VERSION, COMMIT_MESSAGE_MARGE,
+                COMMIT_MESSAGE_FIX_NEW_MODULES);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_EPIC_VERSION);
+        assertParentVersionsInPom(new File(repositorySet.getWorkingDirectory(), "module"), NEW_EPIC_VERSION);
+    }
+
+    private void createNewModule(String moduleName, String parentVersion) throws IOException {
+        File workingDir = repositorySet.getWorkingDirectory();
+        File moduleDir = new File(workingDir, moduleName);
+        moduleDir.mkdir();
+        XML pom = createEmptyPom();
+        pom.createPathAndSetValue("/project/parent/groupId", "de.gebit.build.maven.test");
+        pom.createPathAndSetValue("/project/parent/artifactId", "basic-project");
+        pom.createPathAndSetValue("/project/parent/version", parentVersion);
+        pom.createPathAndSetValue("/project/artifactId", moduleName);
+        pom.storeTo(new File(moduleDir, "pom.xml"));
+
+        XML parentPom = XML.load(new File(workingDir, "pom.xml"));
+        parentPom.createPathAndSetValue("/project/modules/module", moduleName);
+        parentPom.createPathAndSetValue("/project/packaging", "pom");
+        parentPom.store();
+    }
+
+    private XML createEmptyPom() throws IOException {
+        return XML.load(
+                "<project xmlns=\"http://maven.apache.org/POM/4.0.0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
+                        + "       xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd\">\n"
+                        + "       <modelVersion>4.0.0</modelVersion>\n</project>\n");
+    }
+
+    private void setVersionForSingleProjectPom(String newVersion) throws IOException {
+        File pomFile = new File(repositorySet.getWorkingDirectory(), "pom.xml");
+        XML pom = XML.load(pomFile);
+        pom.setValue("/project/version", newVersion);
+        pom.setValue("/project/properties/version.build", newVersion);
+        pom.store();
     }
 
 }

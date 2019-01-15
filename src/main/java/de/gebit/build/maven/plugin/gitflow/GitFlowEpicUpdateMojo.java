@@ -54,6 +54,7 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
             }
         }
         if (!continueOnCleanInstall) {
+            String baseVersion;
             if (epicBranchName == null) {
                 checkUncommittedChanges();
 
@@ -63,6 +64,7 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
                             "Please start an epic first.", "'mvn flow:epic-start'");
                 }
                 String currentBranch = gitCurrentBranch();
+                String currentVersion = null;
                 boolean isOnEpicBranch = branches.contains(currentBranch);
                 if (!isOnEpicBranch) {
                     epicBranchName = getPrompter().promptToSelectFromOrderedList("Epic branches:",
@@ -77,6 +79,7 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
                             new GitFlowFailureInfo("Remote and local epic branches '" + epicBranchName + "' diverge.",
                                     "Rebase or merge the changes in local epic branch '" + epicBranchName + "' first.",
                                     "'git rebase'"));
+                    currentVersion = getCurrentProjectVersion();
                     getMavenLog().info("Switching to epic branch '" + epicBranchName + "'");
                     gitCheckout(epicBranchName);
                 } else {
@@ -140,6 +143,15 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
                                     "Push the base branch '" + baseBranch + "' first or set 'pushRemote' parameter to "
                                             + "false in order to avoid inconsistent state in remote repository."));
                 }
+                if (baseBranch.equals(currentBranch) && currentVersion != null) {
+                    baseVersion = currentVersion;
+                } else {
+                    gitCheckout(baseBranch);
+                    baseVersion = getCurrentProjectVersion();
+                    gitCheckout(epicBranchName);
+                }
+                getLog().info("Project version on base branch: " + baseVersion);
+                gitSetBranchLocalConfig(epicBranchName, "baseVersion", baseVersion);
 
                 try {
                     getMavenLog().info("Merging (--no-ff) base branch '" + baseBranch + "' into epic branch '"
@@ -178,6 +190,14 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
                                     + "conflicts as resolved",
                             "'mvn flow:epic-update' to continue epic update process");
                 }
+                baseVersion = gitGetBranchLocalConfig(epicBranchName, "baseVersion");
+                getLog().info("Project version on base branch: " + baseVersion);
+            }
+
+            String epicVersion = getCurrentProjectVersion();
+            getLog().info("Project version on epic branch: " + epicVersion);
+            if (!baseVersion.equals(epicVersion)) {
+                fixupModuleParents(epicBranchName, epicVersion, baseVersion);
             }
         } else {
             getMavenLog().info("Restart after failed epic project installation detected");
@@ -204,6 +224,15 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
             gitPush(epicBranchName, false, false);
         }
         getMavenLog().info("Epic update process finished");
+    }
+
+    private void fixupModuleParents(String epicBranch, String epicVersion, String baseVersion)
+            throws MojoFailureException, CommandLineException {
+        getLog().info("Ensure consistent version in all modules");
+        String issueNumber = getEpicIssueNumber(epicBranch);
+        String epicNewModulesMessage = substituteWithIssueNumber(commitMessages.getEpicNewModulesMessage(),
+                issueNumber);
+        mvnFixupVersions(epicVersion, issueNumber, baseVersion, epicNewModulesMessage, false);
     }
 
 }

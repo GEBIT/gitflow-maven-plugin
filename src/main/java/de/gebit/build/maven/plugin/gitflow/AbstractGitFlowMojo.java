@@ -3002,14 +3002,14 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * When finishing versions of new modules might be wrong and need to be
+     * When finishing parent versions of new modules might be wrong and need to be
      * corrected.
      *
-     * @param version
+     * @param newVersion
      *            the correct version
-     * @param uniqueVersionPart
-     *            all versions that contains this unique part (e.g. issueNumber)
-     *            will be replaced with correct version
+     * @param oldVersionUniquePart
+     *            all parent versions that contains this unique part (e.g.
+     *            issueNumber) will be replaced with correct version
      * @param message
      *            the message for correction commit if <code>amend=false</code>
      * @param amend
@@ -3018,15 +3018,48 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws MojoFailureException
      * @throws CommandLineException
      */
-    protected void mvnFixupVersions(final String version, final String uniqueVersionPart, final String message,
+    protected void mvnFixupVersions(final String newVersion, final String oldVersionUniquePart, final String message,
             boolean amend) throws MojoFailureException, CommandLineException {
+        mvnFixupVersions(newVersion, oldVersionUniquePart, null, message, amend);
+    }
+
+    /**
+     * When finishing parent versions of new modules might be wrong and need to be
+     * corrected.
+     *
+     * @param newVersion
+     *            the correct version
+     * @param oldVersionUniquePart
+     *            all parent versions that contains this unique part (e.g.
+     *            issueNumber) will be replaced with correct version
+     * @param oldVersion
+     *            all parent versions that are equal to this oldVersion will be
+     *            replaced with correct version
+     * @param message
+     *            the message for correction commit if <code>amend=false</code>
+     * @param amend
+     *            <code>true</code> if the correction should be included in last
+     *            commit
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void mvnFixupVersions(final String newVersion, final String oldVersionUniquePart, final String oldVersion,
+            final String message, boolean amend) throws MojoFailureException, CommandLineException {
         if (tychoBuild) {
             // not supported
         } else {
-            executeMvnCommand(XML_EDITOR_MAVEN_PLUGIN_SET_GOAL, "-N", "-DtargetFile=**/pom.xml",
-                    "-DexcludeFile=pom.xml,**/resources/**/pom.xml,**/target/**/pom.xml",
-                    "-Dxpath=/project/parent/version[contains(text(),'" + uniqueVersionPart + "')]/text()",
-                    "-Dreplacement=" + version, "-DfailIfNoMatch=false");
+            if (oldVersionUniquePart != null && !oldVersionUniquePart.isEmpty()) {
+                executeMvnCommand(XML_EDITOR_MAVEN_PLUGIN_SET_GOAL, "-N", "-DtargetFile=**/pom.xml",
+                        "-DexcludeFile=pom.xml,**/resources/**/pom.xml,**/target/**/pom.xml",
+                        "-Dxpath=/project/parent/version[contains(text(),'" + oldVersionUniquePart + "')]/text()",
+                        "-Dreplacement=" + newVersion, "-DfailIfNoMatch=false");
+            }
+            if (oldVersion != null && !oldVersion.isEmpty()) {
+                executeMvnCommand(XML_EDITOR_MAVEN_PLUGIN_SET_GOAL, "-N", "-DtargetFile=**/pom.xml",
+                        "-DexcludeFile=pom.xml,**/resources/**/pom.xml,**/target/**/pom.xml",
+                        "-Dxpath=/project/parent/version[text()='" + oldVersion + "']/text()",
+                        "-Dreplacement=" + newVersion, "-DfailIfNoMatch=false");
+            }
             CommandResult result;
             if (amend) {
                 result = executeGitCommandExitCode("commit", "--amend", "--no-edit", "**/pom.xml");

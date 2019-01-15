@@ -184,7 +184,8 @@ Hints:
 									<featureNewModulesMessage>@{key}: updating versions for new modules on feature branch</featureNewModulesMessage>
 									<featureFinishMessage>@{key}: reverting versions for development branch</featureFinishMessage>
 									<epicStartMessage>${flow.epicStartMessage}</epicStartMessage>
-									<epicFinishMessage>@{key}: reverting versions for development branch</epicFinishMessage>
+									<epicNewModulesMessage>@{key}: updating versions for new modules on epic branch</epicNewModulesMessage>
+                                    <epicFinishMessage>@{key}: reverting versions for development branch</epicFinishMessage>
 									<hotfixStartMessage>NO-ISSUE: updating versions for hotfix</hotfixStartMessage>
 									<hotfixFinishMessage>NO-ISSUE: updating for next development version</hotfixFinishMessage>
 									<releaseStartMessage>NO-ISSUE: updating versions for release</releaseStartMessage>

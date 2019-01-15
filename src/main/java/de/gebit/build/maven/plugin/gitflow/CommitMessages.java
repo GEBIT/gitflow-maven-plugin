@@ -27,6 +27,7 @@ public class CommitMessages {
     private String featureFinishMessage;
 
     private String epicStartMessage;
+    private String epicNewModulesMessage;
     private String epicFinishMessage;
 
     private String hotfixStartMessage;
@@ -63,6 +64,7 @@ public class CommitMessages {
         featureFinishMessage = "updating versions for development branch";
 
         epicStartMessage = "updating versions for epic branch";
+        epicNewModulesMessage = "updating versions for new modules on epic branch";
         epicFinishMessage = "updating versions for development branch";
 
         hotfixStartMessage = "updating versions for hotfix";
@@ -109,6 +111,21 @@ public class CommitMessages {
      */
     public void setFeatureNewModulesMessage(String aFeatureNewModulesMessage) {
         this.featureNewModulesMessage = aFeatureNewModulesMessage;
+    }
+
+    /**
+     * @return the epicNewModulesMessage
+     */
+    public String getEpicNewModulesMessage() {
+        return epicNewModulesMessage;
+    }
+
+    /**
+     * @param aEpicNewModulesMessage
+     *            the epicNewModulesMessage to set
+     */
+    public void setEpicNewModulesMessage(String aEpicNewModulesMessage) {
+        this.epicNewModulesMessage = aEpicNewModulesMessage;
     }
 
     /**

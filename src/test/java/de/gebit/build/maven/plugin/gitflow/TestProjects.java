@@ -597,8 +597,7 @@ public class TestProjects {
         public static final String EPIC_WITHOUT_VERSION_ISSUE = BASIC.jiraProject + "-202";
         public static final String EPIC_WITHOUT_VERSION_NAME = EPIC_WITHOUT_VERSION_ISSUE + "-without-version";
         public static final String EPIC_WITHOUT_VERSION_BRANCH = "epic/" + EPIC_WITHOUT_VERSION_NAME;
-        public static final String EPIC_WITHOUT_VERSION_VERSION = TestProjects.BASIC.releaseVersion + "-"
-                + EPIC_WITHOUT_VERSION_ISSUE + "-SNAPSHOT";
+        public static final String EPIC_WITHOUT_VERSION_VERSION = TestProjects.BASIC.version;
         public static final String EPIC_WITHOUT_VERSION_COMMIT_MESSAGE_TESTFILE = "EPIC: Unit test dummy file commit";
 
         public static final String EPIC_ON_MAINTENANCE_ISSUE = BASIC.jiraProject + "-203";
