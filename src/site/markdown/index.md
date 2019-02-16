@@ -47,7 +47,7 @@ mvn flow:branch-config -DpropertyName=JOB_BUILD -DpropertyValue=true
 ```
 otherwise:
 ```
-mvn flow:branch-config -DfeatureName=XYZ-1234 -DpropertyName=JOB_BUILD -DpropertyValue=true
+mvn flow:branch-config -DbranchName=feature/XYZ-1234 -DpropertyName=JOB_BUILD -DpropertyValue=true
 ```
 
 (you will need to use the correct branch name, of course).
