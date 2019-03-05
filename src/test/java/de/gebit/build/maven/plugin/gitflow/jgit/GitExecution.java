@@ -766,7 +766,7 @@ public class GitExecution {
         String currentBranch = currentBranch(repositorySet.getClonedRemoteRepoGit());
         pull(repositorySet.getClonedRemoteRepoGit());
         switchToBranch(repositorySet.getClonedRemoteRepoGit(), aBranch, true);
-        push(repositorySet.getClonedRemoteRepoGit());
+        push(repositorySet.getClonedRemoteRepoGit(), false);
         switchToBranch(repositorySet.getClonedRemoteRepoGit(), currentBranch, false);
 
     }
@@ -816,7 +816,7 @@ public class GitExecution {
         git.checkout().setName(branch).setOrphan(true).call();
         git.commit().setAllowEmpty(true).setMessage(initialCommitMessage).call();
         if (push) {
-            push(git);
+            push(git, false);
         }
         switchToBranch(git, currentBranch, false);
     }
@@ -848,11 +848,15 @@ public class GitExecution {
      *             if an error occurs on git command execution
      */
     public void push(RepositorySet repositorySet) throws GitAPIException {
-        push(repositorySet.getLocalRepoGit());
+        push(repositorySet, false);
     }
 
-    private void push(Git git) throws GitAPIException {
-        git.push().call();
+    public void push(RepositorySet repositorySet, boolean forced) throws GitAPIException {
+        push(repositorySet.getLocalRepoGit(), forced);
+    }
+
+    private void push(Git git, boolean forced) throws GitAPIException {
+        git.push().setForce(forced).call();
     }
 
     private void pull(Git git) throws GitAPIException {

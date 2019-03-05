@@ -3892,7 +3892,11 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     protected void gitResetHard() throws MojoFailureException, CommandLineException {
-        executeGitCommand("reset", "--hard", "HEAD");
+        gitResetHard("HEAD");
+    }
+
+    protected void gitResetHard(String newRef) throws MojoFailureException, CommandLineException {
+        executeGitCommand("reset", "--hard", newRef);
     }
 
     /**

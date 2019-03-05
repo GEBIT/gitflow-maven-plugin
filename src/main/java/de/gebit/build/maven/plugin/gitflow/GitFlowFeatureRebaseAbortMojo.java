@@ -38,43 +38,87 @@ public class GitFlowFeatureRebaseAbortMojo extends AbstractGitFlowFeatureMojo {
                 mergeInProgress = true;
             }
         }
-        if (featureBranch == null) {
-            throw new GitFlowFailureException(
-                    "No rebase of feature branch or merge into feature branch detected. Nothing to abort.", null);
-        }
-        if (mergeInProgress) {
-            if (!getPrompter().promptConfirmation("You have a merge in process on your current branch. "
-                    + "Are you sure you want to abort the feature rebase process?", true, true)) {
-                throw new GitFlowFailureException("Aborting feature rebase process aborted by user.", null);
+        if (featureBranch != null) {
+            if (mergeInProgress) {
+                if (!getPrompter().promptConfirmation("You have a merge in process on your current branch. "
+                        + "Are you sure you want to abort the feature rebase process?", true, true)) {
+                    throw new GitFlowFailureException("Aborting feature rebase process aborted by user.", null);
+                }
+                getMavenLog().info("Aborting merge in progress");
+                gitMergeAbort();
+                getMavenLog().info("Switching to feature branch '" + featureBranch + "'");
+                gitCheckout(featureBranch);
+            } else {
+                if (!getPrompter().promptConfirmation("You have a rebase in process on your current branch. "
+                        + "Are you sure you want to abort the feature rebase process?", true, true)) {
+                    throw new GitFlowFailureException("Aborting feature rebase process aborted by user.", null);
+                }
+                getMavenLog().info("Aborting rebase in progress");
+                gitRebaseAbort();
+                getMavenLog().info("Switching to feature branch '" + featureBranch + "'");
+                gitCheckout(featureBranch);
+                String tempFeatureBranch = createTempFeatureBranchName(featureBranch);
+                if (gitBranchExists(tempFeatureBranch)) {
+                    getLog().info("Deleting temporary branch used for feature rebase.");
+                    gitBranchDeleteForce(tempFeatureBranch);
+                }
             }
-            getMavenLog().info("Aborting merge in progress");
-            gitMergeAbort();
-            getMavenLog().info("Switching to feature branch '" + featureBranch + "'");
-            gitCheckout(featureBranch);
-            gitRemoveBranchLocalConfig(featureBranch, "oldFeatureVersion");
-            gitRemoveBranchLocalConfig(featureBranch, "breakpoint");
+            resetBranchLocalConfigs(featureBranch);
         } else {
-            if (!getPrompter().promptConfirmation("You have a rebase in process on your current branch. "
-                    + "Are you sure you want to abort the feature rebase process?", true, true)) {
-                throw new GitFlowFailureException("Aborting feature rebase process aborted by user.", null);
+            boolean aborted = false;
+            featureBranch = gitCurrentBranch();
+            if (isFeatureBranch(featureBranch)) {
+                String breakpoint = gitGetBranchLocalConfig(featureBranch, "breakpoint");
+                if (breakpoint != null) {
+                    if ("featureRebase.cleanInstall".equals(breakpoint)) {
+                        if (!getPrompter().promptConfirmation("You have an interrupted feature rebase process on your "
+                                + "current branch because project installation failed after rebase.\n"
+                                + "Are you sure you want to abort the feature rebase process and rollback the rebase?",
+                                true, true)) {
+                            throw new GitFlowFailureException("Aborting feature rebase process aborted by user.", null);
+                        }
+                        BranchRefState state = gitCheckBranchReference(featureBranch);
+                        if (state == BranchRefState.DIVERGE || state == BranchRefState.LOCAL_AHEAD) {
+                            gitResetHard(gitLocalToRemoteRef(featureBranch));
+                            BranchCentralConfigChanges branchConfigChanges = new BranchCentralConfigChanges();
+                            branchConfigChanges.set(featureBranch, BranchConfigKeys.BASE_VERSION,
+                                    gitGetBranchLocalConfig(featureBranch, "oldBaseVersion"));
+                            branchConfigChanges.set(featureBranch, BranchConfigKeys.START_COMMIT_MESSAGE,
+                                    gitGetBranchLocalConfig(featureBranch, "oldStartCommitMessage"));
+                            branchConfigChanges.set(featureBranch, BranchConfigKeys.VERSION_CHANGE_COMMIT,
+                                    gitGetBranchLocalConfig(featureBranch, "oldVersionChangeCommit"));
+                            gitApplyBranchCentralConfigChanges(branchConfigChanges,
+                                    "feature rebase aborted on '" + featureBranch + "'");
+                            resetBranchLocalConfigs(featureBranch);
+                            aborted = true;
+                        } else {
+                            throw new GitFlowFailureException(
+                                    "The state of current local and remote branches is unexpected for an interrupted "
+                                            + "feature rebase process.\n"
+                                            + "This indicates a severe error condition on your branches.",
+                                    "Please consult a gitflow expert on how to fix this!");
+                        }
+                    }
+                }
             }
-            getMavenLog().info("Aborting rebase in progress");
-            gitRebaseAbort();
-            getMavenLog().info("Switching to feature branch '" + featureBranch + "'");
-            gitCheckout(featureBranch);
-            gitRemoveBranchLocalConfig(featureBranch, "newBaseVersion");
-            gitRemoveBranchLocalConfig(featureBranch, "newStartCommitMessage");
-            gitRemoveBranchLocalConfig(featureBranch, "newVersionChangeCommit");
-            gitRemoveBranchLocalConfig(featureBranch, "oldFeatureVersion");
-            gitRemoveBranchLocalConfig(featureBranch, "breakpoint");
-            gitRemoveBranchLocalConfig(featureBranch, "rebasedWithoutVersionChangeCommit");
-            String tempFeatureBranch = createTempFeatureBranchName(featureBranch);
-            if (gitBranchExists(tempFeatureBranch)) {
-                getLog().info("Deleting temporary branch used for feature rebase.");
-                gitBranchDeleteForce(tempFeatureBranch);
+            if (!aborted) {
+                throw new GitFlowFailureException("No interrupted feature rebase process detected. Nothing to abort.",
+                        null);
             }
         }
         getMavenLog().info("Feature rebase abort process finished");
+    }
+
+    private void resetBranchLocalConfigs(String featureBranch) throws MojoFailureException, CommandLineException {
+        gitRemoveBranchLocalConfig(featureBranch, "newBaseVersion");
+        gitRemoveBranchLocalConfig(featureBranch, "newStartCommitMessage");
+        gitRemoveBranchLocalConfig(featureBranch, "newVersionChangeCommit");
+        gitRemoveBranchLocalConfig(featureBranch, "oldFeatureVersion");
+        gitRemoveBranchLocalConfig(featureBranch, "breakpoint");
+        gitRemoveBranchLocalConfig(featureBranch, "rebasedWithoutVersionChangeCommit");
+        gitRemoveBranchLocalConfig(featureBranch, "oldBaseVersion");
+        gitRemoveBranchLocalConfig(featureBranch, "oldStartCommitMessage");
+        gitRemoveBranchLocalConfig(featureBranch, "oldVersionChangeCommit");
     }
 
 }

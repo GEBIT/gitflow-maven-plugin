@@ -225,6 +225,12 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
                 }
                 oldFeatureVersion = getCurrentProjectVersion();
                 gitSetBranchLocalConfig(featureBranchName, "oldFeatureVersion", oldFeatureVersion);
+                gitSetBranchLocalConfig(featureBranchName, "oldBaseVersion",
+                        gitGetBranchCentralConfig(featureBranchName, BranchConfigKeys.BASE_VERSION));
+                gitSetBranchLocalConfig(featureBranchName, "oldStartCommitMessage",
+                        gitGetBranchCentralConfig(featureBranchName, BranchConfigKeys.START_COMMIT_MESSAGE));
+                gitSetBranchLocalConfig(featureBranchName, "oldVersionChangeCommit",
+                        gitGetBranchCentralConfig(featureBranchName, BranchConfigKeys.VERSION_CHANGE_COMMIT));
                 rebaseFeatureBranchOnTopOfBaseBranch(featureBranchName, baseBranch, confirmedUpdateWithMerge);
             } else {
                 continueFeatureRebase(confirmedUpdateWithMerge);
@@ -232,7 +238,7 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
                 oldFeatureVersion = gitGetBranchLocalConfig(featureBranchName, "oldFeatureVersion");
             }
             fixupModuleParents(featureBranchName, baseBranch, oldFeatureVersion);
-            finilizeFeatureRebase(featureBranchName);
+            finilizeRebase(featureBranchName);
         } else {
             getMavenLog().info("Restart after failed feature project installation detected");
             checkUncommittedChanges();
@@ -264,6 +270,7 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
             getMavenLog().info("Pushing (forced) feature branch '" + featureBranchName + "' to remote repository");
             gitPush(featureBranchName, false, true);
         }
+        finilizeFeatureRebaseProcess(featureBranchName);
         getMavenLog().info("Feature rebase process finished");
     }
 
@@ -455,12 +462,15 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
         }
     }
 
-    private void finilizeFeatureRebase(String featureBranch) throws MojoFailureException, CommandLineException {
+    private void finilizeRebase(String featureBranch) throws MojoFailureException, CommandLineException {
         String tempFeatureBranch = createTempFeatureBranchName(featureBranch);
         if (gitBranchExists(tempFeatureBranch)) {
             getLog().info("Deleting temporary branch used for feature rebase.");
             gitBranchDeleteForce(tempFeatureBranch);
         }
+    }
+
+    private void finilizeFeatureRebaseProcess(String featureBranch) throws MojoFailureException, CommandLineException {
         String newBaseVersion = gitGetBranchLocalConfig(featureBranch, "newBaseVersion");
         if (newBaseVersion != null) {
             BranchCentralConfigChanges branchConfigChanges = new BranchCentralConfigChanges();
@@ -475,5 +485,8 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
         gitRemoveBranchLocalConfig(featureBranch, "newStartCommitMessage");
         gitRemoveBranchLocalConfig(featureBranch, "newVersionChangeCommit");
         gitRemoveBranchLocalConfig(featureBranch, "oldFeatureVersion");
+        gitRemoveBranchLocalConfig(featureBranch, "oldBaseVersion");
+        gitRemoveBranchLocalConfig(featureBranch, "oldStartCommitMessage");
+        gitRemoveBranchLocalConfig(featureBranch, "oldVersionChangeCommit");
     }
 }
