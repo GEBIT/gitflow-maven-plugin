@@ -613,8 +613,6 @@ public class TestProjects {
                 + "-without-vers-on-maint";
         public static final String EPIC_WITHOUT_VERSION_ON_MAINTENANCE_BRANCH = "epic/"
                 + EPIC_WITHOUT_VERSION_ON_MAINTENANCE_NAME;
-        public static final String EPIC_WITHOUT_VERSION_ON_MAINTENANCE_VERSION = EXISTING_MAINTENANCE_RELEASE_VERSION
-                + "-" + EPIC_WITHOUT_VERSION_ON_MAINTENANCE_ISSUE + "-SNAPSHOT";
 
         public static final String EPIC_WITH_NEW_VERSION_ISSUE = BASIC.jiraProject + "-205";
         public static final String EPIC_WITH_NEW_VERSION_NAME = EPIC_WITH_NEW_VERSION_ISSUE + "-with-new-version";

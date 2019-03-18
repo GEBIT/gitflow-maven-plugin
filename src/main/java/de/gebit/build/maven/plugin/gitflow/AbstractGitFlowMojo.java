@@ -790,16 +790,30 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
-     * Get branches of passed type using central branch config.
+     * Get branches with passed base branch.
      *
-     * @param branchType
-     *            the type of branches to be returned
-     * @return list of branches or empty list if no branches for passed type found
-     * @throws MojoFailureException
-     * @throws CommandLineException
+     * @param baseBranch
+     *            the base branch of branches to be returned
+     * @return list of branches or empty list if no branches for passed base branch
+     *         found
      */
     protected List<String> getBranches(BranchType branchType) throws MojoFailureException, CommandLineException {
         return getCentralBranchConfigCache().getBranches(branchType);
+    }
+
+    /**
+     * Get branches with passed base branch.
+     *
+     * @param baseBranch
+     *            the base branch of branches to be returned
+     * @return list of branches or empty list if no branches for passed base branch
+     *         found
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected List<String> getBranchesWithBaseBranch(String baseBranch)
+            throws MojoFailureException, CommandLineException {
+        return getCentralBranchConfigCache().getBranchesWithBaseBranch(baseBranch);
     }
 
     /**
@@ -1478,6 +1492,31 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
+     * Rebase branch starting from oldBase on top of newBase.<br>
+     * Execute: <code>git rebase --onto newBase oldBase branch</code>
+     *
+     * @param newBase
+     * @param oldBase
+     * @param branch
+     * @param rebaseMerges
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitRebaseOnto(String newBase, String oldBase, String branch, boolean rebaseMerges)
+            throws MojoFailureException, CommandLineException {
+        List<String> options = new ArrayList<>();
+        options.add("rebase");
+        if (rebaseMerges) {
+            options.add("--preserve-merges");
+        }
+        options.add("--onto");
+        options.add(newBase);
+        options.add(oldBase);
+        options.add(branch);
+        executeGitCommand(options.toArray(new String[options.size()]));
+    }
+
+    /**
      * @param aBranchName
      * @param aCurrentBranchName
      * @return
@@ -1672,6 +1711,30 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         return executeGitCommandReturn("log", "-1", "--pretty=%s", commit);
     }
 
+    protected List<String> gitAllBranchesWithCommit(String commit) throws MojoFailureException, CommandLineException {
+        gitFetchOnce();
+        String prefix1 = "remotes/" + gitFlowConfig.getOrigin() + "/";
+        String prefix2 = gitFlowConfig.getOrigin() + "/";
+        String tempCmdResult = executeGitCommandReturn("branch", "-a", "--contains", commit).trim();
+        if (!StringUtils.isBlank(tempCmdResult)) {
+            String[] lines = tempCmdResult.split("\r?\n");
+            List<String> result = new ArrayList<>();
+            for (int i = 0; i < lines.length; ++i) {
+                lines[i] = StringUtils.stripStart(lines[i].trim(), "*").trim();
+                if (lines[i].startsWith(prefix1)) {
+                    lines[i] = lines[i].substring(prefix1.length());
+                } else if (lines[i].startsWith(prefix2)) {
+                    lines[i] = lines[i].substring(prefix2.length());
+                }
+                if (!result.contains(lines[i])) {
+                    result.add(lines[i]);
+                }
+            }
+            return result;
+        }
+        return Collections.emptyList();
+    }
+
     /**
      * Returns <code>true</code> if the given branch exists on the configured origin
      * remote.
@@ -1734,6 +1797,74 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             throws MojoFailureException, CommandLineException {
         final String mergeCommits = executeGitCommandReturn("rev-list", branchPoint + ".." + branchName, "--merges");
         return mergeCommits.trim().isEmpty();
+    }
+
+    /**
+     * Execute git rev-list [branchPoint]..[branchName] --merges to get all merge
+     * commits in the given branch from the given branch point. This is useful to
+     * determine if a rebase can be done.
+     *
+     * @param branchName
+     *            The branch name.
+     * @param branchPoint
+     *            commit id of the branching point of the branch from develop.
+     * @return the list of merge commits or an empty list
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected List<String> gitGetMergeCommits(String branchName, String branchPoint)
+            throws MojoFailureException, CommandLineException {
+        List<String> result = new ArrayList<>();
+        String mergeCommits = executeGitCommandReturn("rev-list", branchPoint + ".." + branchName, "--merges");
+        if (!StringUtils.isBlank(mergeCommits)) {
+            String[] lines = mergeCommits.split("\r?\n");
+            for (int i = 0; i < lines.length; ++i) {
+                lines[i] = lines[i].trim();
+                if (!StringUtils.isBlank(lines[i]) && !result.contains(lines[i])) {
+                    result.add(lines[i]);
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Check if at least one of the passed merge commits is not empty. This is
+     * useful to determine if a rebase can be done.
+     *
+     * @param mergeCommits
+     *            The list of merge commits to be checked.
+     * @return <code>true</code> if at least one of the passed merge commits is not
+     *         empty.
+     * @throws CommandLineException
+     * @throws MojoFailureException
+     */
+    protected boolean gitHasNonEmptyMergeCommits(List<String> mergeCommits)
+            throws MojoFailureException, CommandLineException {
+        for (String mergeCommit : mergeCommits) {
+            if (!isEmptyMergeCommit(mergeCommit)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Check if passed merge commit is an empty commit: one parent is ancestor for
+     * the other parent.
+     *
+     * @param mergeCommit
+     *            The merge commit to be checked.
+     * @return <code>true</code> if the passed merge commit is an empty commit.
+     * @throws CommandLineException
+     * @throws MojoFailureException
+     */
+    protected boolean isEmptyMergeCommit(String mergeCommit) throws MojoFailureException, CommandLineException {
+        if (gitIsAncestorBranch("\"" + mergeCommit + "^1\"", "\"" + mergeCommit + "^2\"")
+                || gitIsAncestorBranch("\"" + mergeCommit + "^2\"", "\"" + mergeCommit + "^1\"")) {
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -3059,6 +3190,32 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                         "-DexcludeFile=pom.xml,**/resources/**/pom.xml,**/target/**/pom.xml",
                         "-Dxpath=/project/parent/version[text()='" + oldVersion + "']/text()",
                         "-Dreplacement=" + newVersion, "-DfailIfNoMatch=false");
+            }
+            CommandResult result;
+            if (amend) {
+                result = executeGitCommandExitCode("commit", "--amend", "--no-edit", "**/pom.xml");
+            } else {
+                result = executeGitCommandExitCode("commit", "-m", message, "**/pom.xml");
+            }
+            if (result.exitCode == 0) {
+                getMavenLog().info("New modules adapted to correct version"
+                        + (amend ? " and the changes squashed with last commit" : ""));
+            }
+        }
+    }
+
+    protected void mvnFixupVersions(String newVersion, String message, boolean amend, String... oldVersions)
+            throws MojoFailureException, CommandLineException {
+        if (tychoBuild) {
+            // not supported
+        } else {
+            for (String oldVersion : oldVersions) {
+                if (oldVersion != null && !oldVersion.isEmpty()) {
+                    executeMvnCommand(XML_EDITOR_MAVEN_PLUGIN_SET_GOAL, "-N", "-DtargetFile=**/pom.xml",
+                            "-DexcludeFile=pom.xml,**/resources/**/pom.xml,**/target/**/pom.xml",
+                            "-Dxpath=/project/parent/version[text()='" + oldVersion + "']/text()",
+                            "-Dreplacement=" + newVersion, "-DfailIfNoMatch=false");
+                }
             }
             CommandResult result;
             if (amend) {

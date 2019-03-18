@@ -136,7 +136,7 @@ public abstract class AbstractGitFlowEpicMojo extends AbstractGitFlowMojo {
         }
     }
 
-    private String gitVersionChangeCommitOnEpicBranch(String epicBranch, String branchPoint)
+    protected String gitVersionChangeCommitOnEpicBranch(String epicBranch, String branchPoint)
             throws MojoFailureException, CommandLineException {
         String firstCommitOnBranch = gitFirstCommitOnBranch(epicBranch, branchPoint);
         String firstCommitMessage = gitCommitMessage(firstCommitOnBranch);
@@ -171,6 +171,32 @@ public abstract class AbstractGitFlowEpicMojo extends AbstractGitFlowMojo {
             throw new MojoFailureException("Merge target branch is not an epic branch: " + currentBranchName);
         }
         return currentBranchName;
+    }
+
+    /**
+     * Checks whether a rebase is in progress by looking at .git/rebase-apply.
+     *
+     * @return true if a branch with the passed name exists.
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected String gitRebaseEpicBranchInProcess() throws MojoFailureException, CommandLineException {
+        final String tempBranchName = gitRebaseBranchInProcess();
+        if (tempBranchName != null && !tempBranchName.startsWith(gitFlowConfig.getEpicBranchPrefix())) {
+            throw new MojoFailureException("Rebasing branch is not an epic branch: " + tempBranchName);
+        }
+        return tempBranchName;
+    }
+
+    /**
+     * Create a name of temporary epic branch for passed epic branch.
+     *
+     * @param epicBranchName
+     *            the name of epic branch
+     * @return the name of temporary epic branch
+     */
+    protected String createTempEpicBranchName(String epicBranchName) {
+        return "tmp-" + epicBranchName;
     }
 
 }

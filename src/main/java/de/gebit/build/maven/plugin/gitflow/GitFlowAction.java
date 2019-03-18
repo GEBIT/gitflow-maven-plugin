@@ -20,6 +20,7 @@ public enum GitFlowAction {
     FEATURE_REBASE(CommandContext.VERSION),
     FEATURE_FINISH(CommandContext.INTERNAL),
     EPIC_START(CommandContext.VERSION),
+    EPIC_UPDATE(CommandContext.VERSION),
     EPIC_FINISH(CommandContext.INTERNAL),
     MAINTENANCE_START(CommandContext.VERSION),
     RELEASE_START(CommandContext.RELEASE),

@@ -8,23 +8,28 @@
 //
 package de.gebit.build.maven.plugin.gitflow;
 
+import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.Parameter;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
- * Merge the development branch into the epic branch.
+ * Rebase an epic branch on top of development (upstream) branch.<br>
+ * If some other (feature) branches based on the epic branch exists or the epic
+ * branch has merge commits, the rebase of the epic branch is not possible. In
+ * this case the development (upstream) branch can be merged into the epic
+ * branch.
  * <p>
  * Integrates the changes from development branch into the epic branch. If
- * conflicts occur on merge, you can fix the conflicts and continue merge
- * process by executing <code>flow:epic-update</code> again. We need to use a
- * merge here, as the epic branch must not be rebased due to several feature
- * branches being branched off further.
+ * conflicts occur on rebase/merge, you can fix the conflicts and continue
+ * rebase/merge process by executing <code>flow:epic-update</code> again.
  *
  * @author Volodymyr Medvid
  * @see GitFlowEpicStartMojo
@@ -35,11 +40,38 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
 
     static final String GOAL = "epic-update";
 
+    /**
+     * Controls whether a merge of the development branch instead of a rebase on the
+     * development branch is performed.
+     *
+     * @since 2.1.6
+     */
+    @Parameter(property = "flow.updateEpicWithMerge", defaultValue = "false")
+    private boolean updateEpicWithMerge = false;
+
+    /**
+     * If fast forward pushes on epic branches are not allowed, the remote branch is
+     * deleted before pushing the rebased branch.
+     *
+     * @since 2.1.6
+     */
+    @Parameter(property = "flow.deleteRemoteBranchOnRebase", defaultValue = "false")
+    private boolean deleteRemoteBranchOnRebase = false;
+
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         getMavenLog().info("Starting epic update process");
         checkCentralBranchConfig();
-        String epicBranchName = gitMergeIntoEpicBranchInProcess();
+        boolean confirmedUpdateWithMerge = updateEpicWithMerge;
+        String epicBranchName = gitRebaseEpicBranchInProcess();
+        if (epicBranchName == null) {
+            epicBranchName = gitMergeIntoEpicBranchInProcess();
+            if (epicBranchName != null) {
+                confirmedUpdateWithMerge = true;
+            }
+        } else {
+            confirmedUpdateWithMerge = false;
+        }
         boolean continueOnCleanInstall = false;
         if (epicBranchName == null) {
             String currentBranch = gitCurrentBranch();
@@ -55,6 +87,7 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
         }
         if (!continueOnCleanInstall) {
             String baseVersion;
+            String oldEpicVersion;
             if (epicBranchName == null) {
                 checkUncommittedChanges();
 
@@ -151,53 +184,111 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
                     gitCheckout(epicBranchName);
                 }
                 getLog().info("Project version on base branch: " + baseVersion);
-                gitSetBranchLocalConfig(epicBranchName, "baseVersion", baseVersion);
+                if (!gitIsAncestorBranch(baseBranch, epicBranchName)) {
+                    String branchPoint = gitBranchPoint(epicBranchName, baseBranch);
+                    List<String> mergeCommits = gitGetMergeCommits(epicBranchName, branchPoint);
+                    boolean hasNonEmptyMergeCommits = false;
+                    if (!mergeCommits.isEmpty()) {
+                        hasNonEmptyMergeCommits = gitHasNonEmptyMergeCommits(mergeCommits);
+                    }
+                    String rebaseNotPossibleReason = null;
+                    if (hasNonEmptyMergeCommits) {
+                        rebaseNotPossibleReason = "epic branch contains merge commits";
+                    } else {
+                        List<String> subBranches = getSubBranches(epicBranchName, branchPoint);
+                        if (!subBranches.isEmpty()) {
+                            StringBuilder msgBuilder = new StringBuilder("found branches based on epic branch:");
+                            final int MAX = 4;
+                            int cnt = 0;
+                            for (String subBranch : subBranches) {
+                                msgBuilder.append("\n- ");
+                                msgBuilder.append(subBranch);
+                                cnt++;
+                                if (cnt == MAX) {
+                                    break;
+                                } else if (subBranches.size() > MAX && cnt == MAX - 1) {
+                                    msgBuilder.append("\n- and ");
+                                    msgBuilder.append(subBranches.size() - MAX + 1);
+                                    msgBuilder.append(" more branches");
+                                    break;
+                                }
+                            }
+                            rebaseNotPossibleReason = msgBuilder.toString();
+                        }
+                    }
 
-                try {
-                    getMavenLog().info("Merging (--no-ff) base branch '" + baseBranch + "' into epic branch '"
-                            + epicBranchName + "'...");
-                    gitMerge(baseBranch, true);
-                } catch (MojoFailureException ex) {
-                    getMavenLog().info("Epic update process paused to resolve merge conflicts");
-                    throw new GitFlowFailureException(ex,
-                            "Automatic merge failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage()),
-                            "Fix the merge conflicts and mark them as resolved.\nIMPORTANT: "
-                                    + "be sure not to update the version in epic branch while resolving conflicts!\n"
-                                    + "After that, run 'mvn flow:epic-update' again. Do NOT run 'git merge --continue'.",
-                            "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as "
-                                    + "resolved",
-                            "'mvn flow:epic-update' to continue epic update process");
+                    if (updateEpicWithMerge) {
+                        if (rebaseNotPossibleReason == null) {
+                            String answer = getPrompter().promptSelection(
+                                    "Updating is configured for merges, a later rebase will not be possible. Select if you "
+                                            + "want to proceed with (m)erge or you want to use (r)ebase instead or (a)bort "
+                                            + "the process.",
+                                    new String[] { "m", "r", "a" }, "m");
+                            if ("m".equalsIgnoreCase(answer)) {
+                                confirmedUpdateWithMerge = true;
+                            } else if ("r".equalsIgnoreCase(answer)) {
+                                confirmedUpdateWithMerge = false;
+                            } else {
+                                throw new GitFlowFailureException("Epic update aborted by user.", null);
+                            }
+                        } else {
+                            confirmedUpdateWithMerge = true;
+                        }
+                    } else if (rebaseNotPossibleReason != null) {
+                        GitFlowFailureInfo failureInfo;
+                        if (hasNonEmptyMergeCommits) {
+                            failureInfo = new GitFlowFailureInfo(
+                                    "Epic branch can't be rebased. Reason: " + rebaseNotPossibleReason,
+                                    "Run epic update in interactive mode to update epic branch using merge",
+                                    "'mvn flow:epic-update' to run in interactive mode");
+                        } else {
+                            failureInfo = new GitFlowFailureInfo(
+                                    "Epic branch can't be rebased. Reason: " + rebaseNotPossibleReason
+                                            + "\nIf you continue with merge, a later rebase will not be possible.",
+                                    "Finish the listed branches and run epic update again in order to rebase it.\n"
+                                            + "Or run epic update in interactive mode in order to update epic branch using "
+                                            + "merge.",
+                                    "'mvn flow:epic-update' to run in interactive mode");
+                        }
+                        boolean confirmed = getPrompter()
+                                .promptConfirmation(
+                                        "Epic branch can't be rebased. Reason: " + rebaseNotPossibleReason
+                                                + "\nIf you continue with merge, a later rebase will not be possible.\n"
+                                                + "Do you want to merge base branch into epic branch?",
+                                        false, failureInfo);
+                        if (confirmed) {
+                            confirmedUpdateWithMerge = true;
+                        } else {
+                            throw new GitFlowFailureException(failureInfo);
+                        }
+                    } else {
+                        confirmedUpdateWithMerge = false;
+                    }
+                    oldEpicVersion = getCurrentProjectVersion();
+                    gitSetBranchLocalConfig(epicBranchName, "baseVersion", baseVersion);
+                    gitSetBranchLocalConfig(epicBranchName, "oldEpicVersion", oldEpicVersion);
+                    gitSetBranchLocalConfig(epicBranchName, "oldBaseVersion",
+                            gitGetBranchCentralConfig(epicBranchName, BranchConfigKeys.BASE_VERSION));
+                    gitSetBranchLocalConfig(epicBranchName, "oldStartCommitMessage",
+                            gitGetBranchCentralConfig(epicBranchName, BranchConfigKeys.START_COMMIT_MESSAGE));
+                    gitSetBranchLocalConfig(epicBranchName, "oldVersionChangeCommit",
+                            gitGetBranchCentralConfig(epicBranchName, BranchConfigKeys.VERSION_CHANGE_COMMIT));
+                    updateEpic(epicBranchName, baseBranch, branchPoint, confirmedUpdateWithMerge,
+                            !mergeCommits.isEmpty());
+                } else {
+                    getMavenLog().info("No changes on base branch '" + baseBranch + "' found. Nothing to update.");
+                    oldEpicVersion = null;
                 }
             } else {
-                if (!getPrompter().promptConfirmation(
-                        "You have a merge in process on your current branch. If you run 'mvn flow:epic-update' before "
-                                + "and merge had conflicts you can continue. In other case it is better to clarify the "
-                                + "reason of merge in process. Continue?",
-                        true, true)) {
-                    throw new GitFlowFailureException("Continuation of epic update aborted by user.", null);
-                }
-                getMavenLog().info("Continue merging base branch into epic branch...");
-                try {
-                    gitCommitMerge();
-                } catch (MojoFailureException exc) {
-                    getMavenLog().info("Epic update process paused to resolve merge conflicts");
-                    throw new GitFlowFailureException(exc,
-                            "There are unresolved conflicts after merge.\nGit error message:\n"
-                                    + StringUtils.trim(exc.getMessage()),
-                            "Fix the merge conflicts and mark them as resolved. After that, run "
-                                    + "'mvn flow:epic-update' again. Do NOT run 'git merge --continue'.",
-                            "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
-                                    + "conflicts as resolved",
-                            "'mvn flow:epic-update' to continue epic update process");
-                }
+                continueEpicUpdate(confirmedUpdateWithMerge);
                 baseVersion = gitGetBranchLocalConfig(epicBranchName, "baseVersion");
+                oldEpicVersion = gitGetBranchLocalConfig(epicBranchName, "oldEpicVersion");
                 getLog().info("Project version on base branch: " + baseVersion);
             }
-
-            String epicVersion = getCurrentProjectVersion();
-            getLog().info("Project version on epic branch: " + epicVersion);
-            if (!baseVersion.equals(epicVersion)) {
-                fixupModuleParents(epicBranchName, epicVersion, baseVersion);
+            if (oldEpicVersion != null) {
+                String epicVersion = getCurrentProjectVersion();
+                getLog().info("Project version on epic branch: " + epicVersion);
+                fixupModuleParents(epicBranchName, epicVersion, oldEpicVersion, baseVersion, confirmedUpdateWithMerge);
             }
         } else {
             getMavenLog().info("Restart after failed epic project installation detected");
@@ -220,19 +311,214 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
         }
         gitRemoveBranchLocalConfig(epicBranchName, "breakpoint");
         if (pushRemote) {
-            getMavenLog().info("Pushing epic branch '" + epicBranchName + "' to remote repository");
-            gitPush(epicBranchName, false, false);
+            if (!confirmedUpdateWithMerge && deleteRemoteBranchOnRebase) {
+                getMavenLog().info("Deleting remote epic branch to not run into non-fast-forward error");
+                gitBranchDeleteRemote(epicBranchName);
+            }
+            getMavenLog().info("Pushing (forced) epic branch '" + epicBranchName + "' to remote repository");
+            gitPush(epicBranchName, false, true);
         }
+        finilizeEpicUpdateProcess(epicBranchName);
         getMavenLog().info("Epic update process finished");
     }
 
-    private void fixupModuleParents(String epicBranch, String epicVersion, String baseVersion)
+    private void fixupModuleParents(String epicBranch, String newEpicVersion, String oldEpicVersion,
+            String newBaseVersion, boolean confirmedUpdateWithMerge) throws MojoFailureException, CommandLineException {
+        if ((confirmedUpdateWithMerge && !newBaseVersion.equals(newEpicVersion))
+                || (!confirmedUpdateWithMerge && !oldEpicVersion.equals(newEpicVersion))) {
+            getLog().info("Ensure consistent version in all modules");
+            String issueNumber = getEpicIssueNumber(epicBranch);
+            String epicNewModulesMessage = substituteWithIssueNumber(commitMessages.getEpicNewModulesMessage(),
+                    issueNumber);
+            mvnFixupVersions(newEpicVersion, epicNewModulesMessage, false, oldEpicVersion, newBaseVersion);
+        }
+    }
+
+    private List<String> getSubBranches(String epicBranch, String branchPoint)
             throws MojoFailureException, CommandLineException {
-        getLog().info("Ensure consistent version in all modules");
-        String issueNumber = getEpicIssueNumber(epicBranch);
-        String epicNewModulesMessage = substituteWithIssueNumber(commitMessages.getEpicNewModulesMessage(),
-                issueNumber);
-        mvnFixupVersions(epicVersion, issueNumber, baseVersion, epicNewModulesMessage, false);
+        List<String> subBranches = new LinkedList<>();
+        // to ensure that corresponding branches started from branch point are also
+        // included
+        subBranches.addAll(getBranchesWithBaseBranch(epicBranch));
+        String firstCommit = gitFirstCommitOnBranch(epicBranch, branchPoint);
+        if (firstCommit != null) {
+            List<String> branchesWithFirstCommit = gitAllBranchesWithCommit(firstCommit);
+            for (String branch : branchesWithFirstCommit) {
+                if (!epicBranch.equals(branch) && !subBranches.contains(branch)) {
+                    subBranches.add(branch);
+                }
+            }
+        }
+        Collections.sort(subBranches);
+        return subBranches;
+    }
+
+    private void updateEpic(String epicBranch, String baseBranch, String branchPoint, boolean confirmedUpdateWithMerge,
+            boolean hasMergeCommits) throws CommandLineException, MojoFailureException {
+        if (confirmedUpdateWithMerge) {
+            try {
+                getMavenLog().info(
+                        "Merging (--no-ff) base branch '" + baseBranch + "' into epic branch '" + epicBranch + "'...");
+                gitMerge(baseBranch, true);
+            } catch (MojoFailureException ex) {
+                getMavenLog().info("Epic update process paused to resolve merge conflicts");
+                throw new GitFlowFailureException(ex,
+                        "Automatic merge failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage()),
+                        "Fix the merge conflicts and mark them as resolved.\nIMPORTANT: "
+                                + "be sure not to update the version in epic branch while resolving conflicts!\n"
+                                + "After that, run 'mvn flow:epic-update' again. Do NOT run 'git merge --continue'.",
+                        "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as "
+                                + "resolved",
+                        "'mvn flow:epic-update' to continue epic update process");
+            }
+        } else {
+            getMavenLog()
+                    .info("Rebasing epic branch '" + epicBranch + "' on top of base branch '" + baseBranch + "'...");
+            // rebase feature on top of development
+            String versionChangeCommitOnBranch = gitVersionChangeCommitOnEpicBranch(epicBranch, branchPoint);
+            if (versionChangeCommitOnBranch != null) {
+                getLog().info("First commit on epic branch is version change commit. Exclude it from rebase.");
+                String tempEpicBranch = createTempEpicBranchName(epicBranch);
+                getLog().info("Creating temporary branch with new version change commit to be used for epic rebase.");
+                if (gitBranchExists(tempEpicBranch)) {
+                    gitBranchDeleteForce(tempEpicBranch);
+                }
+                gitCreateAndCheckout(tempEpicBranch, baseBranch);
+                String currentVersion = getCurrentProjectVersion();
+                String baseVersion = currentVersion;
+                gitSetBranchLocalConfig(tempEpicBranch, "newBaseVersion", baseVersion);
+                String versionChangeCommit = null;
+                String version = createEpicVersion(baseVersion, epicBranch);
+                if (!currentVersion.equals(version)) {
+                    String prevBaseVersion = gitGetBranchCentralConfig(epicBranch, BranchConfigKeys.BASE_VERSION);
+                    boolean sameBaseVersion = Objects.equals(baseVersion, prevBaseVersion);
+                    getMavenLog()
+                            .info("- setting epic version '" + version + "' for project on branch prepared for rebase");
+                    mvnSetVersions(version, GitFlowAction.EPIC_UPDATE, "On epic branch: ", epicBranch, sameBaseVersion,
+                            epicBranch);
+                    String epicStartMessage = getEpicStartCommitMessage(epicBranch);
+                    gitCommit(epicStartMessage);
+                    versionChangeCommit = getCurrentCommit();
+                    gitSetBranchLocalConfig(epicBranch, "newStartCommitMessage", epicStartMessage);
+                    gitSetBranchLocalConfig(epicBranch, "newVersionChangeCommit", versionChangeCommit);
+                } else {
+                    getLog().info("Project version for epic is same as base project version. "
+                            + "Version update not needed.");
+                }
+                try {
+                    gitRebaseOnto(tempEpicBranch, versionChangeCommitOnBranch, epicBranch, hasMergeCommits);
+                } catch (MojoFailureException ex) {
+                    getMavenLog().info("Epic update process paused to resolve rebase conflicts");
+                    throw new GitFlowFailureException(ex,
+                            "Automatic rebase failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage()),
+                            "Fix the rebase conflicts and mark them as resolved. After that, run "
+                                    + "'mvn flow:epic-update' again.\n"
+                                    + "Do NOT run 'git rebase --continue' and 'git rebase --abort'!",
+                            "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
+                                    + "conflicts as resolved",
+                            "'mvn flow:epic-update' to continue epic update process");
+                }
+            } else {
+                getLog().info("First commit on epic branch is not a version change commit. "
+                        + "Rebase the whole epic branch.");
+                try {
+                    gitRebase(baseBranch);
+                } catch (MojoFailureException ex) {
+                    getMavenLog().info("Epic update process paused to resolve rebase conflicts");
+                    throw new GitFlowFailureException(ex,
+                            "Automatic rebase failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage()),
+                            "Fix the rebase conflicts and mark them as resolved. After that, run "
+                                    + "'mvn flow:epic-update' again.\n"
+                                    + "Do NOT run 'git rebase --continue' and 'git rebase --abort'!",
+                            "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
+                                    + "conflicts as resolved",
+                            "'mvn flow:epic-update' to continue epic update process");
+                }
+            }
+        }
+    }
+
+    private String createEpicVersion(String baseVersion, String featureBranchName)
+            throws MojoFailureException, CommandLineException {
+        getLog().info("Project version: " + baseVersion);
+        String version = baseVersion;
+        String epicIssue = getEpicIssueNumber(featureBranchName);
+        getLog().info("Epic issue number read from central branch config: " + epicIssue);
+        version = insertSuffixInVersion(version, epicIssue);
+        getLog().info("Added feature issue number to project version: " + version);
+        return version;
+    }
+
+    private void continueEpicUpdate(boolean confirmedUpdateWithMerge)
+            throws GitFlowFailureException, CommandLineException {
+        if (confirmedUpdateWithMerge) {
+            // continue with commit
+            if (!getPrompter().promptConfirmation(
+                    "You have a merge in process on your current branch. If you run 'mvn flow:epic-update' before "
+                            + "and merge had conflicts you can continue. In other case it is better to clarify the "
+                            + "reason of merge in process. Continue?",
+                    true, true)) {
+                throw new GitFlowFailureException("Continuation of epic update aborted by user.", null);
+            }
+            getMavenLog().info("Continue merging base branch into epic branch...");
+            try {
+                gitCommitMerge();
+            } catch (MojoFailureException exc) {
+                getMavenLog().info("Epic update process paused to resolve merge conflicts");
+                throw new GitFlowFailureException(exc,
+                        "There are unresolved conflicts after merge.\nGit error message:\n"
+                                + StringUtils.trim(exc.getMessage()),
+                        "Fix the merge conflicts and mark them as resolved. After that, run "
+                                + "'mvn flow:epic-update' again. Do NOT run 'git merge --continue'.",
+                        "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
+                                + "conflicts as resolved",
+                        "'mvn flow:epic-update' to continue epic update process");
+            }
+        } else {
+            // continue with the rebase
+            if (!getPrompter().promptConfirmation("You have a rebase in process on your current branch. "
+                    + "If you run 'mvn flow:epic-update' before and rebase had conflicts you can "
+                    + "continue. In other case it is better to clarify the reason of rebase in process. Continue?",
+                    true, true)) {
+                throw new GitFlowFailureException("Continuation of epic update aborted by user.", null);
+            }
+            getMavenLog().info("Continue rebasing epic branch on top of base branch...");
+            try {
+                gitRebaseContinueOrSkip();
+            } catch (MojoFailureException exc) {
+                getMavenLog().info("Epic update process paused to resolve rebase conflicts");
+                throw new GitFlowFailureException(exc,
+                        "There are unresolved conflicts after rebase.\nGit error message:\n"
+                                + StringUtils.trim(exc.getMessage()),
+                        "Fix the rebase conflicts and mark them as resolved. After that, run "
+                                + "'mvn flow:epic-update' again.\n"
+                                + "Do NOT run 'git rebase --continue' and 'git rebase --abort'!",
+                        "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
+                                + "conflicts as resolved",
+                        "'mvn flow:epic-update' to continue epic update process");
+            }
+        }
+    }
+
+    private void finilizeEpicUpdateProcess(String epicBranch) throws MojoFailureException, CommandLineException {
+        String newBaseVersion = gitGetBranchLocalConfig(epicBranch, "newBaseVersion");
+        if (newBaseVersion != null) {
+            BranchCentralConfigChanges branchConfigChanges = new BranchCentralConfigChanges();
+            branchConfigChanges.set(epicBranch, BranchConfigKeys.BASE_VERSION, newBaseVersion);
+            branchConfigChanges.set(epicBranch, BranchConfigKeys.START_COMMIT_MESSAGE,
+                    gitGetBranchLocalConfig(epicBranch, "newStartCommitMessage"));
+            branchConfigChanges.set(epicBranch, BranchConfigKeys.VERSION_CHANGE_COMMIT,
+                    gitGetBranchLocalConfig(epicBranch, "newVersionChangeCommit"));
+            gitApplyBranchCentralConfigChanges(branchConfigChanges, "epic branch '" + epicBranch + "' rebased");
+        }
+        gitRemoveBranchLocalConfig(epicBranch, "baseVersion");
+        gitRemoveBranchLocalConfig(epicBranch, "newBaseVersion");
+        gitRemoveBranchLocalConfig(epicBranch, "newStartCommitMessage");
+        gitRemoveBranchLocalConfig(epicBranch, "newVersionChangeCommit");
+        gitRemoveBranchLocalConfig(epicBranch, "oldEpicVersion");
+        gitRemoveBranchLocalConfig(epicBranch, "oldBaseVersion");
+        gitRemoveBranchLocalConfig(epicBranch, "oldStartCommitMessage");
+        gitRemoveBranchLocalConfig(epicBranch, "oldVersionChangeCommit");
     }
 
 }

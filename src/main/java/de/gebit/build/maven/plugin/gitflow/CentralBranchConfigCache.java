@@ -68,8 +68,7 @@ public class CentralBranchConfigCache {
      *
      * @param branchName
      *            the name of the branch
-     * @return properties for passed branch or empty properties if branch not
-     *         found
+     * @return properties for passed branch or empty properties if branch not found
      */
     public Properties getProperties(String branchName) {
         Properties properties = branchProperties.get(branchName);
@@ -81,11 +80,28 @@ public class CentralBranchConfigCache {
      *
      * @param branchType
      *            the type of branches to be returned
-     * @return list of branches or empty list if no branches for passed type
-     *         found
+     * @return list of branches or empty list if no branches for passed type found
      */
     public List<String> getBranches(BranchType branchType) {
         List<String> typeBranches = branches.get(branchType);
         return typeBranches != null ? typeBranches : new LinkedList<>();
+    }
+
+    /**
+     * Get branches with passed base branch.
+     *
+     * @param baseBranch
+     *            the base branch of branches to be returned
+     * @return list of branches or empty list if no branches for passed base branch
+     *         found
+     */
+    public List<String> getBranchesWithBaseBranch(String baseBranch) {
+        List<String> branchesWithBaseBranch = new LinkedList<>();
+        for (Entry<String, Properties> branchEntry : branchProperties.entrySet()) {
+            if (baseBranch.equals(branchEntry.getValue().getProperty(BranchConfigKeys.BASE_BRANCH))) {
+                branchesWithBaseBranch.add(branchEntry.getKey());
+            }
+        }
+        return branchesWithBaseBranch;
     }
 }

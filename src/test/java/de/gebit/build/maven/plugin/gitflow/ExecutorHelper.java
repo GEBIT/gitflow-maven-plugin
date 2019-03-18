@@ -102,9 +102,30 @@ public class ExecutorHelper {
         return testCase.executeMojoWithResult(repositorySet.getWorkingDirectory(), "feature-finish", userProperties);
     }
 
+    public static MavenExecutionResult executeFeatureFinishWithResult(AbstractGitFlowMojoTestCase testCase,
+            RepositorySet repositorySet, Properties userProperties, Prompter prompter) throws Exception {
+        return testCase.executeMojoWithResult(repositorySet.getWorkingDirectory(), "feature-finish", userProperties,
+                prompter);
+    }
+
+    public static void executeFeatureFinish(AbstractGitFlowMojoTestCase testCase, RepositorySet repositorySet,
+            Properties userProperties) throws Exception {
+        testCase.executeMojo(repositorySet.getWorkingDirectory(), "feature-finish", userProperties);
+    }
+
+    public static void executeFeatureFinish(AbstractGitFlowMojoTestCase testCase, RepositorySet repositorySet,
+            Properties userProperties, Prompter prompter) throws Exception {
+        testCase.executeMojo(repositorySet.getWorkingDirectory(), "feature-finish", userProperties, prompter);
+    }
+
     public static MavenExecutionResult executeFeatureIntegrateWithResult(AbstractGitFlowMojoTestCase testCase,
             RepositorySet repositorySet, Properties userProperties) throws Exception {
         return testCase.executeMojoWithResult(repositorySet.getWorkingDirectory(), "feature-integrate", userProperties);
+    }
+
+    public static void executeFeatureAbort(AbstractGitFlowMojoTestCase testCase, RepositorySet repositorySet)
+            throws Exception {
+        testCase.executeMojo(repositorySet.getWorkingDirectory(), "feature-abort");
     }
 
     public static void executeHotfixStart(AbstractGitFlowMojoTestCase testCase, RepositorySet repositorySet,
