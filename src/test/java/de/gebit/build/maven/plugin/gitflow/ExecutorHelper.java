@@ -66,8 +66,8 @@ public class ExecutorHelper {
     }
 
     public static MavenExecutionResult executeEpicUpdateWithResult(AbstractGitFlowMojoTestCase testCase,
-            RepositorySet repositorySet) throws Exception {
-        return testCase.executeMojoWithResult(repositorySet.getWorkingDirectory(), "epic-update");
+            RepositorySet repositorySet, Properties userProperties) throws Exception {
+        return testCase.executeMojoWithResult(repositorySet.getWorkingDirectory(), "epic-update", userProperties);
     }
 
     public static void executeFeatureStart(AbstractGitFlowMojoTestCase testCase, RepositorySet repositorySet,

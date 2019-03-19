@@ -800,7 +800,9 @@ public class GitFlowEpicAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.createTestfile(repositorySet, TESTFILE_NAME);
         git.modifyTestfile(repositorySet, TESTFILE_NAME);
         git.commitAll(repositorySet, COMMIT_MESSAGE_EPIC_TESTFILE);
-        MavenExecutionResult result = ExecutorHelper.executeEpicUpdateWithResult(this, repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.updateEpicWithMerge", "true");
+        MavenExecutionResult result = ExecutorHelper.executeEpicUpdateWithResult(this, repositorySet, userProperties);
         assertTrue("an exception expected because of merge conflict", result.hasExceptions());
         // test
         result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);

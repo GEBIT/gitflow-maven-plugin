@@ -1860,8 +1860,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws MojoFailureException
      */
     protected boolean isEmptyMergeCommit(String mergeCommit) throws MojoFailureException, CommandLineException {
-        if (gitIsAncestorBranch("\"" + mergeCommit + "^1\"", "\"" + mergeCommit + "^2\"")
-                || gitIsAncestorBranch("\"" + mergeCommit + "^2\"", "\"" + mergeCommit + "^1\"")) {
+        if (gitIsAncestorBranch(mergeCommit + "^1", mergeCommit + "^2")
+                || gitIsAncestorBranch(mergeCommit + "^2", mergeCommit + "^1")) {
             return true;
         }
         return false;

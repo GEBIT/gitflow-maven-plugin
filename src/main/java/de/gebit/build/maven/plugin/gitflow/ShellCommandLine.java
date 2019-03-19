@@ -8,6 +8,8 @@
 //
 package de.gebit.build.maven.plugin.gitflow;
 
+import java.util.Arrays;
+
 import org.codehaus.plexus.util.cli.Commandline;
 import org.codehaus.plexus.util.cli.shell.CmdShell;
 import org.codehaus.plexus.util.cli.shell.Shell;
@@ -38,9 +40,22 @@ public class ShellCommandLine extends Commandline {
     }
 
     private class MyCmdShell extends CmdShell {
+
+        private char[] quotingTriggerChars;
+
         public MyCmdShell() {
             super();
             setDoubleQuotedExecutableEscaped(true);
+        }
+
+        @Override
+        protected char[] getQuotingTriggerChars() {
+            if (quotingTriggerChars == null) {
+                quotingTriggerChars = super.getQuotingTriggerChars();
+                quotingTriggerChars  = Arrays.copyOf(quotingTriggerChars, quotingTriggerChars.length + 1);
+                quotingTriggerChars[quotingTriggerChars.length - 1] = '^';
+            }
+            return quotingTriggerChars;
         }
     }
 }
