@@ -73,6 +73,9 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
 
     private static final String COMMIT_MESSAGE_SET_VERSION = BasicConstants.EXISTING_EPIC_VERSION_COMMIT_MESSAGE;
 
+    private static final String COMMIT_MESSAGE_REVERT_VERSION = BasicConstants.EXISTING_EPIC_ISSUE
+            + ": reverting versions for development branch";
+
     private static final String COMMIT_MESSAGE_FIX_NEW_MODULES = BasicConstants.EXISTING_EPIC_ISSUE
             + ": updating versions for new modules on epic branch";
 
@@ -1878,21 +1881,9 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
         git.createAndCommitTestfile(repositorySet, "epic_testfile.txt", COMMIT_MESSAGE_EPIC_TESTFILE);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.updateEpicWithMerge", "true");
-        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
-                promptControllerMock);
-        verifyZeroInteractions(promptControllerMock);
-        assertGitFlowFailureExceptionRegEx(result, EXPECTED_MERGE_CONFLICT_MESSAGE_PATTERN);
-        git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
-        git.assertMergeInProcess(repositorySet, "pom.xml");
-        repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath("pom.xml").call();
-        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_MASTER_VERSION);
-        setVersionForSingleProjectPom(NEW_EPIC_VERSION);
-        repositorySet.getLocalRepoGit().add().addFilepattern("pom.xml").call();
-        when(promptControllerMock.prompt(PROMPT_MERGE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("y");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
-        verify(promptControllerMock).prompt(PROMPT_MERGE_CONTINUE, Arrays.asList("y", "n"), "y");
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
@@ -1900,7 +1891,8 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_NEW_MASTER_VERSION);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, EPIC_BRANCH, EPIC_BRANCH);
         git.assertCommitHeadLinesInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_EPIC_TESTFILE,
-                COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_NEW_MASTER_VERSION, COMMIT_MESSAGE_MARGE);
+                COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION,
+                COMMIT_MESSAGE_NEW_MASTER_VERSION, COMMIT_MESSAGE_MARGE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_EPIC_VERSION);
     }
 
@@ -1920,21 +1912,9 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
         git.commitAll(repositorySet, COMMIT_MESSAGE_NEW_EPIC_MODULE);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.updateEpicWithMerge", "true");
-        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
-                promptControllerMock);
-        verifyZeroInteractions(promptControllerMock);
-        assertGitFlowFailureExceptionRegEx(result, EXPECTED_MERGE_CONFLICT_MESSAGE_PATTERN);
-        git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
-        git.assertMergeInProcess(repositorySet, "pom.xml");
-        repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath("pom.xml").call();
-        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_MASTER_VERSION);
-        setVersionForSingleProjectPom(NEW_EPIC_VERSION);
-        repositorySet.getLocalRepoGit().add().addFilepattern("pom.xml").call();
-        when(promptControllerMock.prompt(PROMPT_MERGE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("y");
         // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
-        verify(promptControllerMock).prompt(PROMPT_MERGE_CONTINUE, Arrays.asList("y", "n"), "y");
         verifyNoMoreInteractions(promptControllerMock);
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
@@ -1942,8 +1922,8 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_NEW_MASTER_VERSION);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, EPIC_BRANCH, EPIC_BRANCH);
         git.assertCommitHeadLinesInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_NEW_EPIC_MODULE,
-                COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_NEW_MASTER_VERSION, COMMIT_MESSAGE_MARGE,
-                COMMIT_MESSAGE_FIX_NEW_MODULES);
+                COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_REVERT_VERSION, COMMIT_MESSAGE_SET_VERSION,
+                COMMIT_MESSAGE_NEW_MASTER_VERSION, COMMIT_MESSAGE_MARGE, COMMIT_MESSAGE_FIX_NEW_MODULES);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_EPIC_VERSION);
         assertParentVersionsInPom(new File(repositorySet.getWorkingDirectory(), "module"), NEW_EPIC_VERSION);
     }
