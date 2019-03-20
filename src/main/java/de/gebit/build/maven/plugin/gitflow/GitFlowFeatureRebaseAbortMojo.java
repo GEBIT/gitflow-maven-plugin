@@ -78,8 +78,19 @@ public class GitFlowFeatureRebaseAbortMojo extends AbstractGitFlowFeatureMojo {
                             throw new GitFlowFailureException("Aborting feature rebase process aborted by user.", null);
                         }
                         BranchRefState state = gitCheckBranchReference(featureBranch);
-                        if (state == BranchRefState.DIVERGE || state == BranchRefState.LOCAL_AHEAD) {
-                            gitResetHard(gitLocalToRemoteRef(featureBranch));
+                        if (state != BranchRefState.DIVERGE && state != BranchRefState.LOCAL_AHEAD) {
+                            throw new GitFlowFailureException(
+                                    "The state of current local and remote branches is unexpected for an interrupted "
+                                            + "feature rebase process.\n"
+                                            + "This indicates a severe error condition on your branches.",
+                                    "Please consult a gitflow expert on how to fix this!");
+                        }
+                        String oldFeatureHEAD = gitGetBranchLocalConfig(featureBranch, "oldFeatureHEAD");
+                        if (oldFeatureHEAD != null) {
+                            String currentCommit = getCurrentCommit();
+                            if (!oldFeatureHEAD.equals(currentCommit)) {
+                                gitResetHard(oldFeatureHEAD);
+                            }
                             BranchCentralConfigChanges branchConfigChanges = new BranchCentralConfigChanges();
                             branchConfigChanges.set(featureBranch, BranchConfigKeys.BASE_VERSION,
                                     gitGetBranchLocalConfig(featureBranch, "oldBaseVersion"));
@@ -93,9 +104,8 @@ public class GitFlowFeatureRebaseAbortMojo extends AbstractGitFlowFeatureMojo {
                             aborted = true;
                         } else {
                             throw new GitFlowFailureException(
-                                    "The state of current local and remote branches is unexpected for an interrupted "
-                                            + "feature rebase process.\n"
-                                            + "This indicates a severe error condition on your branches.",
+                                    "Couldn't find the old HEAD commit of feature branch in local git config.\n"
+                                            + "This indicates a severe error condition in the git config.",
                                     "Please consult a gitflow expert on how to fix this!");
                         }
                     }
@@ -110,12 +120,13 @@ public class GitFlowFeatureRebaseAbortMojo extends AbstractGitFlowFeatureMojo {
     }
 
     private void resetBranchLocalConfigs(String featureBranch) throws MojoFailureException, CommandLineException {
+        gitRemoveBranchLocalConfig(featureBranch, "breakpoint");
         gitRemoveBranchLocalConfig(featureBranch, "newBaseVersion");
         gitRemoveBranchLocalConfig(featureBranch, "newStartCommitMessage");
         gitRemoveBranchLocalConfig(featureBranch, "newVersionChangeCommit");
-        gitRemoveBranchLocalConfig(featureBranch, "oldFeatureVersion");
-        gitRemoveBranchLocalConfig(featureBranch, "breakpoint");
         gitRemoveBranchLocalConfig(featureBranch, "rebasedWithoutVersionChangeCommit");
+        gitRemoveBranchLocalConfig(featureBranch, "oldFeatureHEAD");
+        gitRemoveBranchLocalConfig(featureBranch, "oldFeatureVersion");
         gitRemoveBranchLocalConfig(featureBranch, "oldBaseVersion");
         gitRemoveBranchLocalConfig(featureBranch, "oldStartCommitMessage");
         gitRemoveBranchLocalConfig(featureBranch, "oldVersionChangeCommit");

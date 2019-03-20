@@ -224,7 +224,9 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
                     }
                 }
                 oldFeatureVersion = getCurrentProjectVersion();
+                String oldFeatureHEAD = getCurrentCommit();
                 gitSetBranchLocalConfig(featureBranchName, "oldFeatureVersion", oldFeatureVersion);
+                gitSetBranchLocalConfig(featureBranchName, "oldFeatureHEAD", oldFeatureHEAD);
                 gitSetBranchLocalConfig(featureBranchName, "oldBaseVersion",
                         gitGetBranchCentralConfig(featureBranchName, BranchConfigKeys.BASE_VERSION));
                 gitSetBranchLocalConfig(featureBranchName, "oldStartCommitMessage",
@@ -484,6 +486,7 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
         gitRemoveBranchLocalConfig(featureBranch, "newBaseVersion");
         gitRemoveBranchLocalConfig(featureBranch, "newStartCommitMessage");
         gitRemoveBranchLocalConfig(featureBranch, "newVersionChangeCommit");
+        gitRemoveBranchLocalConfig(featureBranch, "oldFeatureHEAD");
         gitRemoveBranchLocalConfig(featureBranch, "oldFeatureVersion");
         gitRemoveBranchLocalConfig(featureBranch, "oldBaseVersion");
         gitRemoveBranchLocalConfig(featureBranch, "oldStartCommitMessage");
