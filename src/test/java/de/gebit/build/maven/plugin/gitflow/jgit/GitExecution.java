@@ -1041,7 +1041,11 @@ public class GitExecution {
     public String getConfigValue(RepositorySet repositorySet, String configSection, String configSubsection,
             String configName) {
         StoredConfig config = repositorySet.getLocalRepoGit().getRepository().getConfig();
-        return config.getString(configSection, configSubsection, configName);
+        String value = config.getString(configSection, configSubsection, configName);
+        if (value != null && (value.length() == 0 || "\"\"".equals(value))) {
+            value = null;
+        }
+        return value;
     }
 
     /**

@@ -710,9 +710,10 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, INTEGRATION_MASTER_BRANCH,
                 INTEGRATION_MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, INTEGRATION_MASTER_BRANCH);
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, EPIC_BRANCH, EPIC_BRANCH);
+        git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, EPIC_BRANCH, EPIC_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_EPIC_TESTFILE,
                 COMMIT_MESSAGE_SET_VERSION);
+        git.assertCommitsInRemoteBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_SET_VERSION);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), EPIC_VERSION);
     }
 
@@ -788,8 +789,10 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_MAINTENANCE_TESTFILE,
                 COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, USED_EPIC_BRANCH, USED_EPIC_BRANCH);
+        git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, USED_EPIC_BRANCH, USED_EPIC_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, USED_EPIC_BRANCH, COMMIT_MESSAGE_EPIC_TESTFILE,
+                BasicConstants.EPIC_ON_MAINTENANCE_VERSION_COMMIT_MESSAGE, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
+        git.assertCommitsInRemoteBranch(repositorySet, USED_EPIC_BRANCH,
                 BasicConstants.EPIC_ON_MAINTENANCE_VERSION_COMMIT_MESSAGE, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_EPIC_VERSION);
     }
@@ -807,9 +810,10 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
 
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, EPIC_BRANCH, EPIC_BRANCH);
+        git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, EPIC_BRANCH, EPIC_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_EPIC_TESTFILE,
                 COMMIT_MESSAGE_SET_VERSION);
+        git.assertCommitsInRemoteBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_SET_VERSION);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), EPIC_VERSION);
     }
 
