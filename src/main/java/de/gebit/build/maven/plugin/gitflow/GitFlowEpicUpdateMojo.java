@@ -267,7 +267,9 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
                     }
                     oldEpicVersion = getCurrentProjectVersion();
                     oldBaseVersion = gitGetBranchCentralConfig(epicBranchName, BranchConfigKeys.BASE_VERSION);
+                    String oldEpicHEAD = getCurrentCommit();
                     gitSetBranchLocalConfig(epicBranchName, "baseVersion", baseVersion);
+                    gitSetBranchLocalConfig(epicBranchName, "oldEpicHEAD", oldEpicHEAD);
                     gitSetBranchLocalConfig(epicBranchName, "oldEpicVersion", oldEpicVersion);
                     gitSetBranchLocalConfig(epicBranchName, "oldBaseVersion", oldBaseVersion);
                     gitSetBranchLocalConfig(epicBranchName, "oldStartCommitMessage",
@@ -281,8 +283,8 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
                     }
                 } else {
                     getMavenLog().info("No changes on base branch '" + baseBranch + "' found. Nothing to update.");
-                    oldEpicVersion = null;
-                    oldBaseVersion = null;
+                    getMavenLog().info("Epic update process finished");
+                    return;
                 }
             } else {
                 continueEpicUpdate(confirmedUpdateWithMerge);
@@ -416,7 +418,7 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
             gitCreateAndCheckout(tempEpicBranch, baseBranch);
             String currentVersion = getCurrentProjectVersion();
             String baseVersion = currentVersion;
-            gitSetBranchLocalConfig(tempEpicBranch, "newBaseVersion", baseVersion);
+            gitSetBranchLocalConfig(epicBranch, "newBaseVersion", baseVersion);
             String versionChangeCommit = null;
             String version = createEpicVersion(baseVersion, epicBranch);
             if (!currentVersion.equals(version)) {
@@ -544,6 +546,7 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
         gitRemoveBranchLocalConfig(epicBranch, "newBaseVersion");
         gitRemoveBranchLocalConfig(epicBranch, "newStartCommitMessage");
         gitRemoveBranchLocalConfig(epicBranch, "newVersionChangeCommit");
+        gitRemoveBranchLocalConfig(epicBranch, "oldEpicHEAD");
         gitRemoveBranchLocalConfig(epicBranch, "oldEpicVersion");
         gitRemoveBranchLocalConfig(epicBranch, "oldBaseVersion");
         gitRemoveBranchLocalConfig(epicBranch, "oldStartCommitMessage");
