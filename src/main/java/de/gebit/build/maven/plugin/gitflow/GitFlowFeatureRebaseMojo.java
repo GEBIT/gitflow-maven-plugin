@@ -205,35 +205,41 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
                                     "Push the base branch '" + baseBranch + "' first or set 'pushRemote' parameter to "
                                             + "false in order to avoid inconsistent state in remote repository."));
                 }
-                if (updateWithMerge && rebaseWithoutVersionChange) {
-                    String answer = getPrompter().promptSelection(
-                            "Updating is configured for merges, a later rebase will not be possible. Select if you "
-                                    + "want to proceed with (m)erge or you want to use (r)ebase instead or (a)bort "
-                                    + "the process.",
-                            new String[] { "m", "r", "a" }, "a",
-                            new GitFlowFailureInfo(
-                                    "Updating is configured for merges, a later rebase will not be possible.",
-                                    "Run feature-rebase in interactive mode",
-                                    "'mvn flow:feature-rebase' to run in interactive mode"));
-                    if ("m".equalsIgnoreCase(answer)) {
-                        confirmedUpdateWithMerge = true;
-                    } else if ("r".equalsIgnoreCase(answer)) {
-                        confirmedUpdateWithMerge = false;
-                    } else {
-                        throw new GitFlowFailureException("Feature rebase aborted by user.", null);
+                if (!gitIsAncestorBranch(baseBranch, featureBranchName)) {
+                    if (updateWithMerge && rebaseWithoutVersionChange) {
+                        String answer = getPrompter().promptSelection(
+                                "Updating is configured for merges, a later rebase will not be possible. Select if you "
+                                        + "want to proceed with (m)erge or you want to use (r)ebase instead or (a)bort "
+                                        + "the process.",
+                                new String[] { "m", "r", "a" }, "a",
+                                new GitFlowFailureInfo(
+                                        "Updating is configured for merges, a later rebase will not be possible.",
+                                        "Run feature-rebase in interactive mode",
+                                        "'mvn flow:feature-rebase' to run in interactive mode"));
+                        if ("m".equalsIgnoreCase(answer)) {
+                            confirmedUpdateWithMerge = true;
+                        } else if ("r".equalsIgnoreCase(answer)) {
+                            confirmedUpdateWithMerge = false;
+                        } else {
+                            throw new GitFlowFailureException("Feature rebase aborted by user.", null);
+                        }
                     }
+                    oldFeatureVersion = getCurrentProjectVersion();
+                    String oldFeatureHEAD = getCurrentCommit();
+                    gitSetBranchLocalConfig(featureBranchName, "oldFeatureVersion", oldFeatureVersion);
+                    gitSetBranchLocalConfig(featureBranchName, "oldFeatureHEAD", oldFeatureHEAD);
+                    gitSetBranchLocalConfig(featureBranchName, "oldBaseVersion",
+                            gitGetBranchCentralConfig(featureBranchName, BranchConfigKeys.BASE_VERSION));
+                    gitSetBranchLocalConfig(featureBranchName, "oldStartCommitMessage",
+                            gitGetBranchCentralConfig(featureBranchName, BranchConfigKeys.START_COMMIT_MESSAGE));
+                    gitSetBranchLocalConfig(featureBranchName, "oldVersionChangeCommit",
+                            gitGetBranchCentralConfig(featureBranchName, BranchConfigKeys.VERSION_CHANGE_COMMIT));
+                    rebaseFeatureBranchOnTopOfBaseBranch(featureBranchName, baseBranch, confirmedUpdateWithMerge);
+                } else {
+                    getMavenLog().info("No changes on base branch '" + baseBranch + "' found. Nothing to rebase.");
+                    getMavenLog().info("Feature rebase process finished");
+                    return;
                 }
-                oldFeatureVersion = getCurrentProjectVersion();
-                String oldFeatureHEAD = getCurrentCommit();
-                gitSetBranchLocalConfig(featureBranchName, "oldFeatureVersion", oldFeatureVersion);
-                gitSetBranchLocalConfig(featureBranchName, "oldFeatureHEAD", oldFeatureHEAD);
-                gitSetBranchLocalConfig(featureBranchName, "oldBaseVersion",
-                        gitGetBranchCentralConfig(featureBranchName, BranchConfigKeys.BASE_VERSION));
-                gitSetBranchLocalConfig(featureBranchName, "oldStartCommitMessage",
-                        gitGetBranchCentralConfig(featureBranchName, BranchConfigKeys.START_COMMIT_MESSAGE));
-                gitSetBranchLocalConfig(featureBranchName, "oldVersionChangeCommit",
-                        gitGetBranchCentralConfig(featureBranchName, BranchConfigKeys.VERSION_CHANGE_COMMIT));
-                rebaseFeatureBranchOnTopOfBaseBranch(featureBranchName, baseBranch, confirmedUpdateWithMerge);
             } else {
                 continueFeatureRebase(confirmedUpdateWithMerge);
                 baseBranch = gitFeatureBranchBaseBranch(featureBranchName);
