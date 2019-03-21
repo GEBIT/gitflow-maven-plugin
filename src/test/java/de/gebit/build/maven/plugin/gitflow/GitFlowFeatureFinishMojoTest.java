@@ -10,6 +10,7 @@ package de.gebit.build.maven.plugin.gitflow;
 
 import static de.gebit.build.maven.plugin.gitflow.jgit.GitExecution.COMMIT_MESSAGE_FOR_TESTFILE;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
@@ -19,10 +20,12 @@ import java.io.File;
 import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 
 import org.apache.maven.execution.MavenExecutionResult;
+import org.apache.maven.model.Model;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
 import org.codehaus.plexus.components.interactivity.PrompterException;
 import org.codehaus.plexus.util.FileUtils;
@@ -35,6 +38,7 @@ import org.junit.Test;
 import de.gebit.build.maven.plugin.gitflow.TestProjects.BasicConstants;
 import de.gebit.build.maven.plugin.gitflow.jgit.GitExecution;
 import de.gebit.build.maven.plugin.gitflow.jgit.RepositorySet;
+import de.gebit.xmlxpath.XML;
 
 /**
  * @author Volodymyr Medvid
@@ -44,6 +48,8 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
     private static final String GOAL = "feature-finish";
 
     private static final String FEATURE_ISSUE = BasicConstants.EXISTING_FEATURE_ISSUE;
+
+    private static final String FEATURE_NAME = BasicConstants.EXISTING_FEATURE_NAME;
 
     private static final String FEATURE_BRANCH = BasicConstants.EXISTING_FEATURE_BRANCH;
 
@@ -2538,6 +2544,88 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
 
         git.assertBranchLocalConfigValueMissing(repositorySet, MASTER_BRANCH, "breakpoint");
         git.assertBranchLocalConfigValueMissing(repositorySet, MASTER_BRANCH, "breakpointFeatureBranch");
+    }
+
+    @Test
+    public void testExecuteWithDeletedModuleOnFeatureBranch_GBLD648() throws Exception {
+        final String MODULE_TO_DELETE = "module1";
+        final String COMMIT_MESSAGE_DELETE_MODULE = FEATURE_ISSUE + ": delete module";
+        try (RepositorySet otherRepositorySet = git.createGitRepositorySet(TestProjects.WITH_MODULES.basedir)) {
+            // set up
+            ExecutorHelper.executeFeatureStart(this, otherRepositorySet, FEATURE_NAME);
+            removeModule(otherRepositorySet, MODULE_TO_DELETE);
+            git.commitAll(otherRepositorySet, COMMIT_MESSAGE_DELETE_MODULE);
+            git.createAndCommitTestfile(otherRepositorySet);
+            // test
+            executeMojo(otherRepositorySet.getWorkingDirectory(), GOAL);
+            // verify
+            git.assertClean(otherRepositorySet);
+            git.assertCurrentBranch(otherRepositorySet, MASTER_BRANCH);
+            git.assertMissingLocalBranches(otherRepositorySet, FEATURE_BRANCH);
+            git.assertMissingRemoteBranches(otherRepositorySet, FEATURE_BRANCH);
+            git.assertLocalAndRemoteBranchesAreIdentical(otherRepositorySet, MASTER_BRANCH, MASTER_BRANCH);
+            git.assertCommitsInLocalBranch(otherRepositorySet, MASTER_BRANCH, COMMIT_MESSAGE_DELETE_MODULE,
+                    COMMIT_MESSAGE_MERGE, COMMIT_MESSAGE_FOR_TESTFILE);
+            assertVersionsInPom(otherRepositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+
+            assertFalse("module1 directory shouldn't exist",
+                    new File(otherRepositorySet.getWorkingDirectory(), MODULE_TO_DELETE).exists());
+
+            Model workingPom = readPom(otherRepositorySet.getWorkingDirectory());
+            List<String> modules = workingPom.getModules();
+            assertEquals(1, modules.size());
+            assertEquals("module2", modules.get(0));
+
+            git.assertRemoteFileMissing(otherRepositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
+        }
+    }
+
+    @Test
+    public void testExecuteWithDeletedTwoModulesOnFeatureBranch_GBLD648() throws Exception {
+        final String MODULE1_TO_DELETE = "module1";
+        final String MODULE2_TO_DELETE = "module2";
+        final String COMMIT_MESSAGE_DELETE_MODULE1 = FEATURE_ISSUE + ": delete module " + MODULE1_TO_DELETE;
+        final String COMMIT_MESSAGE_DELETE_MODULE2 = FEATURE_ISSUE + ": delete module " + MODULE2_TO_DELETE;
+        try (RepositorySet otherRepositorySet = git.createGitRepositorySet(TestProjects.WITH_MODULES.basedir)) {
+            // set up
+            ExecutorHelper.executeFeatureStart(this, otherRepositorySet, FEATURE_NAME);
+            removeModule(otherRepositorySet, MODULE1_TO_DELETE);
+            git.commitAll(otherRepositorySet, COMMIT_MESSAGE_DELETE_MODULE1);
+            git.createAndCommitTestfile(otherRepositorySet);
+            removeModule(otherRepositorySet, MODULE2_TO_DELETE);
+            git.commitAll(otherRepositorySet, COMMIT_MESSAGE_DELETE_MODULE2);
+            // test
+            executeMojo(otherRepositorySet.getWorkingDirectory(), GOAL);
+            // verify
+            git.assertClean(otherRepositorySet);
+            git.assertCurrentBranch(otherRepositorySet, MASTER_BRANCH);
+            git.assertMissingLocalBranches(otherRepositorySet, FEATURE_BRANCH);
+            git.assertMissingRemoteBranches(otherRepositorySet, FEATURE_BRANCH);
+            git.assertLocalAndRemoteBranchesAreIdentical(otherRepositorySet, MASTER_BRANCH, MASTER_BRANCH);
+            git.assertCommitsInLocalBranch(otherRepositorySet, MASTER_BRANCH, COMMIT_MESSAGE_DELETE_MODULE2,
+                    COMMIT_MESSAGE_DELETE_MODULE1, COMMIT_MESSAGE_MERGE, COMMIT_MESSAGE_FOR_TESTFILE);
+            assertVersionsInPom(otherRepositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+
+            assertFalse("module1 directory shouldn't exist",
+                    new File(otherRepositorySet.getWorkingDirectory(), MODULE1_TO_DELETE).exists());
+            assertFalse("module2 directory shouldn't exist",
+                    new File(otherRepositorySet.getWorkingDirectory(), MODULE2_TO_DELETE).exists());
+
+            Model workingPom = readPom(otherRepositorySet.getWorkingDirectory());
+            List<String> modules = workingPom.getModules();
+            assertEquals(0, modules.size());
+
+            git.assertRemoteFileMissing(otherRepositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
+        }
+    }
+
+    private void removeModule(RepositorySet aRepositorySet, String module) throws IOException, GitAPIException {
+        File workingDir = aRepositorySet.getWorkingDirectory();
+        FileUtils.deleteDirectory(new File(workingDir, module));
+        aRepositorySet.getLocalRepoGit().rm().addFilepattern(module).call();
+        XML pom = XML.load(new File(workingDir, "pom.xml"));
+        pom.removeFirst("/project/modules/module[text()='" + module + "']");
+        pom.store();
     }
 
 }

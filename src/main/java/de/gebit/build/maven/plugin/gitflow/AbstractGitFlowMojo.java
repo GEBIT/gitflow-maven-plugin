@@ -1424,6 +1424,12 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         executeGitCommand("commit", "--no-edit");
     }
 
+    protected void gitRemoveFile(String file) throws MojoFailureException, CommandLineException {
+        getLog().info("Removing file '" + file + "'");
+
+        executeGitCommand("rm", file);
+    }
+
     /**
      * Execute <code>git merge</code> or <code>git merge --no-ff</code>.
      *
@@ -3017,6 +3023,24 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         return commitNumber;
     }
 
+    protected Integer gitGetRebasePatchNumber() throws MojoFailureException, CommandLineException {
+        Integer patchNumber = null;
+        File msgnumFile = gitGetRebaseFileIfExists("next");
+        if (msgnumFile != null) {
+            try {
+                String patchNumberStr = FileUtils.readFileToString(msgnumFile, "UTF-8").trim();
+                patchNumber = Integer.parseInt(patchNumberStr);
+            } catch (IOException e) {
+                getLog().warn("Failed to check for current commit number in interactive rebase. Error on reading file '"
+                        + msgnumFile.getPath() + "'.");
+            } catch (NumberFormatException exc) {
+                getLog().warn("Failed to check for current commit number in interactive rebase. "
+                        + "Error on parsing file content. " + exc.getMessage());
+            }
+        }
+        return patchNumber;
+    }
+
     /**
      * Abort the merge in process.
      *
@@ -4084,6 +4108,45 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         executeGitCommand("rebase", "--no-ff", "--onto", lastCommitToBeKept, lastCommitToBeRemoved, branch);
     }
 
+    protected Map<String, StageStates> gitUnmergedFiles() throws CommandLineException, MojoFailureException {
+        Map<String, StageStates> unmergedFiles = new HashMap<>();
+        CommandResult result = executeGitCommandExitCode("ls-files", "--unmerged");
+        if (result.exitCode == SUCCESS_EXIT_CODE) {
+            String tempCmdResult = result.getOut().trim();
+            if (!StringUtils.isBlank(tempCmdResult)) {
+                String[] lines = tempCmdResult.split("\r?\n");
+                for (int i = 0; i < lines.length; ++i) {
+                    lines[i] = lines[i].trim();
+                    String[] mainParts = StringUtils.split(lines[i], "\t");
+                    if (mainParts.length == 2) {
+                        String path = mainParts[1].trim();
+                        String[] parts = StringUtils.split(mainParts[0].trim(), " ");
+                        if (parts.length == 3) {
+                            int state;
+                            try {
+                                state = Integer.parseInt(parts[2].trim());
+                            } catch (NumberFormatException exc) {
+                                return null;
+                            }
+                            StageStates states = unmergedFiles.get(path);
+                            if (states == null) {
+                                states = new StageStates();
+                                unmergedFiles.put(path, states);
+                            }
+                            states.setStageState(state);
+                        } else {
+                            return null;
+                        }
+                    } else {
+                        return null;
+                    }
+
+                }
+            }
+        }
+        return unmergedFiles;
+    }
+
     /**
      * Check if passed branch name is name for a maintenance branch.
      *
@@ -4775,5 +4838,30 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
     protected enum BranchRefState {
         LOCAL_AHEAD, REMOTE_AHEAD, DIVERGE, SYNCHRONIZED, REMOTE_MISSING, BRANCH_MISSING;
+    }
+
+    public static class StageStates {
+        // stage 1: common ancestor
+        // stage 2: ours (on rebase: theirs)
+        // stage 3: theirs (on rebase: ours)
+        private boolean[] stages = new boolean[3];
+
+        public void setStageState(int stage) {
+            if (stage >= 1 && stage <= 3) {
+                stages[stage - 1] = true;
+            }
+        }
+
+        public boolean hasStage(int stage) {
+            if (stage >= 1 && stage <= 3) {
+                return stages[stage - 1];
+            }
+            return false;
+        }
+
+        @Override
+        public String toString() {
+            return Arrays.toString(stages);
+        }
     }
 }
