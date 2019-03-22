@@ -4539,6 +4539,51 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         return baseBranch;
     }
 
+    protected boolean fixAndContinueIfModuleDeletedConflictDetected(String rebasePausedLogMessage,
+            GitFlowFailureInfo rebasePausedFailureInfo) throws MojoFailureException, CommandLineException {
+        Map<String, StageStates> unmergedFiles = gitUnmergedFiles();
+        if (unmergedFiles != null && unmergedFiles.size() > 0) {
+            List<String> removedPomFiles = new ArrayList<>();
+            for (Entry<String, StageStates> unmergedEntry : unmergedFiles.entrySet()) {
+                String file = unmergedEntry.getKey();
+                StageStates stage = unmergedEntry.getValue();
+                // stage 1: common ancestor
+                // stage 2: ours (on rebase: theirs)
+                // stage 3: theirs (on rebase: ours)
+                // is deleted on feature branch (stage1=true, stage2=true, stage3=false)?
+                if (stage.hasStage(1) && stage.hasStage(2) && !stage.hasStage(3) && file.endsWith("pom.xml")) {
+                    removedPomFiles.add(file);
+                } else {
+                    return false;
+                }
+            }
+            if (!removedPomFiles.isEmpty()) {
+                getLog().info("Detected conflict with deleted modules on branch to be rebased. "
+                        + "Trying to resolve conflict automatically.");
+                for (String removedPomFile : removedPomFiles) {
+                    gitRemoveFile(removedPomFile);
+                }
+                Integer patchNumber = gitGetRebasePatchNumber();
+                getLog().info("Continue rebase after automatically resolved conflict with deleted modules...");
+                try {
+                    gitRebaseContinueOrSkip();
+                } catch (MojoFailureException exc) {
+                    Integer newPatchNumber = gitGetRebasePatchNumber();
+                    if (patchNumber != null && newPatchNumber != null && patchNumber != newPatchNumber) {
+                        if (fixAndContinueIfModuleDeletedConflictDetected(rebasePausedLogMessage,
+                                rebasePausedFailureInfo)) {
+                            return true;
+                        }
+                    }
+                    getMavenLog().info(rebasePausedLogMessage);
+                    throw new GitFlowFailureException(exc, rebasePausedFailureInfo);
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Override
     public LogWrapper getLog() {
         if (logWrapper == null) {

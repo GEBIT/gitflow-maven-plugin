@@ -9,6 +9,7 @@
 package de.gebit.build.maven.plugin.gitflow;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -18,10 +19,12 @@ import static org.mockito.Mockito.when;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 
 import org.apache.maven.execution.MavenExecutionResult;
+import org.apache.maven.model.Model;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
 import org.codehaus.plexus.util.FileUtils;
 import org.eclipse.jgit.api.CheckoutCommand.Stage;
@@ -41,6 +44,10 @@ import de.gebit.xmlxpath.XML;
 public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
 
     private static final String GOAL = "feature-rebase";
+
+    private static final String FEATURE_ISSUE = BasicConstants.EXISTING_FEATURE_ISSUE;
+
+    private static final String FEATURE_NAME = BasicConstants.EXISTING_FEATURE_NAME;
 
     private static final String FEATURE_BRANCH = BasicConstants.EXISTING_FEATURE_BRANCH;
 
@@ -2061,7 +2068,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         final String COMMIT_MESSAGE_MASTER_VERSION_UPDATE = "MASTER: update project version";
         final String COMMIT_MESSAGE_NEW_FEATURE_MODULE = "FEATURE: added module";
         git.switchToBranch(repositorySet, MASTER_BRANCH);
-        replaceProjectVersion(NEW_MASTER_VERSION);
+        replaceSingleProjectVersion(NEW_MASTER_VERSION);
         git.commitAll(repositorySet, COMMIT_MESSAGE_MASTER_VERSION_UPDATE);
         git.push(repositorySet);
         git.switchToBranch(repositorySet, FEATURE_BRANCH);
@@ -2099,7 +2106,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         final String COMMIT_MESSAGE_MASTER_VERSION_UPDATE = "MASTER: update project version";
         final String COMMIT_MESSAGE_NEW_FEATURE_MODULE = "FEATURE: added module";
         git.switchToBranch(repositorySet, MASTER_BRANCH);
-        replaceProjectVersion(NEW_MASTER_VERSION);
+        replaceSingleProjectVersion(NEW_MASTER_VERSION);
         git.commitAll(repositorySet, COMMIT_MESSAGE_MASTER_VERSION_UPDATE);
         git.push(repositorySet);
         git.switchToBranch(repositorySet, FEATURE_BRANCH);
@@ -2139,7 +2146,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         final String COMMIT_MESSAGE_MASTER_VERSION_UPDATE = "MASTER: update project version";
         final String COMMIT_MESSAGE_NEW_FEATURE_MODULE = "FEATURE: added module";
         git.switchToBranch(repositorySet, MASTER_BRANCH);
-        replaceProjectVersion(NEW_MASTER_VERSION);
+        replaceSingleProjectVersion(NEW_MASTER_VERSION);
         git.commitAll(repositorySet, COMMIT_MESSAGE_MASTER_VERSION_UPDATE);
         git.push(repositorySet);
         git.switchToBranch(repositorySet, FEATURE_BRANCH);
@@ -2184,7 +2191,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         final String USED_COMMIT_MESSAGE_MARGE = TestProjects.BASIC.jiraProject + "-NONE: Merge branch " + MASTER_BRANCH
                 + " into " + USED_FEATURE_BRANCH;
         git.switchToBranch(repositorySet, MASTER_BRANCH);
-        replaceProjectVersion(NEW_MASTER_VERSION);
+        replaceSingleProjectVersion(NEW_MASTER_VERSION);
         git.commitAll(repositorySet, COMMIT_MESSAGE_MASTER_VERSION_UPDATE);
         git.push(repositorySet);
         git.switchToBranch(repositorySet, USED_FEATURE_BRANCH);
@@ -2224,7 +2231,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
                 + ": updating versions for new modules on feature branch";
         final String USED_FEATURE_BRANCH = BasicConstants.FEATURE_WITHOUT_VERSION_BRANCH;
         git.switchToBranch(repositorySet, MASTER_BRANCH);
-        replaceProjectVersion(NEW_MASTER_VERSION);
+        replaceSingleProjectVersion(NEW_MASTER_VERSION);
         git.commitAll(repositorySet, COMMIT_MESSAGE_MASTER_VERSION_UPDATE);
         git.push(repositorySet);
         git.switchToBranch(repositorySet, USED_FEATURE_BRANCH);
@@ -2269,12 +2276,90 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         FileUtils.fileWrite(pom, pomContents);
     }
 
-    private void replaceProjectVersion(String newVersion) throws IOException {
+    private void replaceSingleProjectVersion(String newVersion) throws IOException {
         File pom = new File(repositorySet.getWorkingDirectory(), "pom.xml");
         XML pomXML = XML.load(pom);
         pomXML.setValue("/project/version", newVersion);
         pomXML.setValue("/project/properties/version.build", newVersion);
         pomXML.store();
+    }
+
+    @Test
+    public void testExecuteWithDeletedModuleOnFeatureBranch_GBLD648() throws Exception {
+        final String MODULE_TO_DELETE = "module1";
+        final String COMMIT_MESSAGE_DELETE_MODULE = FEATURE_ISSUE + ": delete module";
+        try (RepositorySet otherRepositorySet = git.createGitRepositorySet(TestProjects.WITH_MODULES.basedir)) {
+            // set up
+            ExecutorHelper.executeFeatureStart(this, otherRepositorySet, FEATURE_NAME);
+            git.switchToBranch(otherRepositorySet, MASTER_BRANCH);
+            git.createAndCommitTestfile(otherRepositorySet, "master_testfile.txt", COMMIT_MESSAGE_MASTER_TESTFILE);
+            git.push(otherRepositorySet);
+            git.switchToBranch(otherRepositorySet, FEATURE_BRANCH);
+            removeModule(otherRepositorySet, MODULE_TO_DELETE);
+            git.commitAll(otherRepositorySet, COMMIT_MESSAGE_DELETE_MODULE);
+            git.createAndCommitTestfile(otherRepositorySet, "feature_testfile.txt", COMMIT_MESSAGE_FEATURE_TESTFILE);
+            // test
+            executeMojo(otherRepositorySet.getWorkingDirectory(), GOAL);
+            // verify
+            git.assertClean(otherRepositorySet);
+            git.assertCurrentBranch(otherRepositorySet, FEATURE_BRANCH);
+
+            git.assertLocalAndRemoteBranchesAreIdentical(otherRepositorySet, MASTER_BRANCH, MASTER_BRANCH);
+            git.assertCommitsInLocalBranch(otherRepositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE);
+            git.assertLocalAndRemoteBranchesAreIdentical(otherRepositorySet, FEATURE_BRANCH, FEATURE_BRANCH);
+            git.assertCommitsInLocalBranch(otherRepositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_DELETE_MODULE,
+                    COMMIT_MESSAGE_FEATURE_TESTFILE, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_MASTER_TESTFILE);
+            assertVersionsInPom(otherRepositorySet.getWorkingDirectory(), FEATURE_VERSION);
+
+            assertFalse("module1 directory shouldn't exist",
+                    new File(otherRepositorySet.getWorkingDirectory(), MODULE_TO_DELETE).exists());
+
+            Model workingPom = readPom(otherRepositorySet.getWorkingDirectory());
+            List<String> modules = workingPom.getModules();
+            assertEquals(1, modules.size());
+            assertEquals("module2", modules.get(0));
+        }
+    }
+
+    @Test
+    public void testExecuteWithDeletedModuleOnFeatureBranchAndNewVersionOnMaster_GBLD648() throws Exception {
+        final String NEW_MASTER_VERSION = "7.6.5-SNAPSHOT";
+        final String NEW_FEATURE_VERSION = "7.6.5-" + FEATURE_ISSUE + "-SNAPSHOT";
+        final String COMMIT_MESSAGE_MASTER_VERSION_UPDATE = "MASTER: update project version";
+        final String MODULE_TO_DELETE = "module1";
+        final String COMMIT_MESSAGE_DELETE_MODULE = FEATURE_ISSUE + ": delete module";
+        try (RepositorySet otherRepositorySet = git.createGitRepositorySet(TestProjects.WITH_MODULES.basedir)) {
+            // set up
+            ExecutorHelper.executeFeatureStart(this, otherRepositorySet, FEATURE_NAME);
+            git.switchToBranch(otherRepositorySet, MASTER_BRANCH);
+            setProjectVersion(otherRepositorySet, NEW_MASTER_VERSION);
+            git.commitAll(otherRepositorySet, COMMIT_MESSAGE_MASTER_VERSION_UPDATE);
+            git.push(otherRepositorySet);
+            git.switchToBranch(otherRepositorySet, FEATURE_BRANCH);
+            removeModule(otherRepositorySet, MODULE_TO_DELETE);
+            git.commitAll(otherRepositorySet, COMMIT_MESSAGE_DELETE_MODULE);
+            git.createAndCommitTestfile(otherRepositorySet, "feature_testfile.txt", COMMIT_MESSAGE_FEATURE_TESTFILE);
+            // test
+            executeMojo(otherRepositorySet.getWorkingDirectory(), GOAL);
+            // verify
+            git.assertClean(otherRepositorySet);
+            git.assertCurrentBranch(otherRepositorySet, FEATURE_BRANCH);
+
+            git.assertLocalAndRemoteBranchesAreIdentical(otherRepositorySet, MASTER_BRANCH, MASTER_BRANCH);
+            git.assertCommitsInLocalBranch(otherRepositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_VERSION_UPDATE);
+            git.assertLocalAndRemoteBranchesAreIdentical(otherRepositorySet, FEATURE_BRANCH, FEATURE_BRANCH);
+            git.assertCommitsInLocalBranch(otherRepositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_DELETE_MODULE,
+                    COMMIT_MESSAGE_FEATURE_TESTFILE, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_MASTER_VERSION_UPDATE);
+            assertVersionsInPom(otherRepositorySet.getWorkingDirectory(), NEW_FEATURE_VERSION);
+
+            assertFalse("module1 directory shouldn't exist",
+                    new File(otherRepositorySet.getWorkingDirectory(), MODULE_TO_DELETE).exists());
+
+            Model workingPom = readPom(otherRepositorySet.getWorkingDirectory());
+            List<String> modules = workingPom.getModules();
+            assertEquals(1, modules.size());
+            assertEquals("module2", modules.get(0));
+        }
     }
 
 }

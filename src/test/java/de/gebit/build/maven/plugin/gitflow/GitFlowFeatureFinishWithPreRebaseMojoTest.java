@@ -8,17 +8,23 @@
 //
 package de.gebit.build.maven.plugin.gitflow;
 
+import static de.gebit.build.maven.plugin.gitflow.jgit.GitExecution.COMMIT_MESSAGE_FOR_TESTFILE;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
+import java.io.File;
 import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Properties;
 
 import org.apache.maven.execution.MavenExecutionResult;
+import org.apache.maven.model.Model;
 import org.eclipse.jgit.api.CheckoutCommand.Stage;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.junit.After;
@@ -38,6 +44,8 @@ public class GitFlowFeatureFinishWithPreRebaseMojoTest extends AbstractGitFlowMo
     private static final String TESTFILE_NAME = "testfile.txt";
 
     private static final String FEATURE_ISSUE = BasicConstants.EXISTING_FEATURE_ISSUE;
+
+    private static final String FEATURE_NAME = BasicConstants.EXISTING_FEATURE_NAME;
 
     private static final String FEATURE_BRANCH = BasicConstants.EXISTING_FEATURE_BRANCH;
 
@@ -625,6 +633,47 @@ public class GitFlowFeatureFinishWithPreRebaseMojoTest extends AbstractGitFlowMo
 
         git.assertBranchLocalConfigValueMissing(repositorySet, USED_FEATURE_BRANCH,
                 "rebasedWithoutVersionChangeCommit");
+    }
+
+    @Test
+    public void testExecuteWithDeletedModuleOnFeatureBranchAndNewVersionOnMaster_GBLD648() throws Exception {
+        final String MODULE_TO_DELETE = "module1";
+        final String COMMIT_MESSAGE_DELETE_MODULE = FEATURE_ISSUE + ": delete module";
+        final String NEW_MASTER_VERSION = "7.6.5-SNAPSHOT";
+        final String COMMIT_MESSAGE_MASTER_VERSION_UPDATE = "MASTER: update project version";
+        try (RepositorySet otherRepositorySet = git.createGitRepositorySet(TestProjects.WITH_MODULES.basedir)) {
+            // set up
+            ExecutorHelper.executeFeatureStart(this, otherRepositorySet, FEATURE_NAME);
+            removeModule(otherRepositorySet, MODULE_TO_DELETE);
+            git.commitAll(otherRepositorySet, COMMIT_MESSAGE_DELETE_MODULE);
+            git.createAndCommitTestfile(otherRepositorySet);
+            git.switchToBranch(otherRepositorySet, MASTER_BRANCH);
+            setProjectVersion(otherRepositorySet, NEW_MASTER_VERSION);
+            git.commitAll(otherRepositorySet, COMMIT_MESSAGE_MASTER_VERSION_UPDATE);
+            git.push(otherRepositorySet);
+            git.switchToBranch(otherRepositorySet, FEATURE_BRANCH);
+            // test
+            executeMojo(otherRepositorySet.getWorkingDirectory(), GOAL, userProperties);
+            // verify
+            git.assertClean(otherRepositorySet);
+            git.assertCurrentBranch(otherRepositorySet, MASTER_BRANCH);
+            git.assertMissingLocalBranches(otherRepositorySet, FEATURE_BRANCH);
+            git.assertMissingRemoteBranches(otherRepositorySet, FEATURE_BRANCH);
+            git.assertLocalAndRemoteBranchesAreIdentical(otherRepositorySet, MASTER_BRANCH, MASTER_BRANCH);
+            git.assertCommitsInLocalBranch(otherRepositorySet, MASTER_BRANCH, COMMIT_MESSAGE_DELETE_MODULE,
+                    COMMIT_MESSAGE_MERGE, COMMIT_MESSAGE_MASTER_VERSION_UPDATE, COMMIT_MESSAGE_FOR_TESTFILE);
+            assertVersionsInPom(otherRepositorySet.getWorkingDirectory(), NEW_MASTER_VERSION);
+
+            assertFalse("module1 directory shouldn't exist",
+                    new File(otherRepositorySet.getWorkingDirectory(), MODULE_TO_DELETE).exists());
+
+            Model workingPom = readPom(otherRepositorySet.getWorkingDirectory());
+            List<String> modules = workingPom.getModules();
+            assertEquals(1, modules.size());
+            assertEquals("module2", modules.get(0));
+
+            git.assertRemoteFileMissing(otherRepositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
+        }
     }
 
 }

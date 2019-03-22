@@ -38,7 +38,6 @@ import org.junit.Test;
 import de.gebit.build.maven.plugin.gitflow.TestProjects.BasicConstants;
 import de.gebit.build.maven.plugin.gitflow.jgit.GitExecution;
 import de.gebit.build.maven.plugin.gitflow.jgit.RepositorySet;
-import de.gebit.xmlxpath.XML;
 
 /**
  * @author Volodymyr Medvid
@@ -2566,7 +2565,7 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
             git.assertLocalAndRemoteBranchesAreIdentical(otherRepositorySet, MASTER_BRANCH, MASTER_BRANCH);
             git.assertCommitsInLocalBranch(otherRepositorySet, MASTER_BRANCH, COMMIT_MESSAGE_DELETE_MODULE,
                     COMMIT_MESSAGE_MERGE, COMMIT_MESSAGE_FOR_TESTFILE);
-            assertVersionsInPom(otherRepositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+            assertVersionsInPom(otherRepositorySet.getWorkingDirectory(), TestProjects.WITH_MODULES.version);
 
             assertFalse("module1 directory shouldn't exist",
                     new File(otherRepositorySet.getWorkingDirectory(), MODULE_TO_DELETE).exists());
@@ -2604,7 +2603,7 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
             git.assertLocalAndRemoteBranchesAreIdentical(otherRepositorySet, MASTER_BRANCH, MASTER_BRANCH);
             git.assertCommitsInLocalBranch(otherRepositorySet, MASTER_BRANCH, COMMIT_MESSAGE_DELETE_MODULE2,
                     COMMIT_MESSAGE_DELETE_MODULE1, COMMIT_MESSAGE_MERGE, COMMIT_MESSAGE_FOR_TESTFILE);
-            assertVersionsInPom(otherRepositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+            assertVersionsInPom(otherRepositorySet.getWorkingDirectory(), TestProjects.WITH_MODULES.version);
 
             assertFalse("module1 directory shouldn't exist",
                     new File(otherRepositorySet.getWorkingDirectory(), MODULE1_TO_DELETE).exists());
@@ -2617,15 +2616,6 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
 
             git.assertRemoteFileMissing(otherRepositorySet, CONFIG_BRANCH, FEATURE_BRANCH);
         }
-    }
-
-    private void removeModule(RepositorySet aRepositorySet, String module) throws IOException, GitAPIException {
-        File workingDir = aRepositorySet.getWorkingDirectory();
-        FileUtils.deleteDirectory(new File(workingDir, module));
-        aRepositorySet.getLocalRepoGit().rm().addFilepattern(module).call();
-        XML pom = XML.load(new File(workingDir, "pom.xml"));
-        pom.removeFirst("/project/modules/module[text()='" + module + "']");
-        pom.store();
     }
 
 }

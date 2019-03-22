@@ -58,6 +58,7 @@ import org.codehaus.plexus.components.interactivity.Prompter;
 import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.repository.WorkspaceReader;
 import org.eclipse.aether.repository.WorkspaceRepository;
+import org.eclipse.jgit.api.errors.GitAPIException;
 import org.junit.After;
 import org.junit.Before;
 import org.mockito.Mock;
@@ -68,6 +69,7 @@ import com.google.inject.Module;
 
 import de.gebit.build.maven.plugin.gitflow.jgit.GitExecution;
 import de.gebit.build.maven.plugin.gitflow.jgit.RepositorySet;
+import de.gebit.xmlxpath.XML;
 
 /**
  * The abstract test case for all GitFlowMojo test cases.
@@ -1099,5 +1101,31 @@ public abstract class AbstractGitFlowMojoTestCase {
                 "'mvn flow:" + goal + "' to continue " + process + " process after problem solving", "or 'mvn flow:"
                         + goal + " -Dflow.installProject=false' to continue by skipping the project installation" };
         assertGitFlowFailureException(mavenExecutionResult, expectedProblem, expectedSolutionProposal, expectedSteps);
+    }
+
+    protected void removeModule(RepositorySet aRepositorySet, String module) throws IOException, GitAPIException {
+        File workingDir = aRepositorySet.getWorkingDirectory();
+        FileUtils.deleteDirectory(new File(workingDir, module));
+        aRepositorySet.getLocalRepoGit().rm().addFilepattern(module).call();
+        XML pom = XML.load(new File(workingDir, "pom.xml"));
+        pom.removeFirst("/project/modules/module[text()='" + module + "']");
+        pom.store();
+    }
+
+    protected void setProjectVersion(RepositorySet aRepositorySet, String newVersion) throws IOException {
+        File workingDir = aRepositorySet.getWorkingDirectory();
+        File pomFile = new File(workingDir, "pom.xml");
+        XML pom = XML.load(pomFile);
+        pom.setValue("/project/version", newVersion);
+        pom.setValue("/project/properties/version.build", newVersion);
+        pom.store();
+        String[] modules = pom.getAllValues("/project/modules/module");
+        for (String module : modules) {
+            File modulePomFile = new File(new File(workingDir, module), "pom.xml");
+            XML modulePom = XML.load(modulePomFile);
+            modulePom.setValue("/project/version", newVersion);
+            modulePom.setValue("/project/parent/version", newVersion);
+            modulePom.store();
+        }
     }
 }
