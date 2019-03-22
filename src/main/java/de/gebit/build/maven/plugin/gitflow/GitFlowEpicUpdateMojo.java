@@ -440,8 +440,8 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
             try {
                 gitRebaseOnto(tempEpicBranch, versionChangeCommitOnBranch, epicBranch, hasMergeCommits);
             } catch (MojoFailureException ex) {
-                getMavenLog().info("Epic update process paused to resolve rebase conflicts");
-                throw new GitFlowFailureException(ex,
+                String rebasePausedLogMessage = "Epic update process paused to resolve rebase conflicts";
+                GitFlowFailureInfo rebasePausedFailureInfo = new GitFlowFailureInfo(
                         "Automatic rebase failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage()),
                         "Fix the rebase conflicts and mark them as resolved. After that, run "
                                 + "'mvn flow:epic-update' again.\n"
@@ -449,6 +449,11 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
                         "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
                                 + "conflicts as resolved",
                         "'mvn flow:epic-update' to continue epic update process");
+                if (!fixAndContinueIfModuleDeletedConflictDetected(rebasePausedLogMessage,
+                        rebasePausedFailureInfo)) {
+                    getMavenLog().info(rebasePausedLogMessage);
+                    throw new GitFlowFailureException(ex, rebasePausedFailureInfo);
+                }
             }
         } else {
             getLog().info(
@@ -456,8 +461,8 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
             try {
                 gitRebase(baseBranch);
             } catch (MojoFailureException ex) {
-                getMavenLog().info("Epic update process paused to resolve rebase conflicts");
-                throw new GitFlowFailureException(ex,
+                String rebasePausedLogMessage = "Epic update process paused to resolve rebase conflicts";
+                GitFlowFailureInfo rebasePausedFailureInfo = new GitFlowFailureInfo(
                         "Automatic rebase failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage()),
                         "Fix the rebase conflicts and mark them as resolved. After that, run "
                                 + "'mvn flow:epic-update' again.\n"
@@ -465,6 +470,11 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
                         "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
                                 + "conflicts as resolved",
                         "'mvn flow:epic-update' to continue epic update process");
+                if (!fixAndContinueIfModuleDeletedConflictDetected(rebasePausedLogMessage,
+                        rebasePausedFailureInfo)) {
+                    getMavenLog().info(rebasePausedLogMessage);
+                    throw new GitFlowFailureException(ex, rebasePausedFailureInfo);
+                }
             }
         }
     }

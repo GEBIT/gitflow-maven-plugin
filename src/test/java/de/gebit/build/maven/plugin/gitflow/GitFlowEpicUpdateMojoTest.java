@@ -9,6 +9,7 @@
 package de.gebit.build.maven.plugin.gitflow;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
@@ -17,10 +18,12 @@ import static org.mockito.Mockito.when;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 
 import org.apache.maven.execution.MavenExecutionResult;
+import org.apache.maven.model.Model;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
 import org.eclipse.jgit.api.CheckoutCommand.Stage;
 import org.eclipse.jgit.api.errors.GitAPIException;
@@ -39,6 +42,10 @@ import de.gebit.xmlxpath.XML;
 public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
 
     private static final String GOAL = "epic-update";
+
+    private static final String EPIC_ISSUE = BasicConstants.EXISTING_EPIC_ISSUE;
+
+    private static final String EPIC_NAME = BasicConstants.EXISTING_EPIC_NAME;
 
     private static final String EPIC_BRANCH = BasicConstants.EXISTING_EPIC_BRANCH;
 
@@ -2459,6 +2466,84 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
                 "Epic branch can't be rebased. Reason: epic branch contains merge commits",
                 "Run epic update in interactive mode to update epic branch using merge",
                 "'mvn flow:epic-update' to run in interactive mode");
+    }
+
+    @Test
+    public void testExecuteWithDeletedModuleOnEpicBranch_GBLD648() throws Exception {
+        final String MODULE_TO_DELETE = "module1";
+        final String COMMIT_MESSAGE_DELETE_MODULE = EPIC_ISSUE + ": delete module";
+        try (RepositorySet otherRepositorySet = git.createGitRepositorySet(TestProjects.WITH_MODULES.basedir)) {
+            // set up
+            ExecutorHelper.executeEpicStart(this, otherRepositorySet, EPIC_NAME);
+            git.switchToBranch(otherRepositorySet, MASTER_BRANCH);
+            git.createAndCommitTestfile(otherRepositorySet, "master_testfile.txt", COMMIT_MESSAGE_MASTER_TESTFILE);
+            git.push(otherRepositorySet);
+            git.switchToBranch(otherRepositorySet, EPIC_BRANCH);
+            removeModule(otherRepositorySet, MODULE_TO_DELETE);
+            git.commitAll(otherRepositorySet, COMMIT_MESSAGE_DELETE_MODULE);
+            git.createAndCommitTestfile(otherRepositorySet, "epic_testfile.txt", COMMIT_MESSAGE_EPIC_TESTFILE);
+            // test
+            executeMojo(otherRepositorySet.getWorkingDirectory(), GOAL);
+            // verify
+            git.assertClean(otherRepositorySet);
+            git.assertCurrentBranch(otherRepositorySet, EPIC_BRANCH);
+
+            git.assertLocalAndRemoteBranchesAreIdentical(otherRepositorySet, MASTER_BRANCH, MASTER_BRANCH);
+            git.assertCommitsInLocalBranch(otherRepositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE);
+            git.assertLocalAndRemoteBranchesAreIdentical(otherRepositorySet, EPIC_BRANCH, EPIC_BRANCH);
+            git.assertCommitsInLocalBranch(otherRepositorySet, EPIC_BRANCH, COMMIT_MESSAGE_DELETE_MODULE,
+                    COMMIT_MESSAGE_EPIC_TESTFILE, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_MASTER_TESTFILE);
+            assertVersionsInPom(otherRepositorySet.getWorkingDirectory(), EPIC_VERSION);
+
+            assertFalse("module1 directory shouldn't exist",
+                    new File(otherRepositorySet.getWorkingDirectory(), MODULE_TO_DELETE).exists());
+
+            Model workingPom = readPom(otherRepositorySet.getWorkingDirectory());
+            List<String> modules = workingPom.getModules();
+            assertEquals(1, modules.size());
+            assertEquals("module2", modules.get(0));
+        }
+    }
+
+    @Test
+    public void testExecuteWithDeletedModuleOnEpicBranchAndNewVersionOnMaster_GBLD648() throws Exception {
+        final String NEW_MASTER_VERSION = "7.6.5-SNAPSHOT";
+        final String NEW_EPIC_VERSION = "7.6.5-" + EPIC_ISSUE + "-SNAPSHOT";
+        final String COMMIT_MESSAGE_MASTER_VERSION_UPDATE = "MASTER: update project version";
+        final String MODULE_TO_DELETE = "module1";
+        final String COMMIT_MESSAGE_DELETE_MODULE = EPIC_ISSUE + ": delete module";
+        try (RepositorySet otherRepositorySet = git.createGitRepositorySet(TestProjects.WITH_MODULES.basedir)) {
+            // set up
+            ExecutorHelper.executeEpicStart(this, otherRepositorySet, EPIC_NAME);
+            git.switchToBranch(otherRepositorySet, MASTER_BRANCH);
+            setProjectVersion(otherRepositorySet, NEW_MASTER_VERSION);
+            git.commitAll(otherRepositorySet, COMMIT_MESSAGE_MASTER_VERSION_UPDATE);
+            git.push(otherRepositorySet);
+            git.switchToBranch(otherRepositorySet, EPIC_BRANCH);
+            removeModule(otherRepositorySet, MODULE_TO_DELETE);
+            git.commitAll(otherRepositorySet, COMMIT_MESSAGE_DELETE_MODULE);
+            git.createAndCommitTestfile(otherRepositorySet, "epic_testfile.txt", COMMIT_MESSAGE_EPIC_TESTFILE);
+            // test
+            executeMojo(otherRepositorySet.getWorkingDirectory(), GOAL);
+            // verify
+            git.assertClean(otherRepositorySet);
+            git.assertCurrentBranch(otherRepositorySet, EPIC_BRANCH);
+
+            git.assertLocalAndRemoteBranchesAreIdentical(otherRepositorySet, MASTER_BRANCH, MASTER_BRANCH);
+            git.assertCommitsInLocalBranch(otherRepositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_VERSION_UPDATE);
+            git.assertLocalAndRemoteBranchesAreIdentical(otherRepositorySet, EPIC_BRANCH, EPIC_BRANCH);
+            git.assertCommitsInLocalBranch(otherRepositorySet, EPIC_BRANCH, COMMIT_MESSAGE_DELETE_MODULE,
+                    COMMIT_MESSAGE_EPIC_TESTFILE, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_MASTER_VERSION_UPDATE);
+            assertVersionsInPom(otherRepositorySet.getWorkingDirectory(), NEW_EPIC_VERSION);
+
+            assertFalse("module1 directory shouldn't exist",
+                    new File(otherRepositorySet.getWorkingDirectory(), MODULE_TO_DELETE).exists());
+
+            Model workingPom = readPom(otherRepositorySet.getWorkingDirectory());
+            List<String> modules = workingPom.getModules();
+            assertEquals(1, modules.size());
+            assertEquals("module2", modules.get(0));
+        }
     }
 
 }
