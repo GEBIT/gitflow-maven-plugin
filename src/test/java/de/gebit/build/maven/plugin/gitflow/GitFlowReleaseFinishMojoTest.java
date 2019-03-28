@@ -1983,7 +1983,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         verifyZeroInteractions(promptControllerMock);
         assertGitFlowFailureException(result,
                 "There is a conflict of merging branch '" + RELEASE_BRANCH + "' into branch '" + OTHER_BRANCH
-                        + "'. After such a conflict can't be automatically proceeded.",
+                        + "'. After such a conflict release can't be automatically proceeded.",
                 "Please consult a gitflow expert on how to fix this!");
     }
 
@@ -2008,7 +2008,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         verifyZeroInteractions(promptControllerMock);
         assertGitFlowFailureException(result,
                 "There is a conflict of merging branch 'origin/" + MASTER_BRANCH + "' into branch '" + OTHER_BRANCH
-                        + "'. After such a conflict can't be automatically proceeded.",
+                        + "'. After such a conflict release can't be automatically proceeded.",
                 "Please consult a gitflow expert on how to fix this!");
     }
 
@@ -2034,7 +2034,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         verifyZeroInteractions(promptControllerMock);
         assertGitFlowFailureException(result,
                 "There is a conflict of merging branch '" + MASTER_BRANCH + "' into branch '" + OTHER_BRANCH
-                        + "'. After such a conflict can't be automatically proceeded.",
+                        + "'. After such a conflict release can't be automatically proceeded.",
                 "Please consult a gitflow expert on how to fix this!");
     }
 

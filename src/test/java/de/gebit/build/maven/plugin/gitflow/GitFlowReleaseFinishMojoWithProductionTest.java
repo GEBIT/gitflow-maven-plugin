@@ -1655,7 +1655,7 @@ public class GitFlowReleaseFinishMojoWithProductionTest extends AbstractGitFlowM
         verifyZeroInteractions(promptControllerMock);
         assertGitFlowFailureException(result,
                 "There is a conflict of merging branch '" + PRODUCTION_BRANCH + "' into branch '" + OTHER_BRANCH
-                        + "'. After such a conflict can't be automatically proceeded.",
+                        + "'. After such a conflict release can't be automatically proceeded.",
                 "Please consult a gitflow expert on how to fix this!");
     }
 
