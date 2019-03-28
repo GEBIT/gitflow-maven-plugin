@@ -23,10 +23,11 @@ import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
- * Finish the release process previously started with <code>flow:release-start</code>.
+ * Finish the release process previously started with
+ * <code>flow:release-start</code>.
  * <p>
- * Tags, deploys, merges to development branch, sets the new development version and finally pushes to remote and
- * deletes release branch.
+ * Tags, deploys, merges to development branch, sets the new development version
+ * and finally pushes to remote and deletes release branch.
  *
  * @see GitFlowReleaseStartMojo
  * @see GitFlowReleaseAbortMojo
@@ -70,8 +71,8 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
     private boolean releaseMergeNoFF = true;
 
     /**
-     * Whether to use <code>--no-ff</code> option when merging the release
-     * branch to production.
+     * Whether to use <code>--no-ff</code> option when merging the release branch to
+     * production.
      *
      * @since 1.5.0
      */
@@ -79,9 +80,9 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
     private boolean releaseMergeProductionNoFF = true;
 
     /**
-     * Goals to perform on release, before tagging and pushing. A useful
-     * combination is <code>deploy site</code>. You may specifify multiple
-     * entries, they are perfored
+     * Goals to perform on release, before tagging and pushing. A useful combination
+     * is <code>deploy site</code>. You may specifify multiple entries, they are
+     * perfored
      *
      * @since 1.3.0
      * @since 1.3.9 you can specify multiple entries
@@ -90,9 +91,9 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
     private String[] releaseGoals;
 
     /**
-     * When {@link #skipDeployProject} is activated the invocation of 'deploy'
-     * in {@link #releaseGoals} is suppressed. You can specify a replacement
-     * goal that is substituted here (the default is empty).
+     * When {@link #skipDeployProject} is activated the invocation of 'deploy' in
+     * {@link #releaseGoals} is suppressed. You can specify a replacement goal that
+     * is substituted here (the default is empty).
      *
      * @since 1.5.10
      */
@@ -100,10 +101,10 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
     private String deployReplacement;
 
     /**
-     * Version to set for the next development iteration. If not specified you
-     * will be asked for the version (in interactive mode), in batch mode the
-     * default will be used (current version with stripped SNAPSHOT incremented
-     * and SNAPSHOT added).
+     * Version to set for the next development iteration. If not specified you will
+     * be asked for the version (in interactive mode), in batch mode the default
+     * will be used (current version with stripped SNAPSHOT incremented and SNAPSHOT
+     * added).
      *
      * @since 1.3.10
      */
@@ -111,8 +112,8 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
     private String developmentVersion;
 
     /**
-     * A release branch can be pushed to the remote to prevent concurrent
-     * releases. The default is <code>false</code>.
+     * A release branch can be pushed to the remote to prevent concurrent releases.
+     * The default is <code>false</code>.
      *
      * @since 1.5.0
      */
@@ -120,15 +121,15 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
     private boolean pushReleaseBranch;
 
     /**
-     * When you are releasing using a CI infrastructure the actual deployment
-     * might be suppressed until the task is finished (to make sure every module
-     * is deployable). But at this point your checkout is already in the state
-     * for the next development version. Enable this option to checkout the
-     * release commit after finishing, which will result in a detached HEAD (you
-     * are on no branch then).
+     * When you are releasing using a CI infrastructure the actual deployment might
+     * be suppressed until the task is finished (to make sure every module is
+     * deployable). But at this point your checkout is already in the state for the
+     * next development version. Enable this option to checkout the release commit
+     * after finishing, which will result in a detached HEAD (you are on no branch
+     * then).
      *
-     * Note that this option implies installProject=false, as otherwise the
-     * build artifacts could not be preserved.
+     * Note that this option implies installProject=false, as otherwise the build
+     * artifacts could not be preserved.
      *
      * @since 1.3.11
      */
@@ -136,7 +137,8 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
     private boolean detachReleaseCommit;
 
     /**
-     * Explicitly allow to have the next development version same as release version.
+     * Explicitly allow to have the next development version same as release
+     * version.
      *
      * @since 2.1.5
      */
@@ -224,7 +226,8 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
         getMavenLog().info("Starting release finish process");
         checkCentralBranchConfig();
         String currentBranch = gitCurrentBranch();
-        if (!continueReleaseFinishIfMergeInProcess(currentBranch)) {
+        if (!continueReleaseFinishIfInstallProjectPaused(currentBranch)
+                && !continueReleaseFinishIfMergeInProcess(currentBranch)) {
             // check uncommitted changes
             checkUncommittedChanges();
 

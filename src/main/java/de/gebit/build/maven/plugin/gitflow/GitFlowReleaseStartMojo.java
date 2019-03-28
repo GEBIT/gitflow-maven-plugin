@@ -74,6 +74,15 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
     @Parameter(property = "flow.pushReleaseBranch", defaultValue = "false")
     private boolean pushReleaseBranch;
 
+    /**
+     * Whether to clean-up possibly failed or not finished release before starting
+     * new release.
+     *
+     * @since 2.1.8
+     */
+    @Parameter(property = "flow.cleanupBeforeStart", defaultValue = "false")
+    private boolean cleanupBeforeStart;
+
     @Override
     protected boolean isSkipTestProject() {
         throw new IllegalStateException("release-start does not test the project.");
@@ -157,6 +166,7 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
         initGitFlowConfig();
 
         checkCentralBranchConfig();
+        abortNotFinishedReleaseIfNeeded(cleanupBeforeStart);
         checkUncommittedChanges();
 
         releaseStart();

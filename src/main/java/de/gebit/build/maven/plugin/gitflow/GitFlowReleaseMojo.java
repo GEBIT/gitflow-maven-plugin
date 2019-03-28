@@ -22,7 +22,8 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
- * Start a new release of your project and finish it in a single step. See these goals for documentation.
+ * Start a new release of your project and finish it in a single step. See these
+ * goals for documentation.
  * <p>
  * This process cannot be reverted or aborted!
  *
@@ -65,8 +66,8 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
     private boolean releaseMergeNoFF = true;
 
     /**
-     * Whether to use <code>--no-ff</code> option when merging the release
-     * branch to production.
+     * Whether to use <code>--no-ff</code> option when merging the release branch to
+     * production.
      *
      * @since 1.5.0
      */
@@ -74,9 +75,9 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
     private boolean releaseMergeProductionNoFF = true;
 
     /**
-     * Goals to perform on release, before tagging and pushing. A useful
-     * combination is <code>deploy site</code>. You may specifify multiple
-     * entries, they are perfored
+     * Goals to perform on release, before tagging and pushing. A useful combination
+     * is <code>deploy site</code>. You may specifify multiple entries, they are
+     * perfored
      *
      * @since 1.3.0
      * @since 1.3.9 you can specify multiple entries
@@ -85,9 +86,9 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
     private String[] releaseGoals;
 
     /**
-     * When {@link #skipDeployProject} is activated the invocation of 'deploy'
-     * in {@link #releaseGoals} is suppressed. You can specify a replacement
-     * goal that is substituted here (the default is empty).
+     * When {@link #skipDeployProject} is activated the invocation of 'deploy' in
+     * {@link #releaseGoals} is suppressed. You can specify a replacement goal that
+     * is substituted here (the default is empty).
      *
      * @since 1.5.10
      */
@@ -95,10 +96,10 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
     private String deployReplacement;
 
     /**
-     * Version to set for the next development iteration. If not specified you
-     * will be asked for the version (in interactive mode), in batch mode the
-     * default will be used (current version with stripped SNAPSHOT incremented
-     * and SNAPSHOT added).
+     * Version to set for the next development iteration. If not specified you will
+     * be asked for the version (in interactive mode), in batch mode the default
+     * will be used (current version with stripped SNAPSHOT incremented and SNAPSHOT
+     * added).
      *
      * @since 1.3.10
      */
@@ -106,8 +107,8 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
     private String developmentVersion;
 
     /**
-     * Version to set for the release. If not specified you will be asked for
-     * the version (in interactive mode), in batch mode the default will be used
+     * Version to set for the release. If not specified you will be asked for the
+     * version (in interactive mode), in batch mode the default will be used
      * (current version with stripped SNAPSHOT).
      *
      * @since 1.3.10
@@ -116,15 +117,15 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
     private String releaseVersion;
 
     /**
-     * When you are releasing using a CI infrastructure the actual deployment
-     * might be suppressed until the task is finished (to make sure every module
-     * is deployable). But at this point your checkout is already in the state
-     * for the next development version. Enable this option to checkout the
-     * release commit after finishing, which will result in a detached HEAD (you
-     * are on no branch then).
+     * When you are releasing using a CI infrastructure the actual deployment might
+     * be suppressed until the task is finished (to make sure every module is
+     * deployable). But at this point your checkout is already in the state for the
+     * next development version. Enable this option to checkout the release commit
+     * after finishing, which will result in a detached HEAD (you are on no branch
+     * then).
      *
-     * Note that this option implies installProject=false, as otherwise the
-     * build artifacts could not be preserved.
+     * Note that this option implies installProject=false, as otherwise the build
+     * artifacts could not be preserved.
      *
      * @since 1.3.11
      */
@@ -140,14 +141,13 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
     private boolean keepBranch = false;
 
     /**
-     * Whether to use the same name of the release branch for every release.
-     * Default is <code>false</code>, i.e. project version will be added to
-     * release branch prefix. <br/>
+     * Whether to use the same name of the release branch for every release. Default
+     * is <code>false</code>, i.e. project version will be added to release branch
+     * prefix. <br/>
      * <br/>
      *
-     * Note: By itself the default releaseBranchPrefix is not a valid branch
-     * name. You must change it when setting sameBranchName to <code>true</code>
-     * .
+     * Note: By itself the default releaseBranchPrefix is not a valid branch name.
+     * You must change it when setting sameBranchName to <code>true</code> .
      *
      * @since 1.5.0
      */
@@ -155,12 +155,22 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
     private boolean sameBranchName = false;
 
     /**
-     * Explicitly allow to have the next development version same as release version.
+     * Explicitly allow to have the next development version same as release
+     * version.
      *
      * @since 2.1.5
      */
     @Parameter(property = "flow.allowSameVersion", defaultValue = "false")
     private boolean allowSameVersion;
+
+    /**
+     * Whether to clean-up possibly failed or not finished release before starting
+     * new release.
+     *
+     * @since 2.1.8
+     */
+    @Parameter(property = "flow.cleanupBeforeStart", defaultValue = "false")
+    private boolean cleanupBeforeStart;
 
     @Override
     protected boolean isSkipTestProject() {
@@ -253,8 +263,10 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         getMavenLog().info("Starting release process");
         checkCentralBranchConfig();
+        abortNotFinishedReleaseIfNeeded(cleanupBeforeStart);
         String currentBranch = gitCurrentBranch();
-        if (!continueReleaseFinishIfMergeInProcess(currentBranch)) {
+        if (!continueReleaseFinishIfInstallProjectPaused(currentBranch)
+                && !continueReleaseFinishIfMergeInProcess(currentBranch)) {
             // set git flow configuration
             initGitFlowConfig();
 

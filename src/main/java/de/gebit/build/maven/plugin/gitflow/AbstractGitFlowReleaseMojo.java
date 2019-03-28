@@ -8,6 +8,8 @@
 //
 package de.gebit.build.maven.plugin.gitflow;
 
+import java.util.List;
+
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -23,6 +25,10 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * @since 1.4.2
  */
 public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
+
+    private static final String BREAKPOINT_RELEASE_START = "releaseStart.cleanInstall";
+
+    private static final String BREAKPOINT_RELEASE_FINISH = "releaseFinish.cleanInstall";
 
     /**
      * The mojo provides this flag from a configuration property.
@@ -114,144 +120,176 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
      * @throws CommandLineException
      */
     protected void releaseStart() throws MojoFailureException, CommandLineException {
-        // check snapshots dependencies
-        if (!allowSnapshots && hasProjectSnapshotDependencies()) {
-            throw new GitFlowFailureException(
-                    "There are some SNAPSHOT dependencies in the project. Release cannot be started.",
-                    "Change the dependencies or ignore with parameter 'allowSnapshots'.");
-        }
-
         String currentBranch = gitCurrentBranch();
-        if (!isDevelopmentBranch(currentBranch) && !isMaintenanceBranch(currentBranch)) {
-            throw new GitFlowFailureException(
-                    "Release can be started only on development branch '" + gitFlowConfig.getDevelopmentBranch()
-                            + "' or on a maintenance branch.",
-                    "Please switch to the development branch '" + gitFlowConfig.getDevelopmentBranch()
-                            + "' or to a maintenance branch first in order to proceed.");
+        String releaseBranchName = null;
+        if (isReleaseBranch(currentBranch)) {
+            String breakpoint = gitGetBranchLocalConfig(currentBranch, "breakpoint");
+            if (breakpoint != null && BREAKPOINT_RELEASE_START.equals(breakpoint)) {
+                releaseBranchName = currentBranch;
+            }
         }
-        String developmentBranch = currentBranch;
-        getMavenLog().info("Base branch for release is '" + developmentBranch + "'");
-        gitAssertRemoteBranchNotAheadOfLocalBranche(developmentBranch,
-                new GitFlowFailureInfo("Remote branch '" + developmentBranch + "' is ahead of the local branch.",
-                        "Either pull changes on remote branch into local branch or reset the changes on remote "
-                                + "branch in order to proceed.",
-                        "'git pull' to pull remote changes into local branch"),
-                new GitFlowFailureInfo("Remote and local branches '" + developmentBranch + "' diverge.",
-                        "Either rebase/merge the changes into local branch '" + developmentBranch
-                                + "' or reset the changes on remote branch in order to proceed.",
-                        "'git rebase'"));
-
-        String productionBranch = getProductionBranchForDevelopmentBranch(developmentBranch);
-        if (isUsingProductionBranch(developmentBranch, productionBranch)) {
-            // check the production branch, too
-            gitEnsureLocalBranchIsUpToDateIfExists(productionBranch,
-                    new GitFlowFailureInfo(
-                            "Remote and local production branches '" + productionBranch + "' diverge. "
-                                    + "This indicates a severe error condition on your branches.",
-                            "Please consult a gitflow expert on how to fix this!"));
-        }
-
-        // get current project version from pom in the current (development or
-        // maintenance) branch
-        final String currentVersion = getCurrentProjectVersion();
-
-        String version = getReleaseVersion();
-        if (version == null) {
-            getLog().info("Property 'releaseVersion' not provided. Trying to calculate it from project version.");
-            getLog().info("Project version: " + currentVersion);
-            String defaultVersion;
-            // get default release version
-            try {
-                final DefaultVersionInfo versionInfo = new DefaultVersionInfo(currentVersion);
-                defaultVersion = versionInfo.getReleaseVersionString();
-                getLog().info("Calculated releaseVersion: " + defaultVersion);
-            } catch (VersionParseException e) {
-                if (getLog().isDebugEnabled()) {
-                    getLog().debug(e);
-                }
+        String developmentBranch;
+        if (releaseBranchName == null) {
+            // check snapshots dependencies
+            if (!allowSnapshots && hasProjectSnapshotDependencies()) {
                 throw new GitFlowFailureException(
-                        "Failed to calculate release version. The project version '" + currentVersion
-                                + "' can't be parsed.",
-                        "Check the version of the project or run 'mvn flow:" + getCurrentGoal()
-                                + "' with specified parameter 'releaseVersion'.",
-                        "'mvn flow:" + getCurrentGoal() + " -DreleaseVersion=X.Y.Z' to predefine release version");
+                        "There are some SNAPSHOT dependencies in the project. Release cannot be started.",
+                        "Change the dependencies or ignore with parameter 'allowSnapshots'.");
             }
-            version = getPrompter().promptValue("What is the release version?", defaultVersion);
-            if (!settings.isInteractiveMode()) {
-                getLog().info("Using calculated releaseVersion for release branch in batch mode.");
+
+            if (!isDevelopmentBranch(currentBranch) && !isMaintenanceBranch(currentBranch)) {
+                throw new GitFlowFailureException(
+                        "Release can be started only on development branch '" + gitFlowConfig.getDevelopmentBranch()
+                                + "' or on a maintenance branch.",
+                        "Please switch to the development branch '" + gitFlowConfig.getDevelopmentBranch()
+                                + "' or to a maintenance branch first in order to proceed.");
             }
-        }
-        if (tychoBuild) {
-            // make sure we have an OSGi conforming version
-            try {
-                version = makeValidTychoVersion(version);
-            } catch (VersionParseException e) {
-                if (getLog().isDebugEnabled()) {
-                    getLog().debug(e);
+            developmentBranch = currentBranch;
+            getMavenLog().info("Base branch for release is '" + developmentBranch + "'");
+            gitAssertRemoteBranchNotAheadOfLocalBranche(developmentBranch,
+                    new GitFlowFailureInfo("Remote branch '" + developmentBranch + "' is ahead of the local branch.",
+                            "Either pull changes on remote branch into local branch or reset the changes on remote "
+                                    + "branch in order to proceed.",
+                            "'git pull' to pull remote changes into local branch"),
+                    new GitFlowFailureInfo("Remote and local branches '" + developmentBranch + "' diverge.",
+                            "Either rebase/merge the changes into local branch '" + developmentBranch
+                                    + "' or reset the changes on remote branch in order to proceed.",
+                            "'git rebase'"));
+
+            String productionBranch = getProductionBranchForDevelopmentBranch(developmentBranch);
+            if (isUsingProductionBranch(developmentBranch, productionBranch)) {
+                // check the production branch, too
+                gitEnsureLocalBranchIsUpToDateIfExists(productionBranch,
+                        new GitFlowFailureInfo(
+                                "Remote and local production branches '" + productionBranch + "' diverge. "
+                                        + "This indicates a severe error condition on your branches.",
+                                "Please consult a gitflow expert on how to fix this!"));
+            }
+
+            // get current project version from pom in the current (development or
+            // maintenance) branch
+            final String currentVersion = getCurrentProjectVersion();
+
+            String version = getReleaseVersion();
+            if (version == null) {
+                getLog().info("Property 'releaseVersion' not provided. Trying to calculate it from project version.");
+                getLog().info("Project version: " + currentVersion);
+                String defaultVersion;
+                // get default release version
+                try {
+                    final DefaultVersionInfo versionInfo = new DefaultVersionInfo(currentVersion);
+                    defaultVersion = versionInfo.getReleaseVersionString();
+                    getLog().info("Calculated releaseVersion: " + defaultVersion);
+                } catch (VersionParseException e) {
+                    if (getLog().isDebugEnabled()) {
+                        getLog().debug(e);
+                    }
+                    throw new GitFlowFailureException(
+                            "Failed to calculate release version. The project version '" + currentVersion
+                                    + "' can't be parsed.",
+                            "Check the version of the project or run 'mvn flow:" + getCurrentGoal()
+                                    + "' with specified parameter 'releaseVersion'.",
+                            "'mvn flow:" + getCurrentGoal() + " -DreleaseVersion=X.Y.Z' to predefine release version");
+                }
+                version = getPrompter().promptValue("What is the release version?", defaultVersion);
+                if (!settings.isInteractiveMode()) {
+                    getLog().info("Using calculated releaseVersion for release branch in batch mode.");
                 }
             }
-        }
-        getMavenLog().info("Using releaseVersion: " + version);
+            if (tychoBuild) {
+                // make sure we have an OSGi conforming version
+                try {
+                    version = makeValidTychoVersion(version);
+                } catch (VersionParseException e) {
+                    if (getLog().isDebugEnabled()) {
+                        getLog().debug(e);
+                    }
+                }
+            }
+            getMavenLog().info("Using releaseVersion: " + version);
 
-        // actually create the release branch now
-        String releaseBranchName = gitFlowConfig.getReleaseBranchPrefix();
-        if (!isSameBranchName()) {
-            releaseBranchName += version;
-        }
+            // actually create the release branch now
+            releaseBranchName = gitFlowConfig.getReleaseBranchPrefix();
+            if (!isSameBranchName()) {
+                releaseBranchName += version;
+            }
 
-        if (gitBranchExists(releaseBranchName)) {
-            throw new GitFlowFailureException(
-                    "Release branch '" + releaseBranchName + "' already exists. Cannot start release.",
-                    "Either checkout the existing release branch or start a new release with another release version.",
-                    "'git checkout " + releaseBranchName + "' to checkout the release branch",
-                    "'mvn flow:" + getCurrentGoal() + "' to run again and specify another release version");
-        }
-        if (gitRemoteBranchExists(releaseBranchName)) {
-            throw new GitFlowFailureException(
-                    "Remote release branch '" + releaseBranchName + "' already exists on the remote '"
-                            + gitFlowConfig.getOrigin() + "'. Cannot start release.",
-                    "Either checkout the existing release branch or start a new release with another release version.",
-                    "'git checkout " + releaseBranchName + "' to checkout the release branch",
-                    "'mvn flow:" + getCurrentGoal() + "' to run again and specify another release version");
-        }
+            if (gitBranchExists(releaseBranchName)) {
+                throw new GitFlowFailureException(
+                        "Release branch '" + releaseBranchName + "' already exists. Cannot start release.",
+                        "Either checkout the existing release branch or start a new release with another release version.",
+                        "'git checkout " + releaseBranchName + "' to checkout the release branch",
+                        "'mvn flow:" + getCurrentGoal() + "' to run again and specify another release version");
+            }
+            if (gitRemoteBranchExists(releaseBranchName)) {
+                throw new GitFlowFailureException(
+                        "Remote release branch '" + releaseBranchName + "' already exists on the remote '"
+                                + gitFlowConfig.getOrigin() + "'. Cannot start release.",
+                        "Either checkout the existing release branch or start a new release with another release version.",
+                        "'git checkout " + releaseBranchName + "' to checkout the release branch",
+                        "'mvn flow:" + getCurrentGoal() + "' to run again and specify another release version");
+            }
 
-        String developmentCommitRef = getCurrentCommit();
+            String developmentCommitRef = getCurrentCommit();
 
-        getMavenLog().info("Creating release branch '" + releaseBranchName + "'");
-        gitCreateAndCheckout(releaseBranchName, developmentBranch);
+            getMavenLog().info("Creating release branch '" + releaseBranchName + "'");
+            gitCreateAndCheckout(releaseBranchName, developmentBranch);
 
-        BranchCentralConfigChanges branchConfigChanges = new BranchCentralConfigChanges();
-        branchConfigChanges.set(releaseBranchName, BranchConfigKeys.BRANCH_TYPE, BranchType.RELEASE.getType());
-        branchConfigChanges.set(releaseBranchName, BranchConfigKeys.BASE_BRANCH, developmentBranch);
-        branchConfigChanges.set(releaseBranchName, BranchConfigKeys.RELEASE_DEVELOPMENT_SAVEPOINT,
-                developmentCommitRef);
+            BranchCentralConfigChanges branchConfigChanges = new BranchCentralConfigChanges();
+            branchConfigChanges.set(releaseBranchName, BranchConfigKeys.BRANCH_TYPE, BranchType.RELEASE.getType());
+            branchConfigChanges.set(releaseBranchName, BranchConfigKeys.BASE_BRANCH, developmentBranch);
+            branchConfigChanges.set(releaseBranchName, BranchConfigKeys.RELEASE_DEVELOPMENT_SAVEPOINT,
+                    developmentCommitRef);
 
-        // store development branch in branch config
-        if (isUsingProductionBranch(developmentBranch, productionBranch)) {
-            if (gitBranchExists(productionBranch)) {
-                String productionCommitRef = getCurrentCommit(productionBranch);
-                branchConfigChanges.set(releaseBranchName, BranchConfigKeys.RELEASE_PRODUCTION_SAVEPOINT,
-                        productionCommitRef);
+            // store development branch in branch config
+            if (isUsingProductionBranch(developmentBranch, productionBranch)) {
+                if (gitBranchExists(productionBranch)) {
+                    String productionCommitRef = getCurrentCommit(productionBranch);
+                    branchConfigChanges.set(releaseBranchName, BranchConfigKeys.RELEASE_PRODUCTION_SAVEPOINT,
+                            productionCommitRef);
+                }
+            }
+
+            if (!version.equals(currentVersion)) {
+                getMavenLog().info("Setting release version '" + version + "' for project on release branch...");
+                mvnSetVersions(version, GitFlowAction.RELEASE_START, "On release branch: ");
+                gitCommit(commitMessages.getReleaseStartMessage());
+            }
+
+            if (pushRemote && isPushReleaseBranch()) {
+                getMavenLog().info("Pushing release branch '" + releaseBranchName + "' to remote repository");
+                gitPush(gitCurrentBranch(), false, false, true);
+            }
+
+            gitApplyBranchCentralConfigChanges(branchConfigChanges, "release '" + releaseBranchName + "' started");
+        } else {
+            getMavenLog().info("Restart after failed release project installation detected");
+            developmentBranch = gitGetBranchCentralConfig(releaseBranchName, BranchConfigKeys.BASE_BRANCH);
+            if (developmentBranch == null) {
+                throw new GitFlowFailureException(
+                        "Base branch for release branch '" + releaseBranchName
+                                + "' couldn't be found in central branch config.",
+                        "Please consult a gitflow expert on how to fix this!");
             }
         }
-
-        if (!version.equals(currentVersion)) {
-            getMavenLog().info("Setting release version '" + version + "' for project on release branch...");
-            mvnSetVersions(version, GitFlowAction.RELEASE_START, "On release branch: ");
-            gitCommit(commitMessages.getReleaseStartMessage());
-        }
-
-        if (pushRemote && isPushReleaseBranch()) {
-            getMavenLog().info("Pushing release branch '" + releaseBranchName + "' to remote repository");
-            gitPush(gitCurrentBranch(), false, false, true);
-        }
-
-        gitApplyBranchCentralConfigChanges(branchConfigChanges, "release '" + releaseBranchName + "' started");
 
         if (isInstallProject()) {
             getMavenLog().info("Installing the release project...");
-            mvnCleanInstall();
+            gitSetBranchLocalConfig(releaseBranchName, "breakpoint", BREAKPOINT_RELEASE_START);
+            try {
+                mvnCleanInstall();
+            } catch (MojoFailureException e) {
+                getMavenLog().info("Release process paused on failed project installation after release start to fix "
+                        + "project problems");
+                String reason = null;
+                if (e instanceof GitFlowFailureException) {
+                    reason = ((GitFlowFailureException) e).getProblem();
+                }
+                throw new GitFlowFailureException(e, FailureInfoHelper.installProjectFailure(getCurrentGoal(),
+                        releaseBranchName, "release start", reason));
+            }
         }
+        gitRemoveBranchLocalConfig(developmentBranch, "breakpoint");
     }
 
     /**
@@ -463,33 +501,51 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
             }
         }
 
-        finilizeRelease(nextSnapshotVersion, releaseBranch, productionBranch, developmentBranch, releaseCommit);
+        setDevelopmentVersionAndFinilizeRelease(nextSnapshotVersion, releaseBranch, productionBranch, developmentBranch,
+                releaseCommit);
     }
 
-    private void finilizeRelease(String nextSnapshotVersion, String releaseBranch, String productionBranch,
-            String developmentBranch, String releaseCommit) throws MojoFailureException, CommandLineException {
-        gitRemoveBranchLocalConfig(developmentBranch, "releaseBranch");
-
-        gitRemoveBranchLocalConfig(releaseBranch, "releaseTag");
-        gitRemoveBranchLocalConfig(releaseBranch, "releaseCommit");
-        gitRemoveBranchLocalConfig(releaseBranch, "nextSnapshotVersion");
-
+    private void setDevelopmentVersionAndFinilizeRelease(String nextSnapshotVersion, String releaseBranch,
+            String productionBranch, String developmentBranch, String releaseCommit)
+            throws MojoFailureException, CommandLineException {
         String currentVersion = getCurrentProjectVersion();
-
         if (!nextSnapshotVersion.equals(currentVersion)) {
             // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
-            getMavenLog().info(
-                    "Setting next development version '" + nextSnapshotVersion + "' for project on development branch...");
+            getMavenLog().info("Setting next development version '" + nextSnapshotVersion
+                    + "' for project on development branch...");
             mvnSetVersions(nextSnapshotVersion, GitFlowAction.RELEASE_FINISH, "Next development version: ");
 
             // git commit -a -m updating for next development version
             gitCommit(commitMessages.getReleaseFinishMessage());
         }
 
+        finilizeRelease(releaseBranch, productionBranch, developmentBranch, releaseCommit);
+    }
+
+    private void finilizeRelease(String releaseBranch, String productionBranch, String developmentBranch,
+            String releaseCommit) throws MojoFailureException, CommandLineException {
         if (!isDetachReleaseCommit() && installProject) {
             getMavenLog().info("Installing the project...");
-            mvnCleanInstall();
+            gitSetBranchLocalConfig(developmentBranch, "breakpoint", BREAKPOINT_RELEASE_FINISH);
+            try {
+                mvnCleanInstall();
+            } catch (MojoFailureException e) {
+                getMavenLog().info("Release process paused on failed project installation after release finish to fix "
+                        + "project problems");
+                String reason = null;
+                if (e instanceof GitFlowFailureException) {
+                    reason = ((GitFlowFailureException) e).getProblem();
+                }
+                throw new GitFlowFailureException(e, FailureInfoHelper.installProjectFailure(getCurrentGoal(),
+                        developmentBranch, "release finish", reason));
+            }
         }
+        gitRemoveBranchLocalConfig(developmentBranch, "breakpoint");
+        gitRemoveBranchLocalConfig(developmentBranch, "releaseBranch");
+
+        gitRemoveBranchLocalConfig(releaseBranch, "releaseTag");
+        gitRemoveBranchLocalConfig(releaseBranch, "releaseCommit");
+        gitRemoveBranchLocalConfig(releaseBranch, "nextSnapshotVersion");
 
         // first push modified branches
         if (pushRemote) {
@@ -560,7 +616,8 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                 releaseCommit = gitGetBranchLocalConfig(releaseBranch, "releaseCommit");
                 nextSnapshotVersion = gitGetBranchLocalConfig(releaseBranch, "nextSnapshotVersion");
                 promptAndMergeContinue();
-                finilizeRelease(nextSnapshotVersion, releaseBranch, productionBranch, developmentBranch, releaseCommit);
+                setDevelopmentVersionAndFinilizeRelease(nextSnapshotVersion, releaseBranch, productionBranch,
+                        developmentBranch, releaseCommit);
             } else if (isProductionBranch(mergeIntoBranch)) {
                 productionBranch = mergeIntoBranch;
                 developmentBranch = getDevelopmentBranchForProductionBranch(productionBranch);
@@ -571,7 +628,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                         developmentBranch, releaseCommit);
             } else {
                 throw new GitFlowFailureException(
-                        getFailureMessageForUnsupportedMergeConflict(mergeIntoBranch, mergeFromBranch));
+                        getFailureMessageForUnsupportedMergeConflictWhileRealeasing(mergeIntoBranch, mergeFromBranch));
             }
         } else if (isProductionBranch(mergeFromBranch)) {
             if (isDevelopmentBranch(mergeIntoBranch) || isMaintenanceBranch(mergeIntoBranch)) {
@@ -581,10 +638,11 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                 releaseCommit = gitGetBranchLocalConfig(releaseBranch, "releaseCommit");
                 nextSnapshotVersion = gitGetBranchLocalConfig(releaseBranch, "nextSnapshotVersion");
                 promptAndMergeContinue();
-                finilizeRelease(nextSnapshotVersion, releaseBranch, productionBranch, developmentBranch, releaseCommit);
+                setDevelopmentVersionAndFinilizeRelease(nextSnapshotVersion, releaseBranch, productionBranch,
+                        developmentBranch, releaseCommit);
             } else {
                 throw new GitFlowFailureException(
-                        getFailureMessageForUnsupportedMergeConflict(mergeIntoBranch, mergeFromBranch));
+                        getFailureMessageForUnsupportedMergeConflictWhileRealeasing(mergeIntoBranch, mergeFromBranch));
             }
         } else if (isRemoteBranch(mergeFromBranch)) {
             if (isDevelopmentBranch(mergeIntoBranch) || isMaintenanceBranch(mergeIntoBranch)) {
@@ -598,11 +656,11 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                         productionBranch, developmentBranch, releaseCommit);
             } else {
                 throw new GitFlowFailureException(
-                        getFailureMessageForUnsupportedMergeConflict(mergeIntoBranch, mergeFromBranch));
+                        getFailureMessageForUnsupportedMergeConflictWhileRealeasing(mergeIntoBranch, mergeFromBranch));
             }
         } else {
             throw new GitFlowFailureException(
-                    getFailureMessageForUnsupportedMergeConflict(mergeIntoBranch, mergeFromBranch));
+                    getFailureMessageForUnsupportedMergeConflictWhileRealeasing(mergeIntoBranch, mergeFromBranch));
         }
     }
 
@@ -627,11 +685,304 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         }
     }
 
-    private GitFlowFailureInfo getFailureMessageForUnsupportedMergeConflict(String mergeIntoBranch,
+    private GitFlowFailureInfo getFailureMessageForUnsupportedMergeConflictWhileRealeasing(String mergeIntoBranch,
             String mergeFromBranch) {
         return new GitFlowFailureInfo(
                 "There is a conflict of merging branch '" + mergeFromBranch + "' into branch '" + mergeIntoBranch
-                        + "'. After such a conflict can't be automatically proceeded.",
+                        + "'. After such a conflict release can't be automatically proceeded.",
+                "Please consult a gitflow expert on how to fix this!");
+    }
+
+    protected boolean continueReleaseFinishIfInstallProjectPaused(String currentBranch)
+            throws MojoFailureException, CommandLineException {
+        if (isDevelopmentBranch(currentBranch) || isMaintenanceBranch(currentBranch)) {
+            String developmentBranch = currentBranch;
+            String breakpoint = gitGetBranchLocalConfig(currentBranch, "breakpoint");
+            if (breakpoint != null && BREAKPOINT_RELEASE_FINISH.equals(breakpoint)) {
+                String productionBranch = getProductionBranchForDevelopmentBranch(developmentBranch);
+                String releaseBranch = gitGetBranchLocalConfig(developmentBranch, "releaseBranch");
+                String releaseCommit = gitGetBranchLocalConfig(releaseBranch, "releaseCommit");
+                finilizeRelease(releaseBranch, productionBranch, developmentBranch, releaseCommit);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // release abort stuff
+
+    /**
+     * Perfom the steps to start a release. Create a release branch and sets the
+     * version
+     *
+     * @param cleanupBeforeStart
+     *            whether to clean-up possibly failed release before starting new
+     *            release.
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void abortNotFinishedReleaseIfNeeded(boolean cleanupBeforeStart)
+            throws MojoFailureException, CommandLineException {
+        if (cleanupBeforeStart && isOnNotFinishedRelease()) {
+            getMavenLog().info("Not finished release detected. Trying to abort it before starting new release.");
+            abortRelease();
+        }
+    }
+
+    private boolean isOnNotFinishedRelease() throws MojoFailureException, CommandLineException {
+        String currentBranch = gitCurrentBranchOrCommit();
+        if (isReleaseBranch(currentBranch)) {
+            return true;
+        }
+        if (isDevelopmentBranch(currentBranch) || isMaintenanceBranch(currentBranch)) {
+            String breakpoint = gitGetBranchLocalConfig(currentBranch, "breakpoint");
+            if (breakpoint != null && breakpoint.equals(BREAKPOINT_RELEASE_FINISH)) {
+                return true;
+            }
+        }
+        if (getMergeInProcessSourceBranch() != null) {
+            return true;
+        }
+        return false;
+    }
+
+    protected String getMergeInProcessSourceBranch() throws MojoFailureException, CommandLineException {
+        return gitMergeFromBranchIfInProcess(gitFlowConfig.getDevelopmentBranch(),
+                gitFlowConfig.getMaintenanceBranchPrefix() + "*", gitFlowConfig.getProductionBranch(),
+                gitFlowConfig.getProductionBranch() + "-" + gitFlowConfig.getMaintenanceBranchPrefix() + "*",
+                gitFlowConfig.getReleaseBranchPrefix() + "*",
+                gitFlowConfig.getOrigin() + "/" + gitFlowConfig.getDevelopmentBranch(),
+                gitFlowConfig.getOrigin() + "/" + gitFlowConfig.getMaintenanceBranchPrefix() + "*");
+    }
+
+    /**
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     * @throws GitFlowFailureException
+     */
+    protected void abortRelease() throws MojoFailureException, CommandLineException {
+        String currentBranch = gitCurrentBranch();
+        String releaseBranch = abortReleaseInProcessWithReleaseFinishPause(currentBranch);
+        if (releaseBranch == null) {
+            releaseBranch = abortReleaseWithConflictsIfMergeInProcess(currentBranch);
+        }
+        String developmentBranch;
+        if (releaseBranch == null) {
+            if (isReleaseBranch(currentBranch)) {
+                releaseBranch = currentBranch;
+                developmentBranch = gitGetBranchCentralConfig(releaseBranch, BranchConfigKeys.BASE_BRANCH);
+                if (StringUtils.isBlank(developmentBranch)) {
+                    developmentBranch = gitFlowConfig.getDevelopmentBranch();
+                }
+                if (!gitLocalOrRemoteBranchesExist(developmentBranch)) {
+                    if (!gitFlowConfig.getDevelopmentBranch().equals(developmentBranch)) {
+                        developmentBranch = gitFlowConfig.getDevelopmentBranch();
+                        if (!gitLocalOrRemoteBranchesExist(developmentBranch)) {
+                            developmentBranch = null;
+                        }
+                    } else {
+                        developmentBranch = null;
+                    }
+                }
+                if (developmentBranch != null) {
+                    if (executeGitHasUncommitted()) {
+                        boolean confirmed = getPrompter().promptConfirmation(
+                                "You have some uncommitted files. If you continue any changes will be discarded. Continue?",
+                                false, true);
+                        if (!confirmed) {
+                            throw new GitFlowFailureException(
+                                    "You have aborted release-abort process because of uncommitted files.",
+                                    "Commit or discard local changes in order to proceed.",
+                                    "'git add' and 'git commit' to commit your changes",
+                                    "'git reset --hard' to throw away your changes");
+                        }
+                        gitResetHard();
+                    }
+                    gitCheckout(developmentBranch);
+                } else {
+                    throw new GitFlowFailureException(
+                            "No development branch found for current release branch. Cannot abort release.\n"
+                                    + "This indicates a severe error condition on your branches.",
+                            "Please configure correct development branch for the current release branch or consult a "
+                                    + "gitflow expert on how to fix this.",
+                            "'mvn flow:branch-config -DbranchName=" + releaseBranch
+                                    + " -DpropertyName=baseBranch -DpropertyValue=[development branch name]' to "
+                                    + "configure correct development branch");
+                }
+            } else {
+                List<String> releaseBranches = gitAllBranches(gitFlowConfig.getReleaseBranchPrefix());
+                if (releaseBranches.isEmpty()) {
+                    throw new GitFlowFailureException("There are no release branches in your repository.", null);
+                }
+                if (releaseBranches.size() > 1) {
+                    throw new GitFlowFailureException(
+                            "More than one release branch exists. Cannot abort release from non-release branch.",
+                            "Please switch to a release branch first in order to proceed.",
+                            "'git checkout INTERNAL' to switch to the release branch");
+                }
+                releaseBranch = releaseBranches.get(0);
+            }
+        }
+
+        if (gitBranchExists(releaseBranch)) {
+            gitBranchDeleteForce(releaseBranch);
+        }
+
+        if (pushRemote) {
+            gitBranchDeleteRemote(releaseBranch);
+        }
+        gitRemoveAllBranchCentralConfigsForBranch(releaseBranch, "release '" + releaseBranch + "' aborted");
+    }
+
+    private String abortReleaseWithConflictsIfMergeInProcess(String currentBranch)
+            throws MojoFailureException, CommandLineException {
+        String mergeFromBranch = getMergeInProcessSourceBranch();
+        if (mergeFromBranch != null) {
+            return abortReleaseWithMergeConflicts(currentBranch, mergeFromBranch);
+        }
+        return null;
+    }
+
+    private String abortReleaseWithMergeConflicts(String mergeIntoBranch, String mergeFromBranch)
+            throws MojoFailureException, CommandLineException {
+        String developmentBranch;
+        String productionBranch;
+        String releaseBranch;
+        if (isReleaseBranch(mergeFromBranch)) {
+            releaseBranch = mergeFromBranch;
+            if (isDevelopmentBranch(mergeIntoBranch) || isMaintenanceBranch(mergeIntoBranch)) {
+                developmentBranch = mergeIntoBranch;
+                productionBranch = getProductionBranchForDevelopmentBranch(developmentBranch);
+            } else if (isProductionBranch(mergeIntoBranch)) {
+                productionBranch = mergeIntoBranch;
+                developmentBranch = getDevelopmentBranchForProductionBranch(productionBranch);
+            } else {
+                throw new GitFlowFailureException(
+                        getFailureMessageForUnsupportedMergeConflictWhileAborting(mergeIntoBranch, mergeFromBranch));
+            }
+        } else if (isProductionBranch(mergeFromBranch)) {
+            if (isDevelopmentBranch(mergeIntoBranch) || isMaintenanceBranch(mergeIntoBranch)) {
+                developmentBranch = mergeIntoBranch;
+                productionBranch = mergeFromBranch;
+                releaseBranch = gitGetBranchLocalConfig(developmentBranch, "releaseBranch");
+            } else {
+                throw new GitFlowFailureException(
+                        getFailureMessageForUnsupportedMergeConflictWhileAborting(mergeIntoBranch, mergeFromBranch));
+            }
+        } else if (isRemoteBranch(mergeFromBranch)) {
+            if (isDevelopmentBranch(mergeIntoBranch) || isMaintenanceBranch(mergeIntoBranch)) {
+                developmentBranch = mergeIntoBranch;
+                productionBranch = getProductionBranchForDevelopmentBranch(developmentBranch);
+                releaseBranch = gitGetBranchLocalConfig(developmentBranch, "releaseBranch");
+            } else {
+                throw new GitFlowFailureException(
+                        getFailureMessageForUnsupportedMergeConflictWhileAborting(mergeIntoBranch, mergeFromBranch));
+            }
+        } else {
+            throw new GitFlowFailureException(
+                    getFailureMessageForUnsupportedMergeConflictWhileAborting(mergeIntoBranch, mergeFromBranch));
+        }
+        if (!getPrompter().promptConfirmation(
+                "You have a merge in process on your current branch.\n"
+                        + "If you run 'mvn flow:release' or 'mvn flow:release-finish' before and merge had conflicts "
+                        + "and now you want to abort this release then you can continue.\n"
+                        + "In other case it is better to clarify the reason of merge in process. Continue?",
+                true, true)) {
+            throw new GitFlowFailureException("Continuation of release abort process aborted by user.", null);
+        }
+        if (StringUtils.isBlank(releaseBranch)) {
+            throw new GitFlowFailureException(
+                    "There is a conflict of merging branch '" + mergeFromBranch + "' into branch '" + mergeIntoBranch
+                            + "'.\nInformation about release branch couldn't be found in git config.\n"
+                            + "Release can't be automatically aborted.",
+                    "Please consult a gitflow expert on how to fix this!");
+        }
+        String developmentCommitRef = gitGetBranchCentralConfig(releaseBranch,
+                BranchConfigKeys.RELEASE_DEVELOPMENT_SAVEPOINT);
+        if (StringUtils.isBlank(developmentCommitRef)) {
+            throw new GitFlowFailureException(
+                    "There is a conflict of merging branch '" + mergeFromBranch + "' into branch '" + mergeIntoBranch
+                            + "'.\nReset point for development branch couldn't be found in git config.\n"
+                            + "Release can't be automatically aborted.",
+                    "Please consult a gitflow expert on how to fix this!");
+        }
+        gitMergeAbort();
+        String tagName = gitGetBranchLocalConfig(releaseBranch, "releaseTag");
+        if (StringUtils.isNotBlank(tagName) && gitTagExists(tagName)) {
+            gitRemoveLocalTag(tagName);
+        }
+        gitUpdateRef(developmentBranch, developmentCommitRef);
+        if (developmentBranch.equals(gitCurrentBranchOrCommit())) {
+            gitResetHard();
+        }
+        gitCheckout(developmentBranch);
+        String productionCommitRef = gitGetBranchCentralConfig(releaseBranch,
+                BranchConfigKeys.RELEASE_PRODUCTION_SAVEPOINT);
+        if (StringUtils.isNotBlank(productionCommitRef)) {
+            gitUpdateRef(productionBranch, productionCommitRef);
+        } else if (isUsingProductionBranch(developmentBranch, productionBranch) && gitBranchExists(productionBranch)) {
+            // production branch was newly created -> can be deleted on abort
+            gitBranchDeleteForce(productionBranch);
+        }
+        removeBranchConfigs(releaseBranch, developmentBranch);
+        return releaseBranch;
+    }
+
+    private String abortReleaseInProcessWithReleaseFinishPause(String currentBranch)
+            throws MojoFailureException, CommandLineException {
+        if (isDevelopmentBranch(currentBranch) || isMaintenanceBranch(currentBranch)) {
+            String developmentBranch = currentBranch;
+            String breakpoint = gitGetBranchLocalConfig(currentBranch, "breakpoint");
+            if (breakpoint != null && BREAKPOINT_RELEASE_FINISH.equals(breakpoint)) {
+                String productionBranch = getProductionBranchForDevelopmentBranch(developmentBranch);
+                String releaseBranch = gitGetBranchLocalConfig(developmentBranch, "releaseBranch");
+                String developmentCommitRef = gitGetBranchCentralConfig(releaseBranch,
+                        BranchConfigKeys.RELEASE_DEVELOPMENT_SAVEPOINT);
+                if (StringUtils.isBlank(developmentCommitRef)) {
+                    throw new GitFlowFailureException(
+                            "Reset point for development branch couldn't be found in git config.\n"
+                                    + "Release can't be automatically aborted.",
+                            "Please consult a gitflow expert on how to fix this!");
+                }
+                String tagName = gitGetBranchLocalConfig(releaseBranch, "releaseTag");
+                if (StringUtils.isNotBlank(tagName) && gitTagExists(tagName)) {
+                    gitRemoveLocalTag(tagName);
+                }
+                gitUpdateRef(developmentBranch, developmentCommitRef);
+                if (developmentBranch.equals(gitCurrentBranchOrCommit())) {
+                    gitResetHard();
+                }
+                gitCheckout(developmentBranch);
+                String productionCommitRef = gitGetBranchCentralConfig(releaseBranch,
+                        BranchConfigKeys.RELEASE_PRODUCTION_SAVEPOINT);
+                if (StringUtils.isNotBlank(productionCommitRef)) {
+                    gitUpdateRef(productionBranch, productionCommitRef);
+                } else if (isUsingProductionBranch(developmentBranch, productionBranch)
+                        && gitBranchExists(productionBranch)) {
+                    // production branch was newly created -> can be deleted on abort
+                    gitBranchDeleteForce(productionBranch);
+                }
+                removeBranchConfigs(releaseBranch, developmentBranch);
+                return releaseBranch;
+            }
+        }
+        return null;
+    }
+
+    private void removeBranchConfigs(String releaseBranch, String developmentBranch)
+            throws MojoFailureException, CommandLineException {
+        gitRemoveBranchLocalConfig(releaseBranch, "releaseTag");
+        gitRemoveBranchLocalConfig(releaseBranch, "releaseCommit");
+        gitRemoveBranchLocalConfig(releaseBranch, "nextSnapshotVersion");
+        gitRemoveBranchLocalConfig(developmentBranch, "releaseBranch");
+        gitRemoveBranchLocalConfig(developmentBranch, "breakpoint");
+    }
+
+    private GitFlowFailureInfo getFailureMessageForUnsupportedMergeConflictWhileAborting(String mergeIntoBranch,
+            String mergeFromBranch) {
+        return new GitFlowFailureInfo(
+                "There is a conflict of merging branch '" + mergeFromBranch + "' into branch '" + mergeIntoBranch
+                        + "'. After such a conflict release can't be automatically aborted.",
                 "Please consult a gitflow expert on how to fix this!");
     }
 
