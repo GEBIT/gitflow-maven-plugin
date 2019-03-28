@@ -289,7 +289,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                         releaseBranchName, "release start", reason));
             }
         }
-        gitRemoveBranchLocalConfig(developmentBranch, "breakpoint");
+        gitRemoveBranchLocalConfig(releaseBranchName, "breakpoint");
     }
 
     /**
