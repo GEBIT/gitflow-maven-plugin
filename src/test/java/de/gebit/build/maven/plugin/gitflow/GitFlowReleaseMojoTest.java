@@ -8,8 +8,10 @@
 //
 package de.gebit.build.maven.plugin.gitflow;
 
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -372,6 +374,168 @@ public class GitFlowReleaseMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), RELEASE_VERSION);
         assertDefaultDeployGoalExecuted();
+    }
+
+    @Test
+    public void testExecuteContinueAfterFailedProjectBuildonFinish() throws Exception {
+        // set up
+        final String COMMIT_MESSAGE_INVALID_JAVA_FILE = "Invalid java file";
+        final String COMMIT_MESSAGE_INVALID_JAVA_FILE_REMOVED = "Invalid java file removed";
+        git.createAndCommitTestfile(repositorySet, "src/main/java/InvalidJavaFile.java",
+                COMMIT_MESSAGE_INVALID_JAVA_FILE);
+        git.push(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.installProject", "true");
+        when(promptControllerMock.prompt(PROMPT_RELEASE_VERSION, POM_RELEASE_VERSION)).thenReturn(RELEASE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_NEXT_DEVELOPMENT_VERSION, NEW_DEVELOPMENT_VERSION)).thenReturn("");
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_RELEASE_VERSION, POM_RELEASE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_NEXT_DEVELOPMENT_VERSION, NEW_DEVELOPMENT_VERSION);
+        verifyNoMoreInteractionsAndReset(promptControllerMock);
+        assertInstallProjectFailureException(result, GOAL, MASTER_BRANCH, "release finish");
+        git.assertBranchLocalConfigValue(repositorySet, MASTER_BRANCH, "breakpoint", "releaseFinish.cleanInstall");
+        repositorySet.getLocalRepoGit().rm().addFilepattern("src/main/java/InvalidJavaFile.java").call();
+        git.commitAll(repositorySet, COMMIT_MESSAGE_INVALID_JAVA_FILE_REMOVED);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
+        git.assertLocalTags(repositorySet, RELEASE_TAG);
+        git.assertRemoteTags(repositorySet, RELEASE_TAG);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
+                COMMIT_MESSAGE_RELEASE_START_SET_VERSION, COMMIT_MESSAGE_INVALID_JAVA_FILE_REMOVED,
+                COMMIT_MESSAGE_INVALID_JAVA_FILE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
+        assertDefaultDeployGoalExecuted();
+        assertBranchLocalConfigsRemoved(RELEASE_BRANCH, MASTER_BRANCH);
+    }
+
+    private void assertBranchLocalConfigsRemoved(String releaseBranch, String developmentBranch) {
+        git.assertBranchLocalConfigValueMissing(repositorySet, releaseBranch, "breakpoint");
+        git.assertBranchLocalConfigValueMissing(repositorySet, releaseBranch, "releaseTag");
+        git.assertBranchLocalConfigValueMissing(repositorySet, releaseBranch, "releaseCommit");
+        git.assertBranchLocalConfigValueMissing(repositorySet, releaseBranch, "nextSnapshotVersion");
+        git.assertBranchLocalConfigValueMissing(repositorySet, developmentBranch, "releaseBranch");
+    }
+
+    @Test
+    public void testExecuteAfterSuccessfulReleaseStart() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        final String EXPECTED_DEVELOPMENT_COMMIT = git.currentCommit(repositorySet);
+        when(promptControllerMock.prompt(PROMPT_RELEASE_VERSION, POM_RELEASE_VERSION)).thenReturn(RELEASE_VERSION);
+        executeMojo(repositorySet.getWorkingDirectory(), "release-start", promptControllerMock);
+        verify(promptControllerMock).prompt(PROMPT_RELEASE_VERSION, POM_RELEASE_VERSION);
+        verifyNoMoreInteractions(promptControllerMock);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertGitFlowFailureException(result,
+                "Release can be started only on development branch '" + MASTER_BRANCH + "' or on a maintenance branch.",
+                "Please switch to the development branch '" + MASTER_BRANCH
+                        + "' or to a maintenance branch first in order to proceed.");
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, RELEASE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
+        git.assertCommitsInLocalBranch(repositorySet, RELEASE_BRANCH, COMMIT_MESSAGE_RELEASE_START_SET_VERSION,
+                GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
+        Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
+        assertEquals("release", branchConfig.getProperty("branchType"));
+        assertEquals(MASTER_BRANCH, branchConfig.getProperty("baseBranch"));
+        assertEquals(EXPECTED_DEVELOPMENT_COMMIT, branchConfig.getProperty("developmentSavepointCommitRef"));
+        assertEquals(null, branchConfig.getProperty("productionSavepointCommitRef"));
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), RELEASE_VERSION);
+    }
+
+    @Test
+    public void testExecuteAfterSuccessfulReleaseStartAndCleanupBeforeStartTrue() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        when(promptControllerMock.prompt(PROMPT_RELEASE_VERSION, POM_RELEASE_VERSION)).thenReturn(RELEASE_VERSION);
+        executeMojo(repositorySet.getWorkingDirectory(), "release-start", promptControllerMock);
+        verify(promptControllerMock).prompt(PROMPT_RELEASE_VERSION, POM_RELEASE_VERSION);
+        verifyNoMoreInteractionsAndReset(promptControllerMock);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.cleanupBeforeStart", "true");
+        when(promptControllerMock.prompt(PROMPT_RELEASE_VERSION, POM_RELEASE_VERSION)).thenReturn(RELEASE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_NEXT_DEVELOPMENT_VERSION, NEW_DEVELOPMENT_VERSION)).thenReturn("");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_RELEASE_VERSION, POM_RELEASE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_NEXT_DEVELOPMENT_VERSION, NEW_DEVELOPMENT_VERSION);
+        verifyNoMoreInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
+        git.assertLocalTags(repositorySet, RELEASE_TAG);
+        git.assertRemoteTags(repositorySet, RELEASE_TAG);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
+                COMMIT_MESSAGE_RELEASE_START_SET_VERSION, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
+        assertDefaultDeployGoalExecuted();
+        assertBranchLocalConfigsRemoved(RELEASE_BRANCH, MASTER_BRANCH);
+    }
+
+    @Test
+    public void testExecuteAfterFailedReleaseStartAndCleanupBeforeStartTrue() throws Exception {
+        // set up
+        final String COMMIT_MESSAGE_INVALID_JAVA_FILE = "Invalid java file";
+        final String COMMIT_MESSAGE_INVALID_JAVA_FILE_REMOVED = "Invalid java file removed";
+        git.createAndCommitTestfile(repositorySet, "src/main/java/InvalidJavaFile.java",
+                COMMIT_MESSAGE_INVALID_JAVA_FILE);
+        git.push(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.installProject", "true");
+        when(promptControllerMock.prompt(PROMPT_RELEASE_VERSION, POM_RELEASE_VERSION)).thenReturn(RELEASE_VERSION);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), "release-start",
+                userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_RELEASE_VERSION, POM_RELEASE_VERSION);
+        verifyNoMoreInteractionsAndReset(promptControllerMock);
+        assertInstallProjectFailureException(result, "release-start", RELEASE_BRANCH, "release start");
+        git.assertBranchLocalConfigValue(repositorySet, RELEASE_BRANCH, "breakpoint", "releaseStart.cleanInstall");
+        git.commitAll(repositorySet, COMMIT_MESSAGE_INVALID_JAVA_FILE_REMOVED);
+        userProperties.setProperty("flow.cleanupBeforeStart", "true");
+        userProperties.setProperty("flow.installProject", "false");
+        when(promptControllerMock.prompt(PROMPT_RELEASE_VERSION, POM_RELEASE_VERSION)).thenReturn(RELEASE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_NEXT_DEVELOPMENT_VERSION, NEW_DEVELOPMENT_VERSION)).thenReturn("");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_RELEASE_VERSION, POM_RELEASE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_NEXT_DEVELOPMENT_VERSION, NEW_DEVELOPMENT_VERSION);
+        verifyZeroInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
+        git.assertLocalTags(repositorySet, RELEASE_TAG);
+        git.assertRemoteTags(repositorySet, RELEASE_TAG);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
+                COMMIT_MESSAGE_RELEASE_START_SET_VERSION, COMMIT_MESSAGE_INVALID_JAVA_FILE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
+        assertDefaultDeployGoalExecuted();
+        assertBranchLocalConfigsRemoved(RELEASE_BRANCH, MASTER_BRANCH);
     }
 
 }

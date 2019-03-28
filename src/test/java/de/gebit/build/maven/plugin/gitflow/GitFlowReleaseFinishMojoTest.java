@@ -2162,4 +2162,43 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
     }
 
+    @Test
+    public void testExecuteContinueAfterFailureOnCleanInstall() throws Exception {
+        // set up
+        final String COMMIT_MESSAGE_INVALID_JAVA_FILE = "Invalid java file";
+        final String COMMIT_MESSAGE_INVALID_JAVA_FILE_REMOVED = "Invalid java file removed";
+        git.createAndCommitTestfile(repositorySet, "src/main/java/InvalidJavaFile.java",
+                COMMIT_MESSAGE_INVALID_JAVA_FILE);
+        git.push(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.installProject", "true");
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        assertInstallProjectFailureException(result, GOAL, MASTER_BRANCH, "release finish");
+        git.assertBranchLocalConfigValue(repositorySet, MASTER_BRANCH, "breakpoint", "releaseFinish.cleanInstall");
+        repositorySet.getLocalRepoGit().rm().addFilepattern("src/main/java/InvalidJavaFile.java").call();
+        git.commitAll(repositorySet, COMMIT_MESSAGE_INVALID_JAVA_FILE_REMOVED);
+        userProperties.setProperty("flow.installProject", "false");
+        userProperties.setProperty("flow.pushReleaseBranch", "true");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
+        git.assertLocalTags(repositorySet, RELEASE_TAG);
+        git.assertRemoteTags(repositorySet, RELEASE_TAG);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
+                COMMIT_MESSAGE_INVALID_JAVA_FILE_REMOVED, COMMIT_MESSAGE_INVALID_JAVA_FILE,
+                COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
+        assertDefaultDeployGoalExecuted();
+        assertMavenCommandNotExecuted("clean verify");
+        assertMavenCommandNotExecuted("clean test");
+        assertConfigCleanedUpForMaster();
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
+        git.assertBranchLocalConfigValueMissing(repositorySet, MASTER_BRANCH, "breakpoint");
+    }
+
 }
