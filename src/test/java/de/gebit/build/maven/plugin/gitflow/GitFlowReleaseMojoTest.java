@@ -471,7 +471,7 @@ public class GitFlowReleaseMojoTest extends AbstractGitFlowMojoTestCase {
         verify(promptControllerMock).prompt(PROMPT_RELEASE_VERSION, POM_RELEASE_VERSION);
         verifyNoMoreInteractionsAndReset(promptControllerMock);
         Properties userProperties = new Properties();
-        userProperties.setProperty("flow.cleanupBeforeStart", "true");
+        userProperties.setProperty("flow.cleanupReleaseBeforeStart", "true");
         when(promptControllerMock.prompt(PROMPT_RELEASE_VERSION, POM_RELEASE_VERSION)).thenReturn(RELEASE_VERSION);
         when(promptControllerMock.prompt(PROMPT_NEXT_DEVELOPMENT_VERSION, NEW_DEVELOPMENT_VERSION)).thenReturn("");
         // test
@@ -514,7 +514,7 @@ public class GitFlowReleaseMojoTest extends AbstractGitFlowMojoTestCase {
         assertInstallProjectFailureException(result, "release-start", RELEASE_BRANCH, "release start");
         git.assertBranchLocalConfigValue(repositorySet, RELEASE_BRANCH, "breakpoint", "releaseStart.cleanInstall");
         git.commitAll(repositorySet, COMMIT_MESSAGE_INVALID_JAVA_FILE_REMOVED);
-        userProperties.setProperty("flow.cleanupBeforeStart", "true");
+        userProperties.setProperty("flow.cleanupReleaseBeforeStart", "true");
         userProperties.setProperty("flow.installProject", "false");
         when(promptControllerMock.prompt(PROMPT_RELEASE_VERSION, POM_RELEASE_VERSION)).thenReturn(RELEASE_VERSION);
         when(promptControllerMock.prompt(PROMPT_NEXT_DEVELOPMENT_VERSION, NEW_DEVELOPMENT_VERSION)).thenReturn("");

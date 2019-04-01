@@ -164,13 +164,13 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
     private boolean allowSameVersion;
 
     /**
-     * Whether to clean-up possibly failed or not finished release before starting
+     * Whether to clean-up possibly failed or not finished release before starting a
      * new release.
      *
      * @since 2.1.8
      */
-    @Parameter(property = "flow.cleanupBeforeStart", defaultValue = "false")
-    private boolean cleanupBeforeStart;
+    @Parameter(property = "flow.cleanupReleaseBeforeStart", defaultValue = "false")
+    private boolean cleanupReleaseBeforeStart;
 
     @Override
     protected boolean isSkipTestProject() {
@@ -263,7 +263,7 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         getMavenLog().info("Starting release process");
         checkCentralBranchConfig();
-        abortNotFinishedReleaseIfNeeded(cleanupBeforeStart);
+        abortNotFinishedReleaseIfNeeded(cleanupReleaseBeforeStart);
         String currentBranch = gitCurrentBranch();
         if (!continueReleaseFinishIfInstallProjectPaused(currentBranch)
                 && !continueReleaseFinishIfMergeInProcess(currentBranch)) {

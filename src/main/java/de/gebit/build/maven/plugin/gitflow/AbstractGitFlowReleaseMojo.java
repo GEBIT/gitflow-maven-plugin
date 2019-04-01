@@ -715,15 +715,15 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
      * Perfom the steps to start a release. Create a release branch and sets the
      * version
      *
-     * @param cleanupBeforeStart
+     * @param cleanupReleaseBeforeStart
      *            whether to clean-up possibly failed release before starting new
      *            release.
      * @throws MojoFailureException
      * @throws CommandLineException
      */
-    protected void abortNotFinishedReleaseIfNeeded(boolean cleanupBeforeStart)
+    protected void abortNotFinishedReleaseIfNeeded(boolean cleanupReleaseBeforeStart)
             throws MojoFailureException, CommandLineException {
-        if (cleanupBeforeStart && isOnNotFinishedRelease()) {
+        if (cleanupReleaseBeforeStart && isOnNotFinishedRelease()) {
             getMavenLog().info("Not finished release detected. Trying to abort it before starting new release.");
             abortRelease();
         }
