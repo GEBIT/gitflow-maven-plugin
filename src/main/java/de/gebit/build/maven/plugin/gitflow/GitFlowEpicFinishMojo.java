@@ -14,7 +14,6 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
-import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
@@ -47,8 +46,7 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
     private boolean skipTestProject = false;
 
     /**
-     * Whether to allow fast forward merge of epic branch into development
-     * branch.
+     * Whether to allow fast forward merge of epic branch into development branch.
      *
      * @since 2.0.0
      */
@@ -107,17 +105,16 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
                 }
                 baseBranch = gitEpicBranchBaseBranch(epicBranchName);
                 getMavenLog().info("Base branch of epic branch is '" + baseBranch + "'");
-                gitEnsureLocalBranchIsUpToDateIfExists(baseBranch,
-                        new GitFlowFailureInfo("Remote and local base branches '" + baseBranch + "' diverge.",
-                                "Rebase the changes in local branch '"
-                                        + baseBranch + "' and then include these changes in the epic branch '"
-                                        + epicBranchName + "' in order to proceed.",
-                                "'git checkout " + baseBranch
-                                        + "' and 'git rebase' to rebase the changes in base branch '" + baseBranch
-                                        + "'",
-                                "'git checkout " + epicBranchName
-                                        + "' and 'mvn flow:epic-update' to include these changes in the epic branch '"
-                                        + epicBranchName + "'"));
+                gitEnsureLocalBranchIsUpToDateIfExists(baseBranch, new GitFlowFailureInfo(
+                        "Remote and local base branches '" + baseBranch + "' diverge.",
+                        "Rebase the changes in local branch '" + baseBranch
+                                + "' and then include these changes in the epic branch '" + epicBranchName
+                                + "' in order to proceed.",
+                        "'git checkout " + baseBranch + "' and 'git rebase' to rebase the changes in base branch '"
+                                + baseBranch + "'",
+                        "'git checkout " + epicBranchName
+                                + "' and 'mvn flow:epic-update' to include these changes in the epic branch '"
+                                + epicBranchName + "'"));
                 if (!hasCommitsExceptVersionChangeCommitOnEpicBranch(epicBranchName, baseBranch)) {
                     throw new GitFlowFailureException(
                             "There are no real changes in epic branch '" + epicBranchName + "'.",
@@ -183,9 +180,9 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
                 } catch (MojoFailureException ex) {
                     getMavenLog().info("Epic finish process paused to resolve merge conflicts");
                     throw new GitFlowFailureException(ex,
-                            "Automatic merge failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage()),
-                            "Fix the merge conflicts and mark them as resolved. After that, run "
-                                    + "'mvn flow:epic-finish' again. Do NOT run 'git merge --continue'.",
+                            "Automatic merge failed.\n" + createMergeConflictDetails(baseBranch, epicBranchName, ex),
+                            "Fix the merge conflicts and mark them as resolved by using 'git add'. After that, run "
+                                    + "'mvn flow:epic-finish' again.\nDo NOT run 'git merge --continue'.",
                             "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
                                     + "conflicts as resolved",
                             "'mvn flow:epic-finish' to continue epic finish process");
@@ -198,20 +195,22 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
                         true, true)) {
                     throw new GitFlowFailureException("Continuation of epic finish aborted by user.", null);
                 }
+                baseBranch = gitCurrentBranch();
                 getMavenLog().info("Continue merging epic branch into base branch...");
                 try {
                     gitCommitMerge();
                 } catch (MojoFailureException exc) {
                     getMavenLog().info("Epic finish process paused to resolve merge conflicts");
                     throw new GitFlowFailureException(exc,
-                            "There are unresolved conflicts after merge.\nGit error message:\n"
-                                    + StringUtils.trim(exc.getMessage()),
-                            "Fix the merge conflicts and mark them as resolved. "
-                                    + "After that, run 'mvn flow:epic-finish' again. Do NOT run 'git merge --continue'.",
-                            "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved",
+                            "There are unresolved conflicts after merge.\n"
+                                    + createMergeConflictDetails(baseBranch, epicBranchName, exc),
+                            "Fix the merge conflicts and mark them as resolved by using 'git add'. "
+                                    + "After that, run 'mvn flow:epic-finish' again.\n"
+                                    + "Do NOT run 'git merge --continue'.",
+                            "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
+                                    + "conflicts as resolved",
                             "'mvn flow:epic-finish' to continue epic finish process");
                 }
-                baseBranch = gitCurrentBranch();
             }
         } else {
             getMavenLog().info("Restart after failed project installation on base branch detected");

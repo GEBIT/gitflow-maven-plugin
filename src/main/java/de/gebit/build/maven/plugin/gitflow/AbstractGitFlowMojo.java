@@ -4147,6 +4147,72 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         return unmergedFiles;
     }
 
+    protected String createMergeConflictDetails(String ourBranch, String theirBranch, MojoFailureException exception)
+            throws MojoFailureException, CommandLineException {
+        String unmergedInfo = gitGetUnmergedStatus(ourBranch, theirBranch);
+        if (unmergedInfo == null) {
+            unmergedInfo = "Git error message:\n" + StringUtils.trim(exception.getMessage());
+        }
+        return unmergedInfo;
+    }
+
+    protected String gitGetUnmergedStatus(String ourBranch, String theirBranch)
+            throws MojoFailureException, CommandLineException {
+        StringBuilder status = new StringBuilder();
+        CommandResult result = executeGitCommandExitCode("status", "--porcelain");
+        if (result.exitCode == SUCCESS_EXIT_CODE) {
+            String tempCmdResult = result.getOut().trim();
+            if (!StringUtils.isBlank(tempCmdResult)) {
+                String[] lines = tempCmdResult.split("\r?\n");
+                String line;
+                for (int i = 0; i < lines.length; ++i) {
+                    line = lines[i].trim();
+                    if (line.length() > 3) {
+                        char ours = line.charAt(0);
+                        char theirs = line.charAt(1);
+                        String file = line.substring(3);
+                        String unmergedStatus = getUnmergedStatusForChanges(ours, theirs, ourBranch, theirBranch);
+                        if (unmergedStatus != null) {
+                            if (status.length() > 0) {
+                                status.append("\n");
+                            }
+                            status.append("CONFLICT (");
+                            status.append(unmergedStatus);
+                            status.append("): ");
+                            status.append(file);
+                        }
+                    }
+                }
+            }
+        }
+        return status.length() == 0 ? null : status.toString();
+    }
+
+    private String getUnmergedStatusForChanges(char ours, char theirs, String ourBranch, String theirBranch) {
+        if (ours == 'D') {
+            if (theirs == 'D') {
+                return "deleted on " + ourBranch + " and on " + theirBranch;
+            } else if (theirs == 'U') {
+                return "deleted on " + ourBranch;
+            }
+        } else if (ours == 'A') {
+            if (theirs == 'A') {
+                return "added on " + ourBranch + " and on " + theirBranch;
+            } else if (theirs == 'U') {
+                return "added on " + ourBranch;
+            }
+        } else if (ours == 'U') {
+            if (theirs == 'U') {
+                return "modified on " + ourBranch + " and on " + theirBranch;
+            } else if (theirs == 'D') {
+                return "deleted on " + theirBranch;
+            } else if (theirs == 'A') {
+                return "added on " + theirBranch;
+            }
+        }
+        return null;
+    }
+
     /**
      * Check if passed branch name is name for a maintenance branch.
      *

@@ -42,9 +42,11 @@ import de.gebit.build.maven.plugin.gitflow.steps.StepsUtil;
  * <code>flow:feature-integrate-abort</code>.
  * <p>
  * Example:
+ *
  * <pre>
  * mvn -N flow:feature-integrate [-DfeatureName=XXXX] [-Dflow.keepFeatureBranch=true|false] [-Dflow.installProject=true|false]
  * </pre>
+ *
  * @author Volodymyr Medvid
  * @since 2.1.0
  * @see GitFlowFeatureIntegrateAbortMojo
@@ -269,9 +271,9 @@ public class GitFlowFeatureIntegrateMojo extends AbstractGitFlowFeatureMojo {
                 getMavenLog().info("Feature rebase process paused to resolve rebase conflicts");
                 throw new GitFlowFailureException(ex,
                         "Automatic rebase of feature branch '" + sourceFeatureBranch + "' on top of feature branch '"
-                                + targetFeatureBranch + "' failed.\nGit error message:\n"
-                                + StringUtils.trim(ex.getMessage()),
-                        "Fix the rebase conflicts and mark them as resolved. After that, run "
+                                + targetFeatureBranch + "' failed.\n"
+                                + createMergeConflictDetails(targetFeatureBranch, sourceFeatureBranch, ex),
+                        "Fix the rebase conflicts and mark them as resolved by using 'git add'. After that, run "
                                 + "'mvn flow:feature-integrate' again.\n"
                                 + "Do NOT run 'git rebase --continue' and 'git rebase --abort'!",
                         "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
@@ -319,9 +321,9 @@ public class GitFlowFeatureIntegrateMojo extends AbstractGitFlowFeatureMojo {
             getMavenLog().info("Feature finish process paused to resolve rebase conflicts");
             throw new GitFlowFailureException(exc,
                     "Automatic rebase of feature branch '" + sourceFeatureBranch + "' on top of feature branch '"
-                            + targetFeatureBranch + "' failed.\nGit error message:\n"
-                            + StringUtils.trim(exc.getMessage()),
-                    "Fix the rebase conflicts and mark them as resolved. After that, run "
+                            + targetFeatureBranch + "' failed.\n"
+                            + createMergeConflictDetails(targetFeatureBranch, sourceFeatureBranch, exc),
+                    "Fix the rebase conflicts and mark them as resolved by using 'git add'. After that, run "
                             + "'mvn flow:feature-integrate' again.\n"
                             + "Do NOT run 'git rebase --continue' and 'git rebase --abort'!",
                     "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
@@ -381,9 +383,9 @@ public class GitFlowFeatureIntegrateMojo extends AbstractGitFlowFeatureMojo {
                 getMavenLog().info("Removing remote source feature branch '" + sourceFeatureBranch + "'");
                 gitBranchDeleteRemote(sourceFeatureBranch);
             }
-            String featureName = sourceFeatureBranch.substring(gitFlowConfig.getFeatureBranchPrefix().length());
+            String sourceFeatureName = sourceFeatureBranch.substring(gitFlowConfig.getFeatureBranchPrefix().length());
             gitRemoveAllBranchCentralConfigsForBranch(sourceFeatureBranch,
-                    "feature '" + featureName + "' integrated");
+                    "feature '" + sourceFeatureName + "' integrated");
         }
         return stepParameters;
     }

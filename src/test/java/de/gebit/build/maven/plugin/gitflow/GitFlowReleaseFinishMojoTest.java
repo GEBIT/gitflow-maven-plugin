@@ -80,48 +80,53 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
             + "run 'mvn flow:release-finish' before and merge had conflicts you can continue. In other case it is "
             + "better to clarify the reason of merge in process. Continue?";
 
-    private static final GitFlowFailureInfo EXPECTED_RELEASE_MERGE_CONFLICT_MESSAGE_PATTERN = new GitFlowFailureInfo(
-            "\\QAutomatic merge of release branch '" + RELEASE_BRANCH + "' into development branch '" + MASTER_BRANCH
-                    + "' failed.\nGit error message:\n\\E.*",
-            "\\QEither abort the release process or fix the merge conflicts, mark them as resolved and run "
-                    + "'mvn flow:release-finish' again.\nDo NOT run 'git merge --continue'!\\E",
-            "\\Q'mvn flow:release-abort' to abort the release process\\E",
-            "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved\\E",
-            "\\Q'mvn flow:release-finish' to continue release process\\E");
+    private static final GitFlowFailureInfo EXPECTED_RELEASE_MERGE_CONFLICT_MESSAGE = new GitFlowFailureInfo(
+            "Automatic merge of release branch '" + RELEASE_BRANCH + "' into development branch '" + MASTER_BRANCH
+                    + "' failed.\nCONFLICT (added on " + MASTER_BRANCH + " and on " + RELEASE_BRANCH + "): "
+                    + GitExecution.TESTFILE_NAME,
+            "Either abort the release process or fix the merge conflicts, mark them as resolved by using 'git add' and run "
+                    + "'mvn flow:release-finish' again.\nDo NOT run 'git merge --continue'!",
+            "'mvn flow:release-abort' to abort the release process",
+            "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved",
+            "'mvn flow:release-finish' to continue release process");
 
-    private static final GitFlowFailureInfo EXPECTED_RELEASE_MERGE_INTO_MAINTENANCE_CONFLICT_MESSAGE_PATTERN = new GitFlowFailureInfo(
-            "\\QAutomatic merge of release branch '" + RELEASE_ON_MAINTENANCE_BRANCH + "' into development branch '"
-                    + MAINTENANCE_BRANCH + "' failed.\nGit error message:\n\\E.*",
-            "\\QEither abort the release process or fix the merge conflicts, mark them as resolved and run "
-                    + "'mvn flow:release-finish' again.\nDo NOT run 'git merge --continue'!\\E",
-            "\\Q'mvn flow:release-abort' to abort the release process\\E",
-            "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved\\E",
-            "\\Q'mvn flow:release-finish' to continue release process\\E");
+    private static final GitFlowFailureInfo EXPECTED_RELEASE_MERGE_INTO_MAINTENANCE_CONFLICT_MESSAGE = new GitFlowFailureInfo(
+            "Automatic merge of release branch '" + RELEASE_ON_MAINTENANCE_BRANCH + "' into development branch '"
+                    + MAINTENANCE_BRANCH + "' failed.\nCONFLICT (added on " + MAINTENANCE_BRANCH + " and on "
+                    + RELEASE_ON_MAINTENANCE_BRANCH + "): " + GitExecution.TESTFILE_NAME,
+            "Either abort the release process or fix the merge conflicts, mark them as resolved by using 'git add' and run "
+                    + "'mvn flow:release-finish' again.\nDo NOT run 'git merge --continue'!",
+            "'mvn flow:release-abort' to abort the release process",
+            "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved",
+            "'mvn flow:release-finish' to continue release process");
 
-    private static final GitFlowFailureInfo EXPECTED_UPSTREAM_MERGE_CONFLICT_MESSAGE_PATTERN = new GitFlowFailureInfo(
-            "\\QAutomatic merge of remote branch into local development branch '" + MASTER_BRANCH
-                    + "' failed.\nGit error message:\n\\E.*",
-            "\\QEither abort the release process or fix the merge conflicts, mark them as resolved and run "
-                    + "'mvn flow:release-finish' again.\nDo NOT run 'git merge --continue'!\\E",
-            "\\Q'mvn flow:release-abort' to abort the release process\\E",
-            "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved\\E",
-            "\\Q'mvn flow:release-finish' to continue release process\\E");
+    private static final GitFlowFailureInfo EXPECTED_UPSTREAM_MERGE_CONFLICT_MESSAGE = new GitFlowFailureInfo(
+            "Automatic merge of remote branch into local development branch '" + MASTER_BRANCH
+                    + "' failed.\nCONFLICT (added on " + MASTER_BRANCH + " and on remote branch): "
+                    + GitExecution.TESTFILE_NAME,
+            "Either abort the release process or fix the merge conflicts, mark them as resolved by using 'git add' and run "
+                    + "'mvn flow:release-finish' again.\nDo NOT run 'git merge --continue'!",
+            "'mvn flow:release-abort' to abort the release process",
+            "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved",
+            "'mvn flow:release-finish' to continue release process");
 
-    private static final GitFlowFailureInfo EXPECTED_MAINTENANCE_UPSTREAM_MERGE_CONFLICT_MESSAGE_PATTERN = new GitFlowFailureInfo(
-            "\\QAutomatic merge of remote branch into local development branch '" + MAINTENANCE_BRANCH
-                    + "' failed.\nGit error message:\n\\E.*",
-            "\\QEither abort the release process or fix the merge conflicts, mark them as resolved and run "
-                    + "'mvn flow:release-finish' again.\nDo NOT run 'git merge --continue'!\\E",
-            "\\Q'mvn flow:release-abort' to abort the release process\\E",
-            "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved\\E",
-            "\\Q'mvn flow:release-finish' to continue release process\\E");
+    private static final GitFlowFailureInfo EXPECTED_MAINTENANCE_UPSTREAM_MERGE_CONFLICT_MESSAGE = new GitFlowFailureInfo(
+            "Automatic merge of remote branch into local development branch '" + MAINTENANCE_BRANCH
+                    + "' failed.\nCONFLICT (added on " + MAINTENANCE_BRANCH + " and on remote branch): "
+                    + GitExecution.TESTFILE_NAME,
+            "Either abort the release process or fix the merge conflicts, mark them as resolved by using 'git add' and run "
+                    + "'mvn flow:release-finish' again.\nDo NOT run 'git merge --continue'!",
+            "'mvn flow:release-abort' to abort the release process",
+            "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved",
+            "'mvn flow:release-finish' to continue release process");
 
-    private static final GitFlowFailureInfo EXPECTED_UNRESOLVED_MERGE_CONFLICT_MESSAGE_PATTERN = new GitFlowFailureInfo(
-            "\\QThere are unresolved conflicts after merge.\nGit error message:\n\\E.*",
-            "\\QFix the merge conflicts and mark them as resolved. After that, run 'mvn flow:release-finish' again.\n"
-                    + "Do NOT run 'git merge --continue'.\\E",
-            "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved\\E",
-            "\\Q'mvn flow:release-finish' to continue release process\\E");
+    private static final GitFlowFailureInfo EXPECTED_UNRESOLVED_MERGE_CONFLICT_MESSAGE = new GitFlowFailureInfo(
+            "There are unresolved conflicts after merge.\nCONFLICT (added on " + MASTER_BRANCH + " and on "
+                    + RELEASE_BRANCH + "): " + GitExecution.TESTFILE_NAME,
+            "Fix the merge conflicts and mark them as resolved by using 'git add'. After that, run 'mvn flow:release-finish' again.\n"
+                    + "Do NOT run 'git merge --continue'.",
+            "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved",
+            "'mvn flow:release-finish' to continue release process");
 
     private static final String DEFAULT_DEPLOY_GOAL = "validate";
 
@@ -1721,7 +1726,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
         // verify
-        assertGitFlowFailureExceptionRegEx(result, EXPECTED_RELEASE_MERGE_CONFLICT_MESSAGE_PATTERN);
+        assertGitFlowFailureException(result, EXPECTED_RELEASE_MERGE_CONFLICT_MESSAGE);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertMergeInProcessFromBranch(repositorySet, RELEASE_BRANCH, GitExecution.TESTFILE_NAME);
 
@@ -1751,7 +1756,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
         // verify
-        assertGitFlowFailureExceptionRegEx(result, EXPECTED_UPSTREAM_MERGE_CONFLICT_MESSAGE_PATTERN);
+        assertGitFlowFailureException(result, EXPECTED_UPSTREAM_MERGE_CONFLICT_MESSAGE);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertMergeInProcessFromBranch(repositorySet, "origin/" + MASTER_BRANCH, GitExecution.TESTFILE_NAME);
 
@@ -1778,7 +1783,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.commitAll(repositorySet, COMMIT_MESSAGE_MASTER);
         git.switchToBranch(repositorySet, RELEASE_BRANCH);
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
-        assertGitFlowFailureExceptionRegEx(result, EXPECTED_RELEASE_MERGE_CONFLICT_MESSAGE_PATTERN);
+        assertGitFlowFailureException(result, EXPECTED_RELEASE_MERGE_CONFLICT_MESSAGE);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertMergeInProcessFromBranch(repositorySet, RELEASE_BRANCH, GitExecution.TESTFILE_NAME);
         repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath(GitExecution.TESTFILE_NAME).call();
@@ -1818,7 +1823,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.createAndCommitTestfile(repositorySet);
         final String EXPECTED_RELEASE_COMMIT = git.currentCommit(repositorySet);
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
-        assertGitFlowFailureExceptionRegEx(result, EXPECTED_RELEASE_MERGE_CONFLICT_MESSAGE_PATTERN);
+        assertGitFlowFailureException(result, EXPECTED_RELEASE_MERGE_CONFLICT_MESSAGE);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertMergeInProcessFromBranch(repositorySet, RELEASE_BRANCH, GitExecution.TESTFILE_NAME);
         when(promptControllerMock.prompt(PROMPT_MERGE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("y");
@@ -1827,7 +1832,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         verify(promptControllerMock).prompt(PROMPT_MERGE_CONTINUE, Arrays.asList("y", "n"), "y");
         verifyNoMoreInteractions(promptControllerMock);
-        assertGitFlowFailureExceptionRegEx(result, EXPECTED_UNRESOLVED_MERGE_CONFLICT_MESSAGE_PATTERN);
+        assertGitFlowFailureException(result, EXPECTED_UNRESOLVED_MERGE_CONFLICT_MESSAGE);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertMergeInProcessFromBranch(repositorySet, RELEASE_BRANCH, GitExecution.TESTFILE_NAME);
 
@@ -1855,7 +1860,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.commitAll(repositorySet, COMMIT_MESSAGE_MAINTENANCE);
         git.switchToBranch(repositorySet, RELEASE_ON_MAINTENANCE_BRANCH);
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
-        assertGitFlowFailureExceptionRegEx(result, EXPECTED_RELEASE_MERGE_INTO_MAINTENANCE_CONFLICT_MESSAGE_PATTERN);
+        assertGitFlowFailureException(result, EXPECTED_RELEASE_MERGE_INTO_MAINTENANCE_CONFLICT_MESSAGE);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
         git.assertMergeInProcessFromBranch(repositorySet, RELEASE_ON_MAINTENANCE_BRANCH, GitExecution.TESTFILE_NAME);
         repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath(GitExecution.TESTFILE_NAME).call();
@@ -1894,7 +1899,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.commitAll(repositorySet, COMMIT_MESSAGE_LOCAL);
         git.switchToBranch(repositorySet, RELEASE_BRANCH);
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
-        assertGitFlowFailureExceptionRegEx(result, EXPECTED_UPSTREAM_MERGE_CONFLICT_MESSAGE_PATTERN);
+        assertGitFlowFailureException(result, EXPECTED_UPSTREAM_MERGE_CONFLICT_MESSAGE);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertMergeInProcessFromBranch(repositorySet, "origin/" + MASTER_BRANCH, GitExecution.TESTFILE_NAME);
         repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath(GitExecution.TESTFILE_NAME).call();
@@ -1933,7 +1938,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.commitAll(repositorySet, COMMIT_MESSAGE_LOCAL);
         git.switchToBranch(repositorySet, RELEASE_ON_MAINTENANCE_BRANCH);
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
-        assertGitFlowFailureExceptionRegEx(result, EXPECTED_MAINTENANCE_UPSTREAM_MERGE_CONFLICT_MESSAGE_PATTERN);
+        assertGitFlowFailureException(result, EXPECTED_MAINTENANCE_UPSTREAM_MERGE_CONFLICT_MESSAGE);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
         git.assertMergeInProcessFromBranch(repositorySet, "origin/" + MAINTENANCE_BRANCH, GitExecution.TESTFILE_NAME);
         repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath(GitExecution.TESTFILE_NAME).call();
@@ -2051,7 +2056,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.createAndCommitTestfile(repositorySet);
         final String EXPECTED_RELEASE_COMMIT = git.currentCommit(repositorySet);
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
-        assertGitFlowFailureExceptionRegEx(result, EXPECTED_RELEASE_MERGE_CONFLICT_MESSAGE_PATTERN);
+        assertGitFlowFailureException(result, EXPECTED_RELEASE_MERGE_CONFLICT_MESSAGE);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertMergeInProcessFromBranch(repositorySet, RELEASE_BRANCH, GitExecution.TESTFILE_NAME);
         repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath(GitExecution.TESTFILE_NAME).call();

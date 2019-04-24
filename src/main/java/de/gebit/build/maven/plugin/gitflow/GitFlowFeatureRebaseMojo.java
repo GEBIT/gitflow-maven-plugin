@@ -241,7 +241,7 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
                     return;
                 }
             } else {
-                continueFeatureRebase(confirmedUpdateWithMerge);
+                continueFeatureRebase(confirmedUpdateWithMerge, featureBranchName);
                 baseBranch = gitFeatureBranchBaseBranch(featureBranchName);
                 oldFeatureVersion = gitGetBranchLocalConfig(featureBranchName, "oldFeatureVersion");
             }
@@ -294,8 +294,8 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
             } catch (MojoFailureException ex) {
                 getMavenLog().info("Feature rebase process paused to resolve merge conflicts");
                 throw new GitFlowFailureException(ex,
-                        "Automatic merge failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage()),
-                        "Fix the merge conflicts and mark them as resolved. After that, run "
+                        "Automatic merge failed.\n" + createMergeConflictDetails(featureBranch, baseBranch, ex),
+                        "Fix the merge conflicts and mark them as resolved by using 'git add'. After that, run "
                                 + "'mvn flow:feature-rebase' again.\nDo NOT run 'git merge --continue'!",
                         "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
                                 + "conflicts as resolved",
@@ -343,8 +343,8 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
                 } catch (MojoFailureException ex) {
                     String rebasePausedLogMessage = "Feature rebase process paused to resolve rebase conflicts";
                     GitFlowFailureInfo rebasePausedFailureInfo = new GitFlowFailureInfo(
-                            "Automatic rebase failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage()),
-                            "Fix the rebase conflicts and mark them as resolved. After that, run "
+                            "Automatic rebase failed.\n" + createMergeConflictDetails(baseBranch, featureBranch, ex),
+                            "Fix the rebase conflicts and mark them as resolved by using 'git add'. After that, run "
                                     + "'mvn flow:feature-rebase' again.\n"
                                     + "Do NOT run 'git rebase --continue' and 'git rebase --abort'!",
                             "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
@@ -365,8 +365,8 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
                 } catch (MojoFailureException ex) {
                     String rebasePausedLogMessage = "Feature rebase process paused to resolve rebase conflicts";
                     GitFlowFailureInfo rebasePausedFailureInfo = new GitFlowFailureInfo(
-                            "Automatic rebase failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage()),
-                            "Fix the rebase conflicts and mark them as resolved. After that, run "
+                            "Automatic rebase failed.\n" + createMergeConflictDetails(baseBranch, featureBranch, ex),
+                            "Fix the rebase conflicts and mark them as resolved by using 'git add'. After that, run "
                                     + "'mvn flow:feature-rebase' again.\n"
                                     + "Do NOT run 'git rebase --continue' and 'git rebase --abort'!",
                             "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
@@ -407,7 +407,7 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
         return version;
     }
 
-    private void continueFeatureRebase(boolean confirmedUpdateWithMerge)
+    private void continueFeatureRebase(boolean confirmedUpdateWithMerge, String featureBranch)
             throws CommandLineException, MojoFailureException {
         if (confirmedUpdateWithMerge) {
             // continue with commit
@@ -424,9 +424,9 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
             } catch (MojoFailureException exc) {
                 getMavenLog().info("Feature rebase process paused to resolve merge conflicts");
                 throw new GitFlowFailureException(exc,
-                        "There are unresolved conflicts after merge.\nGit error message:\n"
-                                + StringUtils.trim(exc.getMessage()),
-                        "Fix the merge conflicts and mark them as resolved. After that, run "
+                        "There are unresolved conflicts after merge.\n"
+                                + createMergeConflictDetails(featureBranch, "base branch", exc),
+                        "Fix the merge conflicts and mark them as resolved by using 'git add'. After that, run "
                                 + "'mvn flow:feature-rebase' again.\nDo NOT run 'git merge --continue'!",
                         "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
                                 + "conflicts as resolved",
@@ -447,17 +447,16 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
             } catch (MojoFailureException exc) {
                 String rebasePausedLogMessage = "Feature rebase process paused to resolve rebase conflicts";
                 GitFlowFailureInfo rebasePausedFailureInfo = new GitFlowFailureInfo(
-                        "There are unresolved conflicts after rebase.\nGit error message:\n"
-                                + StringUtils.trim(exc.getMessage()),
-                        "Fix the rebase conflicts and mark them as resolved. After that, run "
+                        "There are unresolved conflicts after rebase.\n"
+                                + createMergeConflictDetails("base branch", featureBranch, exc),
+                        "Fix the rebase conflicts and mark them as resolved by using 'git add'. After that, run "
                                 + "'mvn flow:feature-rebase' again.\n"
                                 + "Do NOT run 'git rebase --continue' and 'git rebase --abort'!",
                         "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
                                 + "conflicts as resolved",
                         "'mvn flow:feature-rebase' to continue feature rebase process",
                         "'mvn flow:feature-rebase-abort' to abort feature rebase process");
-                if (!fixAndContinueIfModuleDeletedConflictDetected(rebasePausedLogMessage,
-                        rebasePausedFailureInfo)) {
+                if (!fixAndContinueIfModuleDeletedConflictDetected(rebasePausedLogMessage, rebasePausedFailureInfo)) {
                     getMavenLog().info(rebasePausedLogMessage);
                     throw new GitFlowFailureException(exc, rebasePausedFailureInfo);
                 }

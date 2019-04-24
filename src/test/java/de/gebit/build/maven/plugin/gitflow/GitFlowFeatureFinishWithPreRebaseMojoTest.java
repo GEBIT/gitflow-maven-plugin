@@ -79,21 +79,24 @@ public class GitFlowFeatureFinishWithPreRebaseMojoTest extends AbstractGitFlowMo
             + "run 'mvn flow:feature-finish' before and merge had conflicts you can continue. In other case it is "
             + "better to clarify the reason of merge in process. Continue?";
 
-    private static final GitFlowFailureInfo EXPECTED_REBASE_CONFLICT_MESSAGE_PATTERN = new GitFlowFailureInfo(
-            "\\QAutomatic rebase of feature branch ''{0}'' on top of base branch ''{1}'' failed.\nGit error message:\n\\E.*",
-            "\\QFix the rebase conflicts and mark them as resolved. After that, run 'mvn flow:feature-finish' again.\n"
-                    + "Do NOT run 'git rebase --continue' and 'git rebase --abort'!\\E",
-            "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved\\E",
-            "\\Q'mvn flow:feature-finish' to continue feature finish process\\E",
-            "\\Q'mvn flow:feature-rebase-abort' to abort feature finish process\\E");
+    private static final GitFlowFailureInfo EXPECTED_REBASE_CONFLICT_MESSAGE = new GitFlowFailureInfo(
+            "Automatic rebase of feature branch ''{0}'' on top of base branch ''{1}'' failed.\n"
+                    + "CONFLICT (added on {1} and on {0}): " + TESTFILE_NAME,
+            "Fix the rebase conflicts and mark them as resolved by using 'git add'. "
+                    + "After that, run 'mvn flow:feature-finish' again.\n"
+                    + "Do NOT run 'git rebase --continue' and 'git rebase --abort'!",
+            "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved",
+            "'mvn flow:feature-finish' to continue feature finish process",
+            "'mvn flow:feature-rebase-abort' to abort feature finish process");
 
-    private static final GitFlowFailureInfo EXPECTED_MERGE_CONFLICT_MESSAGE_PATTERN = new GitFlowFailureInfo(
-            "\\QAutomatic merge of base branch ''{0}'' into feature branch ''{1}'' failed.\nGit error message:\n\\E.*",
-            "\\QFix the merge conflicts and mark them as resolved. After that, run 'mvn flow:feature-finish' again.\n"
-                    + "Do NOT run 'git merge --continue'!\\E",
-            "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved\\E",
-            "\\Q'mvn flow:feature-finish' to continue feature finish process\\E",
-            "\\Q'mvn flow:feature-rebase-abort' to abort feature finish process\\E");
+    private static final GitFlowFailureInfo EXPECTED_MERGE_CONFLICT_MESSAGE = new GitFlowFailureInfo(
+            "Automatic merge of base branch ''{0}'' into feature branch ''{1}'' failed.\n"
+                    + "CONFLICT (added on {1} and on {0}): " + TESTFILE_NAME,
+            "Fix the merge conflicts and mark them as resolved by using 'git add'. "
+                    + "After that, run 'mvn flow:feature-finish' again.\nDo NOT run 'git merge --continue'!",
+            "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved",
+            "'mvn flow:feature-finish' to continue feature finish process",
+            "'mvn flow:feature-rebase-abort' to abort feature finish process");
 
     private RepositorySet repositorySet;
 
@@ -143,22 +146,20 @@ public class GitFlowFeatureFinishWithPreRebaseMojoTest extends AbstractGitFlowMo
 
     private void assertGitFlowFailureExceptionOnRebaseBeforeMerge(MavenExecutionResult result, String baseBranch,
             String featureBranch) {
-        assertGitFlowFailureExceptionRegEx(result,
+        assertGitFlowFailureException(result,
                 new GitFlowFailureInfo(
-                        MessageFormat.format(EXPECTED_REBASE_CONFLICT_MESSAGE_PATTERN.getProblem(), featureBranch,
-                                baseBranch),
-                        EXPECTED_REBASE_CONFLICT_MESSAGE_PATTERN.getSolutionProposal(),
-                        EXPECTED_REBASE_CONFLICT_MESSAGE_PATTERN.getStepsToContinue()));
+                        MessageFormat.format(EXPECTED_REBASE_CONFLICT_MESSAGE.getProblem(), featureBranch, baseBranch),
+                        EXPECTED_REBASE_CONFLICT_MESSAGE.getSolutionProposal(),
+                        EXPECTED_REBASE_CONFLICT_MESSAGE.getStepsToContinue()));
     }
 
     private void assertGitFlowFailureExceptionOnUpdateBeforeMerge(MavenExecutionResult result, String baseBranch,
             String featureBranch) {
-        assertGitFlowFailureExceptionRegEx(result,
+        assertGitFlowFailureException(result,
                 new GitFlowFailureInfo(
-                        MessageFormat.format(EXPECTED_MERGE_CONFLICT_MESSAGE_PATTERN.getProblem(), baseBranch,
-                                featureBranch),
-                        EXPECTED_MERGE_CONFLICT_MESSAGE_PATTERN.getSolutionProposal(),
-                        EXPECTED_MERGE_CONFLICT_MESSAGE_PATTERN.getStepsToContinue()));
+                        MessageFormat.format(EXPECTED_MERGE_CONFLICT_MESSAGE.getProblem(), baseBranch, featureBranch),
+                        EXPECTED_MERGE_CONFLICT_MESSAGE.getSolutionProposal(),
+                        EXPECTED_MERGE_CONFLICT_MESSAGE.getStepsToContinue()));
     }
 
     @Test
@@ -330,16 +331,17 @@ public class GitFlowFeatureFinishWithPreRebaseMojoTest extends AbstractGitFlowMo
         // verify
         verify(promptControllerMock).prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y");
         verifyNoMoreInteractions(promptControllerMock);
-        assertGitFlowFailureExceptionRegEx(result, new GitFlowFailureInfo(
-                "\\QThere are unresolved conflicts after rebase of feature branch on top of base branch.\n"
-                        + "Git error message:\n\\E.*",
-                "\\QFix the rebase conflicts and mark them as resolved. After that, run "
-                        + "'mvn flow:feature-finish' again.\n"
-                        + "Do NOT run 'git rebase --continue' and 'git rebase --abort'!\\E",
-                "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as "
-                        + "resolved\\E",
-                "\\Q'mvn flow:feature-finish' to continue feature finish process\\E",
-                "\\Q'mvn flow:feature-rebase-abort' to abort feature finish process\\E"));
+        assertGitFlowFailureException(result,
+                new GitFlowFailureInfo(
+                        "There are unresolved conflicts after rebase of feature branch on top of base branch.\n"
+                                + "CONFLICT (added on base branch and on " + FEATURE_BRANCH + "): " + TESTFILE_NAME,
+                        "Fix the rebase conflicts and mark them as resolved by using 'git add'. After that, run "
+                                + "'mvn flow:feature-finish' again.\n"
+                                + "Do NOT run 'git rebase --continue' and 'git rebase --abort'!",
+                        "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as "
+                                + "resolved",
+                        "'mvn flow:feature-finish' to continue feature finish process",
+                        "'mvn flow:feature-rebase-abort' to abort feature finish process"));
         git.assertRebaseBranchInProcess(repositorySet, FEATURE_BRANCH, TESTFILE_NAME);
 
         git.assertBranchLocalConfigValue(repositorySet, FEATURE_BRANCH, "rebasedWithoutVersionChangeCommit", "true");
@@ -366,16 +368,16 @@ public class GitFlowFeatureFinishWithPreRebaseMojoTest extends AbstractGitFlowMo
         // verify
         verify(promptControllerMock).prompt(PROMPT_MERGE_CONTINUE, Arrays.asList("y", "n"), "y");
         verifyNoMoreInteractions(promptControllerMock);
-        assertGitFlowFailureExceptionRegEx(result,
+        assertGitFlowFailureException(result,
                 new GitFlowFailureInfo(
-                        "\\QThere are unresolved conflicts after merge of base branch into feature branch.\n"
-                                + "Git error message:\n\\E.*",
-                        "\\QFix the merge conflicts and mark them as resolved. After that, run "
-                                + "'mvn flow:feature-finish' again.\nDo NOT run 'git merge --continue'!\\E",
-                        "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
-                                + "conflicts as resolved\\E",
-                        "\\Q'mvn flow:feature-finish' to continue feature finish process\\E",
-                        "\\Q'mvn flow:feature-rebase-abort' to abort feature finish process\\E"));
+                        "There are unresolved conflicts after merge of base branch into feature branch.\n"
+                                + "CONFLICT (added on " + FEATURE_BRANCH + " and on base branch): " + TESTFILE_NAME,
+                        "Fix the merge conflicts and mark them as resolved by using 'git add'. After that, run "
+                                + "'mvn flow:feature-finish' again.\nDo NOT run 'git merge --continue'!",
+                        "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as "
+                                + "resolved",
+                        "'mvn flow:feature-finish' to continue feature finish process",
+                        "'mvn flow:feature-rebase-abort' to abort feature finish process"));
         git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
         git.assertMergeInProcessFromBranch(repositorySet, MASTER_BRANCH, TESTFILE_NAME);
 
@@ -402,17 +404,17 @@ public class GitFlowFeatureFinishWithPreRebaseMojoTest extends AbstractGitFlowMo
         // verify
         verify(promptControllerMock).prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y");
         verifyNoMoreInteractions(promptControllerMock);
-        assertGitFlowFailureExceptionRegEx(result,
-                new GitFlowFailureInfo(
-                        "\\QThere are unresolved conflicts after rebase of feature branch on top of base branch.\n"
-                                + "Git error message:\n\\E.*",
-                        "\\QFix the rebase conflicts and mark them as resolved. After that, run "
-                                + "'mvn flow:feature-finish' again.\n"
-                                + "Do NOT run 'git rebase --continue' and 'git rebase --abort'!\\E",
-                        "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
-                                + "conflicts as resolved\\E",
-                        "\\Q'mvn flow:feature-finish' to continue feature finish process\\E",
-                        "\\Q'mvn flow:feature-rebase-abort' to abort feature finish process\\E"));
+        assertGitFlowFailureException(result, new GitFlowFailureInfo(
+                "There are unresolved conflicts after rebase of feature branch on top of base branch.\n"
+                        + "CONFLICT (added on base branch and on " + FEATURE_WITHOUT_VERSION_BRANCH + "): "
+                        + TESTFILE_NAME,
+                "Fix the rebase conflicts and mark them as resolved by using 'git add'. After that, run "
+                        + "'mvn flow:feature-finish' again.\n"
+                        + "Do NOT run 'git rebase --continue' and 'git rebase --abort'!",
+                "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
+                        + "conflicts as resolved",
+                "'mvn flow:feature-finish' to continue feature finish process",
+                "'mvn flow:feature-rebase-abort' to abort feature finish process"));
         git.assertRebaseBranchInProcess(repositorySet, FEATURE_WITHOUT_VERSION_BRANCH, TESTFILE_NAME);
 
         git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_WITHOUT_VERSION_BRANCH,

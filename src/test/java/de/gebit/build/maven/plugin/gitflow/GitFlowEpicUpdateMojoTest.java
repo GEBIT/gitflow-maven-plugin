@@ -98,21 +98,23 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
     private static final String COMMIT_MESSAGE_MARGE = TestProjects.BASIC.jiraProject + "-NONE: Merge branch "
             + MASTER_BRANCH + " into " + EPIC_BRANCH;
 
-    private static final GitFlowFailureInfo EXPECTED_MERGE_CONFLICT_MESSAGE_PATTERN = new GitFlowFailureInfo(
-            "\\QAutomatic merge failed.\nGit error message:\n\\E.*",
-            "\\QFix the merge conflicts and mark them as resolved.\nIMPORTANT: be sure not to update the version in "
-                    + "epic branch while resolving conflicts!\nAfter that, run 'mvn flow:epic-update' again. "
-                    + "Do NOT run 'git merge --continue'.\\E",
-            "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved\\E",
-            "\\Q'mvn flow:epic-update' to continue epic update process\\E");
+    private static final GitFlowFailureInfo EXPECTED_MERGE_CONFLICT_MESSAGE = new GitFlowFailureInfo(
+            "Automatic merge failed.\nCONFLICT (added on " + EPIC_BRANCH + " and on " + MASTER_BRANCH + "): "
+                    + GitExecution.TESTFILE_NAME,
+            "Fix the merge conflicts and mark them as resolved by using 'git add'.\n"
+                    + "IMPORTANT: be sure not to update the version in epic branch while resolving conflicts!\n"
+                    + "After that, run 'mvn flow:epic-update' again.\nDo NOT run 'git merge --continue'.",
+            "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved",
+            "'mvn flow:epic-update' to continue epic update process");
 
-    private static final GitFlowFailureInfo EXPECTED_REBASE_CONFLICT_MESSAGE_PATTERN = new GitFlowFailureInfo(
-            "\\QAutomatic rebase failed.\nGit error message:\n\\E.*",
-            "\\QFix the rebase conflicts and mark them as resolved. After that, run 'mvn flow:epic-update' again.\n"
-                    + "Do NOT run 'git rebase --continue' and 'git rebase --abort'!\\E",
-            "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved"
-                    + "\\E",
-            "\\Q'mvn flow:epic-update' to continue epic update process\\E");
+    private static final GitFlowFailureInfo EXPECTED_REBASE_CONFLICT_MESSAGE = new GitFlowFailureInfo(
+            "Automatic rebase failed.\nCONFLICT (added on " + MASTER_BRANCH + " and on "
+                    + BasicConstants.SINGLE_EPIC_BRANCH + "): " + GitExecution.TESTFILE_NAME,
+            "Fix the rebase conflicts and mark them as resolved by using 'git add'. After that, run "
+                    + "'mvn flow:epic-update' again.\n"
+                    + "Do NOT run 'git rebase --continue' and 'git rebase --abort'!",
+            "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved",
+            "'mvn flow:epic-update' to continue epic update process");
 
     private static final String PROMPT_REBASE_ON_LAST_INTEGRATED_MASTER = "The current commit on " + MASTER_BRANCH
             + " is not integrated. Update epic branch to the last integrated commit (" + INTEGRATION_MASTER_BRANCH
@@ -1414,7 +1416,7 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         verify(promptControllerMock).prompt(PROMPT_MESSAGE_MERGE_ONLY, Arrays.asList("y", "n"), "n");
         verifyZeroInteractions(promptControllerMock);
-        assertGitFlowFailureExceptionRegEx(result, EXPECTED_MERGE_CONFLICT_MESSAGE_PATTERN);
+        assertGitFlowFailureException(result, EXPECTED_MERGE_CONFLICT_MESSAGE);
         git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
         git.assertMergeInProcess(repositorySet, TESTFILE_NAME);
     }
@@ -1639,7 +1641,7 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
                 promptControllerMock);
         verify(promptControllerMock).prompt(PROMPT_MESSAGE_MERGE_ONLY, Arrays.asList("y", "n"), "n");
         verifyZeroInteractions(promptControllerMock);
-        assertGitFlowFailureExceptionRegEx(result, EXPECTED_MERGE_CONFLICT_MESSAGE_PATTERN);
+        assertGitFlowFailureException(result, EXPECTED_MERGE_CONFLICT_MESSAGE);
         git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
         git.assertMergeInProcess(repositorySet, TESTFILE_NAME);
         repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath(TESTFILE_NAME).call();
@@ -1669,7 +1671,7 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
                 promptControllerMock);
         verify(promptControllerMock).prompt(PROMPT_MESSAGE_MERGE_ONLY, Arrays.asList("y", "n"), "n");
         verifyZeroInteractions(promptControllerMock);
-        assertGitFlowFailureExceptionRegEx(result, EXPECTED_MERGE_CONFLICT_MESSAGE_PATTERN);
+        assertGitFlowFailureException(result, EXPECTED_MERGE_CONFLICT_MESSAGE);
         git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
         git.assertMergeInProcess(repositorySet, TESTFILE_NAME);
         repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath(TESTFILE_NAME).call();
@@ -1699,7 +1701,7 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
                 promptControllerMock);
         verify(promptControllerMock).prompt(PROMPT_MESSAGE_MERGE_ONLY, Arrays.asList("y", "n"), "n");
         verifyZeroInteractions(promptControllerMock);
-        assertGitFlowFailureExceptionRegEx(result, EXPECTED_MERGE_CONFLICT_MESSAGE_PATTERN);
+        assertGitFlowFailureException(result, EXPECTED_MERGE_CONFLICT_MESSAGE);
         git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
         git.assertMergeInProcess(repositorySet, TESTFILE_NAME);
         when(promptControllerMock.prompt(PROMPT_MERGE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("y");
@@ -1708,13 +1710,15 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         verify(promptControllerMock).prompt(PROMPT_MERGE_CONTINUE, Arrays.asList("y", "n"), "y");
         verifyNoMoreInteractions(promptControllerMock);
-        assertGitFlowFailureExceptionRegEx(result,
-                new GitFlowFailureInfo("\\QThere are unresolved conflicts after merge.\nGit error message:\n\\E.*",
-                        "\\QFix the merge conflicts and mark them as resolved. After that, run "
-                                + "'mvn flow:epic-update' again. Do NOT run 'git merge --continue'.\\E",
-                        "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts "
-                                + "as resolved\\E",
-                        "\\Q'mvn flow:epic-update' to continue epic update process\\E"));
+        assertGitFlowFailureException(result,
+                new GitFlowFailureInfo(
+                        "There are unresolved conflicts after merge.\nCONFLICT (added on " + EPIC_BRANCH
+                                + " and on base branch): " + TESTFILE_NAME,
+                        "Fix the merge conflicts and mark them as resolved by using 'git add'. After that, run "
+                                + "'mvn flow:epic-update' again.\nDo NOT run 'git merge --continue'.",
+                        "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts "
+                                + "as resolved",
+                        "'mvn flow:epic-update' to continue epic update process"));
         git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
         git.assertMergeInProcess(repositorySet, TESTFILE_NAME);
     }
@@ -2064,7 +2068,7 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
                 promptControllerMock);
         verifyZeroInteractions(promptControllerMock);
-        assertGitFlowFailureExceptionRegEx(result, EXPECTED_REBASE_CONFLICT_MESSAGE_PATTERN);
+        assertGitFlowFailureException(result, EXPECTED_REBASE_CONFLICT_MESSAGE);
         git.assertRebaseBranchInProcess(repositorySet, USED_EPIC_BRANCH, TESTFILE_NAME);
         repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath(TESTFILE_NAME).call();
         repositorySet.getLocalRepoGit().add().addFilepattern(TESTFILE_NAME).call();
@@ -2095,7 +2099,7 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
                 promptControllerMock);
         verifyZeroInteractions(promptControllerMock);
-        assertGitFlowFailureExceptionRegEx(result, EXPECTED_REBASE_CONFLICT_MESSAGE_PATTERN);
+        assertGitFlowFailureException(result, EXPECTED_REBASE_CONFLICT_MESSAGE);
         git.assertRebaseBranchInProcess(repositorySet, USED_EPIC_BRANCH, TESTFILE_NAME);
         repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath(TESTFILE_NAME).call();
         repositorySet.getLocalRepoGit().add().addFilepattern(TESTFILE_NAME).call();
@@ -2125,7 +2129,7 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
                 promptControllerMock);
         verifyZeroInteractions(promptControllerMock);
-        assertGitFlowFailureExceptionRegEx(result, EXPECTED_REBASE_CONFLICT_MESSAGE_PATTERN);
+        assertGitFlowFailureException(result, EXPECTED_REBASE_CONFLICT_MESSAGE);
         git.assertRebaseBranchInProcess(repositorySet, USED_EPIC_BRANCH, TESTFILE_NAME);
         when(promptControllerMock.prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("y");
         // test
@@ -2133,13 +2137,14 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         verify(promptControllerMock).prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y");
         verifyNoMoreInteractions(promptControllerMock);
-        assertGitFlowFailureExceptionRegEx(result,
-                new GitFlowFailureInfo("\\QThere are unresolved conflicts after rebase.\nGit error message:\n\\E.*",
-                        "\\QFix the rebase conflicts and mark them as resolved. After that, run 'mvn flow:epic-update' "
-                                + "again.\nDo NOT run 'git rebase --continue' and 'git rebase --abort'!\\E",
-                        "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts "
-                                + "as resolved\\E",
-                        "\\Q'mvn flow:epic-update' to continue epic update process\\E"));
+        assertGitFlowFailureException(result, new GitFlowFailureInfo(
+                "There are unresolved conflicts after rebase.\nCONFLICT (added on base branch and on "
+                        + BasicConstants.SINGLE_EPIC_BRANCH + "): " + TESTFILE_NAME,
+                "Fix the rebase conflicts and mark them as resolved by using 'git add'. After that, run "
+                        + "'mvn flow:epic-update' again.\nDo NOT run 'git rebase --continue' and 'git rebase --abort'!",
+                "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as "
+                        + "resolved",
+                "'mvn flow:epic-update' to continue epic update process"));
         git.assertRebaseBranchInProcess(repositorySet, USED_EPIC_BRANCH, TESTFILE_NAME);
     }
 
@@ -2206,6 +2211,14 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
         // set up
         final String USED_EPIC_BRANCH = BasicConstants.EPIC_WITHOUT_VERSION_ON_MAINTENANCE_BRANCH;
         final String TESTFILE_NAME = "testfile.txt";
+        final GitFlowFailureInfo USED_EXPECTED_REBASE_CONFLICT_MESSAGE = new GitFlowFailureInfo(
+                "Automatic rebase failed.\nCONFLICT (added on " + MAINTENANCE_BRANCH + " and on " + USED_EPIC_BRANCH
+                        + "): " + TESTFILE_NAME,
+                "Fix the rebase conflicts and mark them as resolved by using 'git add'. After that, run "
+                        + "'mvn flow:epic-update' again.\n"
+                        + "Do NOT run 'git rebase --continue' and 'git rebase --abort'!",
+                "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved",
+                "'mvn flow:epic-update' to continue epic update process");
         git.switchToBranch(repositorySet, MAINTENANCE_BRANCH);
         git.createAndCommitTestfile(repositorySet, TESTFILE_NAME, COMMIT_MESSAGE_MAINTENANCE_TESTFILE);
         git.push(repositorySet);
@@ -2218,7 +2231,7 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
                 promptControllerMock);
         // verify
         verifyNoMoreInteractions(promptControllerMock);
-        assertGitFlowFailureExceptionRegEx(result, EXPECTED_REBASE_CONFLICT_MESSAGE_PATTERN);
+        assertGitFlowFailureException(result, USED_EXPECTED_REBASE_CONFLICT_MESSAGE);
         git.assertRebaseBranchInProcess(repositorySet, USED_EPIC_BRANCH, TESTFILE_NAME);
     }
 
@@ -2409,12 +2422,13 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
         final String FEATURE_TESTFILE = "feature_testfile.txt";
         final String COMMIT_MESSAGE_FEATURE_TESTFILE = "FEATURE: Unit test dummy file commit";
         final String COMMIT_MESSAGE_EPIC_TESTFILE2 = "EPIC2: Unit test dummy file commit";
-        final GitFlowFailureInfo EXPECTED_FEATURE_FINISH_MERGE_CONFLICT_MESSAGE_PATTERN = new GitFlowFailureInfo(
-                "\\QAutomatic merge failed.\nGit error message:\n\\E.*",
-                "\\QFix the merge conflicts and mark them as resolved. After that, run 'mvn flow:feature-finish' again. "
-                        + "Do NOT run 'git merge --continue'.\\E",
-                "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved\\E",
-                "\\Q'mvn flow:feature-finish' to continue feature finish process\\E");
+        final GitFlowFailureInfo EXPECTED_FEATURE_FINISH_MERGE_CONFLICT_MESSAGE = new GitFlowFailureInfo(
+                "Automatic merge failed.\nCONFLICT (added on " + EPIC_BRANCH + " and on "
+                        + BasicConstants.FEATURE_ON_EPIC_BRANCH + "): " + FEATURE_TESTFILE,
+                "Fix the merge conflicts and mark them as resolved by using 'git add'. "
+                        + "After that, run 'mvn flow:feature-finish' again.\nDo NOT run 'git merge --continue'.",
+                "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved",
+                "'mvn flow:feature-finish' to continue feature finish process");
         final String PROMPT_FEATURE_FINISH_MERGE_CONTINUE = "You have a merge in process on your current branch. If you "
                 + "run 'mvn flow:feature-finish' before and merge had conflicts you can continue. In other case it is "
                 + "better to clarify the reason of merge in process. Continue?";
@@ -2447,7 +2461,7 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
                 + "base branch" + LS + "a. Abort feature finish process" + LS + "Select how you want to continue:",
                 Arrays.asList("r", "m", "a"), "a");
         verifyNoMoreInteractions(promptControllerMock);
-        assertGitFlowFailureExceptionRegEx(result, EXPECTED_FEATURE_FINISH_MERGE_CONFLICT_MESSAGE_PATTERN);
+        assertGitFlowFailureException(result, EXPECTED_FEATURE_FINISH_MERGE_CONFLICT_MESSAGE);
         git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
         git.assertMergeInProcess(repositorySet, FEATURE_TESTFILE);
         repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath(FEATURE_TESTFILE).call();

@@ -1502,14 +1502,15 @@ public class GitFlowReleaseStartMojoTest extends AbstractGitFlowMojoTestCase {
         git.createAndCommitTestfile(repositorySet);
         final String EXPECTED_RELEASE_COMMIT = git.currentCommit(repositorySet);
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), "release-finish");
-        assertGitFlowFailureExceptionRegEx(result, new GitFlowFailureInfo(
-                "\\QAutomatic merge of release branch '" + USED_RELEASE_BRANCH + "' into development branch '"
-                        + MASTER_BRANCH + "' failed.\nGit error message:\n\\E.*",
-                "\\QEither abort the release process or fix the merge conflicts, mark them as resolved and run "
-                        + "'mvn flow:release-finish' again.\nDo NOT run 'git merge --continue'!\\E",
-                "\\Q'mvn flow:release-abort' to abort the release process\\E",
-                "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved\\E",
-                "\\Q'mvn flow:release-finish' to continue release process\\E"));
+        assertGitFlowFailureException(result, new GitFlowFailureInfo(
+                "Automatic merge of release branch '" + USED_RELEASE_BRANCH + "' into development branch '"
+                        + MASTER_BRANCH + "' failed.\nCONFLICT (added on " + MASTER_BRANCH + " and on "
+                        + USED_RELEASE_BRANCH + "): " + GitExecution.TESTFILE_NAME,
+                "Either abort the release process or fix the merge conflicts, mark them as resolved by using 'git add' "
+                        + "and run 'mvn flow:release-finish' again.\nDo NOT run 'git merge --continue'!",
+                "'mvn flow:release-abort' to abort the release process",
+                "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved",
+                "'mvn flow:release-finish' to continue release process"));
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertMergeInProcessFromBranch(repositorySet, USED_RELEASE_BRANCH, GitExecution.TESTFILE_NAME);
 

@@ -1021,6 +1021,12 @@ public abstract class AbstractGitFlowMojoTestCase {
         assertExceptionOnMavenExecution(mavenExecutionResult, MojoExecutionException.class, expectedMessage, false);
     }
 
+    protected void assertGitFlowFailureException(MavenExecutionResult mavenExecutionResult,
+            GitFlowFailureInfo expectedFailureInfo) {
+        assertGitFlowFailureException(mavenExecutionResult, expectedFailureInfo.getProblem(),
+                expectedFailureInfo.getSolutionProposal(), expectedFailureInfo.getStepsToContinue());
+    }
+
     protected void assertGitFlowFailureException(MavenExecutionResult mavenExecutionResult, String expectedProblem,
             String expectedSolutionProposal, String... expectedSteps) {
         String expectedMessage = createGitFlowMessage(expectedProblem, expectedSolutionProposal, expectedSteps);

@@ -81,12 +81,13 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
             + "run 'mvn flow:epic-finish' before and merge had conflicts you can continue. In other case it is "
             + "better to clarify the reason of merge in process. Continue?";
 
-    private static final GitFlowFailureInfo EXPECTED_MERGE_CONFLICT_MESSAGE_PATTERN = new GitFlowFailureInfo(
-            "\\QAutomatic merge failed.\nGit error message:\n\\E.*",
-            "\\QFix the merge conflicts and mark them as resolved. After that, run 'mvn flow:epic-finish' again. "
-                    + "Do NOT run 'git merge --continue'.\\E",
-            "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved\\E",
-            "\\Q'mvn flow:epic-finish' to continue epic finish process\\E");
+    private static final GitFlowFailureInfo EXPECTED_MERGE_CONFLICT_MESSAGE = new GitFlowFailureInfo(
+            "Automatic merge failed.\nCONFLICT (added on " + MASTER_BRANCH + " and on " + EPIC_BRANCH + "): "
+                    + GitExecution.TESTFILE_NAME,
+            "Fix the merge conflicts and mark them as resolved by using 'git add'. "
+                    + "After that, run 'mvn flow:epic-finish' again.\nDo NOT run 'git merge --continue'.",
+            "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved",
+            "'mvn flow:epic-finish' to continue epic finish process");
 
     private RepositorySet repositorySet;
 
@@ -967,7 +968,7 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         verify(promptControllerMock).prompt(PROMPT_MERGE_WITHOUT_UPDATE, Arrays.asList("y", "n"), "n");
         verifyNoMoreInteractions(promptControllerMock);
-        assertGitFlowFailureExceptionRegEx(result, EXPECTED_MERGE_CONFLICT_MESSAGE_PATTERN);
+        assertGitFlowFailureException(result, EXPECTED_MERGE_CONFLICT_MESSAGE);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertMergeInProcess(repositorySet, GitExecution.TESTFILE_NAME);
     }
@@ -1374,7 +1375,7 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         verify(promptControllerMock).prompt(PROMPT_MERGE_WITHOUT_UPDATE, Arrays.asList("y", "n"), "n");
         verifyNoMoreInteractions(promptControllerMock);
-        assertGitFlowFailureExceptionRegEx(result, EXPECTED_MERGE_CONFLICT_MESSAGE_PATTERN);
+        assertGitFlowFailureException(result, EXPECTED_MERGE_CONFLICT_MESSAGE);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertMergeInProcess(repositorySet, GitExecution.TESTFILE_NAME);
     }
@@ -1394,7 +1395,7 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 promptControllerMock);
         verify(promptControllerMock).prompt(PROMPT_MERGE_WITHOUT_UPDATE, Arrays.asList("y", "n"), "n");
         verifyNoMoreInteractionsAndReset(promptControllerMock);
-        assertGitFlowFailureExceptionRegEx(result, EXPECTED_MERGE_CONFLICT_MESSAGE_PATTERN);
+        assertGitFlowFailureException(result, EXPECTED_MERGE_CONFLICT_MESSAGE);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertMergeInProcess(repositorySet, GitExecution.TESTFILE_NAME);
         repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath(GitExecution.TESTFILE_NAME).call();
@@ -1431,7 +1432,7 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 promptControllerMock);
         verify(promptControllerMock).prompt(PROMPT_MERGE_WITHOUT_UPDATE, Arrays.asList("y", "n"), "n");
         verifyNoMoreInteractionsAndReset(promptControllerMock);
-        assertGitFlowFailureExceptionRegEx(result, EXPECTED_MERGE_CONFLICT_MESSAGE_PATTERN);
+        assertGitFlowFailureException(result, EXPECTED_MERGE_CONFLICT_MESSAGE);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertMergeInProcess(repositorySet, GitExecution.TESTFILE_NAME);
         repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath(GitExecution.TESTFILE_NAME).call();
@@ -1460,7 +1461,7 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 promptControllerMock);
         verify(promptControllerMock).prompt(PROMPT_MERGE_WITHOUT_UPDATE, Arrays.asList("y", "n"), "n");
         verifyNoMoreInteractionsAndReset(promptControllerMock);
-        assertGitFlowFailureExceptionRegEx(result, EXPECTED_MERGE_CONFLICT_MESSAGE_PATTERN);
+        assertGitFlowFailureException(result, EXPECTED_MERGE_CONFLICT_MESSAGE);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertMergeInProcess(repositorySet, GitExecution.TESTFILE_NAME);
         when(promptControllerMock.prompt(PROMPT_MERGE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("y");
@@ -1469,13 +1470,15 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         verify(promptControllerMock).prompt(PROMPT_MERGE_CONTINUE, Arrays.asList("y", "n"), "y");
         verifyNoMoreInteractions(promptControllerMock);
-        assertGitFlowFailureExceptionRegEx(result,
-                new GitFlowFailureInfo("\\QThere are unresolved conflicts after merge.\nGit error message:\n\\E.*",
-                        "\\QFix the merge conflicts and mark them as resolved. After that, run 'mvn flow:epic-finish' "
-                                + "again. Do NOT run 'git merge --continue'.\\E",
-                        "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts "
-                                + "as resolved\\E",
-                        "\\Q'mvn flow:epic-finish' to continue epic finish process\\E"));
+        assertGitFlowFailureException(result,
+                new GitFlowFailureInfo(
+                        "There are unresolved conflicts after merge.\nCONFLICT (added on " + MASTER_BRANCH + " and on "
+                                + EPIC_BRANCH + "): " + GitExecution.TESTFILE_NAME,
+                        "Fix the merge conflicts and mark them as resolved by using 'git add'. After that, run "
+                                + "'mvn flow:epic-finish' again.\nDo NOT run 'git merge --continue'.",
+                        "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts "
+                                + "as resolved",
+                        "'mvn flow:epic-finish' to continue epic finish process"));
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertMergeInProcess(repositorySet, GitExecution.TESTFILE_NAME);
     }

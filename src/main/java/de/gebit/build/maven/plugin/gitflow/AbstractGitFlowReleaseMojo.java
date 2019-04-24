@@ -419,10 +419,11 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
             } catch (MojoFailureException ex) {
                 throw new GitFlowFailureException(ex,
                         "Automatic merge of release branch '" + releaseBranch + "' into production branch '"
-                                + productionBranch + "' failed.\nGit error message:\n"
-                                + StringUtils.trim(ex.getMessage()),
-                        "Either abort the release process or fix the merge conflicts, mark them as resolved and run "
-                                + "'mvn flow:" + getCurrentGoal() + "' again.\nDo NOT run 'git merge --continue'!",
+                                + productionBranch + "' failed.\n"
+                                + createMergeConflictDetails(productionBranch, releaseBranch, ex),
+                        "Either abort the release process or fix the merge conflicts, mark them as resolved by using "
+                                + "'git add' and run 'mvn flow:" + getCurrentGoal()
+                                + "' again.\nDo NOT run 'git merge --continue'!",
                         "'mvn flow:release-abort' to abort the release process",
                         "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as "
                                 + "resolved",
@@ -446,9 +447,10 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         } catch (MojoFailureException ex) {
             throw new GitFlowFailureException(ex,
                     "Automatic merge of remote branch into local development branch '" + developmentBranch
-                            + "' failed.\nGit error message:\n" + StringUtils.trim(ex.getMessage()),
-                    "Either abort the release process or fix the merge conflicts, mark them as resolved and run "
-                            + "'mvn flow:" + getCurrentGoal() + "' again.\nDo NOT run 'git merge --continue'!",
+                            + "' failed.\n" + createMergeConflictDetails(developmentBranch, "remote branch", ex),
+                    "Either abort the release process or fix the merge conflicts, mark them as resolved by using "
+                            + "'git add' and run " + "'mvn flow:" + getCurrentGoal()
+                            + "' again.\nDo NOT run 'git merge --continue'!",
                     "'mvn flow:release-abort' to abort the release process",
                     "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as "
                             + "resolved",
@@ -472,10 +474,11 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
             } catch (MojoFailureException ex) {
                 throw new GitFlowFailureException(ex,
                         "Automatic merge of production branch '" + productionBranch + "' into development branch '"
-                                + developmentBranch + "' failed.\nGit error message:\n"
-                                + StringUtils.trim(ex.getMessage()),
-                        "Either abort the release process or fix the merge conflicts, mark them as resolved and run "
-                                + "'mvn flow:" + getCurrentGoal() + "' again.\nDo NOT run 'git merge --continue'!",
+                                + developmentBranch + "' failed.\n"
+                                + createMergeConflictDetails(developmentBranch, productionBranch, ex),
+                        "Either abort the release process or fix the merge conflicts, mark them as resolved by using "
+                                + "'git add' and run " + "'mvn flow:" + getCurrentGoal()
+                                + "' again.\nDo NOT run 'git merge --continue'!",
                         "'mvn flow:release-abort' to abort the release process",
                         "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as "
                                 + "resolved",
@@ -490,10 +493,11 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
             } catch (MojoFailureException ex) {
                 throw new GitFlowFailureException(ex,
                         "Automatic merge of release branch '" + releaseBranch + "' into development branch '"
-                                + developmentBranch + "' failed.\nGit error message:\n"
-                                + StringUtils.trim(ex.getMessage()),
-                        "Either abort the release process or fix the merge conflicts, mark them as resolved and run "
-                                + "'mvn flow:" + getCurrentGoal() + "' again.\nDo NOT run 'git merge --continue'!",
+                                + developmentBranch + "' failed.\n"
+                                + createMergeConflictDetails(developmentBranch, releaseBranch, ex),
+                        "Either abort the release process or fix the merge conflicts, mark them as resolved by using "
+                                + "'git add' and run " + "'mvn flow:" + getCurrentGoal()
+                                + "' again.\nDo NOT run 'git merge --continue'!",
                         "'mvn flow:release-abort' to abort the release process",
                         "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as "
                                 + "resolved",
@@ -615,7 +619,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                 productionBranch = getProductionBranchForDevelopmentBranch(developmentBranch);
                 releaseCommit = gitGetBranchLocalConfig(releaseBranch, "releaseCommit");
                 nextSnapshotVersion = gitGetBranchLocalConfig(releaseBranch, "nextSnapshotVersion");
-                promptAndMergeContinue();
+                promptAndMergeContinue(mergeIntoBranch, mergeFromBranch);
                 setDevelopmentVersionAndFinilizeRelease(nextSnapshotVersion, releaseBranch, productionBranch,
                         developmentBranch, releaseCommit);
             } else if (isProductionBranch(mergeIntoBranch)) {
@@ -623,7 +627,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                 developmentBranch = getDevelopmentBranchForProductionBranch(productionBranch);
                 releaseCommit = gitGetBranchLocalConfig(releaseBranch, "releaseCommit");
                 nextSnapshotVersion = gitGetBranchLocalConfig(releaseBranch, "nextSnapshotVersion");
-                promptAndMergeContinue();
+                promptAndMergeContinue(mergeIntoBranch, mergeFromBranch);
                 prepareDevelopmentBranchAndFinilizeRelease(nextSnapshotVersion, releaseBranch, productionBranch,
                         developmentBranch, releaseCommit);
             } else {
@@ -637,7 +641,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                 releaseBranch = gitGetBranchLocalConfig(developmentBranch, "releaseBranch");
                 releaseCommit = gitGetBranchLocalConfig(releaseBranch, "releaseCommit");
                 nextSnapshotVersion = gitGetBranchLocalConfig(releaseBranch, "nextSnapshotVersion");
-                promptAndMergeContinue();
+                promptAndMergeContinue(mergeIntoBranch, mergeFromBranch);
                 setDevelopmentVersionAndFinilizeRelease(nextSnapshotVersion, releaseBranch, productionBranch,
                         developmentBranch, releaseCommit);
             } else {
@@ -651,7 +655,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                 releaseBranch = gitGetBranchLocalConfig(developmentBranch, "releaseBranch");
                 releaseCommit = gitGetBranchLocalConfig(releaseBranch, "releaseCommit");
                 nextSnapshotVersion = gitGetBranchLocalConfig(releaseBranch, "nextSnapshotVersion");
-                promptAndMergeContinue();
+                promptAndMergeContinue(mergeIntoBranch, mergeFromBranch);
                 mergeIntoCurrentDevelopmentBranchAndFinilizeRelease(nextSnapshotVersion, releaseBranch,
                         productionBranch, developmentBranch, releaseCommit);
             } else {
@@ -664,7 +668,8 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         }
     }
 
-    private void promptAndMergeContinue() throws GitFlowFailureException, CommandLineException {
+    private void promptAndMergeContinue(String mergeIntoBranch, String mergeFromBranch)
+            throws CommandLineException, MojoFailureException {
         if (!getPrompter().promptConfirmation(
                 "You have a merge in process on your current branch. If you run 'mvn flow:" + getCurrentGoal()
                         + "' before and merge had conflicts you can continue. "
@@ -676,10 +681,10 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
             gitCommitMerge();
         } catch (MojoFailureException exc) {
             throw new GitFlowFailureException(exc,
-                    "There are unresolved conflicts after merge.\nGit error message:\n"
-                            + StringUtils.trim(exc.getMessage()),
-                    "Fix the merge conflicts and mark them as resolved. After that, run 'mvn flow:" + getCurrentGoal()
-                            + "' again.\nDo NOT run 'git merge --continue'.",
+                    "There are unresolved conflicts after merge.\n"
+                            + createMergeConflictDetails(mergeIntoBranch, mergeFromBranch, exc),
+                    "Fix the merge conflicts and mark them as resolved by using 'git add'. After that, run 'mvn flow:"
+                            + getCurrentGoal() + "' again.\nDo NOT run 'git merge --continue'.",
                     "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark conflicts as resolved",
                     "'mvn flow:" + getCurrentGoal() + "' to continue release process");
         }

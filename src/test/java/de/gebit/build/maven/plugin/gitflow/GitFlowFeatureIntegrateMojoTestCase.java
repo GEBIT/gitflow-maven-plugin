@@ -321,16 +321,18 @@ public class GitFlowFeatureIntegrateMojoTestCase extends AbstractGitFlowMojoTest
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
-        assertGitFlowFailureExceptionRegEx(result, new GitFlowFailureInfo(
-                "\\QAutomatic rebase of feature branch '" + SOURCE_FEATURE_BRANCH + "' on top of feature branch '"
-                        + TARGET_FEATURE_BRANCH + "' failed.\nGit error message:\n\\E.*",
-                "\\QFix the rebase conflicts and mark them as resolved. After that, run "
-                        + "'mvn flow:feature-integrate' again.\n"
-                        + "Do NOT run 'git rebase --continue' and 'git rebase --abort'!\\E",
-                "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
-                        + "conflicts as resolved\\E",
-                "\\Q'mvn flow:feature-integrate' to continue feature integration process\\E",
-                "\\Q'mvn flow:feature-integrate-abort' to abort feature integration process\\E"));
+        assertGitFlowFailureException(result,
+                new GitFlowFailureInfo(
+                        "Automatic rebase of feature branch '" + SOURCE_FEATURE_BRANCH + "' on top of feature branch '"
+                                + TARGET_FEATURE_BRANCH + "' failed.\nCONFLICT (added on " + TARGET_FEATURE_BRANCH
+                                + " and on " + SOURCE_FEATURE_BRANCH + "): " + TESTFILE_NAME,
+                        "Fix the rebase conflicts and mark them as resolved by using 'git add'. After that, run "
+                                + "'mvn flow:feature-integrate' again.\n"
+                                + "Do NOT run 'git rebase --continue' and 'git rebase --abort'!",
+                        "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
+                                + "conflicts as resolved",
+                        "'mvn flow:feature-integrate' to continue feature integration process",
+                        "'mvn flow:feature-integrate-abort' to abort feature integration process"));
 
         git.assertRebaseBranchInProcess(repositorySet, TMP_SOURCE_FEATURE_BRANCH, TESTFILE_NAME);
         git.assertExistingLocalBranches(repositorySet, SOURCE_FEATURE_BRANCH, TARGET_FEATURE_BRANCH,
@@ -362,16 +364,18 @@ public class GitFlowFeatureIntegrateMojoTestCase extends AbstractGitFlowMojoTest
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
                 promptControllerMock);
         verifyZeroInteractions(promptControllerMock);
-        assertGitFlowFailureExceptionRegEx(result, new GitFlowFailureInfo(
-                "\\QAutomatic rebase of feature branch '" + SOURCE_FEATURE_BRANCH + "' on top of feature branch '"
-                        + TARGET_FEATURE_BRANCH + "' failed.\nGit error message:\n\\E.*",
-                "\\QFix the rebase conflicts and mark them as resolved. After that, run "
-                        + "'mvn flow:feature-integrate' again.\n"
-                        + "Do NOT run 'git rebase --continue' and 'git rebase --abort'!\\E",
-                "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
-                        + "conflicts as resolved\\E",
-                "\\Q'mvn flow:feature-integrate' to continue feature integration process\\E",
-                "\\Q'mvn flow:feature-integrate-abort' to abort feature integration process\\E"));
+        assertGitFlowFailureException(result,
+                new GitFlowFailureInfo(
+                        "Automatic rebase of feature branch '" + SOURCE_FEATURE_BRANCH + "' on top of feature branch '"
+                                + TARGET_FEATURE_BRANCH + "' failed.\nCONFLICT (added on " + TARGET_FEATURE_BRANCH
+                                + " and on " + SOURCE_FEATURE_BRANCH + "): " + TESTFILE_NAME,
+                        "Fix the rebase conflicts and mark them as resolved by using 'git add'. After that, run "
+                                + "'mvn flow:feature-integrate' again.\n"
+                                + "Do NOT run 'git rebase --continue' and 'git rebase --abort'!",
+                        "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
+                                + "conflicts as resolved",
+                        "'mvn flow:feature-integrate' to continue feature integration process",
+                        "'mvn flow:feature-integrate-abort' to abort feature integration process"));
         git.assertRebaseBranchInProcess(repositorySet, TMP_SOURCE_FEATURE_BRANCH, TESTFILE_NAME);
         userProperties.remove("featureName");
         when(promptControllerMock.prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y")).thenReturn("y");
@@ -380,16 +384,18 @@ public class GitFlowFeatureIntegrateMojoTestCase extends AbstractGitFlowMojoTest
         // verify
         verify(promptControllerMock).prompt(PROMPT_REBASE_CONTINUE, Arrays.asList("y", "n"), "y");
         verifyNoMoreInteractions(promptControllerMock);
-        assertGitFlowFailureExceptionRegEx(result, new GitFlowFailureInfo(
-                "\\QAutomatic rebase of feature branch '" + SOURCE_FEATURE_BRANCH + "' on top of feature branch '"
-                        + TARGET_FEATURE_BRANCH + "' failed.\nGit error message:\n\\E.*",
-                "\\QFix the rebase conflicts and mark them as resolved. After that, run "
-                        + "'mvn flow:feature-integrate' again.\n"
-                        + "Do NOT run 'git rebase --continue' and 'git rebase --abort'!\\E",
-                "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
-                        + "conflicts as resolved\\E",
-                "\\Q'mvn flow:feature-integrate' to continue feature integration process\\E",
-                "\\Q'mvn flow:feature-integrate-abort' to abort feature integration process\\E"));
+        assertGitFlowFailureException(result,
+                new GitFlowFailureInfo(
+                        "Automatic rebase of feature branch '" + SOURCE_FEATURE_BRANCH + "' on top of feature branch '"
+                                + TARGET_FEATURE_BRANCH + "' failed.\nCONFLICT (added on " + TARGET_FEATURE_BRANCH
+                                + " and on " + SOURCE_FEATURE_BRANCH + "): " + TESTFILE_NAME,
+                        "Fix the rebase conflicts and mark them as resolved by using 'git add'. After that, run "
+                                + "'mvn flow:feature-integrate' again.\n"
+                                + "Do NOT run 'git rebase --continue' and 'git rebase --abort'!",
+                        "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
+                                + "conflicts as resolved",
+                        "'mvn flow:feature-integrate' to continue feature integration process",
+                        "'mvn flow:feature-integrate-abort' to abort feature integration process"));
 
         git.assertRebaseBranchInProcess(repositorySet, TMP_SOURCE_FEATURE_BRANCH, TESTFILE_NAME);
         git.assertExistingLocalBranches(repositorySet, SOURCE_FEATURE_BRANCH, TARGET_FEATURE_BRANCH,
@@ -419,16 +425,18 @@ public class GitFlowFeatureIntegrateMojoTestCase extends AbstractGitFlowMojoTest
         git.switchToBranch(repositorySet, SOURCE_FEATURE_BRANCH);
         userProperties.setProperty("featureName", TARGET_FEATURE_NAME);
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
-        assertGitFlowFailureExceptionRegEx(result, new GitFlowFailureInfo(
-                "\\QAutomatic rebase of feature branch '" + SOURCE_FEATURE_BRANCH + "' on top of feature branch '"
-                        + TARGET_FEATURE_BRANCH + "' failed.\nGit error message:\n\\E.*",
-                "\\QFix the rebase conflicts and mark them as resolved. After that, run "
-                        + "'mvn flow:feature-integrate' again.\n"
-                        + "Do NOT run 'git rebase --continue' and 'git rebase --abort'!\\E",
-                "\\Q'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
-                        + "conflicts as resolved\\E",
-                "\\Q'mvn flow:feature-integrate' to continue feature integration process\\E",
-                "\\Q'mvn flow:feature-integrate-abort' to abort feature integration process\\E"));
+        assertGitFlowFailureException(result,
+                new GitFlowFailureInfo(
+                        "Automatic rebase of feature branch '" + SOURCE_FEATURE_BRANCH + "' on top of feature branch '"
+                                + TARGET_FEATURE_BRANCH + "' failed.\nCONFLICT (added on " + TARGET_FEATURE_BRANCH
+                                + " and on " + SOURCE_FEATURE_BRANCH + "): " + TESTFILE_NAME,
+                        "Fix the rebase conflicts and mark them as resolved by using 'git add'. After that, run "
+                                + "'mvn flow:feature-integrate' again.\n"
+                                + "Do NOT run 'git rebase --continue' and 'git rebase --abort'!",
+                        "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
+                                + "conflicts as resolved",
+                        "'mvn flow:feature-integrate' to continue feature integration process",
+                        "'mvn flow:feature-integrate-abort' to abort feature integration process"));
         git.assertRebaseBranchInProcess(repositorySet, TMP_SOURCE_FEATURE_BRANCH, TESTFILE_NAME);
         repositorySet.getLocalRepoGit().checkout().setStage(Stage.THEIRS).addPath(TESTFILE_NAME).call();
         repositorySet.getLocalRepoGit().add().addFilepattern(TESTFILE_NAME).call();
