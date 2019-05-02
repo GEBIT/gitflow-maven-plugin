@@ -815,4 +815,29 @@ public class GitFlowFeatureIntegrateMojoTestCase extends AbstractGitFlowMojoTest
         git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, SOURCE_FEATURE_BRANCH);
     }
 
+    @Test
+    public void testExecuteTargetFeatureBranchBehindSourceFeatureBranch() throws Exception {
+        // set up
+        prepareFeatures();
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        git.switchToBranch(repositorySet, SOURCE_FEATURE_BRANCH);
+        MavenExecutionResult result = ExecutorHelper.executeFeatureRebaseWithResult(this, repositorySet,
+                userProperties);
+        assertFalse(result.hasExceptions());
+        userProperties.setProperty("featureName", TARGET_FEATURE_NAME);
+        // test
+        result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertGitFlowFailureException(result,
+                "The branch point of the target feature branch is behind the branch point of the current feature "
+                        + "branch.",
+                "Please rebase the target feature branch '" + TARGET_FEATURE_BRANCH + "' first in order to proceed.",
+                "'git checkout " + TARGET_FEATURE_BRANCH
+                        + "' and 'mvn flow:feature-rebase' to rebase the target feature branch",
+                "'git checkout " + SOURCE_FEATURE_BRANCH
+                        + "' and 'mvn flow:feature-integrate' to start the feature integration process again");
+    }
+
 }

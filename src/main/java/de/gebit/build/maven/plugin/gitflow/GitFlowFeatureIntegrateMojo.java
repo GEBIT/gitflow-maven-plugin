@@ -229,6 +229,18 @@ public class GitFlowFeatureIntegrateMojo extends AbstractGitFlowFeatureMojo {
                             + "' as current feature branch.",
                     "'mvn flow:feature-integrate'");
         }
+        String sourceFeatureBranchPoint = gitBranchPoint(sourceBaseBranch, sourceFeatureBranch);
+        String targetFeatureBranchPoint = gitBranchPoint(targetBaseBranch, targetFeatureBranch);
+        if (!gitIsAncestorBranch(sourceFeatureBranchPoint, targetFeatureBranchPoint)) {
+            throw new GitFlowFailureException(
+                    "The branch point of the target feature branch is behind the branch point of the current feature "
+                            + "branch.",
+                    "Please rebase the target feature branch '" + targetFeatureBranch + "' first in order to proceed.",
+                    "'git checkout " + targetFeatureBranch
+                            + "' and 'mvn flow:feature-rebase' to rebase the target feature branch",
+                    "'git checkout " + sourceFeatureBranch
+                            + "' and 'mvn flow:feature-integrate' to start the feature integration process again");
+        }
         stepParameters.sourceFeatureBranch = sourceFeatureBranch;
         stepParameters.sourceBaseBranch = sourceBaseBranch;
         stepParameters.targetFeatureBranch = targetFeatureBranch;
