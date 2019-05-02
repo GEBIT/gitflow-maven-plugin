@@ -8,6 +8,7 @@
 //
 package de.gebit.build.maven.plugin.gitflow;
 
+import static org.junit.Assert.assertFalse;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
@@ -26,6 +27,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import de.gebit.build.maven.plugin.gitflow.TestProjects.BasicConstants;
+import de.gebit.build.maven.plugin.gitflow.jgit.GitExecution;
 import de.gebit.build.maven.plugin.gitflow.jgit.RepositorySet;
 
 /**
@@ -776,6 +778,41 @@ public class GitFlowFeatureIntegrateMojoTestCase extends AbstractGitFlowMojoTest
         assertVersionsInPom(repositorySet.getWorkingDirectory(), BasicConstants.SECOND_FEATURE_VERSION);
         assertParentVersionsInPom(new File(repositorySet.getWorkingDirectory(), "module"),
                 BasicConstants.SECOND_FEATURE_VERSION);
+    }
+
+    @Test
+    public void testExecuteLocalMasterBehindRemoteAndRebasedFeature_GBLD696() throws Exception {
+        // set up
+        prepareFeatures();
+        git.useClonedRemoteRepository(repositorySet);
+        git.fetch(repositorySet);
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        git.createBranchFromRemote(repositorySet, SOURCE_FEATURE_BRANCH);
+        MavenExecutionResult result = ExecutorHelper.executeFeatureRebaseWithResult(this, repositorySet,
+                userProperties);
+        assertFalse(result.hasExceptions());
+        git.createBranchFromRemote(repositorySet, TARGET_FEATURE_BRANCH);
+        result = ExecutorHelper.executeFeatureRebaseWithResult(this, repositorySet, userProperties);
+        assertFalse(result.hasExceptions());
+        git.useLocalRepository(repositorySet);
+        git.resetToRemote(repositorySet);
+        git.deleteLocalBranch(repositorySet, TARGET_FEATURE_BRANCH);
+        userProperties.setProperty("featureName", TARGET_FEATURE_NAME);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, TARGET_FEATURE_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, SOURCE_FEATURE_BRANCH, TMP_SOURCE_FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, SOURCE_FEATURE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, TARGET_FEATURE_BRANCH, TARGET_FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, TARGET_FEATURE_BRANCH, COMMIT_MESSAGE_SOURCE_TESTFILE,
+                COMMIT_MESSAGE_TARGET_TESTFILE, BasicConstants.SECOND_FEATURE_VERSION_COMMIT_MESSAGE,
+                GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), BasicConstants.SECOND_FEATURE_VERSION);
+
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, SOURCE_FEATURE_BRANCH);
     }
 
 }

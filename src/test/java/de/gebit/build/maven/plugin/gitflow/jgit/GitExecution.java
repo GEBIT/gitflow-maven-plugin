@@ -682,6 +682,12 @@ public class GitExecution {
         switchToBranch(repositorySet.getLocalRepoGit(), aBranch, true);
     }
 
+    public void createBranchFromRemote(RepositorySet repositorySet, String aBranch)
+            throws GitAPIException, IOException {
+        repositorySet.getLocalRepoGit().checkout().setName(aBranch).setStartPoint("origin/" + aBranch)
+                .setCreateBranch(true).call();
+    }
+
     /**
      * Creates passed branch in local rpository without switching to it.
      *
@@ -859,8 +865,18 @@ public class GitExecution {
         git.push().setForce(forced).call();
     }
 
+    public void pull(RepositorySet repositorySet) throws GitAPIException {
+        pull(repositorySet.getLocalRepoGit());
+    }
+
     private void pull(Git git) throws GitAPIException {
         git.pull().call();
+    }
+
+    public void resetToRemote(RepositorySet repositorySet) throws GitAPIException, IOException {
+        fetch(repositorySet);
+        String branch = currentBranch(repositorySet);
+        repositorySet.getLocalRepoGit().reset().setRef("origin/" + branch).setMode(ResetType.HARD).call();
     }
 
     /**

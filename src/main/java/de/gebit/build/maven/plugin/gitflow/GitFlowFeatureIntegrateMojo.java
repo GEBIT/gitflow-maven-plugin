@@ -166,7 +166,8 @@ public class GitFlowFeatureIntegrateMojo extends AbstractGitFlowFeatureMojo {
                 new GitFlowFailureInfo("Remote and local feature branches '" + sourceFeatureBranch + "' diverge.",
                         "Rebase the changes in local feature branch '" + sourceFeatureBranch + "' first.",
                         "'git rebase' to rebase the changes in local feature branch"));
-        String sourceBaseBranch = gitFeatureBranchBaseBranch(sourceFeatureBranch);
+        String sourceLocalBaseBranch = gitFeatureBranchBaseBranch(sourceFeatureBranch);
+        String sourceBaseBranch = gitLocalToRemoteRef(sourceLocalBaseBranch);
         if (!hasCommitsExceptVersionChangeCommitOnFeatureBranch(sourceFeatureBranch, sourceBaseBranch)) {
             throw new GitFlowFailureException(
                     "There are no real changes in current feature branch '" + sourceFeatureBranch + "'.",
@@ -217,13 +218,14 @@ public class GitFlowFeatureIntegrateMojo extends AbstractGitFlowFeatureMojo {
                                 + "target feature branch"));
         getMavenLog().info("Integrating current feature branch '" + sourceFeatureBranch
                 + "' into target feature branch '" + targetFeatureBranch + "'");
-        String targetBaseBranch = gitFeatureBranchBaseBranch(targetFeatureBranch);
+        String targetLocalBaseBranch = gitFeatureBranchBaseBranch(targetFeatureBranch);
+        String targetBaseBranch = gitLocalToRemoteRef(targetLocalBaseBranch);
         if (!sourceBaseBranch.equals(targetBaseBranch)) {
             throw new GitFlowFailureException(
                     "The current and target feature branches have different base branches:\n" + "'"
-                            + sourceFeatureBranch + "' -> '" + sourceBaseBranch + "'\n" + "'" + targetFeatureBranch
-                            + "' -> '" + targetBaseBranch + "'\n",
-                    "Please select a target feature branch that has the same base branch '" + sourceBaseBranch
+                            + sourceFeatureBranch + "' -> '" + sourceLocalBaseBranch + "'\n" + "'" + targetFeatureBranch
+                            + "' -> '" + targetLocalBaseBranch + "'\n",
+                    "Please select a target feature branch that has the same base branch '" + sourceLocalBaseBranch
                             + "' as current feature branch.",
                     "'mvn flow:feature-integrate'");
         }
