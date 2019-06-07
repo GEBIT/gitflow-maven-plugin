@@ -44,4 +44,30 @@ public class FailureInfoHelper {
                         + goal + " -Dflow.installProject=false' to continue by skipping the project installation");
     }
 
+    /**
+     * Creates gitflow failure info for failed project test (mvn clean test).
+     *
+     * @param goal
+     *            The maven goal where project test failed.
+     * @param branch
+     *            The branch where project test was executed.
+     * @param process
+     *            The process where project test failed (short goal description).
+     * @param reason
+     *            The short reason of the failure or <code>null</code>.
+     * @return The gitflow failure info for failed project test.
+     */
+    public static GitFlowFailureInfo testProjectFailure(String goal, String branch, String process, String reason) {
+        return new GitFlowFailureInfo(
+                "Failed to test the project on branch '" + branch + "' before " + process + "."
+                        + (reason != null ? "\nReason: " + reason : ""),
+                "Please solve the problems on project, add and commit your changes and run 'mvn flow:" + goal
+                        + "' again in order to continue.\nDo NOT push the branch!\n"
+                        + "Alternatively you can use property '-Dflow.skipTestProject=true' while running "
+                        + "'mvn flow:" + goal + "' to skip the project test.",
+                "'git add' and 'git commit' to commit your changes",
+                "'mvn flow:" + goal + "' to continue " + process + " process after problem solving",
+                "or 'mvn flow:" + goal + " -Dflow.skipTestProject=true' to continue by skipping the project test");
+    }
+
 }

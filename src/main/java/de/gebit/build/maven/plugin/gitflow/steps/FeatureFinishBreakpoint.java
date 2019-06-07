@@ -2,14 +2,14 @@
 // FeatureFinishBreakpoint.java
 //
 // Copyright (C) 2018
-// GEBIT Solutions GmbH, 
+// GEBIT Solutions GmbH,
 // Berlin, Duesseldorf, Stuttgart (Germany)
 // All rights reserved.
 //
 package de.gebit.build.maven.plugin.gitflow.steps;
 
 public enum FeatureFinishBreakpoint implements Breakpoint {
-    CLEAN_INSTALL("cleanInstall"), FINAL_MERGE("finalMerge"), REBASE_BEFORE_FINISH(
+    TEST_PROJECT("testProject"), CLEAN_INSTALL("cleanInstall"), FINAL_MERGE("finalMerge"), REBASE_BEFORE_FINISH(
             "rebaseBeforeFinish"), REBASE_WITHOUT_VERSION_CHANGE("rebaseWithoutVersionChange");
 
     private String id;

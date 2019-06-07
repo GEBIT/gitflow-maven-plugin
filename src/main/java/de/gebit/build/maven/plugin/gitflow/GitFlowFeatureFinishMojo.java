@@ -127,7 +127,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
             new FeatureFinishStep(this::selectFeatureAndBaseBranches),
             new FeatureFinishStep(this::ensureBranchesPreparedForFeatureFinish,
                     FeatureFinishBreakpoint.REBASE_BEFORE_FINISH),
-            new FeatureFinishStep(this::verifyFeatureProject),
+            new FeatureFinishStep(this::verifyFeatureProject, FeatureFinishBreakpoint.TEST_PROJECT),
             new FeatureFinishStep(this::revertProjectVersion, FeatureFinishBreakpoint.REBASE_WITHOUT_VERSION_CHANGE),
             new FeatureFinishStep(this::mergeIntoBaseBranch, FeatureFinishBreakpoint.FINAL_MERGE),
             new FeatureFinishStep(this::buildBaseProject, FeatureFinishBreakpoint.CLEAN_INSTALL),
@@ -197,9 +197,13 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
                 stepParameters.baseBranch = gitFeatureBranchBaseBranch(stepParameters.featureBranch);
                 break;
             case CLEAN_INSTALL:
-                String currentBranch = gitCurrentBranch();
-                stepParameters.baseBranch = currentBranch;
-                stepParameters.featureBranch = gitGetBranchLocalConfig(currentBranch, "breakpointFeatureBranch");
+                stepParameters.baseBranch = gitCurrentBranch();
+                stepParameters.featureBranch = gitGetBranchLocalConfig(stepParameters.baseBranch,
+                        "breakpointFeatureBranch");
+                break;
+            case TEST_PROJECT:
+                stepParameters.featureBranch = gitCurrentBranch();
+                stepParameters.baseBranch = gitFeatureBranchBaseBranch(stepParameters.featureBranch);
                 break;
             }
         }
@@ -475,10 +479,28 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
 
     private FeatureFinishStepParameters verifyFeatureProject(FeatureFinishStepParameters stepParameters)
             throws MojoFailureException, CommandLineException {
+        String featureBranch = stepParameters.featureBranch;
+
+        if (stepParameters.breakpoint == FeatureFinishBreakpoint.TEST_PROJECT) {
+            getMavenLog().info("Restart after failed project test on feature branch detected");
+            checkUncommittedChanges();
+        }
         if (!skipTestProject) {
             getMavenLog().info("Testing the feature project before performing feature finish...");
-            mvnCleanVerify();
+            try {
+                mvnCleanVerify();
+            } catch (MojoFailureException e) {
+                getMavenLog().info("Feature finish process paused on failed project test to fix project problems");
+                setBreakpoint(FeatureFinishBreakpoint.TEST_PROJECT, featureBranch);
+                String reason = null;
+                if (e instanceof GitFlowFailureException) {
+                    reason = ((GitFlowFailureException) e).getProblem();
+                }
+                throw new GitFlowFailureException(e,
+                        FailureInfoHelper.testProjectFailure(GOAL, featureBranch, "feature finish", reason));
+            }
         }
+        removeBreakpoint(featureBranch);
         return stepParameters;
     }
 

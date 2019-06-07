@@ -1109,6 +1109,25 @@ public abstract class AbstractGitFlowMojoTestCase {
         assertGitFlowFailureException(mavenExecutionResult, expectedProblem, expectedSolutionProposal, expectedSteps);
     }
 
+    protected void assertTestProjectFailureException(MavenExecutionResult mavenExecutionResult, String goal,
+            String branch, String process) {
+        assertTestProjectFailureException(mavenExecutionResult, goal, branch, process, null);
+    }
+
+    protected void assertTestProjectFailureException(MavenExecutionResult mavenExecutionResult, String goal,
+            String branch, String process, String reason) {
+        String expectedProblem = "Failed to test the project on branch '" + branch + "' before " + process + "."
+                + (reason != null ? "\nReason: " + reason : "");
+        String expectedSolutionProposal = "Please solve the problems on project, add and commit your changes and run "
+                + "'mvn flow:" + goal + "' again in order to continue.\nDo NOT push the branch!\n"
+                + "Alternatively you can use property '-Dflow.skipTestProject=true' while running 'mvn flow:" + goal
+                + "' to skip the project test.";
+        String[] expectedSteps = new String[] { "'git add' and 'git commit' to commit your changes",
+                "'mvn flow:" + goal + "' to continue " + process + " process after problem solving", "or 'mvn flow:"
+                        + goal + " -Dflow.skipTestProject=true' to continue by skipping the project test" };
+        assertGitFlowFailureException(mavenExecutionResult, expectedProblem, expectedSolutionProposal, expectedSteps);
+    }
+
     protected void removeModule(RepositorySet aRepositorySet, String module) throws IOException, GitAPIException {
         File workingDir = aRepositorySet.getWorkingDirectory();
         FileUtils.deleteDirectory(new File(workingDir, module));
