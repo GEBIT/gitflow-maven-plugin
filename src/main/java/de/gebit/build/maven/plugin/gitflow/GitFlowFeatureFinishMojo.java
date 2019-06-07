@@ -58,6 +58,9 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
 
     static final String GOAL = "feature-finish";
 
+    static final String CONF_KEY_REBASED_WITHOUT_VERSION_CHANGE_COMMIT = "rebasedWithoutVersionChangeCommit";
+    static final String CONF_KEY_REBASED_BEFORE_FINISH = "rebasedBeforeFinish";
+
     /** Whether to keep feature branch after finish. */
     @Parameter(property = "flow.keepFeatureBranch", defaultValue = "false")
     private boolean keepFeatureBranch = false;
@@ -127,7 +130,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
             new FeatureFinishStep(this::selectFeatureAndBaseBranches),
             new FeatureFinishStep(this::ensureBranchesPreparedForFeatureFinish,
                     FeatureFinishBreakpoint.REBASE_BEFORE_FINISH),
-            new FeatureFinishStep(this::verifyFeatureProject, FeatureFinishBreakpoint.TEST_PROJECT),
+            new FeatureFinishStep(this::verifyFeatureProject, FeatureFinishBreakpoint.TEST_PROJECT_AFTER_REBASE),
             new FeatureFinishStep(this::revertProjectVersion, FeatureFinishBreakpoint.REBASE_WITHOUT_VERSION_CHANGE),
             new FeatureFinishStep(this::mergeIntoBaseBranch, FeatureFinishBreakpoint.FINAL_MERGE),
             new FeatureFinishStep(this::buildBaseProject, FeatureFinishBreakpoint.CLEAN_INSTALL),
@@ -187,6 +190,8 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
                     stepParameters.featureBranch = gitMergeIntoFeatureBranchInProcess();
                 }
                 stepParameters.baseBranch = gitFeatureBranchBaseBranch(stepParameters.featureBranch);
+                stepParameters.rebasedWithoutVersionChangeCommit = gitGetBranchLocalConfig(stepParameters.featureBranch,
+                        CONF_KEY_REBASED_WITHOUT_VERSION_CHANGE_COMMIT) != null;
                 break;
             case REBASE_WITHOUT_VERSION_CHANGE:
                 stepParameters.featureBranch = gitRebaseFeatureBranchInProcess();
@@ -201,9 +206,13 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
                 stepParameters.featureBranch = gitGetBranchLocalConfig(stepParameters.baseBranch,
                         "breakpointFeatureBranch");
                 break;
-            case TEST_PROJECT:
+            case TEST_PROJECT_AFTER_REBASE:
                 stepParameters.featureBranch = gitCurrentBranch();
                 stepParameters.baseBranch = gitFeatureBranchBaseBranch(stepParameters.featureBranch);
+                stepParameters.rebasedWithoutVersionChangeCommit = gitGetBranchLocalConfig(stepParameters.featureBranch,
+                        CONF_KEY_REBASED_WITHOUT_VERSION_CHANGE_COMMIT) != null;
+                stepParameters.rebasedBeforeFinish = gitGetBranchLocalConfig(stepParameters.featureBranch,
+                        CONF_KEY_REBASED_BEFORE_FINISH) != null;
                 break;
             }
         }
@@ -318,19 +327,22 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
                 getMavenLog().info("Switching to feature branch '" + featureBranch + "'");
                 gitCheckout(featureBranch);
             }
-            rebaseFeatureBranchOnTopOfBaseBranch(featureBranch, baseBranch);
+            String oldFeatureHEAD = getCurrentCommit();
+            gitSetBranchLocalConfig(featureBranch, "oldFeatureHEAD", oldFeatureHEAD);
+            rebaseFeatureBranchOnTopOfBaseBranch(featureBranch, baseBranch, stepParameters);
         } else {
             continueFeatureRebase(featureBranch);
         }
-        boolean rebasedWithoutVersionChangeCommit = finalizeFeatureRebase(featureBranch);
         stepParameters.isOnFeatureBranch = true;
-        stepParameters.rebasedWithoutVersionChangeCommit = rebasedWithoutVersionChangeCommit;
+        stepParameters.rebasedBeforeFinish = true;
+        gitSetBranchLocalConfig(featureBranch, CONF_KEY_REBASED_BEFORE_FINISH, "true");
         return stepParameters;
     }
 
-    private void rebaseFeatureBranchOnTopOfBaseBranch(String featureBranch, String baseBranch)
+    private void rebaseFeatureBranchOnTopOfBaseBranch(String featureBranch, String baseBranch,
+            FeatureFinishStepParameters stepParameters)
             throws CommandLineException, GitFlowFailureException, MojoFailureException {
-        gitRemoveBranchLocalConfig(featureBranch, "rebasedWithoutVersionChangeCommit");
+        gitRemoveBranchLocalConfig(featureBranch, CONF_KEY_REBASED_WITHOUT_VERSION_CHANGE_COMMIT);
         if (updateWithMerge) {
             // merge development into feature
             try {
@@ -357,7 +369,8 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
             String baseCommit = gitBranchPoint(baseBranch, featureBranch);
             String versionChangeCommitOnBranch = gitVersionChangeCommitOnFeatureBranch(featureBranch, baseCommit);
             if (versionChangeCommitOnBranch != null) {
-                gitSetBranchLocalConfig(featureBranch, "rebasedWithoutVersionChangeCommit", "true");
+                gitSetBranchLocalConfig(featureBranch, CONF_KEY_REBASED_WITHOUT_VERSION_CHANGE_COMMIT, "true");
+                stepParameters.rebasedWithoutVersionChangeCommit = true;
                 try {
                     gitRebaseOnto(baseBranch, versionChangeCommitOnBranch, featureBranch);
                 } catch (MojoFailureException ex) {
@@ -468,20 +481,11 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
         }
     }
 
-    private boolean finalizeFeatureRebase(String featureBranch) throws MojoFailureException, CommandLineException {
-        boolean rebasedWithoutVersionChangeCommit = gitGetBranchLocalConfig(featureBranch,
-                "rebasedWithoutVersionChangeCommit") != null;
-        if (rebasedWithoutVersionChangeCommit) {
-            gitRemoveBranchLocalConfig(featureBranch, "rebasedWithoutVersionChangeCommit");
-        }
-        return rebasedWithoutVersionChangeCommit;
-    }
-
     private FeatureFinishStepParameters verifyFeatureProject(FeatureFinishStepParameters stepParameters)
             throws MojoFailureException, CommandLineException {
         String featureBranch = stepParameters.featureBranch;
 
-        if (stepParameters.breakpoint == FeatureFinishBreakpoint.TEST_PROJECT) {
+        if (stepParameters.breakpoint == FeatureFinishBreakpoint.TEST_PROJECT_AFTER_REBASE) {
             getMavenLog().info("Restart after failed project test on feature branch detected");
             checkUncommittedChanges();
         }
@@ -490,17 +494,33 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
             try {
                 mvnCleanVerify();
             } catch (MojoFailureException e) {
-                getMavenLog().info("Feature finish process paused on failed project test to fix project problems");
-                setBreakpoint(FeatureFinishBreakpoint.TEST_PROJECT, featureBranch);
                 String reason = null;
                 if (e instanceof GitFlowFailureException) {
                     reason = ((GitFlowFailureException) e).getProblem();
                 }
-                throw new GitFlowFailureException(e,
-                        FailureInfoHelper.testProjectFailure(GOAL, featureBranch, "feature finish", reason));
+                if (stepParameters.rebasedBeforeFinish) {
+                    getMavenLog().info("Feature finish process paused on failed project test to fix project problems");
+                    setBreakpoint(FeatureFinishBreakpoint.TEST_PROJECT_AFTER_REBASE, featureBranch);
+                    throw new GitFlowFailureException(e,
+                            FailureInfoHelper.testProjectFailure(GOAL, featureBranch, "feature finish", reason));
+                } else {
+                    throw new GitFlowFailureException(e,
+                            "Failed to test the project on branch '" + featureBranch + "' before merge."
+                                    + (reason != null ? "\nReason: " + reason : ""),
+                            "Please solve the problems on project, add and commit your changes and run "
+                                    + "'mvn flow:feature-finish' again.\n"
+                                    + "Alternatively you can use property '-Dflow.skipTestProject=true' while running "
+                                    + "'mvn flow:feature-finish' to skip the project test.",
+                            "'git add' and 'git commit' to commit your changes",
+                            "'mvn flow:feature-finish' to run feature finish process again after problem solving",
+                            "or 'mvn flow:feature-finish -Dflow.skipTestProject=true' to run feature finish process and"
+                                    + " skipping the project test");
+                }
             }
         }
         removeBreakpoint(featureBranch);
+        gitRemoveBranchLocalConfig(featureBranch, CONF_KEY_REBASED_BEFORE_FINISH);
+        gitRemoveBranchLocalConfig(featureBranch, "oldFeatureHEAD");
         return stepParameters;
     }
 
@@ -509,10 +529,10 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
         String featureBranch = stepParameters.featureBranch;
 
         if (stepParameters.breakpoint != FeatureFinishBreakpoint.REBASE_WITHOUT_VERSION_CHANGE) {
-            if (stepParameters.rebasedWithoutVersionChangeCommit != null
-                    && stepParameters.rebasedWithoutVersionChangeCommit == true) {
+            if (stepParameters.rebasedWithoutVersionChangeCommit) {
                 getLog().info("Project version on feature branch already reverted while rebasing.");
                 fixupModuleParents(featureBranch, stepParameters.baseBranch);
+                gitRemoveBranchLocalConfig(featureBranch, CONF_KEY_REBASED_WITHOUT_VERSION_CHANGE_COMMIT);
             } else {
                 String baseBranch = stepParameters.baseBranch;
                 String featureVersion = getCurrentProjectVersion();

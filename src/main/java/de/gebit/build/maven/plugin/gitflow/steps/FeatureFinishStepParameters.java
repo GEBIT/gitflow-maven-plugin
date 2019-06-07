@@ -17,6 +17,7 @@ public class FeatureFinishStepParameters extends StepParameters<FeatureFinishBre
     public String featureBranch;
     public String baseBranch;
     public Boolean isOnFeatureBranch;
-    public Boolean rebasedWithoutVersionChangeCommit;
+    public boolean rebasedBeforeFinish = false;
+    public boolean rebasedWithoutVersionChangeCommit = false;
 
 }

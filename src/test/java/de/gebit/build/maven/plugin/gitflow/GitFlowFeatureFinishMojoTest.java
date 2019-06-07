@@ -2622,7 +2622,7 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     @Test
-    public void testExecuteFailureOnTestProjectBeforeFinish() throws Exception {
+    public void testExecuteFailureOnTestProjectBeforeFinish_GBLD710() throws Exception {
         // set up
         final String COMMIT_MESSAGE_INVALID_JAVA_FILE = "Invalid java file";
         final String COMMIT_MESSAGE_TESTFILE_MASTER = "MASTER: test file";
@@ -2653,11 +2653,15 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInRemoteBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
 
-        git.assertBranchLocalConfigValue(repositorySet, FEATURE_BRANCH, "breakpoint", "featureFinish.testProject");
+        git.assertBranchLocalConfigValue(repositorySet, FEATURE_BRANCH, "breakpoint",
+                "featureFinish.testProjectAfterRebase");
+        git.assertBranchLocalConfigValueExists(repositorySet, FEATURE_BRANCH, "oldFeatureHEAD");
+        git.assertBranchLocalConfigValue(repositorySet, FEATURE_BRANCH, "rebasedBeforeFinish", "true");
+        git.assertBranchLocalConfigValue(repositorySet, FEATURE_BRANCH, "rebasedWithoutVersionChangeCommit", "true");
     }
 
     @Test
-    public void testExecuteContinueAfterFailureOnTestProjectBeforeFinish() throws Exception {
+    public void testExecuteContinueAfterFailureOnTestProjectBeforeFinish_GBLD710() throws Exception {
         // set up
         final String COMMIT_MESSAGE_INVALID_JAVA_FILE = "Invalid java file";
         final String COMMIT_MESSAGE_INVALID_JAVA_FILE_REMOVED = "Invalid java file removed";
@@ -2677,7 +2681,11 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 promptControllerMock);
         verifyZeroInteractions(promptControllerMock);
         assertTestProjectFailureException(result, GOAL, FEATURE_BRANCH, "feature finish");
-        git.assertBranchLocalConfigValue(repositorySet, FEATURE_BRANCH, "breakpoint", "featureFinish.testProject");
+        git.assertBranchLocalConfigValue(repositorySet, FEATURE_BRANCH, "breakpoint",
+                "featureFinish.testProjectAfterRebase");
+        git.assertBranchLocalConfigValueExists(repositorySet, FEATURE_BRANCH, "oldFeatureHEAD");
+        git.assertBranchLocalConfigValue(repositorySet, FEATURE_BRANCH, "rebasedBeforeFinish", "true");
+        git.assertBranchLocalConfigValue(repositorySet, FEATURE_BRANCH, "rebasedWithoutVersionChangeCommit", "true");
         repositorySet.getLocalRepoGit().rm().addFilepattern("src/main/java/InvalidJavaFile.java").call();
         git.commitAll(repositorySet, COMMIT_MESSAGE_INVALID_JAVA_FILE_REMOVED);
         // test
@@ -2693,12 +2701,10 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 COMMIT_MESSAGE_INVALID_JAVA_FILE_REMOVED, COMMIT_MESSAGE_MERGE, COMMIT_MESSAGE_INVALID_JAVA_FILE,
                 COMMIT_MESSAGE_FOR_TESTFILE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
-
-        git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "breakpoint");
     }
 
     @Test
-    public void testExecuteContinueWithSkipTestTrueAfterFailureOnTestProjectBeforeFinish() throws Exception {
+    public void testExecuteContinueWithSkipTestTrueAfterFailureOnTestProjectBeforeFinish_GBLD710() throws Exception {
         // set up
         final String COMMIT_MESSAGE_INVALID_JAVA_FILE = "Invalid java file";
         final String COMMIT_MESSAGE_TESTFILE_MASTER = "MASTER: test file";
@@ -2717,7 +2723,11 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
                 promptControllerMock);
         verifyZeroInteractions(promptControllerMock);
         assertTestProjectFailureException(result, GOAL, FEATURE_BRANCH, "feature finish");
-        git.assertBranchLocalConfigValue(repositorySet, FEATURE_BRANCH, "breakpoint", "featureFinish.testProject");
+        git.assertBranchLocalConfigValue(repositorySet, FEATURE_BRANCH, "breakpoint",
+                "featureFinish.testProjectAfterRebase");
+        git.assertBranchLocalConfigValueExists(repositorySet, FEATURE_BRANCH, "oldFeatureHEAD");
+        git.assertBranchLocalConfigValue(repositorySet, FEATURE_BRANCH, "rebasedBeforeFinish", "true");
+        git.assertBranchLocalConfigValue(repositorySet, FEATURE_BRANCH, "rebasedWithoutVersionChangeCommit", "true");
         userProperties.setProperty("flow.skipTestProject", "true");
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
@@ -2731,8 +2741,6 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_TESTFILE_MASTER,
                 COMMIT_MESSAGE_MERGE, COMMIT_MESSAGE_INVALID_JAVA_FILE, COMMIT_MESSAGE_FOR_TESTFILE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
-
-        git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "breakpoint");
     }
 
 }

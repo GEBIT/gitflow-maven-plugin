@@ -13,6 +13,8 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
+import de.gebit.build.maven.plugin.gitflow.steps.FeatureFinishBreakpoint;
+
 /**
  * Abort a rebase or marge in process that was started during execution of
  * <code>flow:feature-rebase</code>.
@@ -89,6 +91,7 @@ public class GitFlowFeatureRebaseAbortMojo extends AbstractGitFlowFeatureMojo {
                         if (oldFeatureHEAD != null) {
                             String currentCommit = getCurrentCommit();
                             if (!oldFeatureHEAD.equals(currentCommit)) {
+                                getMavenLog().info("Rollback the rebase of the feature branch.");
                                 gitResetHard(oldFeatureHEAD);
                             }
                             BranchCentralConfigChanges branchConfigChanges = new BranchCentralConfigChanges();
@@ -100,6 +103,36 @@ public class GitFlowFeatureRebaseAbortMojo extends AbstractGitFlowFeatureMojo {
                                     gitGetBranchLocalConfig(featureBranch, "oldVersionChangeCommit"));
                             gitApplyBranchCentralConfigChanges(branchConfigChanges,
                                     "feature rebase aborted on '" + featureBranch + "'");
+                            resetBranchLocalConfigs(featureBranch);
+                            aborted = true;
+                        } else {
+                            throw new GitFlowFailureException(
+                                    "Couldn't find the old HEAD commit of feature branch in local git config.\n"
+                                            + "This indicates a severe error condition in the git config.",
+                                    "Please consult a gitflow expert on how to fix this!");
+                        }
+                    } else if (FeatureFinishBreakpoint.TEST_PROJECT_AFTER_REBASE.getId().equals(breakpoint)) {
+                        if (!getPrompter().promptConfirmation("You have an interrupted feature finish process on your "
+                                + "current branch because project test failed before merge.\n"
+                                + "Are you sure you want to abort the feature finish process and rollback the rebase?",
+                                true, true)) {
+                            throw new GitFlowFailureException("Aborting feature finish process aborted by user.", null);
+                        }
+                        BranchRefState state = gitCheckBranchReference(featureBranch);
+                        if (state != BranchRefState.DIVERGE && state != BranchRefState.LOCAL_AHEAD) {
+                            throw new GitFlowFailureException(
+                                    "The state of current local and remote branches is unexpected for an interrupted "
+                                            + "feature finish process.\n"
+                                            + "This indicates a severe error condition on your branches.",
+                                    "Please consult a gitflow expert on how to fix this!");
+                        }
+                        String oldFeatureHEAD = gitGetBranchLocalConfig(featureBranch, "oldFeatureHEAD");
+                        if (oldFeatureHEAD != null) {
+                            String currentCommit = getCurrentCommit();
+                            if (!oldFeatureHEAD.equals(currentCommit)) {
+                                getMavenLog().info("Rollback the rebase of the feature branch.");
+                                gitResetHard(oldFeatureHEAD);
+                            }
                             resetBranchLocalConfigs(featureBranch);
                             aborted = true;
                         } else {
@@ -124,7 +157,9 @@ public class GitFlowFeatureRebaseAbortMojo extends AbstractGitFlowFeatureMojo {
         gitRemoveBranchLocalConfig(featureBranch, "newBaseVersion");
         gitRemoveBranchLocalConfig(featureBranch, "newStartCommitMessage");
         gitRemoveBranchLocalConfig(featureBranch, "newVersionChangeCommit");
-        gitRemoveBranchLocalConfig(featureBranch, "rebasedWithoutVersionChangeCommit");
+        gitRemoveBranchLocalConfig(featureBranch, GitFlowFeatureFinishMojo.CONF_KEY_REBASED_BEFORE_FINISH);
+        gitRemoveBranchLocalConfig(featureBranch,
+                GitFlowFeatureFinishMojo.CONF_KEY_REBASED_WITHOUT_VERSION_CHANGE_COMMIT);
         gitRemoveBranchLocalConfig(featureBranch, "oldFeatureHEAD");
         gitRemoveBranchLocalConfig(featureBranch, "oldFeatureVersion");
         gitRemoveBranchLocalConfig(featureBranch, "oldBaseVersion");

@@ -9,8 +9,9 @@
 package de.gebit.build.maven.plugin.gitflow.steps;
 
 public enum FeatureFinishBreakpoint implements Breakpoint {
-    TEST_PROJECT("testProject"), CLEAN_INSTALL("cleanInstall"), FINAL_MERGE("finalMerge"), REBASE_BEFORE_FINISH(
-            "rebaseBeforeFinish"), REBASE_WITHOUT_VERSION_CHANGE("rebaseWithoutVersionChange");
+    TEST_PROJECT_AFTER_REBASE("testProjectAfterRebase"), CLEAN_INSTALL("cleanInstall"), FINAL_MERGE(
+            "finalMerge"), REBASE_BEFORE_FINISH(
+                    "rebaseBeforeFinish"), REBASE_WITHOUT_VERSION_CHANGE("rebaseWithoutVersionChange");
 
     private String id;
 
