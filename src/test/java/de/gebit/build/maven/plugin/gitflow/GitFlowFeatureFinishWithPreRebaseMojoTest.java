@@ -53,9 +53,6 @@ public class GitFlowFeatureFinishWithPreRebaseMojoTest extends AbstractGitFlowMo
 
     private static final String FEATURE_WITHOUT_VERSION_BRANCH = BasicConstants.FEATURE_WITHOUT_VERSION_BRANCH;
 
-    private static final String COMMIT_MESSAGE_MERGE_FEATURE_WITHOUT_VERSION = TestProjects.BASIC.jiraProject
-            + "-NONE: Merge branch " + FEATURE_WITHOUT_VERSION_BRANCH;
-
     private static final String COMMIT_MESSAGE_MERGE = TestProjects.BASIC.jiraProject + "-NONE: Merge branch "
             + FEATURE_BRANCH;
 
@@ -175,8 +172,7 @@ public class GitFlowFeatureFinishWithPreRebaseMojoTest extends AbstractGitFlowMo
         git.assertMissingLocalBranches(repositorySet, FEATURE_BRANCH);
         git.assertMissingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE,
-                COMMIT_MESSAGE_FEATURE_TESTFILE);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_FEATURE_TESTFILE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
     }
 
@@ -213,8 +209,8 @@ public class GitFlowFeatureFinishWithPreRebaseMojoTest extends AbstractGitFlowMo
         git.assertMissingLocalBranches(repositorySet, FEATURE_BRANCH);
         git.assertMissingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE,
-                COMMIT_MESSAGE_FEATURE_TESTFILE, COMMIT_MESSAGE_MASTER_TESTFILE);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_FEATURE_TESTFILE,
+                COMMIT_MESSAGE_MASTER_TESTFILE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
 
         git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_BRANCH, "rebasedWithoutVersionChangeCommit");
@@ -255,8 +251,8 @@ public class GitFlowFeatureFinishWithPreRebaseMojoTest extends AbstractGitFlowMo
         git.assertMissingLocalBranches(repositorySet, FEATURE_WITHOUT_VERSION_BRANCH);
         git.assertMissingRemoteBranches(repositorySet, FEATURE_WITHOUT_VERSION_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE_FEATURE_WITHOUT_VERSION,
-                COMMIT_MESSAGE_FEATURE_TESTFILE, COMMIT_MESSAGE_MASTER_TESTFILE);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_FEATURE_TESTFILE,
+                COMMIT_MESSAGE_MASTER_TESTFILE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
 
         git.assertBranchLocalConfigValueMissing(repositorySet, FEATURE_WITHOUT_VERSION_BRANCH,
@@ -528,8 +524,8 @@ public class GitFlowFeatureFinishWithPreRebaseMojoTest extends AbstractGitFlowMo
         git.assertMissingLocalBranches(repositorySet, FEATURE_BRANCH);
         git.assertMissingRemoteBranches(repositorySet, FEATURE_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE,
-                COMMIT_MESSAGE_FEATURE_TESTFILE, COMMIT_MESSAGE_MASTER_TESTFILE);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_FEATURE_TESTFILE,
+                COMMIT_MESSAGE_MASTER_TESTFILE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         git.assertTestfileContentModified(repositorySet, TESTFILE_NAME);
 
@@ -597,8 +593,8 @@ public class GitFlowFeatureFinishWithPreRebaseMojoTest extends AbstractGitFlowMo
         git.assertMissingLocalBranches(repositorySet, FEATURE_WITHOUT_VERSION_BRANCH);
         git.assertMissingRemoteBranches(repositorySet, FEATURE_WITHOUT_VERSION_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE_FEATURE_WITHOUT_VERSION,
-                COMMIT_MESSAGE_FEATURE_TESTFILE, COMMIT_MESSAGE_MASTER_TESTFILE);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_FEATURE_TESTFILE,
+                COMMIT_MESSAGE_MASTER_TESTFILE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         git.assertTestfileContentModified(repositorySet, TESTFILE_NAME);
 
@@ -611,8 +607,6 @@ public class GitFlowFeatureFinishWithPreRebaseMojoTest extends AbstractGitFlowMo
     public void testExecuteWithPreRebaseOnMaster() throws Exception {
         // set up
         final String USED_FEATURE_BRANCH = BasicConstants.SINGLE_FEATURE_BRANCH;
-        final String USED_COMMIT_MESSAGE_MERGE = TestProjects.BASIC.jiraProject + "-NONE: Merge branch "
-                + USED_FEATURE_BRANCH;
         final String PROMPT_MESSAGE = "Feature branches:" + LS + "1. " + USED_FEATURE_BRANCH + LS
                 + "Choose feature branch to finish";
         createFeatureBranchDivergentFromMaster(USED_FEATURE_BRANCH);
@@ -629,8 +623,8 @@ public class GitFlowFeatureFinishWithPreRebaseMojoTest extends AbstractGitFlowMo
         git.assertMissingLocalBranches(repositorySet, USED_FEATURE_BRANCH);
         git.assertMissingRemoteBranches(repositorySet, USED_FEATURE_BRANCH);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, USED_COMMIT_MESSAGE_MERGE,
-                COMMIT_MESSAGE_FEATURE_TESTFILE, COMMIT_MESSAGE_MASTER_TESTFILE);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_FEATURE_TESTFILE,
+                COMMIT_MESSAGE_MASTER_TESTFILE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
 
         git.assertBranchLocalConfigValueMissing(repositorySet, USED_FEATURE_BRANCH,

@@ -74,15 +74,16 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
     private boolean skipTestProject = false;
 
     /**
-     * You can try a rebase of the feature branch skipping the initial commit that
-     * update the pom versions just before finishing a feature. The operation will
-     * peform a rebase, which may not finish successfully. You can make your changes
-     * and run feature-finish again in that case. <br>
-     * Note: problems arise if you're modifying the poms near the version number.
-     * You will need to fix those conflicts before running feature-finish again, as
-     * otherwise the pom will be invalid and the process cannot be started. If you
-     * cannot fix the pom into a working state with the current commit you can
-     * manually issue a <code>git rebase --continue</code>.
+     * You can try a rebase of the feature branch skipping the initial commit
+     * that update the pom versions just before finishing a feature. The
+     * operation will peform a rebase, which may not finish successfully. You
+     * can make your changes and run feature-finish again in that case. <br>
+     * Note: problems arise if you're modifying the poms near the version
+     * number. You will need to fix those conflicts before running
+     * feature-finish again, as otherwise the pom will be invalid and the
+     * process cannot be started. If you cannot fix the pom into a working state
+     * with the current commit you can manually issue a
+     * <code>git rebase --continue</code>.
      *
      * @since 1.3.0
      */
@@ -99,8 +100,8 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
     private boolean allowFF = false;
 
     /**
-     * Whether to rebase feature branch on top of development branch before merging
-     * into it.
+     * Whether to rebase feature branch on top of development branch before
+     * merging into it.
      *
      * @since 2.0.1
      */
@@ -108,9 +109,9 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
     private boolean rebase = false;
 
     /**
-     * Whether a merge of development branch into feature branch should be performed
-     * instead of a rebase on top of development branch before merging into it. Is
-     * used only if parameter <code>rebase</code> is true.
+     * Whether a merge of development branch into feature branch should be
+     * performed instead of a rebase on top of development branch before merging
+     * into it. Is used only if parameter <code>rebase</code> is true.
      *
      * @since 2.0.1
      */
@@ -148,8 +149,8 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
     /**
      * Check the breakpoint marker stored into branch local config.
      *
-     * @return the type of marked breakpoint or <code>null</code> if no breakpoint
-     *         found.
+     * @return the type of marked breakpoint or <code>null</code> if no
+     *         breakpoint found.
      */
     private FeatureFinishBreakpoint getBreakpoint() throws MojoFailureException, CommandLineException {
         String branch;
@@ -579,13 +580,21 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
 
         if (stepParameters.breakpoint != FeatureFinishBreakpoint.FINAL_MERGE) {
             String baseBranch = stepParameters.baseBranch;
+
             // git checkout develop
             gitCheckout(baseBranch);
+
+            int featureCommits = gitGetDistanceToAncestor(featureBranch, baseBranch);
+            getLog().info("Feature branch has " + featureCommits + " commits that will be merged int base branch.");
+            if (featureCommits == 1 && !allowFF) {
+                getMavenLog().info("Using fast forward merge for single commit feature branch.");
+            }
+            boolean fastForward = allowFF || featureCommits == 1;
             // git merge --no-ff feature/...
             try {
-                getMavenLog().info("Merging (" + (allowFF ? "--ff" : "--no-ff") + ") feature branch '" + featureBranch
-                        + "' into base branch '" + baseBranch + "'...");
-                gitMerge(featureBranch, !allowFF);
+                getMavenLog().info("Merging (" + (fastForward ? "--ff" : "--no-ff")
+                        + ") feature branch '" + featureBranch + "' into base branch '" + baseBranch + "'...");
+                gitMerge(featureBranch, !fastForward);
             } catch (MojoFailureException ex) {
                 getMavenLog().info("Feature finish process paused to resolve merge conflicts");
                 setBreakpoint(FeatureFinishBreakpoint.FINAL_MERGE, featureBranch);
@@ -775,18 +784,18 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
     }
 
     /**
-     * Merges the first commit on the given branch ignoring any changes. This first
-     * commit is the commit that changed the versions.
+     * Merges the first commit on the given branch ignoring any changes. This
+     * first commit is the commit that changed the versions.
      *
      * @param featureBranch
      *            The feature branch name.
      * @param branchPoint
      *            the branch point on both feature and development branch
      * @param versionChangeCommitId
-     *            commit ID of the version change commit. Must be first commit on
-     *            featuereBranch after branchPoint
-     * @return true if the version has been premerged and does not need to be turned
-     *         back
+     *            commit ID of the version change commit. Must be first commit
+     *            on featuereBranch after branchPoint
+     * @return true if the version has been premerged and does not need to be
+     *         turned back
      * @throws MojoFailureException
      * @throws CommandLineException
      */
@@ -859,8 +868,8 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
     }
 
     /**
-     * Remove breakpoint information and known additional configs from branch local
-     * config.
+     * Remove breakpoint information and known additional configs from branch
+     * local config.
      *
      * @param featureBranch
      *            the feature branch name
