@@ -1,0 +1,6 @@
+startCommitMessage = GBLD-728: updating versions for feature branch
+baseVersion = 2.1.9-SNAPSHOT
+branchType = feature
+issueNumber = GBLD-728
+baseBranch = master
+versionChangeCommit = 454e8e3ad89fffbb800f9410010b9fa69c549452
