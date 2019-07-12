@@ -2346,8 +2346,6 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteWithFinishedFeatureMergeCommitWithoutChangesOnEpic() throws Exception {
         // set up
         final String COMMIT_MESSAGE_FEATURE_TESTFILE = "FEATURE: Unit test dummy file commit";
-        final String COMMIT_MESSAGE_FEATURE_FINISH_MERGE = TestProjects.BASIC.jiraProject + "-NONE: Merge branch "
-                + BasicConstants.FEATURE_ON_EPIC_BRANCH + " into " + EPIC_BRANCH;
         // abort second feature on epic branch
         git.switchToBranch(repositorySet, BasicConstants.FEATURE_WITHOUT_VERSION_ON_EPIC_BRANCH);
         ExecutorHelper.executeFeatureAbort(this, repositorySet);
@@ -2367,9 +2365,8 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE);
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, EPIC_BRANCH, EPIC_BRANCH);
-        git.assertCommitHeadLinesInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_FEATURE_FINISH_MERGE,
-                COMMIT_MESSAGE_FEATURE_TESTFILE, COMMIT_MESSAGE_EPIC_TESTFILE, COMMIT_MESSAGE_SET_VERSION,
-                COMMIT_MESSAGE_MASTER_TESTFILE);
+        git.assertCommitHeadLinesInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_FEATURE_TESTFILE,
+                COMMIT_MESSAGE_EPIC_TESTFILE, COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_MASTER_TESTFILE);
         assertVersionsInPom(repositorySet.getWorkingDirectory(), EPIC_VERSION);
 
     }
