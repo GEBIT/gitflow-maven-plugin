@@ -4,3 +4,4 @@ branchType = feature
 issueNumber = GBLD-728
 baseBranch = master
 versionChangeCommit = 454e8e3ad89fffbb800f9410010b9fa69c549452
+JOB_BUILD = true
