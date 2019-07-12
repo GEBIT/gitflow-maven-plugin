@@ -11,6 +11,7 @@ package de.gebit.build.maven.plugin.gitflow;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
@@ -113,7 +114,7 @@ public class GitFlowBranchConfigMojo extends AbstractGitFlowMojo {
                 branchName = gitCurrentBranch();
             }
 
-            if (propertyValue != null) {
+            if (StringUtils.isNotEmpty(propertyValue)) {
                 getMavenLog().info("Setting branch property '" + propertyName + "' for branch '" + branchName + "' to '"
                         + propertyValue + "'");
                 gitSetBranchCentralConfig(branchName, propertyName, propertyValue);
