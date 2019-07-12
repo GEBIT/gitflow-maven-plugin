@@ -10,6 +10,8 @@ package de.gebit.build.maven.plugin.gitflow;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map.Entry;
+import java.util.Properties;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -19,7 +21,38 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
- * The git flow branch config mojo. Used to configure branch specific properties
+ * Configure branch specific properties that can be used internally in gitflow
+ * or externally, e.g. by Jenkins.
+ * <p>
+ * Set/remove a property for current or specified branch:
+ * 
+ * <pre>
+ * mvn flow:branch-config [-DbranchName=XYZ] [-DpropertyName=JOB_BUILD] [-DpropertyValue=true]
+ * </pre>
+ * </p>
+ * <p>
+ * Show branch specific properties for current or specified branch (since
+ * 2.1.9):
+ * 
+ * <pre>
+ * mvn flow:branch-config -Dflow.show=true [-DbranchName=XYZ] [-DpropertyName=JOB_BUILD]
+ * </pre>
+ * </p>
+ * <p>
+ * Remove all properties for specified branch (since 2.1.0):
+ * 
+ * <pre>
+ * mvn flow:branch-config -DremoveAllForBranch=XYZ
+ * </pre>
+ * </p>
+ * <p>
+ * Clean-up: remove branch specific properties for not existing feature, epic
+ * and release branches (since 2.1.5):
+ * 
+ * <pre>
+ * mvn flow:branch-config -Dflow.cleanup=true
+ * </pre>
+ * </p>
  *
  * @author Erwin Tratar
  * @since 1.4.0
@@ -30,8 +63,8 @@ public class GitFlowBranchConfigMojo extends AbstractGitFlowMojo {
     static final String GOAL = "branch-config";
 
     /**
-     * Set the property name to specify. If not set in interactive mode you will be
-     * asked.
+     * Set the property name to specify. If not set in interactive mode you will
+     * be asked.
      *
      * @since 1.4.0
      */
@@ -39,8 +72,8 @@ public class GitFlowBranchConfigMojo extends AbstractGitFlowMojo {
     private String propertyName;
 
     /**
-     * Specify the property value to set. If not specified, the property is removed
-     * (in interactive mode you will be asked).
+     * Specify the property value to set. If not specified, the property is
+     * removed (in interactive mode you will be asked).
      *
      * @since 1.4.0
      */
@@ -48,7 +81,8 @@ public class GitFlowBranchConfigMojo extends AbstractGitFlowMojo {
     private String propertyValue;
 
     /**
-     * Name of the branch to configure. If not specified the current branch is used.
+     * Name of the branch to configure. If not specified the current branch is
+     * used.
      *
      * @since 1.4.0
      */
@@ -65,13 +99,23 @@ public class GitFlowBranchConfigMojo extends AbstractGitFlowMojo {
     private String removeAllForBranch;
 
     /**
-     * Clean-up branch-config. Remove branch specific properties for not existing
-     * branches. If specified, other parameters are ignored.
+     * Clean-up branch-config. Remove branch specific properties for not
+     * existing feature, epic and release branches. If specified, other
+     * parameters are ignored.
      *
      * @since 2.1.5
      */
     @Parameter(property = "flow.cleanup", defaultValue = "false", readonly = true)
     private boolean cleanup;
+
+    /**
+     * Show branch specific properties for current branch or for branch defined
+     * in <code>branchName</code> property.
+     *
+     * @since 2.1.9
+     */
+    @Parameter(property = "flow.show", defaultValue = "false", readonly = true)
+    private boolean show;
 
     /** {@inheritDoc} */
     @Override
@@ -82,6 +126,36 @@ public class GitFlowBranchConfigMojo extends AbstractGitFlowMojo {
 
         if (cleanup) {
             cleanupBranchConfig();
+        } else if (show) {
+            if (branchName == null) {
+                branchName = gitCurrentBranch();
+            }
+            CentralBranchConfigCache cache = getCentralBranchConfigCache();
+            Properties properties = cache.getProperties(branchName);
+            if (properties == null || properties.isEmpty()) {
+                getMavenLog().info("No branch properties found for branch '" + branchName + "'");
+            } else if (StringUtils.isNotEmpty(propertyName)) {
+                String value = properties.getProperty(propertyName);
+                if (value == null) {
+                    getMavenLog().info(
+                            "No value set for branch property '" + propertyName + "' for branch '" + branchName + "'");
+                } else {
+                    getMavenLog().info("Branch property '" + propertyName + "' for branch '" + branchName
+                            + "' has value '" + value + "'");
+                }
+            } else {
+                StringBuilder msg = new StringBuilder();
+                msg.append("Branch '");
+                msg.append(branchName);
+                msg.append("' has following branch properties:");
+                for (Entry<Object, Object> propEntry : properties.entrySet()) {
+                    msg.append("\n  ");
+                    msg.append(propEntry.getKey());
+                    msg.append("=");
+                    msg.append(propEntry.getValue());
+                }
+                getMavenLog().info(msg.toString());
+            }
         } else if (removeAllForBranch != null && !removeAllForBranch.trim().isEmpty()) {
             if (gitBranchExists(removeAllForBranch) || gitRemoteBranchExists(removeAllForBranch)) {
                 if (!getPrompter().promptConfirmation(
