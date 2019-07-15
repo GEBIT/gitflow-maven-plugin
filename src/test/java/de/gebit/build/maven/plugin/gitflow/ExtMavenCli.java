@@ -176,6 +176,9 @@ public class ExtMavenCli extends MavenCli {
             if (arg.startsWith("-Dversion.gitflow-maven-plugin=")) {
                 continue;
             }
+            if (arg.equals("-Dstyle.color=never")) {
+                continue;
+            }
             if (first) {
                 first = false;
             } else {
