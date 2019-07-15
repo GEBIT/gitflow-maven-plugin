@@ -29,7 +29,6 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * <pre>
  * mvn flow:branch-config [-DbranchName=XYZ] [-DpropertyName=JOB_BUILD] [-DpropertyValue=true]
  * </pre>
- * </p>
  * <p>
  * Show branch specific properties for current or specified branch (since
  * 2.1.9):
@@ -37,14 +36,12 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * <pre>
  * mvn flow:branch-config -Dflow.show=true [-DbranchName=XYZ] [-DpropertyName=JOB_BUILD]
  * </pre>
- * </p>
  * <p>
  * Remove all properties for specified branch (since 2.1.0):
  * 
  * <pre>
  * mvn flow:branch-config -DremoveAllForBranch=XYZ
  * </pre>
- * </p>
  * <p>
  * Clean-up: remove branch specific properties for not existing feature, epic
  * and release branches (since 2.1.5):
@@ -52,7 +49,6 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * <pre>
  * mvn flow:branch-config -Dflow.cleanup=true
  * </pre>
- * </p>
  *
  * @author Erwin Tratar
  * @since 1.4.0
