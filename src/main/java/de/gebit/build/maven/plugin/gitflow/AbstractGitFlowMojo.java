@@ -15,6 +15,8 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -380,7 +382,21 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             String basedir = session.getRequest().getBaseDirectory();
             cmdMvn.setWorkingDirectory(basedir);
             if (StringUtils.isBlank(mvnExecutable)) {
-                mvnExecutable = "mvn";
+                String mvnCmd = null;
+                String mvnHome = System.getProperty("maven.home");
+                if (mvnHome != null) {
+                    if (Files.exists(Paths.get(mvnHome, "bin", "mvn"))
+                            || Files.exists(Paths.get(mvnHome, "bin", "mvn.cmd"))) {
+                        mvnCmd = Paths.get(mvnHome, "bin", "mvn").toString();
+                        getLog().info("Using '" + mvnCmd + "' for internal maven commands.");
+                    }
+                }
+                if (mvnCmd == null) {
+                    getMavenLog().warn("Maven home used for Gitflow couldn't be detected. Using 'mvn' for internal "
+                            + "maven commands.");
+                    mvnCmd = "mvn";
+                }
+                mvnExecutable = mvnCmd;
             }
             cmdMvn.setExecutable(mvnExecutable);
         }
@@ -3785,6 +3801,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                 }
             }
         }
+        effectiveArgs = addArgs(effectiveArgs, "-Dstyle.color=never");
         Commandline cmd = getCmdMvnConfiguredByUserProperties();
         if (cmd != null) {
             effectiveArgs = mergeCmdMvnArgsConfiguredByUserProperties(effectiveArgs);
@@ -4008,7 +4025,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
         final CommandLineUtils.StringStreamConsumer err = new CommandLineUtils.StringStreamConsumer();
 
-        final String logContext = cmd.getExecutable().toUpperCase();
+        final String logContext = getLogContext(cmd);
 
         final Date lastProgressOutput = (outputMode == OutputMode.PROGRESS) ? new Date() : null;
         if (lastProgressOutput != null) {
@@ -4059,6 +4076,15 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         }
 
         return new CommandResult(exitCode, StringUtils.trim(outStr), errorStr);
+    }
+
+    private String getLogContext(final Commandline cmd) {
+        String executable = cmd.getExecutable();
+        int pos = Math.max(executable.lastIndexOf("/"), executable.lastIndexOf("\\"));
+        if (pos >= 0 && pos < executable.length() - 1) {
+            executable = executable.substring(pos + 1);
+        }
+        return executable.toUpperCase();
     }
 
     protected boolean hasToPrintProgressOutput(Date lastProgressOutput) {

@@ -204,9 +204,6 @@ public class GitFlowParameter {
         if (prompt != null) {
             result.append("Prompt=").append(prompt).append(",");
         }
-        if (promptHints != null) {
-            result.append("promptHints=").append(promptHints).append(",");
-        }
         if (enabled != null) {
             result.append("Enabled=").append(enabled).append(",");
         }
