@@ -29,54 +29,7 @@ You will need to have some software installed:
 
 ### Usage
 
-Typical steps for implementing a feature in a feature branches
-
-+ Start a new feature branch:
-
-```
-mvn flow:feature-start
-```
-
-Make sure your local master is not behind the remote, before executing.
-
-+ Add a Jenkins build job for the feature branch:
-
-If you're on the feature branch:
-```
-mvn flow:branch-config -DpropertyName=JOB_BUILD -DpropertyValue=true
-```
-otherwise:
-```
-mvn flow:branch-config -DbranchName=feature/XYZ-1234 -DpropertyName=JOB_BUILD -DpropertyValue=true
-```
-
-(you will need to use the correct branch name, of course).
-
-You can also do this right away when starting the feature branch:
-
-```
-mvn flow:feature-start -DjobBuild=true
-```
-
-
-+ Rebasing a feature on the current upstream branch
-
-```
-mvn flow:feature-rebase -N
-```
-
-The `-N` option is needed for rare cases where a module in an upstream project is removed, that is still used in the 
-current project before the rebase. If you don't specify `-N` yo will get errors about missing dependencies.
-
-
-+ Finish a feature by merging (rebasing upon) into the upstream branch:
-
-```
-mvn flow:feature-finish
-```
-
-Make sure your local master branch is not behind the remote, before executing.
-
+Typical steps for implementing a feature in a feature branches are outlined in [Working on Features](working-on-features.html).
 
 A complete list of goals with all properties is available from the [Goals List](plugin-info.html).
 

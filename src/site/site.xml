@@ -3,6 +3,7 @@
   <body>
     <menu name="Overview">
       <item name="Introduction" href="index.html"/>
+      <item name="Working on Features" href="working-on-features.html"/>
       <item name="Goals" href="plugin-info.html"/>
       <item name="Branches" href="branches.html"/>
       <item name="Rebase vs. Merge" href="rebase-merge.html"/>
