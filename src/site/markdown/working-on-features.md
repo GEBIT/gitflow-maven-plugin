@@ -64,6 +64,9 @@ conflicts with upstream changes it is much easier if you have only a few commits
 mvn flow:feature-rebase-cleanup -N
 ```
 
+This will basically just perform a `git rebase --interactive` with the correct options for you, so you need to be
+familiar with the [concept in git](https://git-scm.com/book/en/v2/Git-Tools-Rewriting-History#_changing_multiple).
+
 In simple cases (just one or two commits) this step will not be necessary!
 
 ### Finishing the feature 
@@ -73,6 +76,8 @@ Finish the feature by merging (rebasing upon) into the upstream branch:
 ```
 mvn flow:feature-finish
 ```
+
+As you would normaly do a `flow:feature-rebase` before, there should be no conflicts at this stage.
 
 ### If anything goes wrong
 
