@@ -301,7 +301,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         verifyZeroInteractions(promptControllerMock);
         assertGitFlowFailureException(result, "'mvn flow:feature-rebase' can be executed only on a feature branch.",
-                "Please switch to a feature branch first.", "'git checkout INTERNAL' to switch to the feature branch");
+                "Please switch to a feature branch first.", "'git checkout BRANCH' to switch to the feature branch");
     }
 
     @Test
@@ -323,7 +323,7 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
         // verify
         assertGitFlowFailureException(result, "'mvn flow:feature-rebase' can be executed only on a feature branch.",
-                "Please switch to a feature branch first.", "'git checkout INTERNAL' to switch to the feature branch");
+                "Please switch to a feature branch first.", "'git checkout BRANCH' to switch to the feature branch");
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE);

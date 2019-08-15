@@ -257,7 +257,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         assertGitFlowFailureException(result,
                 "More than one release branch exists. Cannot abort release from non-release branch.",
                 "Please switch to a release branch first in order to proceed.",
-                "'git checkout INTERNAL' to switch to the release branch");
+                "'git checkout BRANCH' to switch to the release branch");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
     }

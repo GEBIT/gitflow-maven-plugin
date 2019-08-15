@@ -309,7 +309,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         if (!isReleaseBranch(releaseBranch)) {
             throw new GitFlowFailureException("Current branch '" + releaseBranch + "' is not a release branch.",
                     "Please switch to the release branch that you want to finish in order to proceed.",
-                    "'git checkout INTERNAL' to switch to the release branch");
+                    "'git checkout BRANCH' to switch to the release branch");
         }
 
         // get current project version from pom
@@ -823,7 +823,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                     throw new GitFlowFailureException(
                             "More than one release branch exists. Cannot abort release from non-release branch.",
                             "Please switch to a release branch first in order to proceed.",
-                            "'git checkout INTERNAL' to switch to the release branch");
+                            "'git checkout BRANCH' to switch to the release branch");
                 }
                 releaseBranch = releaseBranches.get(0);
             }

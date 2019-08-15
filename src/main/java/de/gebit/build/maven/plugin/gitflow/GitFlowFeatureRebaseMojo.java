@@ -145,7 +145,7 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
                     throw new GitFlowFailureException(
                             "'mvn flow:feature-rebase' can be executed only on a feature branch.",
                             "Please switch to a feature branch first.",
-                            "'git checkout INTERNAL' to switch to the feature branch");
+                            "'git checkout BRANCH' to switch to the feature branch");
                 }
 
                 featureBranchName = currentBranch;

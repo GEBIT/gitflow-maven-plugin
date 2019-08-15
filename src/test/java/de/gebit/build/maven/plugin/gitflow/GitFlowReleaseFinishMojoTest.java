@@ -271,7 +271,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         assertGitFlowFailureException(result, "Current branch '" + MASTER_BRANCH + "' is not a release branch.",
                 "Please switch to the release branch that you want to finish in order to proceed.",
-                "'git checkout INTERNAL' to switch to the release branch");
+                "'git checkout BRANCH' to switch to the release branch");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
     }
@@ -285,7 +285,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         assertGitFlowFailureException(result, "Current branch '" + MAINTENANCE_BRANCH + "' is not a release branch.",
                 "Please switch to the release branch that you want to finish in order to proceed.",
-                "'git checkout INTERNAL' to switch to the release branch");
+                "'git checkout BRANCH' to switch to the release branch");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
     }
@@ -300,7 +300,7 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
         // verify
         assertGitFlowFailureException(result, "Current branch '" + OTHER_BRANCH + "' is not a release branch.",
                 "Please switch to the release branch that you want to finish in order to proceed.",
-                "'git checkout INTERNAL' to switch to the release branch");
+                "'git checkout BRANCH' to switch to the release branch");
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, OTHER_BRANCH);
     }

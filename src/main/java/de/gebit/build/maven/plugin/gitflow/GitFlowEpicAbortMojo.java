@@ -55,7 +55,7 @@ public class GitFlowEpicAbortMojo extends AbstractGitFlowEpicMojo {
                     new GitFlowFailureInfo(
                             "In non-interactive mode 'mvn flow:epic-abort' can be executed only on an epic branch.",
                             "Please switch to an epic branch first or run in interactive mode.",
-                            "'git checkout INTERNAL' to switch to the epic branch",
+                            "'git checkout BRANCH' to switch to the epic branch",
                             "'mvn flow:epic-abort' to run in interactive mode"));
             getLog().info("Aborting epic on selected epic branch: " + epicBranchName);
         } else {

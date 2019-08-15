@@ -234,7 +234,7 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
             if (!isReleaseBranch(currentBranch)) {
                 throw new GitFlowFailureException("Current branch '" + currentBranch + "' is not a release branch.",
                         "Please switch to the release branch that you want to finish in order to proceed.",
-                        "'git checkout INTERNAL' to switch to the release branch");
+                        "'git checkout BRANCH' to switch to the release branch");
             }
             getMavenLog().info("Release branch to be finished is '" + currentBranch + "'");
             String developmentBranch = gitGetBranchCentralConfig(currentBranch, BranchConfigKeys.BASE_BRANCH);
