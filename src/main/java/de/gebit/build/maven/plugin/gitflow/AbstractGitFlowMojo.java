@@ -126,12 +126,18 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     private static final int SUCCESS_EXIT_CODE = 0;
 
     private static final long PROGRESS_OUTPUT_TIMEOUT_IN_MILLIS = 5000;
+    
+    private static final List<String> MAVEN_LAUNCHERS = Arrays
+            .asList("org.codehaus.plexus.classworlds.launcher.Launcher", "org.apache.maven.cli.MavenCli");
 
     /** Command line for Git executable. */
     private final Commandline cmdGit = new ShellCommandLine();
 
     /** Command line for Maven executable. */
     private final Commandline cmdMvn = new ShellCommandLine();
+
+    /** Command line for Maven executable. */
+    private final List<String> cmdMvnJVMArgs = new ArrayList<>();
 
     /** Git flow configuration. */
     @Parameter(defaultValue = "${gitFlowConfig}")
@@ -260,7 +266,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     protected GitFlowParameter[] additionalVersionCommands;
 
     /**
-     * The path to the Maven executable. Defaults to "mvn".
+     * The path to the Maven executable. Defaults to executable used to run gitflow maven plugin itself.
      */
     @Parameter(property = "mvnExecutable")
     private String mvnExecutable;
@@ -359,7 +365,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     @Parameter(property = "flow.installProjectOptions")
     protected String installProjectOptions;
-
+    
     private ExtendedPrompter extendedPrompter;
 
     private CentralBranchConfigCache centralBranchConfigCache;
@@ -384,16 +390,32 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             if (StringUtils.isBlank(mvnExecutable)) {
                 String mvnCmd = null;
                 String mvnHome = System.getProperty("maven.home");
-                if (mvnHome != null) {
-                    if (Files.exists(Paths.get(mvnHome, "bin", "mvn"))
-                            || Files.exists(Paths.get(mvnHome, "bin", "mvn.cmd"))) {
-                        mvnCmd = Paths.get(mvnHome, "bin", "mvn").toString();
-                        getLog().info("Using '" + mvnCmd + "' for internal maven commands.");
+                String mainClass = getMainClassName();
+                if (StringUtils.isNotEmpty(mainClass)) {
+                    if (StringUtils.isNotEmpty(mvnHome)) {
+                        cmdMvnJVMArgs.add("-Dmaven.home=" + mvnHome);
                     }
+                    String classworldsConf = System.getProperty("classworlds.conf");
+                    if (StringUtils.isNotEmpty(classworldsConf)) {
+                        cmdMvnJVMArgs.add("-Dclassworlds.conf=" + classworldsConf);
+                    }
+                    String multiModuleProjectDirectory = System.getProperty("maven.multiModuleProjectDirectory");
+                    if (StringUtils.isNotEmpty(multiModuleProjectDirectory)) {
+                        cmdMvnJVMArgs.add("-Dmaven.multiModuleProjectDirectory=" + multiModuleProjectDirectory);
+                    }
+                    cmdMvnJVMArgs.add("-classpath");
+                    cmdMvnJVMArgs.add(System.getProperty("java.class.path"));
+                    cmdMvnJVMArgs.add(mainClass);
+                    mvnCmd = Paths.get(System.getProperty("java.home"), "bin", "javaw").toString();
+                    getLog().info("Using maven launcher main class '" + mainClass + "' for internal maven commands.");
+                } else if (StringUtils.isNotEmpty(mvnHome) && (Files.exists(Paths.get(mvnHome, "bin", "mvn"))
+                        || Files.exists(Paths.get(mvnHome, "bin", "mvn.cmd")))) {
+                    mvnCmd = Paths.get(mvnHome, "bin", "mvn").toString();
+                    getLog().info("Using '" + mvnCmd + "' for internal maven commands.");
                 }
                 if (mvnCmd == null) {
-                    getMavenLog().warn("Maven home used for Gitflow couldn't be detected. Using 'mvn' for internal "
-                            + "maven commands.");
+                    getMavenLog().warn("Maven launcher and maven home used for Gitflow couldn't be detected. "
+                            + "Using 'mvn' for internal maven commands.");
                     mvnCmd = "mvn";
                 }
                 mvnExecutable = mvnCmd;
@@ -409,6 +431,72 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             cmdGit.setExecutable(gitExecutable);
             cmdGit.addEnvironment("LANG", "en");
         }
+    }
+
+    private String getMainClassName() {
+        String command = System.getProperty("sun.java.command");
+        if (StringUtils.isNotEmpty(command)) {
+            String mainClass = command.split(" ", 2)[0];
+            if (isMavenLauncherClassName(mainClass)) {
+                getLog().info("Found maven launcher class '" + mainClass + "' in system property 'sun.java.command'.");
+                return mainClass;
+            } else {
+                getLog().info("Found main class '" + mainClass + "' in system property 'sun.java.command' is not a "
+                        + "maven launcher.");
+            }
+        } else {
+            String mainClass = findMainClassInThreads();
+            if (isMavenLauncherClassName(mainClass)) {
+                getLog().info("Found maven launcher class '" + mainClass + "' in main thread.");
+                return mainClass;
+            } else if (mainClass != null) {
+                getLog().info("Found main class '" + mainClass + "' in main thread is not a maven launcher.");
+            }
+        }
+        return null;
+    }
+
+    private boolean isMavenLauncherClassName(String className) {
+        return className != null && MAVEN_LAUNCHERS.contains(className);
+    }
+
+    private String findMainClassInThreads() {
+        Map<String, Thread> candidates = new HashMap<>();
+        for (Entry<Thread, StackTraceElement[]> entry : Thread.getAllStackTraces().entrySet()) {
+            Thread thread = entry.getKey();
+            if (thread.getThreadGroup() != null && thread.getThreadGroup().getName().equals("main")) {
+                StackTraceElement[] stackTrace = entry.getValue();
+                if (stackTrace.length > 0) {
+                    StackTraceElement stackTraceElement = stackTrace[stackTrace.length - 1];
+                    if (stackTraceElement.getMethodName().equals("main")) {
+                        candidates.put(stackTraceElement.getClassName(), thread);
+                    }
+                }
+            }
+        }
+        if (!candidates.isEmpty()) {
+            if (candidates.size() == 1) {
+                return candidates.keySet().iterator().next();
+            } else {
+                List<String> mainCandidates = new ArrayList<>();
+                for (Entry<String, Thread> candidate : candidates.entrySet()) {
+                    if ("main".equals(candidate.getValue().getName())) {
+                        mainCandidates.add(candidate.getKey());
+                    }
+                }
+                if (mainCandidates.size() == 1) {
+                    return mainCandidates.get(0);
+                } else if (mainCandidates.isEmpty()) {
+                    getLog().info("No maven launcher main class candidates found in main thread.");
+                } else {
+                    getLog().info("Found multiple maven launcher main class candidates " + mainCandidates
+                            + " in multiple main threads.");
+                }
+            }
+        } else {
+            getLog().info("No maven launcher main class candidates found in main thread.");
+        }
+        return null;
     }
 
     /** {@inheritDoc} */
@@ -3807,6 +3895,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             effectiveArgs = mergeCmdMvnArgsConfiguredByUserProperties(effectiveArgs);
         } else {
             cmd = cmdMvn;
+            effectiveArgs = mergeArgs(cmdMvnJVMArgs, effectiveArgs);
+
         }
         executeCommand(outputMode, cmd, true, effectiveArgs);
     }
@@ -3840,6 +3930,20 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             newEffectiveArgs = tmpEffectiveArgs;
         }
         return newEffectiveArgs;
+    }
+
+    private String[] mergeArgs(List<String> args1, String[] args2) {
+        if (args1 == null || args1.isEmpty()) {
+            return args2;
+        }
+        List<String> args = new ArrayList<>();
+        for (String arg : args1) {
+            args.add(arg);
+        }
+        for (String arg : args2) {
+            args.add(arg);
+        }
+        return args.toArray(new String[args.size()]);
     }
 
     /**
