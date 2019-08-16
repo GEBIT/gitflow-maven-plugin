@@ -16,6 +16,7 @@ import java.io.StringWriter;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.MessageFormat;
 import java.util.ArrayList;
@@ -390,8 +391,13 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             if (StringUtils.isBlank(mvnExecutable)) {
                 String mvnCmd = null;
                 String mvnHome = System.getProperty("maven.home");
+                Path javaBinPath = Paths.get(System.getProperty("java.home"), "bin");
+                Path javaExecutable = javaBinPath.resolve("javaw");
+                if (!Files.exists(javaExecutable)) {
+                    javaExecutable = javaBinPath.resolve("java");
+                }
                 String mainClass = getMainClassName();
-                if (StringUtils.isNotEmpty(mainClass)) {
+                if (Files.exists(javaExecutable) && StringUtils.isNotEmpty(mainClass)) {
                     if (StringUtils.isNotEmpty(mvnHome)) {
                         cmdMvnJVMArgs.add("-Dmaven.home=" + mvnHome);
                     }
@@ -406,7 +412,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                     cmdMvnJVMArgs.add("-classpath");
                     cmdMvnJVMArgs.add(System.getProperty("java.class.path"));
                     cmdMvnJVMArgs.add(mainClass);
-                    mvnCmd = Paths.get(System.getProperty("java.home"), "bin", "javaw").toString();
+                    mvnCmd = javaExecutable.toString();
                     getLog().info("Using maven launcher main class '" + mainClass + "' for internal maven commands.");
                 } else if (StringUtils.isNotEmpty(mvnHome) && (Files.exists(Paths.get(mvnHome, "bin", "mvn"))
                         || Files.exists(Paths.get(mvnHome, "bin", "mvn.cmd")))) {
