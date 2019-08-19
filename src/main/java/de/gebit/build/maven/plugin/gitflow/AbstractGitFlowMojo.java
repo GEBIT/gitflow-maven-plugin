@@ -391,30 +391,30 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             if (StringUtils.isBlank(mvnExecutable)) {
                 String mvnCmd = null;
                 String mvnHome = System.getProperty("maven.home");
-                Path javaBinPath = Paths.get(System.getProperty("java.home"), "bin");
-                Path javaExecutable = javaBinPath.resolve("javaw");
-                if (!Files.exists(javaExecutable)) {
-                    javaExecutable = javaBinPath.resolve("java");
+                String javaExecutable = getJavaExecutable();
+                if (javaExecutable != null) {
+                    String mainClass = getMainClassName();
+                    if (StringUtils.isNotEmpty(mainClass)) {
+                        if (StringUtils.isNotEmpty(mvnHome)) {
+                            cmdMvnJVMArgs.add("-Dmaven.home=" + mvnHome);
+                        }
+                        String classworldsConf = System.getProperty("classworlds.conf");
+                        if (StringUtils.isNotEmpty(classworldsConf)) {
+                            cmdMvnJVMArgs.add("-Dclassworlds.conf=" + classworldsConf);
+                        }
+                        String multiModuleProjectDirectory = System.getProperty("maven.multiModuleProjectDirectory");
+                        if (StringUtils.isNotEmpty(multiModuleProjectDirectory)) {
+                            cmdMvnJVMArgs.add("-Dmaven.multiModuleProjectDirectory=" + multiModuleProjectDirectory);
+                        }
+                        cmdMvnJVMArgs.add("-classpath");
+                        cmdMvnJVMArgs.add(System.getProperty("java.class.path"));
+                        cmdMvnJVMArgs.add(mainClass);
+                        mvnCmd = javaExecutable;
+                        getLog().info(
+                                "Using maven launcher main class '" + mainClass + "' for internal maven commands.");
+                    }
                 }
-                String mainClass = getMainClassName();
-                if (Files.exists(javaExecutable) && StringUtils.isNotEmpty(mainClass)) {
-                    if (StringUtils.isNotEmpty(mvnHome)) {
-                        cmdMvnJVMArgs.add("-Dmaven.home=" + mvnHome);
-                    }
-                    String classworldsConf = System.getProperty("classworlds.conf");
-                    if (StringUtils.isNotEmpty(classworldsConf)) {
-                        cmdMvnJVMArgs.add("-Dclassworlds.conf=" + classworldsConf);
-                    }
-                    String multiModuleProjectDirectory = System.getProperty("maven.multiModuleProjectDirectory");
-                    if (StringUtils.isNotEmpty(multiModuleProjectDirectory)) {
-                        cmdMvnJVMArgs.add("-Dmaven.multiModuleProjectDirectory=" + multiModuleProjectDirectory);
-                    }
-                    cmdMvnJVMArgs.add("-classpath");
-                    cmdMvnJVMArgs.add(System.getProperty("java.class.path"));
-                    cmdMvnJVMArgs.add(mainClass);
-                    mvnCmd = javaExecutable.toString();
-                    getLog().info("Using maven launcher main class '" + mainClass + "' for internal maven commands.");
-                } else if (StringUtils.isNotEmpty(mvnHome) && (Files.exists(Paths.get(mvnHome, "bin", "mvn"))
+                if (mvnCmd == null && StringUtils.isNotEmpty(mvnHome) && (Files.exists(Paths.get(mvnHome, "bin", "mvn"))
                         || Files.exists(Paths.get(mvnHome, "bin", "mvn.cmd")))) {
                     mvnCmd = Paths.get(mvnHome, "bin", "mvn").toString();
                     getLog().info("Using '" + mvnCmd + "' for internal maven commands.");
@@ -437,6 +437,18 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             cmdGit.setExecutable(gitExecutable);
             cmdGit.addEnvironment("LANG", "en");
         }
+    }
+
+    private String getJavaExecutable() {
+        String[] candidates = new String[] { "javaw", "javaw.exe", "java", "java.exe" };
+        Path javaBinPath = Paths.get(System.getProperty("java.home"), "bin");
+        for (String candidate : candidates) {
+            Path javaExecutable = javaBinPath.resolve(candidate);
+            if (Files.exists(javaExecutable)) {
+                return javaExecutable.toString();
+            }
+        }
+        return null;
     }
 
     private String getMainClassName() {
