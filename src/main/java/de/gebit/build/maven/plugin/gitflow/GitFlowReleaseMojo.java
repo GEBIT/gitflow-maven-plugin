@@ -244,7 +244,7 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
      * release does not need install as it will go straight to testing
      */
     @Override
-    protected boolean isInstallProject() {
+    protected boolean isInstallProjectOnStart() {
         return false;
     }
 

@@ -108,7 +108,11 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
      */
     protected abstract boolean isAllowSameVersion();
 
-    protected boolean isInstallProject() {
+    protected boolean isInstallProjectOnStart() {
+        return installProject;
+    }
+
+    protected boolean isInstallProjectOnFinish() {
         return installProject;
     }
 
@@ -275,7 +279,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
             }
         }
 
-        if (isInstallProject()) {
+        if (isInstallProjectOnStart()) {
             getMavenLog().info("Installing the release project...");
             gitSetBranchLocalConfig(releaseBranchName, "breakpoint", BREAKPOINT_RELEASE_START);
             try {
@@ -535,7 +539,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
 
     private void finalizeRelease(String releaseBranch, String productionBranch, String developmentBranch,
             String releaseCommit) throws MojoFailureException, CommandLineException {
-        if (!isDetachReleaseCommit() && installProject) {
+        if (!isDetachReleaseCommit() && isInstallProjectOnFinish()) {
             getMavenLog().info("Installing the project...");
             gitSetBranchLocalConfig(developmentBranch, "breakpoint", BREAKPOINT_RELEASE_FINISH);
             try {

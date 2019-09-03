@@ -292,6 +292,7 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
                 oldBaseVersion = gitGetBranchLocalConfig(epicBranchName, "oldBaseVersion");
                 getLog().info("Project version on base branch: " + baseVersion);
             }
+            finilizeRebase(epicBranchName);
             if (oldEpicVersion != null) {
                 String epicVersion = getCurrentProjectVersion();
                 if (confirmedUpdateWithMerge && !baseVersion.equals(oldBaseVersion) && !tychoBuild) {
@@ -534,6 +535,14 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
                                 + "conflicts as resolved",
                         "'mvn flow:epic-update' to continue epic update process");
             }
+        }
+    }
+
+    private void finilizeRebase(String epicBranch) throws MojoFailureException, CommandLineException {
+        String tempEpicBranch = createTempEpicBranchName(epicBranch);
+        if (gitBranchExists(tempEpicBranch)) {
+            getLog().info("Deleting temporary branch used for epic rebase.");
+            gitBranchDeleteForce(tempEpicBranch);
         }
     }
 
