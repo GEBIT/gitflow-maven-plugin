@@ -73,4 +73,8 @@ public interface BranchConfigKeys {
      */
     public static final String PREFIX_ADDITIONAL_VERSION_PARAM = "additionalVersionParameter";
 
+    /**
+     * Tracks the current (SNAPSHOT) version for versionless branches.
+     */
+    public static final String VERSION = "version";
 }

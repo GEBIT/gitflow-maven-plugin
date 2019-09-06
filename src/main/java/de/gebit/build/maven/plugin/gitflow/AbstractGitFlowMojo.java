@@ -140,6 +140,13 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     /** Command line for Maven executable. */
     private final List<String> cmdMvnJVMArgs = new ArrayList<>();
 
+    /**
+     * Flag that will be set if versionless operation is detected, i.e. the version is or contains a property value. 
+     * @since 2.1.11
+     */
+    @Parameter(property="flow.versionless")
+    private Boolean versionless = false;
+
     /** Git flow configuration. */
     @Parameter(defaultValue = "${gitFlowConfig}")
     protected GitFlowConfig gitFlowConfig;
@@ -256,6 +263,30 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     @Parameter(property = "flow.copyProperties")
     private String[] copyProperties;
+
+    /**
+     * In versionless mode the version is determined by the latest tag found on the current branch. To change the version
+     * either new tags are used (if set to <code>false</code>) or the version is tracked with the branch-config (if set
+     * to <code>true</code>).
+     * <p>
+     * When enabled please note that any changes to the version are immediatly pushed (as with any other 
+     * <code>branch-config</code> changes. On the other hand there's no need to remove any tags and/or force pushing
+     * then if the version is moved, but that SHOULD never be the case anyways. 
+     *
+     * @since 2.2.0
+     */
+    @Parameter(property = "flow.versionlessByConfig", defaultValue = "false")
+    protected boolean versionlessByConfig;
+
+
+    /**
+     * In versionless mode when using tags this is the prefix (namespace) for all created version tags.
+     * 
+     * @see #versionlessByConfigr
+     * @since 2.2.0
+     */
+    @Parameter(property = "flow.versionlessTagPrefix", defaultValue = "version/")
+    protected String versionlessTagPrefix;
 
     /**
      * Additional version commands that can prompt for user input or be
@@ -520,6 +551,18 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     /** {@inheritDoc} */
     @Override
     public final void execute() throws MojoExecutionException, MojoFailureException {
+        if (versionless == null) {
+            if (!StringUtils.isEmpty(project.getOriginalModel().getVersion())
+                    && project.getOriginalModel().getVersion().contains("$")
+                    || project.getOriginalModel().getParent() != null
+                    && !StringUtils.isEmpty(project.getOriginalModel().getParent().getVersion())
+                    && project.getOriginalModel().getParent().getVersion().contains("$")) {
+                versionless = true;
+                getLog().info("versionless mode enabled");
+            } else {
+                versionless = false;
+            }
+        }
         try {
             executeGoal();
             copyLogFile();
@@ -618,6 +661,10 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws MojoFailureException
      */
     protected String getCurrentProjectVersion() throws MojoFailureException {
+        if (versionless) {
+            // use project version
+            return project.getVersion();
+        }
         try {
             // read pom.xml
             final MavenXpp3Reader mavenReader = new MavenXpp3Reader();
@@ -3507,7 +3554,37 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
         getLog().info("Updating version(s) to '" + version + "'.");
 
-        if (tychoBuild) {
+        if (versionless) {
+            String versionValue = version;
+            if (tychoBuild && ArtifactUtils.isSnapshot(version)) {
+                versionValue = versionValue.replace("-" + Artifact.SNAPSHOT_VERSION, "");
+            }
+
+            if (versionlessByConfig) {
+                getLog().info("Setting version to '" + versionValue + "' in branch-config");
+                branchConfigChanges.set(currentBranch, BranchConfigKeys.VERSION, versionValue);
+            } else {
+                String versionTag = versionlessTagPrefix + versionValue;
+                if (gitTagExists(versionTag)) {
+                    if (!getPrompter().promptConfirmation(
+                            "Existing tag '" + versionTag + "' found. Do you want to remove it?", false, false)) {
+                        throw new GitFlowFailureException("Cannot set version, tag '" + versionTag + "' already exists",
+                                "Run in interactive mode and choose to remove existing tag.");
+                    }
+                    gitRemoveLocalTag(versionTag);
+                }
+
+                getLog().info("Creating '" + versionTag + "' tag.");
+
+                getLog().debug("Removing version from branch-config if set.");
+                branchConfigChanges.set(currentBranch, BranchConfigKeys.VERSION, null);
+
+                executeGitCommand("tag", versionTag);
+
+                getLog().warn("Don't forget to push the tag on commit, e.g. doing 'git push -f " + gitFlowConfig.getOrigin() + " " + versionTag + "' after pushing your current changes.");
+            }
+
+        } else if (tychoBuild) {
             executeMvnCommand(OutputMode.PROGRESS, TYCHO_VERSIONS_PLUGIN_SET_GOAL, "-DnewVersion=" + version,
                     "-Dtycho.mode=maven");
         } else {
