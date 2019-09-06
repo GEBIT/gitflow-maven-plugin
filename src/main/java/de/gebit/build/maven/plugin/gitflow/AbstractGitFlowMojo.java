@@ -145,7 +145,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @since 2.1.11
      */
     @Parameter(property="flow.versionless")
-    private Boolean versionless = false;
+    private Boolean versionless;
 
     /** Git flow configuration. */
     @Parameter(defaultValue = "${gitFlowConfig}")
