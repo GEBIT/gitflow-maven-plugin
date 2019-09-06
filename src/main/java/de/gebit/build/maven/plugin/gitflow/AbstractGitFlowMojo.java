@@ -142,7 +142,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
     /**
      * Flag that will be set if versionless operation is detected, i.e. the version is or contains a property value. 
-     * @since 2.1.11
+     * @since 2.2.0
      */
     @Parameter(property="flow.versionless")
     private Boolean versionless;
