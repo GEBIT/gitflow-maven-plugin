@@ -433,11 +433,11 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
             }
         }
 
-        prepareDevelopmentBranchAndFinilizeRelease(nextSnapshotVersion, releaseBranch, productionBranch,
+        prepareDevelopmentBranchAndFinalizeRelease(nextSnapshotVersion, releaseBranch, productionBranch,
                 developmentBranch, releaseCommit);
     }
 
-    private void prepareDevelopmentBranchAndFinilizeRelease(String nextSnapshotVersion, String releaseBranch,
+    private void prepareDevelopmentBranchAndFinalizeRelease(String nextSnapshotVersion, String releaseBranch,
             String productionBranch, String developmentBranch, String releaseCommit)
             throws MojoFailureException, CommandLineException {
         gitCheckout(developmentBranch);
@@ -459,11 +459,11 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                     "'mvn flow:" + getCurrentGoal() + "' to continue release process");
         }
 
-        mergeIntoCurrentDevelopmentBranchAndFinilizeRelease(nextSnapshotVersion, releaseBranch, productionBranch,
+        mergeIntoCurrentDevelopmentBranchAndFinalizeRelease(nextSnapshotVersion, releaseBranch, productionBranch,
                 developmentBranch, releaseCommit);
     }
 
-    private void mergeIntoCurrentDevelopmentBranchAndFinilizeRelease(String nextSnapshotVersion, String releaseBranch,
+    private void mergeIntoCurrentDevelopmentBranchAndFinalizeRelease(String nextSnapshotVersion, String releaseBranch,
             String productionBranch, String developmentBranch, String releaseCommit)
             throws MojoFailureException, CommandLineException {
         if (isUsingProductionBranch(developmentBranch, productionBranch)) {
@@ -517,15 +517,16 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         String currentVersion = getCurrentProjectVersion();
         if (!nextSnapshotVersion.equals(currentVersion)) {
             // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
-            if (!versionless || versionlessPersist) {
-                getMavenLog().info("Setting next development version '" + nextSnapshotVersion
-                        + "' for project on development branch...");
-                mvnSetVersions(nextSnapshotVersion, GitFlowAction.RELEASE_FINISH, "Next development version: ");
+            getMavenLog().info("Setting next development version '" + nextSnapshotVersion
+                    + "' for project on development branch...");
 
-                if (executeGitHasUncommitted()) {
-                    // git commit -a -m updating for next development version
-                    gitCommit(commitMessages.getReleaseFinishMessage());
-                }
+            // need to enable version change persistence here!
+            versionlessPersist = true;
+            mvnSetVersions(nextSnapshotVersion, GitFlowAction.RELEASE_FINISH, "Next development version: ");
+
+            if (executeGitHasUncommitted()) {
+                // git commit -a -m updating for next development version
+                gitCommit(commitMessages.getReleaseFinishMessage());
             }
         }
 
@@ -634,7 +635,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                 releaseCommit = gitGetBranchLocalConfig(releaseBranch, "releaseCommit");
                 nextSnapshotVersion = gitGetBranchLocalConfig(releaseBranch, "nextSnapshotVersion");
                 promptAndMergeContinue(mergeIntoBranch, mergeFromBranch);
-                prepareDevelopmentBranchAndFinilizeRelease(nextSnapshotVersion, releaseBranch, productionBranch,
+                prepareDevelopmentBranchAndFinalizeRelease(nextSnapshotVersion, releaseBranch, productionBranch,
                         developmentBranch, releaseCommit);
             } else {
                 throw new GitFlowFailureException(
@@ -662,7 +663,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                 releaseCommit = gitGetBranchLocalConfig(releaseBranch, "releaseCommit");
                 nextSnapshotVersion = gitGetBranchLocalConfig(releaseBranch, "nextSnapshotVersion");
                 promptAndMergeContinue(mergeIntoBranch, mergeFromBranch);
-                mergeIntoCurrentDevelopmentBranchAndFinilizeRelease(nextSnapshotVersion, releaseBranch,
+                mergeIntoCurrentDevelopmentBranchAndFinalizeRelease(nextSnapshotVersion, releaseBranch,
                         productionBranch, developmentBranch, releaseCommit);
             } else {
                 throw new GitFlowFailureException(
