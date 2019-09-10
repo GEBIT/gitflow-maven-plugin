@@ -253,7 +253,9 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
             if (!version.equals(currentVersion)) {
                 getMavenLog().info("Setting release version '" + version + "' for project on release branch...");
                 mvnSetVersions(version, GitFlowAction.RELEASE_START, "On release branch: ");
-                gitCommit(commitMessages.getReleaseStartMessage());
+                if (executeGitHasUncommitted()) {
+                    gitCommit(commitMessages.getReleaseStartMessage());
+                }
             }
 
             if (pushRemote && isPushReleaseBranch()) {
@@ -520,7 +522,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                         + "' for project on development branch...");
                 mvnSetVersions(nextSnapshotVersion, GitFlowAction.RELEASE_FINISH, "Next development version: ");
 
-                if (!versionless) {
+                if (executeGitHasUncommitted()) {
                     // git commit -a -m updating for next development version
                     gitCommit(commitMessages.getReleaseFinishMessage());
                 }
