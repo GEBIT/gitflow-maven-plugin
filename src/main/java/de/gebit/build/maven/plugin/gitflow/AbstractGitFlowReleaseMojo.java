@@ -505,28 +505,32 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
             }
         }
 
-        setDevelopmentVersionAndFinilizeRelease(nextSnapshotVersion, releaseBranch, productionBranch, developmentBranch,
+        setDevelopmentVersionAndFinalizeRelease(nextSnapshotVersion, releaseBranch, productionBranch, developmentBranch,
                 releaseCommit);
     }
 
-    private void setDevelopmentVersionAndFinilizeRelease(String nextSnapshotVersion, String releaseBranch,
+    private void setDevelopmentVersionAndFinalizeRelease(String nextSnapshotVersion, String releaseBranch,
             String productionBranch, String developmentBranch, String releaseCommit)
             throws MojoFailureException, CommandLineException {
         String currentVersion = getCurrentProjectVersion();
         if (!nextSnapshotVersion.equals(currentVersion)) {
             // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
-            getMavenLog().info("Setting next development version '" + nextSnapshotVersion
-                    + "' for project on development branch...");
-            mvnSetVersions(nextSnapshotVersion, GitFlowAction.RELEASE_FINISH, "Next development version: ");
+            if (!versionless || versionlessPersist) {
+                getMavenLog().info("Setting next development version '" + nextSnapshotVersion
+                        + "' for project on development branch...");
+                mvnSetVersions(nextSnapshotVersion, GitFlowAction.RELEASE_FINISH, "Next development version: ");
 
-            // git commit -a -m updating for next development version
-            gitCommit(commitMessages.getReleaseFinishMessage());
+                if (!versionless) {
+                    // git commit -a -m updating for next development version
+                    gitCommit(commitMessages.getReleaseFinishMessage());
+                }
+            }
         }
 
-        finilizeRelease(releaseBranch, productionBranch, developmentBranch, releaseCommit);
+        finalizeRelease(releaseBranch, productionBranch, developmentBranch, releaseCommit);
     }
 
-    private void finilizeRelease(String releaseBranch, String productionBranch, String developmentBranch,
+    private void finalizeRelease(String releaseBranch, String productionBranch, String developmentBranch,
             String releaseCommit) throws MojoFailureException, CommandLineException {
         if (!isDetachReleaseCommit() && installProject) {
             getMavenLog().info("Installing the project...");
@@ -620,7 +624,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                 releaseCommit = gitGetBranchLocalConfig(releaseBranch, "releaseCommit");
                 nextSnapshotVersion = gitGetBranchLocalConfig(releaseBranch, "nextSnapshotVersion");
                 promptAndMergeContinue(mergeIntoBranch, mergeFromBranch);
-                setDevelopmentVersionAndFinilizeRelease(nextSnapshotVersion, releaseBranch, productionBranch,
+                setDevelopmentVersionAndFinalizeRelease(nextSnapshotVersion, releaseBranch, productionBranch,
                         developmentBranch, releaseCommit);
             } else if (isProductionBranch(mergeIntoBranch)) {
                 productionBranch = mergeIntoBranch;
@@ -642,7 +646,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                 releaseCommit = gitGetBranchLocalConfig(releaseBranch, "releaseCommit");
                 nextSnapshotVersion = gitGetBranchLocalConfig(releaseBranch, "nextSnapshotVersion");
                 promptAndMergeContinue(mergeIntoBranch, mergeFromBranch);
-                setDevelopmentVersionAndFinilizeRelease(nextSnapshotVersion, releaseBranch, productionBranch,
+                setDevelopmentVersionAndFinalizeRelease(nextSnapshotVersion, releaseBranch, productionBranch,
                         developmentBranch, releaseCommit);
             } else {
                 throw new GitFlowFailureException(
@@ -707,7 +711,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                 String productionBranch = getProductionBranchForDevelopmentBranch(developmentBranch);
                 String releaseBranch = gitGetBranchLocalConfig(developmentBranch, "releaseBranch");
                 String releaseCommit = gitGetBranchLocalConfig(releaseBranch, "releaseCommit");
-                finilizeRelease(releaseBranch, productionBranch, developmentBranch, releaseCommit);
+                finalizeRelease(releaseBranch, productionBranch, developmentBranch, releaseCommit);
                 return true;
             }
         }

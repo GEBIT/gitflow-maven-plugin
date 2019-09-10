@@ -145,7 +145,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @since 2.2.0
      */
     @Parameter(property="flow.versionless")
-    private Boolean versionless;
+    protected Boolean versionless;
 
     /**
      * Flag that controls whether a version change will be persisted in versionless mode. Persistence is either
@@ -154,7 +154,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @since 2.2.0
      */
     @Parameter(property="flow.versionless.persist", defaultValue = "true")
-    private Boolean versionlessPersist;
+    protected boolean versionlessPersist;
 
     /** Git flow configuration. */
     @Parameter(defaultValue = "${gitFlowConfig}")
