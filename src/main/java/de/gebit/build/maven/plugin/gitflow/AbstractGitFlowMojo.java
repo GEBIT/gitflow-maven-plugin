@@ -3564,35 +3564,38 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         getLog().info("Updating version(s) to '" + version + "'.");
 
         if (versionless) {
-            String versionValue = version;
-            if (tychoBuild && ArtifactUtils.isSnapshot(version)) {
-                versionValue = versionValue.replace("-" + Artifact.SNAPSHOT_VERSION, "");
-            }
-
-            if (versionlessByConfig) {
-                getLog().info("Setting version to '" + versionValue + "' in branch-config");
-                branchConfigChanges.set(currentBranch, BranchConfigKeys.VERSION, versionValue);
-            } else {
-                String versionTag = versionlessTagPrefix + versionValue;
-                if (gitTagExists(versionTag)) {
-                    if (!getPrompter().promptConfirmation(
-                            "Existing tag '" + versionTag + "' found. Do you want to remove it?", false, false)) {
-                        throw new GitFlowFailureException("Cannot set version, tag '" + versionTag + "' already exists",
-                                "Run in interactive mode and choose to remove existing tag.");
-                    }
-                    gitRemoveLocalTag(versionTag);
+            if (versionlessPersist) {
+                String versionValue = version;
+                if (tychoBuild && ArtifactUtils.isSnapshot(version)) {
+                    versionValue = versionValue.replace("-" + Artifact.SNAPSHOT_VERSION, "");
                 }
 
-                getLog().info("Creating '" + versionTag + "' tag.");
+                if (versionlessByConfig) {
+                    getLog().info("Setting version to '" + versionValue + "' in branch-config");
+                    branchConfigChanges.set(currentBranch, BranchConfigKeys.VERSION, versionValue);
+                } else {
+                    String versionTag = versionlessTagPrefix + versionValue;
+                    if (gitTagExists(versionTag)) {
+                        if (!getPrompter().promptConfirmation(
+                                "Existing tag '" + versionTag + "' found. Do you want to remove it?", false, false)) {
+                            throw new GitFlowFailureException(
+                                    "Cannot set version, tag '" + versionTag + "' already exists",
+                                    "Run in interactive mode and choose to remove existing tag.");
+                        }
+                        gitRemoveLocalTag(versionTag);
+                    }
 
-                getLog().debug("Removing version from branch-config if set.");
-                branchConfigChanges.set(currentBranch, BranchConfigKeys.VERSION, null);
+                    getLog().info("Creating '" + versionTag + "' tag.");
 
-                executeGitCommand("tag", versionTag);
+                    getLog().debug("Removing version from branch-config if set.");
+                    branchConfigChanges.set(currentBranch, BranchConfigKeys.VERSION, null);
 
-                getLog().warn("Don't forget to push the tag on commit, e.g. doing 'git push -f " + gitFlowConfig.getOrigin() + " " + versionTag + "' after pushing your current changes.");
+                    executeGitCommand("tag", versionTag);
+
+                    getLog().warn("Don't forget to push the tag on commit, e.g. doing 'git push -f "
+                            + gitFlowConfig.getOrigin() + " " + versionTag + "' after pushing your current changes.");
+                }
             }
-
         } else if (tychoBuild) {
             executeMvnCommand(OutputMode.PROGRESS, TYCHO_VERSIONS_PLUGIN_SET_GOAL, "-DnewVersion=" + version,
                     "-Dtycho.mode=maven");
