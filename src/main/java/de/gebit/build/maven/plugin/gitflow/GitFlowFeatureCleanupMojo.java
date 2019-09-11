@@ -61,15 +61,6 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
             "'git rebase --abort' to abort feature clean up process");
 
     /**
-     * Controls whether a merge of the development branch instead of a rebase on the
-     * development branch is performed.
-     *
-     * @since 1.3.0
-     */
-    @Parameter(property = "flow.updateWithMerge", defaultValue = "false")
-    private boolean updateWithMerge = false;
-
-    /**
      * If fast forward pushes on feature branches are not allowed, the remote branch
      * is deleted before pushing the rebased branch.
      *
