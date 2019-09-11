@@ -74,7 +74,10 @@ public class GitFlowBranchConfigMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteWithCommandLineException() throws Exception {
         // test
-        MavenExecutionResult result = executeMojoWithCommandLineException(repositorySet.getWorkingDirectory(), GOAL);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.show", "true");
+        MavenExecutionResult result = executeMojoWithCommandLineException(repositorySet.getWorkingDirectory(), GOAL,
+                userProperties);
         // verify
         assertGitflowFailureOnCommandLineException(repositorySet, result);
     }
