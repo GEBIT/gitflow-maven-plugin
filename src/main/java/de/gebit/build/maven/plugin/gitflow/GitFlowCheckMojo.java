@@ -65,8 +65,6 @@ public class GitFlowCheckMojo extends AbstractGitFlowMojo {
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
-        // set git flow configuration
-        initGitFlowConfig();
         checkCentralBranchConfig();
 
         // check for git executable

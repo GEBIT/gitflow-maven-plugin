@@ -117,8 +117,6 @@ public class GitFlowBranchConfigMojo extends AbstractGitFlowMojo {
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         getMavenLog().info("Starting branch config process");
-        // set git flow configuration
-        initGitFlowConfig();
 
         if (cleanup) {
             cleanupBranchConfig();

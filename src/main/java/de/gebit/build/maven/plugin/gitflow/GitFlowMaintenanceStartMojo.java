@@ -90,9 +90,6 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         getMavenLog().info("Starting maintenance start process");
-        // set git flow configuration
-        initGitFlowConfig();
-
         checkCentralBranchConfig();
         checkUncommittedChanges();
 

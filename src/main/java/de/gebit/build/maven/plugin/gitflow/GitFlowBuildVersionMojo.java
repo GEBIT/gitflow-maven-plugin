@@ -46,8 +46,6 @@ public class GitFlowBuildVersionMojo extends AbstractGitFlowMojo {
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         getMavenLog().info("Starting build version process");
-        // set git flow configuration
-        initGitFlowConfig();
         checkCentralBranchConfig();
 
         // get current project version from pom

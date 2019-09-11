@@ -38,9 +38,6 @@ public class GitFlowHotfixStartMojo extends AbstractGitFlowMojo {
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
-        // set git flow configuration
-        initGitFlowConfig();
-
         // check uncommitted changes
         checkUncommittedChanges();
 

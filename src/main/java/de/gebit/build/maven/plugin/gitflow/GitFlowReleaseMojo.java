@@ -267,9 +267,6 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
         String currentBranch = gitCurrentBranch();
         if (!continueReleaseFinishIfInstallProjectPaused(currentBranch)
                 && !continueReleaseFinishIfMergeInProcess(currentBranch)) {
-            // set git flow configuration
-            initGitFlowConfig();
-
             // check uncommitted changes
             checkUncommittedChanges();
 

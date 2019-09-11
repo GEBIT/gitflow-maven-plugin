@@ -106,8 +106,6 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         getMavenLog().info("Starting feature start process");
-        initGitFlowConfig();
-
         checkCentralBranchConfig();
         checkUncommittedChanges();
 

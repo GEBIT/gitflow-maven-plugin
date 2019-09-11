@@ -50,8 +50,6 @@ public class GitFlowSetVersionMojo extends AbstractGitFlowMojo {
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         getMavenLog().info("Starting set version process");
-        // set git flow configuration
-        initGitFlowConfig();
         checkCentralBranchConfig();
 
         if (newVersion == null) {

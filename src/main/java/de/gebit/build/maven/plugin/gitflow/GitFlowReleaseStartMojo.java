@@ -161,10 +161,7 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
-        // set git flow configuration
         getMavenLog().info("Starting release start process");
-        initGitFlowConfig();
-
         checkCentralBranchConfig();
         abortNotFinishedReleaseIfNeeded(cleanupReleaseBeforeStart);
         checkUncommittedChanges();

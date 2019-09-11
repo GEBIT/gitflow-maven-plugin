@@ -47,7 +47,6 @@ public class GitFlowIntegratedMojo extends AbstractGitFlowMojo {
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         getMavenLog().info("Starting integration process");
-        initGitFlowConfig();
         checkCentralBranchConfig();
 
         if (pushRemote) {

@@ -73,8 +73,6 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         getMavenLog().info("Starting epic start process");
-        initGitFlowConfig();
-
         checkCentralBranchConfig();
         checkUncommittedChanges();
 
