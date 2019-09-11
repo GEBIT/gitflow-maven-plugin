@@ -292,7 +292,7 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
                 oldBaseVersion = gitGetBranchLocalConfig(epicBranchName, "oldBaseVersion");
                 getLog().info("Project version on base branch: " + baseVersion);
             }
-            finilizeRebase(epicBranchName);
+            finalizeRebase(epicBranchName);
             if (oldEpicVersion != null) {
                 String epicVersion = getCurrentProjectVersion();
                 if (confirmedUpdateWithMerge && !baseVersion.equals(oldBaseVersion) && !tychoBuild) {
@@ -340,7 +340,7 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
             getMavenLog().info("Pushing (forced) epic branch '" + epicBranchName + "' to remote repository");
             gitPush(epicBranchName, false, true);
         }
-        finilizeEpicUpdateProcess(epicBranchName);
+        finalizeEpicUpdateProcess(epicBranchName);
         getMavenLog().info("Epic update process finished");
     }
 
@@ -538,7 +538,7 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
         }
     }
 
-    private void finilizeRebase(String epicBranch) throws MojoFailureException, CommandLineException {
+    private void finalizeRebase(String epicBranch) throws MojoFailureException, CommandLineException {
         String tempEpicBranch = createTempEpicBranchName(epicBranch);
         if (gitBranchExists(tempEpicBranch)) {
             getLog().info("Deleting temporary branch used for epic rebase.");
@@ -546,7 +546,7 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
         }
     }
 
-    private void finilizeEpicUpdateProcess(String epicBranch) throws MojoFailureException, CommandLineException {
+    private void finalizeEpicUpdateProcess(String epicBranch) throws MojoFailureException, CommandLineException {
         String newBaseVersion = gitGetBranchLocalConfig(epicBranch, "newBaseVersion");
         if (newBaseVersion != null) {
             BranchCentralConfigChanges branchConfigChanges = new BranchCentralConfigChanges();

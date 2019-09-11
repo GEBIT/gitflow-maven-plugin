@@ -245,7 +245,7 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
                 oldFeatureVersion = gitGetBranchLocalConfig(featureBranchName, "oldFeatureVersion");
             }
             fixupModuleParents(featureBranchName, baseBranch, oldFeatureVersion);
-            finilizeRebase(featureBranchName);
+            finalizeRebase(featureBranchName);
         } else {
             getMavenLog().info("Restart after failed feature project installation detected");
             checkUncommittedChanges();
@@ -277,7 +277,7 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
             getMavenLog().info("Pushing (forced) feature branch '" + featureBranchName + "' to remote repository");
             gitPush(featureBranchName, false, true);
         }
-        finilizeFeatureRebaseProcess(featureBranchName);
+        finalizeFeatureRebaseProcess(featureBranchName);
         getMavenLog().info("Feature rebase process finished");
     }
 
@@ -483,7 +483,7 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
         }
     }
 
-    private void finilizeRebase(String featureBranch) throws MojoFailureException, CommandLineException {
+    private void finalizeRebase(String featureBranch) throws MojoFailureException, CommandLineException {
         String tempFeatureBranch = createTempFeatureBranchName(featureBranch);
         if (gitBranchExists(tempFeatureBranch)) {
             getLog().info("Deleting temporary branch used for feature rebase.");
@@ -491,7 +491,7 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
         }
     }
 
-    private void finilizeFeatureRebaseProcess(String featureBranch) throws MojoFailureException, CommandLineException {
+    private void finalizeFeatureRebaseProcess(String featureBranch) throws MojoFailureException, CommandLineException {
         String newBaseVersion = gitGetBranchLocalConfig(featureBranch, "newBaseVersion");
         if (newBaseVersion != null) {
             BranchCentralConfigChanges branchConfigChanges = new BranchCentralConfigChanges();
