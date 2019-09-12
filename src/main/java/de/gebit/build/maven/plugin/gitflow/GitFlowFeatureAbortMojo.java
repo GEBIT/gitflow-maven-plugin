@@ -25,7 +25,8 @@ import org.codehaus.plexus.util.cli.CommandLineException;
 /**
  * Abort the implementation of a feature.
  * <p>
- * Selects a feature branch for abortion, switches to the development branch and deletes the feature branch.
+ * Selects a feature branch for abortion, switches to the development branch and
+ * deletes the feature branch.
  *
  * @author Erwin Tratar
  * @see GitFlowFeatureStartMojo
@@ -54,6 +55,7 @@ public class GitFlowFeatureAbortMojo extends AbstractGitFlowFeatureMojo {
                     "Finish merge process first in order to proceed.");
         }
 
+        BranchRef featureBranch;
         List<String> branches = gitAllFeatureBranches();
         if (branches.isEmpty()) {
             throw new GitFlowFailureException("There are no feature branches in your repository.", null);
@@ -70,6 +72,7 @@ public class GitFlowFeatureAbortMojo extends AbstractGitFlowFeatureMojo {
                             "'git checkout BRANCH' to switch to the feature branch",
                             "'mvn flow:feature-abort' to run in interactive mode"));
             getLog().info("Aborting feature on selected feature branch: " + featureBranchName);
+            featureBranch = preferLocalRef(featureBranchName);
         } else {
             featureBranchName = currentBranch;
             getLog().info("Aborting feature on current feature branch: " + featureBranchName);
@@ -89,6 +92,15 @@ public class GitFlowFeatureAbortMojo extends AbstractGitFlowFeatureMojo {
                             "'git reset --hard' to throw away your changes");
                 }
             }
+            featureBranch = localRef(featureBranchName);
+        }
+        if (hasCommitsExceptVersionChangeCommitOnFeatureBranch(featureBranch)) {
+            if (!getPrompter().promptConfirmation("You have commits on the feature branch.\n"
+                    + "If you continue all these feature commits will be discarded. Continue?", false, true)) {
+                throw new GitFlowFailureException("Feature abort process aborted by user.", null);
+            }
+        }
+        if (isOnFeatureBranch) {
             String baseBranch = gitFeatureBranchBaseBranch(featureBranchName);
             gitResetHard();
             getMavenLog().info("Switching to base branch '" + baseBranch + "'");

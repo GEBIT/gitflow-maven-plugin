@@ -1871,8 +1871,18 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         return firstCommitOnBranch;
     }
 
+    protected CommitRef gitFirstCommitOnBranch(BranchRef branch, CommitRef branchPoint)
+            throws MojoFailureException, CommandLineException {
+        String firstCommitOnBranch = gitFirstCommitOnBranch(branch.getIdentifier(), branchPoint.getIdentifier());
+        return firstCommitOnBranch == null ? null : commitRef(firstCommitOnBranch);
+    }
+
     protected String gitCommitMessage(String commit) throws MojoFailureException, CommandLineException {
         return executeGitCommandReturn("log", "-1", "--pretty=%s", commit);
+    }
+
+    protected String gitCommitMessage(CommitRef commit) throws MojoFailureException, CommandLineException {
+        return gitCommitMessage(commit.getIdentifier());
     }
 
     protected List<String> gitAllBranchesWithCommit(String commit) throws MojoFailureException, CommandLineException {
@@ -2711,6 +2721,42 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
+     * Return local branch name for passed remote branch. E.g. "master" for
+     * "orgin/master".
+     *
+     * @param remoteBranchName
+     *            the name of the remote branch
+     * @return the remote branch name
+     */
+    protected String gitRemoteToLocalRef(String remoteBranchName) {
+        return org.apache.commons.lang3.StringUtils.removeStart(remoteBranchName, gitFlowConfig.getOrigin() + "/");
+    }
+
+    /**
+     * Return local branch name for passed branch. E.g. "master" for
+     * "orgin/master" and for "master".
+     *
+     * @param branchName
+     *            the name of the local or remote branch
+     * @return the local branch name
+     */
+    protected String gitLocalRef(String branchName) {
+        return isRemoteBranch(branchName) ? gitRemoteToLocalRef(branchName) : branchName;
+    }
+
+    /**
+     * Return remote branch name for passed branch. E.g. "orgin/master" for
+     * "orgin/master" and for "master".
+     *
+     * @param branchName
+     *            the name of the local or remote branch
+     * @return the remote branch name
+     */
+    protected String gitRemoteRef(String branchName) {
+        return isRemoteBranch(branchName) ? branchName : gitLocalToRemoteRef(branchName);
+    }
+
+    /**
      * Executes git push, optionally with the <code>--follow-tags</code> argument.
      *
      * @param branchName
@@ -2834,6 +2880,16 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         }
         return branchPoint;
     }
+    
+    protected CommitRef gitBranchPoint(BranchRef branch, BranchRef otherBranch)
+            throws MojoFailureException, CommandLineException {
+        String branchPoint = executeGitCommandReturn("merge-base", branch.getIdentifier(), otherBranch.getIdentifier())
+                .trim();
+        if (branchPoint.isEmpty()) {
+            return null;
+        }
+        return commitRef(branchPoint);
+    }
 
     protected String gitNearestAncestorCommit(String branch, Collection<String> ancestors)
             throws MojoFailureException, CommandLineException {
@@ -2852,6 +2908,13 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     protected int gitGetDistanceToAncestor(String branch, String ancestor)
             throws CommandLineException, MojoFailureException {
         String revlistout = executeGitCommandReturn("rev-list", "--first-parent", "--count", ancestor + ".." + branch);
+        String count = revlistout.trim();
+        return Integer.parseInt(count);
+    }
+    
+    protected int gitGetDistanceToAncestor(Ref branch, Ref ancestor) throws CommandLineException, MojoFailureException {
+        String revlistout = executeGitCommandReturn("rev-list", "--first-parent", "--count",
+                ancestor.getIdentifier() + ".." + branch.getIdentifier());
         String count = revlistout.trim();
         return Integer.parseInt(count);
     }
@@ -4865,6 +4928,166 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             }
         }
         return false;
+    }
+    
+    protected BranchRef preferRemoteRef(String branchName) throws MojoFailureException, CommandLineException {
+        return new BranchRef(branchName, BranchRefType.PREFER_REMOTE);
+    }
+    
+    protected BranchRef preferRemoteRef(String branchName, GitFlowFailureInfo branchDontExistErrorMessage)
+            throws MojoFailureException, CommandLineException {
+        return new BranchRef(branchName, BranchRefType.PREFER_REMOTE, branchDontExistErrorMessage);
+    }
+
+    protected BranchRef preferLocalRef(String branchName) throws MojoFailureException, CommandLineException {
+        return new BranchRef(branchName, BranchRefType.PREFER_LOCAL);
+    }
+
+    protected BranchRef preferLocalRef(String branchName, GitFlowFailureInfo branchDontExistErrorMessage)
+            throws MojoFailureException, CommandLineException {
+        return new BranchRef(branchName, BranchRefType.PREFER_LOCAL, branchDontExistErrorMessage);
+    }
+    
+    protected BranchRef localRef(String branchName) throws MojoFailureException, CommandLineException {
+        return new BranchRef(branchName, BranchRefType.LOCAL_ONLY);
+    }
+
+    protected BranchRef localRef(String branchName, GitFlowFailureInfo branchDontExistErrorMessage)
+            throws MojoFailureException, CommandLineException {
+        return new BranchRef(branchName, BranchRefType.LOCAL_ONLY, branchDontExistErrorMessage);
+    }
+
+    protected BranchRef remoteRef(String branchName) throws MojoFailureException, CommandLineException {
+        return new BranchRef(branchName, BranchRefType.REMOTE_ONLY);
+    }
+
+    protected BranchRef remoteRef(String branchName, GitFlowFailureInfo branchDontExistErrorMessage)
+            throws MojoFailureException, CommandLineException {
+        return new BranchRef(branchName, BranchRefType.REMOTE_ONLY, branchDontExistErrorMessage);
+    }
+
+    protected CommitRef commitRef(String commit) throws MojoFailureException, CommandLineException {
+        return new CommitRef(commit);
+    }
+    
+    private enum BranchRefType {
+        LOCAL_ONLY,
+        REMOTE_ONLY,
+        PREFER_LOCAL,
+        PREFER_REMOTE;
+    }
+    
+    public abstract class Ref {
+        
+        private String identifier;
+        
+        protected void setIdentifier(String aIdentifier) {
+            identifier = aIdentifier;
+        }
+        
+        public String getIdentifier() {
+            return identifier;
+        }
+        
+        @Override
+        public String toString() {
+            return getIdentifier();
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(identifier);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (obj == null || !(obj instanceof Ref)) {
+                return false;
+            }
+            Ref other = (Ref) obj;
+            return Objects.equals(identifier, other.identifier);
+        }
+        
+        
+    }
+    
+    public class CommitRef extends Ref {
+        
+        private CommitRef(String id) throws MojoFailureException, CommandLineException {
+            setIdentifier(id);
+        }
+    }
+    
+    public class BranchRef extends Ref {
+        
+        private String localName;
+        
+        private String remoteName;
+        
+        private BranchRef(String id, BranchRefType type) throws MojoFailureException, CommandLineException {
+            this(id, type, null);
+        }
+
+        private BranchRef(String id, BranchRefType type, GitFlowFailureInfo branchDontExistErrorMessage)
+                throws MojoFailureException, CommandLineException {
+            localName = gitLocalRef(id);
+            remoteName = gitRemoteRef(id);
+            boolean localExists = gitBranchExists(localName);
+            boolean remoteExists = gitRemoteBranchExists(localName);
+            switch (type) {
+            case LOCAL_ONLY:
+                if (localExists) {
+                    setIdentifier(localName);
+                }
+                break;
+            case REMOTE_ONLY:
+                if (remoteExists) {
+                    setIdentifier(remoteName);
+                }
+                break;
+            case PREFER_LOCAL:
+                if (localExists) {
+                    setIdentifier(localName);
+                } else if (remoteExists) {
+                    setIdentifier(remoteName);
+                }
+                break;
+            case PREFER_REMOTE:
+                if (remoteExists) {
+                    setIdentifier(remoteName);
+                } else if (localExists) {
+                    setIdentifier(localName);
+                }
+                break;
+            }
+            if (getIdentifier() == null) {
+                GitFlowFailureInfo message;
+                if (branchDontExistErrorMessage != null) {
+                    message = branchDontExistErrorMessage;
+                } else if (fetchRemote) {
+                    message = new GitFlowFailureInfo(
+                            "Branch reference '" + id + "' doesn't exist.\n"
+                                    + "This indicates a severe error condition on your branches.",
+                            "Please consult a gitflow expert on how to fix this!");
+                } else {
+                    message = new GitFlowFailureInfo("Branch reference '" + id + "' doesn't exist locally.",
+                            "Set 'fetchRemote' parameter to true in order to try to fetch branch from remote "
+                                    + "repository.");
+                }
+                throw new GitFlowFailureException(message);
+            }
+        }
+        
+        public String getLocalName() {
+            return localName;
+        }
+        
+        public String getRemoteName() {
+            return remoteName;
+        }
     }
 
     @Override

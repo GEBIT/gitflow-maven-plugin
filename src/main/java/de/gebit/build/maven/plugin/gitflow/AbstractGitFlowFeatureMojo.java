@@ -56,6 +56,20 @@ public abstract class AbstractGitFlowFeatureMojo extends AbstractGitFlowMojo {
         }
         return firstCommitOnBranch;
     }
+    
+    protected CommitRef gitVersionChangeCommitOnFeatureBranch(BranchRef featureBranch, CommitRef branchPoint)
+            throws MojoFailureException, CommandLineException {
+        CommitRef firstCommitOnBranch = gitFirstCommitOnBranch(featureBranch, branchPoint);
+        String firstCommitMessage = gitCommitMessage(firstCommitOnBranch);
+        String featureStartMessage = getFeatureStartCommitMessage(featureBranch.getLocalName());
+        if (featureStartMessage == null || !firstCommitMessage.contains(featureStartMessage)) {
+            if (getLog().isDebugEnabled()) {
+                getLog().debug("First commit is not a version change commit.");
+            }
+            return null;
+        }
+        return firstCommitOnBranch;
+    }
 
     /**
      * Return the commit message for version change commit (first commit) of
@@ -97,6 +111,19 @@ public abstract class AbstractGitFlowFeatureMojo extends AbstractGitFlowMojo {
             return false;
         } else if (commits == 1) {
             return StringUtils.isBlank(gitVersionChangeCommitOnFeatureBranch(featureBranch, branchPoint));
+        } else {
+            return true;
+        }
+    }
+
+    protected boolean hasCommitsExceptVersionChangeCommitOnFeatureBranch(BranchRef featureBranch)
+            throws MojoFailureException, CommandLineException {
+        CommitRef branchPoint = gitFeatureBranchBaseCommit(featureBranch);
+        int commits = gitGetDistanceToAncestor(featureBranch, branchPoint);
+        if (commits == 0) {
+            return false;
+        } else if (commits == 1) {
+            return gitVersionChangeCommitOnFeatureBranch(featureBranch, branchPoint) == null;
         } else {
             return true;
         }
@@ -194,6 +221,29 @@ public abstract class AbstractGitFlowFeatureMojo extends AbstractGitFlowMojo {
             }
         }
         return gitBranchPoint(baseBranch, featureBranch);
+    }
+    
+    protected CommitRef gitFeatureBranchBaseCommit(BranchRef featureBranch)
+            throws MojoFailureException, CommandLineException {
+        BranchRef baseBranch = getFeatureBaseBranch(featureBranch);
+        return gitBranchPoint(baseBranch, featureBranch);
+    }
+
+    private BranchRef getFeatureBaseBranch(BranchRef featureBranch) throws MojoFailureException, CommandLineException {
+        String baseBranchName = gitFeatureBranchBaseBranchName(featureBranch.getLocalName());
+        GitFlowFailureInfo baseBranchNotExistingErrorMessage;
+        if (fetchRemote) {
+            baseBranchNotExistingErrorMessage = new GitFlowFailureInfo(
+                    "Base branch '" + baseBranchName + "' for feature branch '" + featureBranch.getLocalName()
+                            + "' doesn't exist.\nThis indicates a severe error condition on your branches.",
+                    "Please consult a gitflow expert on how to fix this!");
+        } else {
+            baseBranchNotExistingErrorMessage = new GitFlowFailureInfo(
+                    "Base branch '" + baseBranchName + "' for feature branch '" + featureBranch.getLocalName()
+                            + "' doesn't exist locally.",
+                    "Set 'fetchRemote' parameter to true in order to try to fetch branch from remote repository.");
+        }
+        return preferRemoteRef(baseBranchName, baseBranchNotExistingErrorMessage);
     }
 
     protected String gitInteractiveRebaseFeatureBranchInProcess() throws MojoFailureException, CommandLineException {

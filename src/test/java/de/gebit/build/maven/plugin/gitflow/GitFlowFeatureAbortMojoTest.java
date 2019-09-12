@@ -53,6 +53,9 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     private static final String PROMPT_MESSAGE_UNCOMMITED_CHANGES_CONFIRMATION = "You have some uncommitted files. "
             + "If you continue any changes will be discarded. Continue?";
 
+    private static final String PROMPT_MESSAGE_ABORT_CONFIRMATION = "You have commits on the feature branch.\n"
+            + "If you continue all these feature commits will be discarded. Continue?";
+
     private static final String COMMIT_MESSAGE_SET_VERSION = BasicConstants.EXISTING_FEATURE_VERSION_COMMIT_MESSAGE;
 
     private static final String COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE = "NO-ISSUE: updating versions for"
@@ -81,14 +84,84 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     @Test
-    public void testExecuteOnFeatureBranch() throws Exception {
-        // set up
-        git.createAndCommitTestfile(repositorySet);
+    public void testExecuteOnEmptyFeature() throws Exception {
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
         // verify
         verifyZeroInteractions(promptControllerMock);
         assertFeatureAbortedCorrectly();
+    }
+
+    @Test
+    public void testExecuteOnNotEmptyFeatureAnswerYes() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        when(promptControllerMock.prompt(PROMPT_MESSAGE_ABORT_CONFIRMATION, Arrays.asList("y", "n"), "n"))
+                .thenReturn("y");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MESSAGE_ABORT_CONFIRMATION, Arrays.asList("y", "n"), "n");
+        verifyNoMoreInteractions(promptControllerMock);
+        assertFeatureAbortedCorrectly();
+    }
+
+    @Test
+    public void testExecuteOnNotEmptyFeatureAnswerNo() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        when(promptControllerMock.prompt(PROMPT_MESSAGE_ABORT_CONFIRMATION, Arrays.asList("y", "n"), "n"))
+                .thenReturn("n");
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MESSAGE_ABORT_CONFIRMATION, Arrays.asList("y", "n"), "n");
+        verifyNoMoreInteractions(promptControllerMock);
+        assertGitFlowFailureException(result, "Feature abort process aborted by user.", null);
+    }
+
+    @Test
+    public void testExecuteOnNotEmptyFeatureInBatchMode() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL);
+        // verify
+        assertFeatureAbortedCorrectly();
+    }
+
+    @Test
+    public void testExecuteOnMasterBranchNonEmptyFeatureStartedRemotelyOnMaintenanceBranch() throws Exception {
+        // set up
+        git.switchToBranch(repositorySet, BasicConstants.SINGLE_FEATURE_ON_MAINTENANCE_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        git.deleteLocalAndRemoteTrackingBranches(repositorySet, BasicConstants.SINGLE_FEATURE_ON_MAINTENANCE_BRANCH);
+        git.deleteLocalAndRemoteTrackingBranches(repositorySet, MAINTENANCE_BRANCH);
+        when(promptControllerMock.prompt(PROMPT_MESSAGE_ONE_FEATURE_ON_MAINTENANCE_SELECT, Arrays.asList("1")))
+                .thenReturn("1");
+        when(promptControllerMock.prompt(PROMPT_MESSAGE_ABORT_CONFIRMATION, Arrays.asList("y", "n"), "n"))
+        .thenReturn("y");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.featureBranchPrefix",
+                BasicConstants.SINGLE_FEATURE_ON_MAINTENANCE_BRANCH_PREFIX);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MESSAGE_ONE_FEATURE_ON_MAINTENANCE_SELECT, Arrays.asList("1"));
+        verify(promptControllerMock).prompt(PROMPT_MESSAGE_ABORT_CONFIRMATION, Arrays.asList("y", "n"), "n");
+        verifyNoMoreInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, BasicConstants.SINGLE_FEATURE_ON_MAINTENANCE_BRANCH,
+                MAINTENANCE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, BasicConstants.SINGLE_FEATURE_ON_MAINTENANCE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
+        git.assertCommitsInRemoteBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
     }
 
     private void assertFeatureAbortedCorrectly() throws ComponentLookupException, GitAPIException, IOException {
@@ -230,11 +303,14 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.modifyTestfile(repositorySet);
         when(promptControllerMock.prompt(PROMPT_MESSAGE_UNCOMMITED_CHANGES_CONFIRMATION, Arrays.asList("y", "n"), "n"))
                 .thenReturn("y");
+        when(promptControllerMock.prompt(PROMPT_MESSAGE_ABORT_CONFIRMATION, Arrays.asList("y", "n"), "n"))
+                .thenReturn("y");
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_MESSAGE_UNCOMMITED_CHANGES_CONFIRMATION, Arrays.asList("y", "n"),
                 "n");
+        verify(promptControllerMock).prompt(PROMPT_MESSAGE_ABORT_CONFIRMATION, Arrays.asList("y", "n"), "n");
         verifyNoMoreInteractions(promptControllerMock);
         assertFeatureAbortedCorrectly();
         git.assertTestfileMissing(repositorySet);
@@ -361,7 +437,6 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
         // set up
         final String OTHER_BRANCH = "otherBranch";
         git.switchToBranch(repositorySet, BasicConstants.FIRST_FEATURE_BRANCH);
-        git.createAndCommitTestfile(repositorySet);
         git.createBranchWithoutSwitch(repositorySet, OTHER_BRANCH);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.featureBranchPrefix", BasicConstants.TWO_FEATURE_BRANCHES_PREFIX);
@@ -384,8 +459,6 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteOnMasterBranchTwoFeatureBranchesAndOtherBranch() throws Exception {
         // set up
         final String OTHER_BRANCH = "otherBranch";
-        git.switchToBranch(repositorySet, BasicConstants.FIRST_FEATURE_BRANCH);
-        git.createAndCommitTestfile(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createBranchWithoutSwitch(repositorySet, OTHER_BRANCH);
         String PROMPT_MESSAGE = "Feature branches:" + LS + "1. " + BasicConstants.FIRST_FEATURE_BRANCH + LS + "2. "
@@ -413,8 +486,6 @@ public class GitFlowFeatureAbortMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteOnOtherBranchTwoFeatureBranchesAndOtherBranch() throws Exception {
         // set up
         final String OTHER_BRANCH = "otherBranch";
-        git.switchToBranch(repositorySet, BasicConstants.FIRST_FEATURE_BRANCH);
-        git.createAndCommitTestfile(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createBranch(repositorySet, OTHER_BRANCH);
         String PROMPT_MESSAGE = "Feature branches:" + LS + "1. " + BasicConstants.FIRST_FEATURE_BRANCH + LS + "2. "
