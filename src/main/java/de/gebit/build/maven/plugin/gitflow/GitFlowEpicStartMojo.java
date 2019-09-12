@@ -160,7 +160,7 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
             String currentVersion = getCurrentProjectVersion();
             String baseVersion = currentVersion;
             String versionChangeCommit = null;
-            if (!tychoBuild) {
+            if (!versionless && !tychoBuild) {
                 getLog().info("Creating project version for epic.");
                 getLog().info("Base project version: " + currentVersion);
                 String version = insertSuffixInVersion(currentVersion, epicIssue);

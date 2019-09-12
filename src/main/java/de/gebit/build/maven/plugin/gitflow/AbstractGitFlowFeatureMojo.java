@@ -45,6 +45,9 @@ public abstract class AbstractGitFlowFeatureMojo extends AbstractGitFlowMojo {
      */
     protected String gitVersionChangeCommitOnFeatureBranch(String featureBranch, String branchPoint)
             throws MojoFailureException, CommandLineException {
+        if (versionless) {
+            return null;
+        }
         String firstCommitOnBranch = gitFirstCommitOnBranch(featureBranch, branchPoint);
         String firstCommitMessage = gitCommitMessage(firstCommitOnBranch);
         String featureStartMessage = getFeatureStartCommitMessage(featureBranch);

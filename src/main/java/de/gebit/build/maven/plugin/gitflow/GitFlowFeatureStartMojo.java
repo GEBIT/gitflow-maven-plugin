@@ -198,7 +198,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
             String currentVersion = getCurrentProjectVersion();
             String baseVersion = currentVersion;
             String versionChangeCommit = null;
-            if (!skipFeatureVersion && !tychoBuild) {
+            if (!versionless && !skipFeatureVersion && !tychoBuild) {
                 String version = currentVersion;
                 getLog().info("Base project version: " + version);
                 if (isEpicBranch(baseBranch)) {
