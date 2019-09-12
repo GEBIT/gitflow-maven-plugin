@@ -14,6 +14,9 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
+import de.gebit.build.maven.plugin.gitflow.AbstractGitFlowMojo.BranchRef;
+import de.gebit.build.maven.plugin.gitflow.AbstractGitFlowMojo.CommitRef;
+
 /**
  * Abstract implementation for all epic mojos.
  *
@@ -122,6 +125,29 @@ public abstract class AbstractGitFlowEpicMojo extends AbstractGitFlowMojo {
         gitEnsureLocalBranchExists(baseBranch, baseBranchNotExistingErrorMessage);
         return baseBranch;
     }
+    
+    protected CommitRef gitEpicBranchBaseCommit(BranchRef epicBranch)
+            throws MojoFailureException, CommandLineException {
+        BranchRef baseBranch = getEpicBaseBranch(epicBranch);
+        return gitBranchPoint(baseBranch, epicBranch);
+    }
+
+    private BranchRef getEpicBaseBranch(BranchRef epicBranch) throws MojoFailureException, CommandLineException {
+        String baseBranchName = gitEpicBranchBaseBranchName(epicBranch.getLocalName());
+        GitFlowFailureInfo baseBranchNotExistingErrorMessage;
+        if (fetchRemote) {
+            baseBranchNotExistingErrorMessage = new GitFlowFailureInfo(
+                    "Base branch '" + baseBranchName + "' for epic branch '" + epicBranch.getLocalName()
+                            + "' doesn't exist.\nThis indicates a severe error condition on your branches.",
+                    "Please consult a gitflow expert on how to fix this!");
+        } else {
+            baseBranchNotExistingErrorMessage = new GitFlowFailureInfo(
+                    "Base branch '" + baseBranchName + "' for epic branch '" + epicBranch.getLocalName()
+                            + "' doesn't exist locally.",
+                    "Set 'fetchRemote' parameter to true in order to try to fetch branch from remote repository.");
+        }
+        return preferRemoteRef(baseBranchName, baseBranchNotExistingErrorMessage);
+    }
 
     protected boolean hasCommitsExceptVersionChangeCommitOnEpicBranch(String epicBranch, String baseBranch)
             throws MojoFailureException, CommandLineException {
@@ -136,11 +162,38 @@ public abstract class AbstractGitFlowEpicMojo extends AbstractGitFlowMojo {
         }
     }
 
+    protected boolean hasCommitsExceptVersionChangeCommitOnEpicBranch(BranchRef epicBranch)
+            throws MojoFailureException, CommandLineException {
+        CommitRef branchPoint = gitEpicBranchBaseCommit(epicBranch);
+        int commits = gitGetDistanceToAncestor(epicBranch, branchPoint);
+        if (commits == 0) {
+            return false;
+        } else if (commits == 1) {
+            return gitVersionChangeCommitOnEpicBranch(epicBranch, branchPoint) == null;
+        } else {
+            return true;
+        }
+    }
+
     protected String gitVersionChangeCommitOnEpicBranch(String epicBranch, String branchPoint)
             throws MojoFailureException, CommandLineException {
         String firstCommitOnBranch = gitFirstCommitOnBranch(epicBranch, branchPoint);
         String firstCommitMessage = gitCommitMessage(firstCommitOnBranch);
         String epicStartMessage = getEpicStartCommitMessage(epicBranch);
+        if (epicStartMessage == null || !firstCommitMessage.contains(epicStartMessage)) {
+            if (getLog().isDebugEnabled()) {
+                getLog().debug("First commit is not a version change commit.");
+            }
+            return null;
+        }
+        return firstCommitOnBranch;
+    }
+    
+    protected CommitRef gitVersionChangeCommitOnEpicBranch(BranchRef epicBranch, CommitRef branchPoint)
+            throws MojoFailureException, CommandLineException {
+        CommitRef firstCommitOnBranch = gitFirstCommitOnBranch(epicBranch, branchPoint);
+        String firstCommitMessage = gitCommitMessage(firstCommitOnBranch);
+        String epicStartMessage = getEpicStartCommitMessage(epicBranch.getLocalName());
         if (epicStartMessage == null || !firstCommitMessage.contains(epicStartMessage)) {
             if (getLog().isDebugEnabled()) {
                 getLog().debug("First commit is not a version change commit.");

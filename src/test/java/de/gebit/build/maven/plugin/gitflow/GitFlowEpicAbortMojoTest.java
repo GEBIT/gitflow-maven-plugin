@@ -53,6 +53,9 @@ public class GitFlowEpicAbortMojoTest extends AbstractGitFlowMojoTestCase {
     private static final String PROMPT_MESSAGE_UNCOMMITED_CHANGES_CONFIRMATION = "You have some uncommitted files. "
             + "If you continue any changes will be discarded. Continue?";
 
+    private static final String PROMPT_MESSAGE_ABORT_CONFIRMATION = "You have commits on the epic branch.\n"
+            + "If you continue all these epic commits will be discarded. Continue?";
+
     private static final String COMMIT_MESSAGE_SET_VERSION = BasicConstants.EXISTING_EPIC_VERSION_COMMIT_MESSAGE;
 
     private static final String COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE = "NO-ISSUE: updating versions for"
@@ -81,14 +84,85 @@ public class GitFlowEpicAbortMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     @Test
-    public void testExecuteOnEpicBranch() throws Exception {
-        // set up
-        git.createAndCommitTestfile(repositorySet);
+    public void testExecuteOnEmptyEpic() throws Exception {
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
         // verify
         verifyZeroInteractions(promptControllerMock);
         assertEpicAbortedCorrectly();
+    }
+
+    @Test
+    public void testExecuteOnNotEmptyEpicAnswerYes() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        when(promptControllerMock.prompt(PROMPT_MESSAGE_ABORT_CONFIRMATION, Arrays.asList("y", "n"), "n"))
+                .thenReturn("y");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MESSAGE_ABORT_CONFIRMATION, Arrays.asList("y", "n"), "n");
+        verifyNoMoreInteractions(promptControllerMock);
+        assertEpicAbortedCorrectly();
+    }
+
+    @Test
+    public void testExecuteOnNotEmptyEpicAnswerNo() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        when(promptControllerMock.prompt(PROMPT_MESSAGE_ABORT_CONFIRMATION, Arrays.asList("y", "n"), "n"))
+                .thenReturn("n");
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
+                promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MESSAGE_ABORT_CONFIRMATION, Arrays.asList("y", "n"), "n");
+        verifyNoMoreInteractions(promptControllerMock);
+        assertGitFlowFailureException(result, "Epic abort process aborted by user.", null);
+    }
+
+    @Test
+    public void testExecuteOnNotEmptyEpicInBatchMode() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL);
+        // verify
+        assertEpicAbortedCorrectly();
+    }
+
+    @Test
+    public void testExecuteOnMasterBranchNonEmptyEpicStartedRemotelyOnMaintenanceBranch() throws Exception {
+        // set up
+        final String USED_EPIC_BRANCH = BasicConstants.SINGLE_EPIC_ON_MAINTENANCE_BRANCH;
+        final String USED_PROMPT_MESSAGE_ONE_EPIC_SELECT = "Epic branches:" + LS + "1. " + USED_EPIC_BRANCH + LS
+                + "Choose epic branch to abort";
+        git.switchToBranch(repositorySet, USED_EPIC_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        git.deleteLocalAndRemoteTrackingBranches(repositorySet, USED_EPIC_BRANCH);
+        git.deleteLocalAndRemoteTrackingBranches(repositorySet, MAINTENANCE_BRANCH);
+        when(promptControllerMock.prompt(USED_PROMPT_MESSAGE_ONE_EPIC_SELECT, Arrays.asList("1"))).thenReturn("1");
+        when(promptControllerMock.prompt(PROMPT_MESSAGE_ABORT_CONFIRMATION, Arrays.asList("y", "n"), "n"))
+        .thenReturn("y");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.epicBranchPrefix", BasicConstants.SINGLE_EPIC_ON_MAINTENANCE_BRANCH_PREFIX);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(USED_PROMPT_MESSAGE_ONE_EPIC_SELECT, Arrays.asList("1"));
+        verify(promptControllerMock).prompt(PROMPT_MESSAGE_ABORT_CONFIRMATION, Arrays.asList("y", "n"), "n");
+        verifyNoMoreInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, USED_EPIC_BRANCH, MAINTENANCE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, USED_EPIC_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, MAINTENANCE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH);
+        git.assertCommitsInRemoteBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
     }
 
     private void assertEpicAbortedCorrectly() throws ComponentLookupException, GitAPIException, IOException {
@@ -232,11 +306,14 @@ public class GitFlowEpicAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.modifyTestfile(repositorySet);
         when(promptControllerMock.prompt(PROMPT_MESSAGE_UNCOMMITED_CHANGES_CONFIRMATION, Arrays.asList("y", "n"), "n"))
                 .thenReturn("y");
+        when(promptControllerMock.prompt(PROMPT_MESSAGE_ABORT_CONFIRMATION, Arrays.asList("y", "n"), "n"))
+                .thenReturn("y");
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
         // verify
         verify(promptControllerMock).prompt(PROMPT_MESSAGE_UNCOMMITED_CHANGES_CONFIRMATION, Arrays.asList("y", "n"),
                 "n");
+        verify(promptControllerMock).prompt(PROMPT_MESSAGE_ABORT_CONFIRMATION, Arrays.asList("y", "n"), "n");
         verifyNoMoreInteractions(promptControllerMock);
         assertEpicAbortedCorrectly();
         git.assertTestfileMissing(repositorySet);
@@ -367,7 +444,6 @@ public class GitFlowEpicAbortMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteOnEpicBranchTwoEpicBranches() throws Exception {
         // set up
         git.switchToBranch(repositorySet, BasicConstants.FIRST_EPIC_BRANCH);
-        git.createAndCommitTestfile(repositorySet);
         Properties userProperties = new Properties();
         userProperties.setProperty("flow.epicBranchPrefix", BasicConstants.TWO_EPIC_BRANCHES_PREFIX);
         // test
@@ -388,8 +464,6 @@ public class GitFlowEpicAbortMojoTest extends AbstractGitFlowMojoTestCase {
     @Test
     public void testExecuteOnMasterBranchTwoEpicBranches() throws Exception {
         // set up
-        git.switchToBranch(repositorySet, BasicConstants.FIRST_EPIC_BRANCH);
-        git.createAndCommitTestfile(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + BasicConstants.FIRST_EPIC_BRANCH + LS + "2. "
                 + BasicConstants.SECOND_EPIC_BRANCH + LS + "Choose epic branch to abort";
@@ -416,8 +490,6 @@ public class GitFlowEpicAbortMojoTest extends AbstractGitFlowMojoTestCase {
     public void testExecuteOnOtherBranchTwoEpicBranchesAndOtherBranch() throws Exception {
         // set up
         final String OTHER_BRANCH = "otherBranch";
-        git.switchToBranch(repositorySet, BasicConstants.FIRST_EPIC_BRANCH);
-        git.createAndCommitTestfile(repositorySet);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createBranch(repositorySet, OTHER_BRANCH);
         String PROMPT_MESSAGE = "Epic branches:" + LS + "1. " + BasicConstants.FIRST_EPIC_BRANCH + LS + "2. "

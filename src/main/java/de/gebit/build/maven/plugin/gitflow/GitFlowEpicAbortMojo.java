@@ -49,6 +49,7 @@ public class GitFlowEpicAbortMojo extends AbstractGitFlowEpicMojo {
         String currentBranch = gitCurrentBranch();
         boolean isOnEpicBranch = branches.contains(currentBranch);
         String epicBranchName;
+        BranchRef epicBranch;
         if (!isOnEpicBranch) {
             epicBranchName = getPrompter().promptToSelectFromOrderedList("Epic branches:",
                     "Choose epic branch to abort", branches,
@@ -58,6 +59,7 @@ public class GitFlowEpicAbortMojo extends AbstractGitFlowEpicMojo {
                             "'git checkout BRANCH' to switch to the epic branch",
                             "'mvn flow:epic-abort' to run in interactive mode"));
             getLog().info("Aborting epic on selected epic branch: " + epicBranchName);
+            epicBranch = preferLocalRef(epicBranchName);
         } else {
             epicBranchName = currentBranch;
             getLog().info("Aborting epic on current epic branch: " + epicBranchName);
@@ -78,6 +80,16 @@ public class GitFlowEpicAbortMojo extends AbstractGitFlowEpicMojo {
                             "'git reset --hard' to throw away your changes");
                 }
             }
+            epicBranch = localRef(epicBranchName);
+        }
+        
+        if (hasCommitsExceptVersionChangeCommitOnEpicBranch(epicBranch)) {
+            if (!getPrompter().promptConfirmation("You have commits on the epic branch.\n"
+                    + "If you continue all these epic commits will be discarded. Continue?", false, true)) {
+                throw new GitFlowFailureException("Epic abort process aborted by user.", null);
+            }
+        }
+        if (isOnEpicBranch) {
             String baseBranch = gitEpicBranchBaseBranch(epicBranchName);
             gitResetHard();
             getMavenLog().info("Switching to base branch '" + baseBranch + "'");
