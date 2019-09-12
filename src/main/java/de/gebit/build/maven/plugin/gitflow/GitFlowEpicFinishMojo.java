@@ -155,7 +155,7 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
                 String baseVersion = getCurrentProjectVersion();
                 getLog().info("Project version on base branch: " + baseVersion);
 
-                if (!tychoBuild) {
+                if (!versionless && !tychoBuild) {
                     if (!epicVersion.equals(baseVersion)) {
                         getLog().info("Reverting the project version on epic branch to the version on base branch.");
                         gitCheckout(epicBranchName);

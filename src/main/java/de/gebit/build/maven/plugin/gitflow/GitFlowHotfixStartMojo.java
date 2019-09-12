@@ -98,7 +98,9 @@ public class GitFlowHotfixStartMojo extends AbstractGitFlowMojo {
             mvnSetVersions(version, GitFlowAction.HOTFIX_START, null);
 
             // git commit -a -m updating versions for hotfix
-            gitCommit(commitMessages.getHotfixStartMessage());
+            if (executeGitHasUncommitted()) {
+                gitCommit(commitMessages.getHotfixStartMessage());
+            }
         }
 
         if (installProject) {

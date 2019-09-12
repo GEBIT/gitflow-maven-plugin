@@ -720,7 +720,9 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
                     issueNumber);
             getMavenLog().info("Setting base version '" + baseVersion + "' for project on feature branch...");
             mvnSetVersions(baseVersion, GitFlowAction.FEATURE_FINISH, null, baseBranch);
-            gitCommit(featureFinishMessage);
+            if (executeGitHasUncommitted()) {
+                gitCommit(featureFinishMessage);
+            }
         } else {
             getLog().info("Project version on feature branch is same as project version on base branch. "
                     + "Version update not needed.");

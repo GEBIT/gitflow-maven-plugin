@@ -211,8 +211,10 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
                 if (!currentVersion.equals(version)) {
                     getMavenLog().info("Setting version '" + version + "' for project on feature branch...");
                     mvnSetVersions(version, GitFlowAction.FEATURE_START, "On feature branch: ", featureBranchName);
-                    gitCommit(featureStartMessage);
-                    versionChangeCommit = getCurrentCommit();
+                    if (executeGitHasUncommitted()) {
+                        gitCommit(featureStartMessage);
+                        versionChangeCommit = getCurrentCommit();
+                    }
                 } else {
                     getMavenLog().info(
                             "Project version for feature is same as base project version. Version update not needed");

@@ -295,7 +295,7 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
             finalizeRebase(epicBranchName);
             if (oldEpicVersion != null) {
                 String epicVersion = getCurrentProjectVersion();
-                if (confirmedUpdateWithMerge && !baseVersion.equals(oldBaseVersion) && !tychoBuild) {
+                if (!versionless && confirmedUpdateWithMerge && !baseVersion.equals(oldBaseVersion) && !tychoBuild) {
                     fixupModuleParents(epicBranchName, epicVersion, oldBaseVersion, null, confirmedUpdateWithMerge);
                     String issueNumber = getEpicIssueNumber(epicBranchName);
                     String epicStartMessage = substituteWithIssueNumber(commitMessages.getEpicStartMessage(),
@@ -377,7 +377,7 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
 
     private void updateEpicByMerge(String epicBranch, String baseBranch, String baseVersion, String oldBaseVersion)
             throws CommandLineException, MojoFailureException {
-        if (!tychoBuild && !baseVersion.equals(oldBaseVersion)) {
+        if (!versionless && !tychoBuild && !baseVersion.equals(oldBaseVersion)) {
             String issueNumber = getEpicIssueNumber(epicBranch);
             String epicFinishMessage = substituteWithIssueNumber(commitMessages.getEpicFinishMessage(), issueNumber);
             getMavenLog().info("Reverting the project version on epic branch to the last merged base version '"
