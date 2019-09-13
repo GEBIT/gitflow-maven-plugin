@@ -1367,4 +1367,26 @@ public abstract class AbstractGitFlowMojoTestCase {
 
             return coreRealm;
     }
+    
+    protected GitFlowFailureInfo format(GitFlowFailureInfo message, Object... replacements) {
+        String problem = message.getProblem();
+        String solutionProposal = message.getSolutionProposal();
+        String[] stepsToContinue = message.getStepsToContinue();
+        if (problem != null) {
+            problem = MessageFormat.format(problem, replacements);
+        }
+        if (solutionProposal != null) {
+            solutionProposal = MessageFormat.format(solutionProposal, replacements);
+        }
+        String[] formatedStepsToContinue = null;
+        if (stepsToContinue != null) {
+            formatedStepsToContinue = new String[stepsToContinue.length];
+            for (int i = 0; i < stepsToContinue.length; i++) {
+                if (stepsToContinue[i] != null) {
+                    stepsToContinue[i] = MessageFormat.format(stepsToContinue[i], replacements);
+                }
+            }
+        }
+        return new GitFlowFailureInfo(problem, solutionProposal, formatedStepsToContinue);
+    }
 }

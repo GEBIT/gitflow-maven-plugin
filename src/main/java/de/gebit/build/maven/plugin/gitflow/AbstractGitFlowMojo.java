@@ -2447,14 +2447,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                 if (branchNotExistingErrorMessage != null) {
                     throw new GitFlowFailureException(replacePlaceholders(branchNotExistingErrorMessage, branchName));
                 }
-                if (fetchRemote) {
-                    throw new GitFlowFailureException(
-                            "Local branch '" + branchName + "' doesn't exist and can't be fetched.", null);
-                } else {
-                    throw new GitFlowFailureException("Local branch '" + branchName + "' doesn't exist.",
-                            "Set 'fetchRemote' parameter to true in order to try to fetch branch from "
-                                    + "remote repository.");
-                }
+                throw new GitFlowFailureException(
+                        createBranchNotExistingError("Local branch '" + branchName + "'", null));
             }
         }
     }
@@ -4614,6 +4608,27 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     protected boolean isProductionBranch(String branchName) {
         return (getDevelopmentBranchForProductionBranch(branchName) != null);
     }
+    
+    /**
+     * Check if passed branch name is name for an integration branch.
+     *
+     * @param branchName
+     *            the branch name to be checked
+     * @return <code>true</code> if the branch name starts with integration
+     *         branch prefix
+     */
+    protected boolean isIntegrationBranch(String branchName) {
+        return branchName.startsWith(gitFlowConfig.getIntegrationBranchPrefix());
+    }
+
+    protected String getIntegrationBranchName(String branch) {
+        return gitFlowConfig.getIntegrationBranchPrefix() + branch;
+    }
+
+    protected String getBaseOfIntegrationBranchName(String integrationBranch) {
+        return org.apache.commons.lang3.StringUtils.removeStart(integrationBranch,
+                gitFlowConfig.getIntegrationBranchPrefix());
+    }
 
     protected String getDevelopmentBranchForProductionBranch(String productionBranch) {
         if (Objects.equals(productionBranch, gitFlowConfig.getProductionBranch())) {
@@ -4750,7 +4765,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     protected String selectBaseBranchStartPoint(String baseBranch, String newBranchType)
             throws MojoFailureException, CommandLineException {
         // use integration branch?
-        String integrationBranch = gitFlowConfig.getIntegrationBranchPrefix() + baseBranch;
+        String integrationBranch = getIntegrationBranchName(baseBranch);
         gitEnsureLocalBranchIsUpToDateIfExists(integrationBranch,
                 new GitFlowFailureInfo(
                         "Local and remote integration branches '" + integrationBranch
@@ -4890,7 +4905,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         case LOCAL_AHEAD:
             // select remote?
             useRemoteBranch = getPrompter().promptConfirmation(
-                    "Local branch '" + baseBranch + "' can't be used as " + "base branch for " + newBranchType
+                    "Local branch '" + baseBranch + "' can't be used as base branch for " + newBranchType
                             + " bacause it is ahead of remote branch. " + "Create a branch based of remote branch?",
                     true,
                     new GitFlowFailureInfo("Local branch is ahead of the remote branch '" + baseBranch + "'.",
@@ -4979,39 +4994,50 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
     
     protected BranchRef preferRemoteRef(String branchName) throws MojoFailureException, CommandLineException {
-        return new BranchRef(branchName, BranchRefType.PREFER_REMOTE);
+        return preferRemoteRef(branchName, null);
     }
     
-    protected BranchRef preferRemoteRef(String branchName, GitFlowFailureInfo branchDontExistErrorMessage)
+    protected BranchRef preferRemoteRef(String branchName, GitFlowFailureInfo branchNotExistingErrorMessage)
             throws MojoFailureException, CommandLineException {
-        return new BranchRef(branchName, BranchRefType.PREFER_REMOTE, branchDontExistErrorMessage);
+        return new BranchRef(branchName, BranchRefType.PREFER_REMOTE, branchNotExistingErrorMessage);
     }
 
     protected BranchRef preferLocalRef(String branchName) throws MojoFailureException, CommandLineException {
-        return new BranchRef(branchName, BranchRefType.PREFER_LOCAL);
+        return preferLocalRef(branchName, null);
     }
 
-    protected BranchRef preferLocalRef(String branchName, GitFlowFailureInfo branchDontExistErrorMessage)
+    protected BranchRef preferLocalRef(String branchName, GitFlowFailureInfo branchNotExistingErrorMessage)
             throws MojoFailureException, CommandLineException {
-        return new BranchRef(branchName, BranchRefType.PREFER_LOCAL, branchDontExistErrorMessage);
+        return new BranchRef(branchName, BranchRefType.PREFER_LOCAL, branchNotExistingErrorMessage);
     }
     
     protected BranchRef localRef(String branchName) throws MojoFailureException, CommandLineException {
-        return new BranchRef(branchName, BranchRefType.LOCAL_ONLY);
+        return localRef(branchName, null);
     }
 
-    protected BranchRef localRef(String branchName, GitFlowFailureInfo branchDontExistErrorMessage)
+    protected BranchRef localRef(String branchName, GitFlowFailureInfo branchNotExistingErrorMessage)
             throws MojoFailureException, CommandLineException {
-        return new BranchRef(branchName, BranchRefType.LOCAL_ONLY, branchDontExistErrorMessage);
+        return new BranchRef(branchName, BranchRefType.LOCAL_ONLY, branchNotExistingErrorMessage);
     }
 
     protected BranchRef remoteRef(String branchName) throws MojoFailureException, CommandLineException {
-        return new BranchRef(branchName, BranchRefType.REMOTE_ONLY);
+        return remoteRef(branchName, null);
     }
 
-    protected BranchRef remoteRef(String branchName, GitFlowFailureInfo branchDontExistErrorMessage)
+    protected BranchRef remoteRef(String branchName, GitFlowFailureInfo branchNotExistingErrorMessage)
             throws MojoFailureException, CommandLineException {
-        return new BranchRef(branchName, BranchRefType.REMOTE_ONLY, branchDontExistErrorMessage);
+        return new BranchRef(branchName, BranchRefType.REMOTE_ONLY, branchNotExistingErrorMessage);
+    }
+
+    protected BranchRef recognizeRef(String localOrRemoteBranchName) throws MojoFailureException, CommandLineException {
+        return recognizeRef(localOrRemoteBranchName, null);
+    }
+
+    protected BranchRef recognizeRef(String localOrRemoteBranchName, GitFlowFailureInfo branchNotExistingErrorMessage)
+            throws MojoFailureException, CommandLineException {
+        BranchRefType type = isRemoteBranch(localOrRemoteBranchName) ? BranchRefType.REMOTE_ONLY
+                : BranchRefType.PREFER_LOCAL;
+        return new BranchRef(localOrRemoteBranchName, type, branchNotExistingErrorMessage);
     }
 
     protected CommitRef commitRef(String commit) throws MojoFailureException, CommandLineException {
@@ -5079,7 +5105,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             this(id, type, null);
         }
 
-        private BranchRef(String id, BranchRefType type, GitFlowFailureInfo branchDontExistErrorMessage)
+        private BranchRef(String id, BranchRefType type, GitFlowFailureInfo branchNotExistingErrorMessage)
                 throws MojoFailureException, CommandLineException {
             localName = gitLocalRef(id);
             remoteName = gitRemoteRef(id);
@@ -5113,17 +5139,10 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             }
             if (getIdentifier() == null) {
                 GitFlowFailureInfo message;
-                if (branchDontExistErrorMessage != null) {
-                    message = branchDontExistErrorMessage;
-                } else if (fetchRemote) {
-                    message = new GitFlowFailureInfo(
-                            "Branch reference '" + id + "' doesn't exist.\n"
-                                    + "This indicates a severe error condition on your branches.",
-                            "Please consult a gitflow expert on how to fix this!");
+                if (branchNotExistingErrorMessage != null) {
+                    message = branchNotExistingErrorMessage;
                 } else {
-                    message = new GitFlowFailureInfo("Branch reference '" + id + "' doesn't exist locally.",
-                            "Set 'fetchRemote' parameter to true in order to try to fetch branch from remote "
-                                    + "repository.");
+                    message = createBranchNotExistingSevereError("Branch reference '" + id + "'");
                 }
                 throw new GitFlowFailureException(message);
             }
@@ -5136,6 +5155,30 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         public String getRemoteName() {
             return remoteName;
         }
+    }
+    
+    protected GitFlowFailureInfo createBranchNotExistingError(String branchLabel, String remoteSolution) {
+        return createBranchNotExistingError(branchLabel, null, remoteSolution);
+    }
+    
+    protected GitFlowFailureInfo createBranchNotExistingSevereError(String branchLabel) {
+        return createBranchNotExistingError(branchLabel, "This indicates a severe error condition on your branches.",
+                "Please consult a gitflow expert on how to fix this!");
+    }
+    
+    protected GitFlowFailureInfo createBranchNotExistingError(String branchLabel, String remoteProblemSuffix,
+            String remoteSolution) {
+        GitFlowFailureInfo message;
+        if (fetchRemote) {
+            message = new GitFlowFailureInfo(
+                    branchLabel + " doesn't exist."
+                            + (StringUtils.isEmpty(remoteProblemSuffix) ? "" : "\n" + remoteProblemSuffix),
+                    remoteSolution);
+        } else {
+            message = new GitFlowFailureInfo(branchLabel + " doesn't exist locally.",
+                    "Set 'fetchRemote' parameter to true in order to try to fetch branch from remote repository.");
+        }
+        return message;
     }
 
     @Override

@@ -150,19 +150,8 @@ public abstract class AbstractGitFlowFeatureMojo extends AbstractGitFlowMojo {
     protected String gitFeatureBranchBaseBranch(String featureBranch)
             throws MojoFailureException, CommandLineException {
         String baseBranch = gitFeatureBranchBaseBranchName(featureBranch);
-        GitFlowFailureInfo baseBranchNotExistingErrorMessage;
-        if (fetchRemote) {
-            baseBranchNotExistingErrorMessage = new GitFlowFailureInfo(
-                    "Base branch '" + baseBranch + "' for feature branch '" + featureBranch
-                            + "' doesn't exist.\nThis indicates a severe error condition on your branches.",
-                    "Please consult a gitflow expert on how to fix this!");
-        } else {
-            baseBranchNotExistingErrorMessage = new GitFlowFailureInfo(
-                    "Base branch '" + baseBranch + "' for feature branch '" + featureBranch
-                            + "' doesn't exist locally.",
-                    "Set 'fetchRemote' parameter to true in order to try to fetch branch from remote repository.");
-        }
-        gitEnsureLocalBranchExists(baseBranch, baseBranchNotExistingErrorMessage);
+        gitEnsureLocalBranchExists(baseBranch, createBranchNotExistingSevereError(
+                "Base branch '" + baseBranch + "' for feature branch '" + featureBranch + "'"));
         return baseBranch;
     }
 
@@ -211,17 +200,9 @@ public abstract class AbstractGitFlowFeatureMojo extends AbstractGitFlowMojo {
         if (gitRemoteBranchExists(baseBranch)) {
             baseBranch = gitFlowConfig.getOrigin() + "/" + baseBranch;
         } else if (!gitBranchExists(baseBranch)) {
-            if (fetchRemote) {
-                throw new GitFlowFailureException(
-                        "Base commit for feature branch '" + featureBranch
-                                + "' can't be estimated because the base branch '" + baseBranch + "' doesn't exist.\n"
-                                + "This indicates a severe error condition on your branches.",
-                        "Please consult a gitflow expert on how to fix this!");
-            } else {
-                throw new GitFlowFailureException("Base commit for feature branch '" + featureBranch
-                        + "' can't be estimated because the base branch '" + baseBranch + "' doesn't exist locally.",
-                        "Set 'fetchRemote' parameter to true in order to try to fetch branch from remote repository.");
-            }
+            throw new GitFlowFailureException(createBranchNotExistingSevereError(
+                    "Base commit for feature branch '" + featureBranch
+                                + "' can't be estimated because the base branch '" + baseBranch + "'"));
         }
         return gitBranchPoint(baseBranch, featureBranch);
     }
@@ -234,19 +215,8 @@ public abstract class AbstractGitFlowFeatureMojo extends AbstractGitFlowMojo {
 
     private BranchRef getFeatureBaseBranch(BranchRef featureBranch) throws MojoFailureException, CommandLineException {
         String baseBranchName = gitFeatureBranchBaseBranchName(featureBranch.getLocalName());
-        GitFlowFailureInfo baseBranchNotExistingErrorMessage;
-        if (fetchRemote) {
-            baseBranchNotExistingErrorMessage = new GitFlowFailureInfo(
-                    "Base branch '" + baseBranchName + "' for feature branch '" + featureBranch.getLocalName()
-                            + "' doesn't exist.\nThis indicates a severe error condition on your branches.",
-                    "Please consult a gitflow expert on how to fix this!");
-        } else {
-            baseBranchNotExistingErrorMessage = new GitFlowFailureInfo(
-                    "Base branch '" + baseBranchName + "' for feature branch '" + featureBranch.getLocalName()
-                            + "' doesn't exist locally.",
-                    "Set 'fetchRemote' parameter to true in order to try to fetch branch from remote repository.");
-        }
-        return preferRemoteRef(baseBranchName, baseBranchNotExistingErrorMessage);
+        return preferRemoteRef(baseBranchName, createBranchNotExistingSevereError(
+                "Base branch '" + baseBranchName + "' for feature branch '" + featureBranch.getLocalName() + "'"));
     }
 
     protected String gitInteractiveRebaseFeatureBranchInProcess() throws MojoFailureException, CommandLineException {

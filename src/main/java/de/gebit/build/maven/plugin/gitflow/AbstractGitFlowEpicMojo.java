@@ -111,18 +111,8 @@ public abstract class AbstractGitFlowEpicMojo extends AbstractGitFlowMojo {
      */
     protected String gitEpicBranchBaseBranch(String epicBranch) throws MojoFailureException, CommandLineException {
         String baseBranch = gitEpicBranchBaseBranchName(epicBranch);
-        GitFlowFailureInfo baseBranchNotExistingErrorMessage;
-        if (fetchRemote) {
-            baseBranchNotExistingErrorMessage = new GitFlowFailureInfo(
-                    "Base branch '" + baseBranch + "' for epic branch '" + epicBranch
-                            + "' doesn't exist.\nThis indicates a severe error condition on your branches.",
-                    "Please consult a gitflow expert on how to fix this!");
-        } else {
-            baseBranchNotExistingErrorMessage = new GitFlowFailureInfo(
-                    "Base branch '" + baseBranch + "' for epic branch '" + epicBranch + "' doesn't exist locally.",
-                    "Set 'fetchRemote' parameter to true in order to try to fetch branch from remote repository.");
-        }
-        gitEnsureLocalBranchExists(baseBranch, baseBranchNotExistingErrorMessage);
+        gitEnsureLocalBranchExists(baseBranch, createBranchNotExistingSevereError(
+                "Base branch '" + baseBranch + "' for epic branch '" + epicBranch + "'"));
         return baseBranch;
     }
     
@@ -134,19 +124,8 @@ public abstract class AbstractGitFlowEpicMojo extends AbstractGitFlowMojo {
 
     private BranchRef getEpicBaseBranch(BranchRef epicBranch) throws MojoFailureException, CommandLineException {
         String baseBranchName = gitEpicBranchBaseBranchName(epicBranch.getLocalName());
-        GitFlowFailureInfo baseBranchNotExistingErrorMessage;
-        if (fetchRemote) {
-            baseBranchNotExistingErrorMessage = new GitFlowFailureInfo(
-                    "Base branch '" + baseBranchName + "' for epic branch '" + epicBranch.getLocalName()
-                            + "' doesn't exist.\nThis indicates a severe error condition on your branches.",
-                    "Please consult a gitflow expert on how to fix this!");
-        } else {
-            baseBranchNotExistingErrorMessage = new GitFlowFailureInfo(
-                    "Base branch '" + baseBranchName + "' for epic branch '" + epicBranch.getLocalName()
-                            + "' doesn't exist locally.",
-                    "Set 'fetchRemote' parameter to true in order to try to fetch branch from remote repository.");
-        }
-        return preferRemoteRef(baseBranchName, baseBranchNotExistingErrorMessage);
+        return preferRemoteRef(baseBranchName, createBranchNotExistingSevereError(
+                "Base branch '" + baseBranchName + "' for epic branch '" + epicBranch.getLocalName() + "'"));
     }
 
     protected boolean hasCommitsExceptVersionChangeCommitOnEpicBranch(String epicBranch, String baseBranch)

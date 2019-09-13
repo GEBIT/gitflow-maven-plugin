@@ -23,16 +23,18 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * <p>
  * Creates the new epic branch to aggregate multiple features and updates the
  * version in all <code>pom.xml</code> files to a branch specific version (e.g.
- * <code>1.0.0-XYZ-1234-SNAPSHOT</code>). If <code>epicName</code> is not specified, you will be
- * asked for a branch name (apply the issue pattern). The version changes will be
- * committed in a single commit. Epic branches can only be started from the master or a maintenance branch.
+ * <code>1.0.0-XYZ-1234-SNAPSHOT</code>). If <code>epicName</code> is not
+ * specified, you will be asked for a branch name (apply the issue pattern). The
+ * version changes will be committed in a single commit. Epic branches can only
+ * be started from the master or a maintenance branch.
  * <p>
- * Make sure your local development is not behind
- * the remote, before executing.
+ * Make sure your local development is not behind the remote, before executing.
  * <p>
- * Use <code>-DjobBuild=true</code> to automatically create build jobs for the epic branch.
+ * Use <code>-DjobBuild=true</code> to automatically create build jobs for the
+ * epic branch.
  * <p>
  * Example:
+ * 
  * <pre>
  * mvn flow:epic-start [-DepicName=XXXX] [-DjobBuild=true|false] [-Dflow.installProject=true|false] [-D...]
  * </pre>
@@ -70,6 +72,24 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
     @Parameter(property = "jobBuild", readonly = true)
     protected boolean jobBuild = false;
 
+    /**
+     * The base branch which epic branch should be started on.
+     *
+     * @since 2.2.0
+     */
+    @Parameter(property = "baseBranch", readonly = true)
+    protected String baseBranch;
+
+    /**
+     * The base commit which epic branch should be started on.
+     * <code>baseCommit</code> can only be used if <code>baseBranch</code>
+     * property is defined and the base branch contains the base commit.
+     *
+     * @since 2.2.0
+     */
+    @Parameter(property = "baseCommit", readonly = true)
+    protected String baseCommit;
+
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         getMavenLog().info("Starting epic start process");
@@ -90,20 +110,69 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
         }
 
         if (!continueOnCleanInstall) {
-            String baseBranch = currentBranch;
-            if (!isMaintenanceBranch(baseBranch)) {
-                baseBranch = gitFlowConfig.getDevelopmentBranch();
-                if (!currentBranch.equals(baseBranch)) {
-                    boolean confirmed = getPrompter().promptConfirmation("Epic branch will be started not from current "
-                            + "branch but will be based off branch '" + baseBranch + "'. Continue?", true, true);
-                    if (!confirmed) {
-                        throw new GitFlowFailureException("Epic start process aborted by user.", null);
+            String baseBranchLocalName;
+            String baseBranchStartPoint = null;
+            if (StringUtils.isNotBlank(baseBranch)) {
+                baseBranchLocalName = gitLocalRef(baseBranch);
+                BranchRef baseBranchRef = recognizeRef(baseBranch,
+                        createBranchNotExistingError(
+                                "Base branch '" + baseBranch + "' defined in 'baseBranch' property",
+                                "Please define an existing branch in order to proceed."));
+                boolean accepted = true;
+                if (!isMaintenanceBranch(baseBranchLocalName) && !isDevelopmentBranch(baseBranchLocalName)) {
+                    if (isIntegrationBranch(baseBranchLocalName)) {
+                        baseBranchStartPoint = baseBranchRef.getIdentifier();
+                        baseBranchLocalName = getBaseOfIntegrationBranchName(baseBranchLocalName);
+                        if (!isMaintenanceBranch(baseBranchLocalName) && !isDevelopmentBranch(baseBranchLocalName)) {
+                            accepted = false;
+                        }
+                    } else {
+                        accepted = false;
                     }
                 }
+                if (!accepted) {
+                    throw new GitFlowFailureException(
+                            "An epic branch can't be started on branch '" + baseBranch
+                            + "' defined in 'baseBranch' property.",
+                            "Please define the development branch '" + gitFlowConfig.getDevelopmentBranch()
+                            + "' or a maintenance branch in order to proceed.");
+                }
+                if (StringUtils.isNotBlank(baseCommit)) {
+                    if (!gitIsAncestorBranch(baseCommit, baseBranchRef.getIdentifier())) {
+                        throw new GitFlowFailureException(
+                                "Base branch defined in property 'baseBranch' doesn't contain commit defined in "
+                                        + "property 'baseCommit'.",
+                                "Please define a commit of the base branch in order to start the epic branch from a "
+                                        + "specified commit.");
+                    }
+                    baseBranchStartPoint = baseCommit;
+                }
+                if (baseBranchStartPoint == null) {
+                    baseBranchStartPoint = baseBranchRef.getIdentifier();
+                }
+            } else {
+                if (StringUtils.isNotBlank(baseCommit)) {
+                    throw new GitFlowFailureException(
+                            "Property 'baseCommit' can only be used togather with property 'baseBranch'.",
+                            "Please define also 'baseBranch' property in order to start the epic branch from a "
+                                    + "specified commit.");
+                }
+                baseBranchLocalName = currentBranch;
+                if (!isMaintenanceBranch(baseBranchLocalName)) {
+                    baseBranchLocalName = gitFlowConfig.getDevelopmentBranch();
+                    if (!currentBranch.equals(baseBranchLocalName)) {
+                        boolean confirmed = getPrompter().promptConfirmation(
+                                "Epic branch will be started not from current "
+                                        + "branch but will be based off branch '" + baseBranchLocalName + "'. Continue?",
+                                true, true);
+                        if (!confirmed) {
+                            throw new GitFlowFailureException("Epic start process aborted by user.", null);
+                        }
+                    }
+                }
+                baseBranchStartPoint = selectBaseBranchStartPoint(baseBranchLocalName, "epic");
             }
-            getMavenLog().info("Base branch for new epic is '" + baseBranch + "'");
-
-            String baseBranchStartPoint = selectBaseBranchStartPoint(baseBranch, "epic");
+            getMavenLog().info("Base branch for new epic is '" + baseBranchLocalName + "'");
 
             epicName = getPrompter().promptRequiredParameterValue(
                     "What is a name of epic branch? " + gitFlowConfig.getEpicBranchPrefix(), "epicName", epicName,
@@ -176,7 +245,7 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
 
             BranchCentralConfigChanges branchConfigChanges = new BranchCentralConfigChanges();
             branchConfigChanges.set(epicBranchName, BranchConfigKeys.BRANCH_TYPE, BranchType.EPIC.getType());
-            branchConfigChanges.set(epicBranchName, BranchConfigKeys.BASE_BRANCH, baseBranch);
+            branchConfigChanges.set(epicBranchName, BranchConfigKeys.BASE_BRANCH, baseBranchLocalName);
             branchConfigChanges.set(epicBranchName, BranchConfigKeys.ISSUE_NUMBER, epicIssue);
             branchConfigChanges.set(epicBranchName, BranchConfigKeys.BASE_VERSION, baseVersion);
             branchConfigChanges.set(epicBranchName, BranchConfigKeys.START_COMMIT_MESSAGE, epicStartMessage);

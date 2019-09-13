@@ -46,8 +46,10 @@ public class GitFlowEpicStartMojoTest extends AbstractGitFlowMojoTestCase {
 
     private static final String EPIC_BRANCH_VERSION = TestProjects.BASIC.releaseVersion + "-" + EPIC_ISSUE
             + "-SNAPSHOT";
+    
+    private static final String INTEGRATION_BRANCH_PREFIX = "integration/";
 
-    private static final String INTEGRATION_BRANCH = "integration/" + MASTER_BRANCH;
+    private static final String INTEGRATION_BRANCH = INTEGRATION_BRANCH_PREFIX + MASTER_BRANCH;
 
     private static final String COMMIT_MESSAGE_SET_VERSION = EPIC_ISSUE + ": updating versions for epic branch";
 
@@ -56,6 +58,11 @@ public class GitFlowEpicStartMojoTest extends AbstractGitFlowMojoTestCase {
     private static final String PROMPT_BRANCH_OF_LAST_INTEGRATED = "The current commit on " + MASTER_BRANCH
             + " is not integrated (probably not stable). Create a branch based of the last integrated commit ("
             + INTEGRATION_BRANCH + ")?";
+
+    private static final GitFlowFailureInfo ERROR_BASE_BRANCH_NOT_ACCEPTED = new GitFlowFailureInfo(
+            "An epic branch can''t be started on branch ''{0}'' defined in ''baseBranch'' property.",
+            "Please define the development branch ''" + MASTER_BRANCH
+            + "'' or a maintenance branch in order to proceed.");
 
     private RepositorySet repositorySet;
 
@@ -1254,6 +1261,178 @@ public class GitFlowEpicStartMojoTest extends AbstractGitFlowMojoTestCase {
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
         git.assertTrackingBranch(repositorySet, "origin/" + EPIC_BRANCH, EPIC_BRANCH);
+    }
+
+    @Test
+    public void testExecuteWithBaseBranchCurrentMaster() throws Exception {
+        // set up
+        Properties userProperties = new Properties();
+        userProperties.setProperty("epicName", EPIC_NAME);
+        userProperties.setProperty("baseBranch", MASTER_BRANCH);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertEpicStartedCorrectly();
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
+    }
+
+    @Test
+    public void testExecuteWithBaseBranchNotCurrentMaster() throws Exception {
+        // set up
+        git.switchToBranch(repositorySet, BasicConstants.EXISTING_MAINTENANCE_BRANCH);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("epicName", EPIC_NAME);
+        userProperties.setProperty("baseBranch", MASTER_BRANCH);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertEpicStartedCorrectly();
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
+    }
+
+    @Test
+    public void testExecuteWithBaseBranchOther() throws Exception {
+        // set up
+        final String OTHER_BRANCH = "otherBranch";
+        git.createBranchWithoutSwitch(repositorySet, OTHER_BRANCH);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("epicName", EPIC_NAME);
+        userProperties.setProperty("baseBranch", OTHER_BRANCH);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertGitFlowFailureException(result, format(ERROR_BASE_BRANCH_NOT_ACCEPTED, OTHER_BRANCH));
+    }
+
+    @Test
+    public void testExecuteWithBaseBranchOtherIntegration() throws Exception {
+        // set up
+        final String OTHER_BRANCH = INTEGRATION_BRANCH_PREFIX + "otherBranch";
+        git.createBranchWithoutSwitch(repositorySet, OTHER_BRANCH);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("epicName", EPIC_NAME);
+        userProperties.setProperty("baseBranch", OTHER_BRANCH);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertGitFlowFailureException(result, format(ERROR_BASE_BRANCH_NOT_ACCEPTED, OTHER_BRANCH));
+    }
+
+    @Test
+    public void testExecuteWithBaseBranchIntegrationBranch() throws Exception {
+        // set up
+        git.createIntegeratedBranch(repositorySet, INTEGRATION_BRANCH);
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("epicName", EPIC_NAME);
+        userProperties.setProperty("baseBranch", INTEGRATION_BRANCH);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), EPIC_BRANCH_VERSION);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, EPIC_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, EPIC_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_SET_VERSION);
+        git.assertTestfileMissing(repositorySet);
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
+    }
+
+    @Test
+    public void testExecuteWithBaseBranchCurrentMasterBaseCommitOnBaseBranch() throws Exception {
+        // set up
+        final String BASE_COMMIT = git.currentCommit(repositorySet);
+        git.createAndCommitTestfile(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("epicName", EPIC_NAME);
+        userProperties.setProperty("baseBranch", MASTER_BRANCH);
+        userProperties.setProperty("baseCommit", BASE_COMMIT);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertEpicStartedCorrectly();
+        git.assertTestfileMissing(repositorySet);
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
+    }
+
+    @Test
+    public void testExecuteWithBaseBranchCurrentMasterBaseCommitHeadOfBaseBranch() throws Exception {
+        // set up
+        Properties userProperties = new Properties();
+        userProperties.setProperty("epicName", EPIC_NAME);
+        userProperties.setProperty("baseBranch", MASTER_BRANCH);
+        userProperties.setProperty("baseCommit", MASTER_BRANCH);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertEpicStartedCorrectly();
+        git.assertTestfileMissing(repositorySet);
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
+    }
+
+    @Test
+    public void testExecuteWithBaseBranchCurrentMasterBaseCommitNotOnBaseBranch() throws Exception {
+        // set up
+        Properties userProperties = new Properties();
+        userProperties.setProperty("epicName", EPIC_NAME);
+        userProperties.setProperty("baseBranch", MASTER_BRANCH);
+        userProperties.setProperty("baseCommit", BasicConstants.EXISTING_MAINTENANCE_BRANCH);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertGitFlowFailureException(result,
+                "Base branch defined in property 'baseBranch' doesn't contain commit defined in property 'baseCommit'.",
+                "Please define a commit of the base branch in order to start the epic branch from a specified commit.");
+    }
+
+    @Test
+    public void testExecuteWithBaseBranchNotSetAndBaseCommitSet() throws Exception {
+        // set up
+        Properties userProperties = new Properties();
+        userProperties.setProperty("epicName", EPIC_NAME);
+        userProperties.setProperty("baseCommit", MASTER_BRANCH);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertGitFlowFailureException(result,
+                "Property 'baseCommit' can only be used togather with property 'baseBranch'.",
+                "Please define also 'baseBranch' property in order to start the epic branch from a specified commit.");
+    }
+
+    @Test
+    public void testExecuteWithBaseBranchRemoteMaster() throws Exception {
+        // set up
+        git.remoteCreateTestfile(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("epicName", EPIC_NAME);
+        userProperties.setProperty("baseBranch", "origin/" + MASTER_BRANCH);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), EPIC_BRANCH_VERSION);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, EPIC_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, EPIC_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, EPIC_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, EPIC_BRANCH, COMMIT_MESSAGE_SET_VERSION,
+                GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
+        git.assertTestfileContent(repositorySet);
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
     }
 
 }
