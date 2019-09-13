@@ -17,6 +17,7 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
@@ -57,29 +58,37 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
     @Parameter(property = "flow.deleteRemoteBranchOnRebase", defaultValue = "false")
     private boolean deleteRemoteBranchOnRebase = false;
 
+    /**
+     * The epic branch to be updated.
+     *
+     * @since 2.2.0
+     */
+    @Parameter(property = "branchName", readonly = true)
+    protected String branchName;
+
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         getMavenLog().info("Starting epic update process");
         checkCentralBranchConfig();
         boolean confirmedUpdateWithMerge = updateEpicWithMerge;
-        String epicBranchName = gitRebaseEpicBranchInProcess();
-        if (epicBranchName == null) {
-            epicBranchName = gitMergeIntoEpicBranchInProcess();
-            if (epicBranchName != null) {
+        String epicBranchLocalName = gitRebaseEpicBranchInProcess();
+        if (epicBranchLocalName == null) {
+            epicBranchLocalName = gitMergeIntoEpicBranchInProcess();
+            if (epicBranchLocalName != null) {
                 confirmedUpdateWithMerge = true;
             }
         } else {
             confirmedUpdateWithMerge = false;
         }
         boolean continueOnCleanInstall = false;
-        if (epicBranchName == null) {
+        if (epicBranchLocalName == null) {
             String currentBranch = gitCurrentBranch();
             if (isEpicBranch(currentBranch)) {
                 String breakpoint = gitGetBranchLocalConfig(currentBranch, "breakpoint");
                 if (breakpoint != null) {
                     if ("epicUpdate.cleanInstall".equals(breakpoint)) {
                         continueOnCleanInstall = true;
-                        epicBranchName = currentBranch;
+                        epicBranchLocalName = currentBranch;
                     }
                 }
             }
@@ -88,42 +97,63 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
             String baseVersion;
             String oldEpicVersion;
             String oldBaseVersion;
-            if (epicBranchName == null) {
+            if (epicBranchLocalName == null) {
                 checkUncommittedChanges();
 
-                List<String> branches = gitAllEpicBranches();
-                if (branches.isEmpty()) {
-                    throw new GitFlowFailureException("There are no epic branches in your repository.",
-                            "Please start an epic first.", "'mvn flow:epic-start'");
-                }
                 String currentBranch = gitCurrentBranch();
                 String currentVersion = null;
-                boolean isOnEpicBranch = branches.contains(currentBranch);
+                boolean isOnEpicBranch;
+                if (StringUtils.isNotEmpty(branchName)) {
+                    epicBranchLocalName = gitLocalRef(branchName);
+                    if (!isEpicBranch(epicBranchLocalName)) {
+                        throw new GitFlowFailureException(
+                                "Branch '" + branchName + "' defined in 'branchName' property is not an epic branch.",
+                                "Please define an epic branch in order to proceed.");
+                    }
+                    getLog().info("Updating epic on specified epic branch: " + epicBranchLocalName);
+                    isOnEpicBranch = epicBranchLocalName.equals(currentBranch);
+                    if (!isOnEpicBranch && !gitLocalOrRemoteBranchesExist(epicBranchLocalName)) {
+                        throw new GitFlowFailureException(createBranchNotExistingError(
+                                "Epic branch '" + branchName + "' defined in 'branchName' property",
+                                "Please define an existing epic branch in order to proceed."));
+                    }
+                } else {
+                    List<String> branches = gitAllEpicBranches();
+                    if (branches.isEmpty()) {
+                        throw new GitFlowFailureException("There are no epic branches in your repository.",
+                                "Please start an epic first.", "'mvn flow:epic-start'");
+                    }
+                    isOnEpicBranch = branches.contains(currentBranch);
+                    if (!isOnEpicBranch) {
+                        epicBranchLocalName = getPrompter().promptToSelectFromOrderedList("Epic branches:",
+                                "Choose epic branch to update", branches,
+                                new GitFlowFailureInfo(
+                                        "In non-interactive mode 'mvn flow:epic-update' can be executed only on an epic branch.",
+                                        "Please switch to an epic branch first or run in interactive mode.",
+                                        "'git checkout BRANCH' to switch to the epic branch",
+                                        "'mvn flow:epic-update' to run in interactive mode"));
+                        getLog().info("Updating epic on selected epic branch: " + epicBranchLocalName);
+                    } else {
+                        epicBranchLocalName = currentBranch;
+                        getLog().info("Updating epic on current epic branch: " + epicBranchLocalName);
+                    }
+                }
+                
                 if (!isOnEpicBranch) {
-                    epicBranchName = getPrompter().promptToSelectFromOrderedList("Epic branches:",
-                            "Choose epic branch to update", branches,
-                            new GitFlowFailureInfo(
-                                    "In non-interactive mode 'mvn flow:epic-update' can be executed only on an epic branch.",
-                                    "Please switch to an epic branch first or run in interactive mode.",
-                                    "'git checkout BRANCH' to switch to the epic branch",
-                                    "'mvn flow:epic-update' to run in interactive mode"));
-                    getLog().info("Updating epic on selected epic branch: " + epicBranchName);
-                    gitEnsureLocalBranchIsUpToDateIfExists(epicBranchName,
-                            new GitFlowFailureInfo("Remote and local epic branches '" + epicBranchName + "' diverge.",
-                                    "Rebase or merge the changes in local epic branch '" + epicBranchName + "' first.",
+                    gitEnsureLocalBranchIsUpToDateIfExists(epicBranchLocalName,
+                            new GitFlowFailureInfo("Remote and local epic branches '" + epicBranchLocalName + "' diverge.",
+                                    "Rebase or merge the changes in local epic branch '" + epicBranchLocalName + "' first.",
                                     "'git rebase'"));
                     currentVersion = getCurrentProjectVersion();
-                    getMavenLog().info("Switching to epic branch '" + epicBranchName + "'");
-                    gitCheckout(epicBranchName);
+                    getMavenLog().info("Switching to epic branch '" + epicBranchLocalName + "'");
+                    gitCheckout(epicBranchLocalName);
                 } else {
-                    epicBranchName = currentBranch;
-                    getLog().info("Updating epic on current epic branch: " + epicBranchName);
                     gitEnsureCurrentLocalBranchIsUpToDate(
                             new GitFlowFailureInfo("Remote and local epic branches '{0}' diverge.",
                                     "Rebase or merge the changes in local epic branch '{0}' first.", "'git rebase'"));
                 }
 
-                String baseBranch = gitEpicBranchBaseBranch(epicBranchName);
+                String baseBranch = gitEpicBranchBaseBranch(epicBranchLocalName);
                 getMavenLog().info("Base branch of epic branch is '" + baseBranch + "'");
 
                 // use integration branch?
@@ -181,12 +211,12 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
                 } else {
                     gitCheckout(baseBranch);
                     baseVersion = getCurrentProjectVersion();
-                    gitCheckout(epicBranchName);
+                    gitCheckout(epicBranchLocalName);
                 }
                 getLog().info("Project version on base branch: " + baseVersion);
-                if (!gitIsAncestorBranch(baseBranch, epicBranchName)) {
-                    String branchPoint = gitBranchPoint(epicBranchName, baseBranch);
-                    List<String> mergeCommits = gitGetMergeCommits(epicBranchName, branchPoint);
+                if (!gitIsAncestorBranch(baseBranch, epicBranchLocalName)) {
+                    String branchPoint = gitBranchPoint(epicBranchLocalName, baseBranch);
+                    List<String> mergeCommits = gitGetMergeCommits(epicBranchLocalName, branchPoint);
                     boolean hasNonEmptyMergeCommits = false;
                     if (!mergeCommits.isEmpty()) {
                         hasNonEmptyMergeCommits = gitHasNonEmptyMergeCommits(mergeCommits);
@@ -195,7 +225,7 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
                     if (hasNonEmptyMergeCommits) {
                         rebaseNotPossibleReason = "epic branch contains merge commits";
                     } else {
-                        List<String> subBranches = getSubBranches(epicBranchName, branchPoint);
+                        List<String> subBranches = getSubBranches(epicBranchLocalName, branchPoint);
                         if (!subBranches.isEmpty()) {
                             StringBuilder msgBuilder = new StringBuilder("found branches based on epic branch:");
                             final int MAX = 4;
@@ -265,20 +295,20 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
                         confirmedUpdateWithMerge = false;
                     }
                     oldEpicVersion = getCurrentProjectVersion();
-                    oldBaseVersion = gitGetBranchCentralConfig(epicBranchName, BranchConfigKeys.BASE_VERSION);
+                    oldBaseVersion = gitGetBranchCentralConfig(epicBranchLocalName, BranchConfigKeys.BASE_VERSION);
                     String oldEpicHEAD = getCurrentCommit();
-                    gitSetBranchLocalConfig(epicBranchName, "baseVersion", baseVersion);
-                    gitSetBranchLocalConfig(epicBranchName, "oldEpicHEAD", oldEpicHEAD);
-                    gitSetBranchLocalConfig(epicBranchName, "oldEpicVersion", oldEpicVersion);
-                    gitSetBranchLocalConfig(epicBranchName, "oldBaseVersion", oldBaseVersion);
-                    gitSetBranchLocalConfig(epicBranchName, "oldStartCommitMessage",
-                            gitGetBranchCentralConfig(epicBranchName, BranchConfigKeys.START_COMMIT_MESSAGE));
-                    gitSetBranchLocalConfig(epicBranchName, "oldVersionChangeCommit",
-                            gitGetBranchCentralConfig(epicBranchName, BranchConfigKeys.VERSION_CHANGE_COMMIT));
+                    gitSetBranchLocalConfig(epicBranchLocalName, "baseVersion", baseVersion);
+                    gitSetBranchLocalConfig(epicBranchLocalName, "oldEpicHEAD", oldEpicHEAD);
+                    gitSetBranchLocalConfig(epicBranchLocalName, "oldEpicVersion", oldEpicVersion);
+                    gitSetBranchLocalConfig(epicBranchLocalName, "oldBaseVersion", oldBaseVersion);
+                    gitSetBranchLocalConfig(epicBranchLocalName, "oldStartCommitMessage",
+                            gitGetBranchCentralConfig(epicBranchLocalName, BranchConfigKeys.START_COMMIT_MESSAGE));
+                    gitSetBranchLocalConfig(epicBranchLocalName, "oldVersionChangeCommit",
+                            gitGetBranchCentralConfig(epicBranchLocalName, BranchConfigKeys.VERSION_CHANGE_COMMIT));
                     if (confirmedUpdateWithMerge) {
-                        updateEpicByMerge(epicBranchName, baseBranch, baseVersion, oldBaseVersion);
+                        updateEpicByMerge(epicBranchLocalName, baseBranch, baseVersion, oldBaseVersion);
                     } else {
-                        updateEpicByRebase(epicBranchName, baseBranch, branchPoint, !mergeCommits.isEmpty());
+                        updateEpicByRebase(epicBranchLocalName, baseBranch, branchPoint, !mergeCommits.isEmpty());
                     }
                 } else {
                     getMavenLog().info("No changes on base branch '" + baseBranch + "' found. Nothing to update.");
@@ -286,29 +316,29 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
                     return;
                 }
             } else {
-                continueEpicUpdate(confirmedUpdateWithMerge, epicBranchName);
-                baseVersion = gitGetBranchLocalConfig(epicBranchName, "baseVersion");
-                oldEpicVersion = gitGetBranchLocalConfig(epicBranchName, "oldEpicVersion");
-                oldBaseVersion = gitGetBranchLocalConfig(epicBranchName, "oldBaseVersion");
+                continueEpicUpdate(confirmedUpdateWithMerge, epicBranchLocalName);
+                baseVersion = gitGetBranchLocalConfig(epicBranchLocalName, "baseVersion");
+                oldEpicVersion = gitGetBranchLocalConfig(epicBranchLocalName, "oldEpicVersion");
+                oldBaseVersion = gitGetBranchLocalConfig(epicBranchLocalName, "oldBaseVersion");
                 getLog().info("Project version on base branch: " + baseVersion);
             }
-            finalizeRebase(epicBranchName);
+            finalizeRebase(epicBranchLocalName);
             if (oldEpicVersion != null) {
                 String epicVersion = getCurrentProjectVersion();
                 if (!versionless && confirmedUpdateWithMerge && !baseVersion.equals(oldBaseVersion) && !tychoBuild) {
-                    fixupModuleParents(epicBranchName, epicVersion, oldBaseVersion, null, confirmedUpdateWithMerge);
-                    String issueNumber = getEpicIssueNumber(epicBranchName);
+                    fixupModuleParents(epicBranchLocalName, epicVersion, oldBaseVersion, null, confirmedUpdateWithMerge);
+                    String issueNumber = getEpicIssueNumber(epicBranchLocalName);
                     String epicStartMessage = substituteWithIssueNumber(commitMessages.getEpicStartMessage(),
                             issueNumber);
                     String version = insertSuffixInVersion(baseVersion, issueNumber);
                     if (!baseVersion.equals(version)) {
                         getMavenLog().info("Setting version '" + version + "' for project on epic branch...");
-                        mvnSetVersions(version, GitFlowAction.EPIC_START, "On epic branch: ", epicBranchName);
+                        mvnSetVersions(version, GitFlowAction.EPIC_START, "On epic branch: ", epicBranchLocalName);
                         gitCommit(epicStartMessage);
                     }
                 } else {
                     getLog().info("Project version on epic branch: " + epicVersion);
-                    fixupModuleParents(epicBranchName, epicVersion, oldEpicVersion, baseVersion,
+                    fixupModuleParents(epicBranchLocalName, epicVersion, oldEpicVersion, baseVersion,
                             confirmedUpdateWithMerge);
                 }
             }
@@ -322,25 +352,25 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
                 mvnCleanInstall();
             } catch (MojoFailureException e) {
                 getMavenLog().info("Epic update process paused on failed project installation to fix project problems");
-                gitSetBranchLocalConfig(epicBranchName, "breakpoint", "epicUpdate.cleanInstall");
+                gitSetBranchLocalConfig(epicBranchLocalName, "breakpoint", "epicUpdate.cleanInstall");
                 String reason = null;
                 if (e instanceof GitFlowFailureException) {
                     reason = ((GitFlowFailureException) e).getProblem();
                 }
                 throw new GitFlowFailureException(e,
-                        FailureInfoHelper.installProjectFailure(GOAL, epicBranchName, "epic update", reason));
+                        FailureInfoHelper.installProjectFailure(GOAL, epicBranchLocalName, "epic update", reason));
             }
         }
-        gitRemoveBranchLocalConfig(epicBranchName, "breakpoint");
+        gitRemoveBranchLocalConfig(epicBranchLocalName, "breakpoint");
         if (pushRemote) {
             if (!confirmedUpdateWithMerge && deleteRemoteBranchOnRebase) {
                 getMavenLog().info("Deleting remote epic branch to not run into non-fast-forward error");
-                gitBranchDeleteRemote(epicBranchName);
+                gitBranchDeleteRemote(epicBranchLocalName);
             }
-            getMavenLog().info("Pushing (forced) epic branch '" + epicBranchName + "' to remote repository");
-            gitPush(epicBranchName, false, true);
+            getMavenLog().info("Pushing (forced) epic branch '" + epicBranchLocalName + "' to remote repository");
+            gitPush(epicBranchLocalName, false, true);
         }
-        finalizeEpicUpdateProcess(epicBranchName);
+        finalizeEpicUpdateProcess(epicBranchLocalName);
         getMavenLog().info("Epic update process finished");
     }
 

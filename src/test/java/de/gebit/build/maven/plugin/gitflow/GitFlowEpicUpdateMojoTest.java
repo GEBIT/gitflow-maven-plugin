@@ -2557,4 +2557,85 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
         }
     }
 
+    @Test
+    public void testExecuteWithBranchNameCurrentEpic() throws Exception {
+        // set up
+        prepareEpicBranchDivergentFromMaster();
+        Properties userProperties = new Properties();
+        userProperties.setProperty("branchName", EPIC_BRANCH);
+        when(promptControllerMock.prompt(PROMPT_MESSAGE_MERGE_ONLY, Arrays.asList("y", "n"), "n")).thenReturn("y");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MESSAGE_MERGE_ONLY, Arrays.asList("y", "n"), "n");
+        verifyZeroInteractions(promptControllerMock);
+        assertEpicMergedCorrectly();
+    }
+
+    @Test
+    public void testExecuteWithBranchNameNotCurrentEpic() throws Exception {
+        // set up
+        prepareEpicBranchDivergentFromMaster();
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("branchName", EPIC_BRANCH);
+        when(promptControllerMock.prompt(PROMPT_MESSAGE_MERGE_ONLY, Arrays.asList("y", "n"), "n")).thenReturn("y");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MESSAGE_MERGE_ONLY, Arrays.asList("y", "n"), "n");
+        verifyZeroInteractions(promptControllerMock);
+        assertEpicMergedCorrectly();
+    }
+
+    @Test
+    public void testExecuteWithBranchNameNotEpic() throws Exception {
+        // set up
+        final String OTHER_BRANCH = "otherBranch";
+        Properties userProperties = new Properties();
+        userProperties.setProperty("branchName", OTHER_BRANCH);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertGitFlowFailureException(result,
+                "Branch '" + OTHER_BRANCH + "' defined in 'branchName' property is not an epic branch.",
+                "Please define an epic branch in order to proceed.");
+    }
+
+    @Test
+    public void testExecuteWithBranchNameNotExistingEpic() throws Exception {
+        // set up
+        final String NON_EXISTING_EPIC_BRANCH = "epic/nonExisting";
+        Properties userProperties = new Properties();
+        userProperties.setProperty("branchName", NON_EXISTING_EPIC_BRANCH);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertGitFlowFailureException(result,
+                "Epic branch '" + NON_EXISTING_EPIC_BRANCH + "' defined in 'branchName' property doesn't exist.",
+                "Please define an existing epic branch in order to proceed.");
+    }
+
+    @Test
+    public void testExecuteWithBranchNameNotExistingLocalEpic() throws Exception {
+        // set up
+        prepareEpicBranchDivergentFromMaster();
+        git.push(repositorySet);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        git.deleteLocalAndRemoteTrackingBranches(repositorySet, EPIC_BRANCH);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("branchName", EPIC_BRANCH);
+        when(promptControllerMock.prompt(PROMPT_MESSAGE_MERGE_ONLY, Arrays.asList("y", "n"), "n")).thenReturn("y");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MESSAGE_MERGE_ONLY, Arrays.asList("y", "n"), "n");
+        verifyZeroInteractions(promptControllerMock);
+        assertEpicMergedCorrectly();
+    }
+
 }
