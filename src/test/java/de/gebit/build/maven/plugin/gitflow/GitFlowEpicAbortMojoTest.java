@@ -969,4 +969,18 @@ public class GitFlowEpicAbortMojoTest extends AbstractGitFlowMojoTestCase {
                 "Please define an existing epic branch in order to proceed.");
     }
 
+    @Test
+    public void testExecuteWithBranchNameNotExistingLocalEpic() throws Exception {
+        // set up
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        git.deleteLocalAndRemoteTrackingBranches(repositorySet, EPIC_BRANCH);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("branchName", EPIC_BRANCH);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertEpicAbortedCorrectly();
+    }
+
 }

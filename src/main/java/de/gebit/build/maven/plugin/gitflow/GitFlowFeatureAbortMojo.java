@@ -20,6 +20,8 @@ import java.util.List;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.Parameter;
+import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
@@ -37,16 +39,24 @@ public class GitFlowFeatureAbortMojo extends AbstractGitFlowFeatureMojo {
 
     static final String GOAL = "feature-abort";
 
+    /**
+     * The feature branch to be aborted.
+     *
+     * @since 2.2.0
+     */
+    @Parameter(property = "branchName", readonly = true)
+    protected String branchName;
+
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         // check if rebase in process
         getMavenLog().info("Starting feature abort process");
         checkCentralBranchConfig();
-        String featureBranchName = gitRebaseFeatureBranchInProcess();
-        if (featureBranchName != null) {
+        String featureBranchLocalName = gitRebaseFeatureBranchInProcess();
+        if (featureBranchLocalName != null) {
             throw new GitFlowFailureException(
-                    "A rebase of the feature branch '" + featureBranchName
+                    "A rebase of the feature branch '" + featureBranchLocalName
                             + "' is in process. Cannot abort feature now.",
                     "Finish rebase process first in order to proceed.");
         } else if (gitMergeInProcess()) {
@@ -55,44 +65,60 @@ public class GitFlowFeatureAbortMojo extends AbstractGitFlowFeatureMojo {
                     "Finish merge process first in order to proceed.");
         }
 
+        boolean isOnFeatureBranch = false;
         BranchRef featureBranch;
-        List<String> branches = gitAllFeatureBranches();
-        if (branches.isEmpty()) {
-            throw new GitFlowFailureException("There are no feature branches in your repository.", null);
-        }
-        // is the current branch a feature branch?
         String currentBranch = gitCurrentBranch();
-        boolean isOnFeatureBranch = branches.contains(currentBranch);
-        if (!isOnFeatureBranch) {
-            featureBranchName = getPrompter().promptToSelectFromOrderedList("Feature branches:",
-                    "Choose feature branch to abort", branches,
-                    new GitFlowFailureInfo(
-                            "In non-interactive mode 'mvn flow:feature-abort' can be executed only on a feature branch.",
-                            "Please switch to a feature branch first or run in interactive mode.",
-                            "'git checkout BRANCH' to switch to the feature branch",
-                            "'mvn flow:feature-abort' to run in interactive mode"));
-            getLog().info("Aborting feature on selected feature branch: " + featureBranchName);
-            featureBranch = preferLocalRef(featureBranchName);
-        } else {
-            featureBranchName = currentBranch;
-            getLog().info("Aborting feature on current feature branch: " + featureBranchName);
-            if (executeGitHasUncommitted()) {
-                boolean confirmed = getPrompter().promptConfirmation(
-                        "You have some uncommitted files. If you continue any changes will be discarded. Continue?",
-                        false,
-                        new GitFlowFailureInfo("You have some uncommitted files.",
-                                "Commit or discard local changes in order to proceed or run in interactive mode.",
-                                "'git add' and 'git commit' to commit your changes",
-                                "'git reset --hard' to throw away your changes",
-                                "'mvn flow:feature-abort' to run in interactive mode"));
-                if (!confirmed) {
-                    throw new GitFlowFailureException("You have aborted feature-abort because of uncommitted files.",
-                            "Commit or discard local changes in order to proceed.",
-                            "'git add' and 'git commit' to commit your changes",
-                            "'git reset --hard' to throw away your changes");
-                }
+
+        if (StringUtils.isNotEmpty(branchName)) {
+            featureBranchLocalName = gitLocalRef(branchName);
+            if (!isFeatureBranch(featureBranchLocalName)) {
+                throw new GitFlowFailureException(
+                        "Branch '" + branchName + "' defined in 'branchName' property is not a feature branch.",
+                        "Please define a feature branch in order to proceed.");
             }
-            featureBranch = localRef(featureBranchName);
+            isOnFeatureBranch = featureBranchLocalName.equals(currentBranch);
+            getLog().info("Aborting feature on specified feature branch: " + featureBranchLocalName);
+            featureBranch = recognizeRef(branchName,
+                    createBranchNotExistingError("Feature branch '" + branchName + "' defined in 'branchName' property",
+                            "Please define an existing feature branch in order to proceed."));
+        } else {
+            List<String> branches = gitAllFeatureBranches();
+            if (branches.isEmpty()) {
+                throw new GitFlowFailureException("There are no feature branches in your repository.", null);
+            }
+            // is the current branch a feature branch?
+            isOnFeatureBranch = branches.contains(currentBranch);
+            if (!isOnFeatureBranch) {
+                featureBranchLocalName = getPrompter().promptToSelectFromOrderedList("Feature branches:",
+                        "Choose feature branch to abort", branches,
+                        new GitFlowFailureInfo(
+                                "In non-interactive mode 'mvn flow:feature-abort' can be executed only on a feature branch.",
+                                "Please switch to a feature branch first or run in interactive mode.",
+                                "'git checkout BRANCH' to switch to the feature branch",
+                                "'mvn flow:feature-abort' to run in interactive mode"));
+                getLog().info("Aborting feature on selected feature branch: " + featureBranchLocalName);
+                featureBranch = preferLocalRef(featureBranchLocalName);
+            } else {
+                featureBranchLocalName = currentBranch;
+                getLog().info("Aborting feature on current feature branch: " + featureBranchLocalName);
+                if (executeGitHasUncommitted()) {
+                    boolean confirmed = getPrompter().promptConfirmation(
+                            "You have some uncommitted files. If you continue any changes will be discarded. Continue?",
+                            false,
+                            new GitFlowFailureInfo("You have some uncommitted files.",
+                                    "Commit or discard local changes in order to proceed or run in interactive mode.",
+                                    "'git add' and 'git commit' to commit your changes",
+                                    "'git reset --hard' to throw away your changes",
+                                    "'mvn flow:feature-abort' to run in interactive mode"));
+                    if (!confirmed) {
+                        throw new GitFlowFailureException("You have aborted feature-abort because of uncommitted files.",
+                                "Commit or discard local changes in order to proceed.",
+                                "'git add' and 'git commit' to commit your changes",
+                                "'git reset --hard' to throw away your changes");
+                    }
+                }
+                featureBranch = localRef(featureBranchLocalName);
+            }
         }
         if (hasCommitsExceptVersionChangeCommitOnFeatureBranch(featureBranch)) {
             if (!getPrompter().promptConfirmation("You have commits on the feature branch.\n"
@@ -101,24 +127,24 @@ public class GitFlowFeatureAbortMojo extends AbstractGitFlowFeatureMojo {
             }
         }
         if (isOnFeatureBranch) {
-            String baseBranch = gitFeatureBranchBaseBranch(featureBranchName);
+            String baseBranch = gitFeatureBranchBaseBranch(featureBranchLocalName);
             gitResetHard();
             getMavenLog().info("Switching to base branch '" + baseBranch + "'");
             gitCheckout(baseBranch);
         }
 
-        if (gitBranchExists(featureBranchName)) {
-            getMavenLog().info("Removing local feature branch '" + featureBranchName + "'");
+        if (gitBranchExists(featureBranchLocalName)) {
+            getMavenLog().info("Removing local feature branch '" + featureBranchLocalName + "'");
             // git branch -D feature/...
-            gitBranchDeleteForce(featureBranchName);
+            gitBranchDeleteForce(featureBranchLocalName);
         }
         if (pushRemote) {
-            getMavenLog().info("Removing remote feature branch '" + featureBranchName + "'");
+            getMavenLog().info("Removing remote feature branch '" + featureBranchLocalName + "'");
             // delete the remote branch
-            gitBranchDeleteRemote(featureBranchName);
+            gitBranchDeleteRemote(featureBranchLocalName);
         }
-        String featureName = featureBranchName.substring(gitFlowConfig.getFeatureBranchPrefix().length());
-        gitRemoveAllBranchCentralConfigsForBranch(featureBranchName, "feature '" + featureName + "' aborted");
+        String featureName = featureBranchLocalName.substring(gitFlowConfig.getFeatureBranchPrefix().length());
+        gitRemoveAllBranchCentralConfigsForBranch(featureBranchLocalName, "feature '" + featureName + "' aborted");
         getMavenLog().info("Feature abort process finished");
     }
 }

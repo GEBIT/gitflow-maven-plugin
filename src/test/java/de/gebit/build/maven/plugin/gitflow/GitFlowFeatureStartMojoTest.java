@@ -2088,6 +2088,23 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     @Test
+    public void testExecuteWithBaseBranchNotExistingLocalMaster() throws Exception {
+        // set up
+        git.switchToBranch(repositorySet, BasicConstants.EXISTING_MAINTENANCE_BRANCH);
+        git.deleteLocalAndRemoteTrackingBranches(repositorySet, MASTER_BRANCH);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("featureName", FEATURE_NAME);
+        userProperties.setProperty("baseBranch", MASTER_BRANCH);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertFeatureStartedCorrectly();
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
+    }
+
+    @Test
     public void testExecuteWithBaseBranchOther() throws Exception {
         // set up
         final String OTHER_BRANCH = "otherBranch";
