@@ -119,19 +119,19 @@ public class GitFlowEpicStartMojoTest extends AbstractGitFlowMojoTestCase {
             String epicBranch, String commitMessageSetVersion) throws IOException, GitAPIException {
         Properties branchConfig = git.readPropertiesFileInRemoteBranch(repositorySet, CONFIG_BRANCH, epicBranch);
         assertCentralBranchConfigPropertiesSetCorrectly(branchConfig, expectedVersionChangeCommit, epicIssue,
-                epicBranch, commitMessageSetVersion);
+                commitMessageSetVersion);
     }
 
     private void assertCentralBranchConfigSetLocallyCorrectly(final String expectedVersionChangeCommit, String epicIssue,
             String epicBranch, String commitMessageSetVersion) throws IOException, GitAPIException {
         Properties branchConfig = git.readPropertiesFileInLocalBranch(repositorySet, CONFIG_BRANCH, epicBranch);
         assertCentralBranchConfigPropertiesSetCorrectly(branchConfig, expectedVersionChangeCommit, epicIssue,
-                epicBranch, commitMessageSetVersion);
+                commitMessageSetVersion);
     }
 
     private void assertCentralBranchConfigPropertiesSetCorrectly(Properties branchConfig,
             String expectedVersionChangeCommit, String epicIssue,
-            String epicBranch, String commitMessageSetVersion) throws IOException, GitAPIException {
+            String commitMessageSetVersion) throws IOException, GitAPIException {
         assertEquals("epic", branchConfig.getProperty("branchType"));
         assertEquals(MASTER_BRANCH, branchConfig.getProperty("baseBranch"));
         assertEquals(epicIssue, branchConfig.getProperty("issueNumber"));

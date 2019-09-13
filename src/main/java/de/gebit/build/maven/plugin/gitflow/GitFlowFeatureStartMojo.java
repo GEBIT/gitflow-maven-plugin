@@ -102,6 +102,24 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
     @Parameter(property = "jobBuild", readonly = true)
     protected boolean jobBuild = false;
 
+    /**
+     * The base branch which feature branch should be started on.
+     *
+     * @since 2.2.0
+     */
+    @Parameter(property = "baseBranch", readonly = true)
+    protected String baseBranch;
+
+    /**
+     * The base commit which feature branch should be started on.
+     * <code>baseCommit</code> can only be used if <code>baseBranch</code>
+     * property is defined and the base branch contains the base commit.
+     *
+     * @since 2.2.0
+     */
+    @Parameter(property = "baseCommit", readonly = true)
+    protected String baseCommit;
+
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
@@ -122,23 +140,72 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
             }
         }
         if (!continueOnCleanInstall) {
-            String baseBranch = currentBranch;
-            if (!isMaintenanceBranch(baseBranch) && !isEpicBranch(baseBranch)) {
-                baseBranch = gitFlowConfig.getDevelopmentBranch();
-                if (!currentBranch.equals(baseBranch)) {
-                    boolean confirmed = getPrompter()
-                            .promptConfirmation(
-                                    "Feature branch will be started not from current "
-                                            + "branch but will be based off branch '" + baseBranch + "'. Continue?",
-                                    true, true);
-                    if (!confirmed) {
-                        throw new GitFlowFailureException("Feature start process aborted by user.", null);
+            String baseBranchLocalName;
+            String baseBranchStartPoint = null;
+            if (StringUtils.isNotBlank(baseBranch)) {
+                baseBranchLocalName = gitLocalRef(baseBranch);
+                BranchRef baseBranchRef = recognizeRef(baseBranch,
+                        createBranchNotExistingError(
+                                "Base branch '" + baseBranch + "' defined in 'baseBranch' property",
+                                "Please define an existing branch in order to proceed."));
+                boolean accepted = true;
+                if (!isMaintenanceBranch(baseBranchLocalName) && !isDevelopmentBranch(baseBranchLocalName)
+                        && !isEpicBranch(baseBranchLocalName)) {
+                    if (isIntegrationBranch(baseBranchLocalName)) {
+                        baseBranchStartPoint = baseBranchRef.getIdentifier();
+                        baseBranchLocalName = getBaseOfIntegrationBranchName(baseBranchLocalName);
+                        if (!isMaintenanceBranch(baseBranchLocalName) && !isDevelopmentBranch(baseBranchLocalName)
+                                && !isEpicBranch(baseBranchLocalName)) {
+                            accepted = false;
+                        }
+                    } else {
+                        accepted = false;
                     }
                 }
-            }
-            getMavenLog().info("Base branch for new feature is '" + baseBranch + "'");
+                if (!accepted) {
+                    throw new GitFlowFailureException(
+                            "A feature branch can't be started on branch '" + baseBranch
+                                    + "' defined in 'baseBranch' property.",
+                            "Please define the development branch '" + gitFlowConfig.getDevelopmentBranch()
+                                    + "' or a maintenance branch in order to proceed.");
+                }
+                if (StringUtils.isNotBlank(baseCommit)) {
+                    if (!gitIsAncestorBranch(baseCommit, baseBranchRef.getIdentifier())) {
+                        throw new GitFlowFailureException(
+                                "Base branch defined in property 'baseBranch' doesn't contain commit defined in "
+                                        + "property 'baseCommit'.",
+                                "Please define a commit of the base branch in order to start the feature branch from a "
+                                        + "specified commit.");
+                    }
+                    baseBranchStartPoint = baseCommit;
+                }
+                if (baseBranchStartPoint == null) {
+                    baseBranchStartPoint = baseBranchRef.getIdentifier();
+                }
+            } else {
+                if (StringUtils.isNotBlank(baseCommit)) {
+                    throw new GitFlowFailureException(
+                            "Property 'baseCommit' can only be used togather with property 'baseBranch'.",
+                            "Please define also 'baseBranch' property in order to start the feature branch from a "
+                                    + "specified commit.");
+                }
 
-            String baseBranchStartPoint = selectBaseBranchStartPoint(baseBranch, "feature");
+                baseBranchLocalName = currentBranch;
+                if (!isMaintenanceBranch(baseBranchLocalName) && !isEpicBranch(baseBranchLocalName)) {
+                    baseBranchLocalName = gitFlowConfig.getDevelopmentBranch();
+                    if (!currentBranch.equals(baseBranchLocalName)) {
+                        boolean confirmed = getPrompter()
+                                .promptConfirmation("Feature branch will be started not from current "
+                                        + "branch but will be based off branch '" + baseBranchLocalName
+                                        + "'. Continue?", true, true);
+                        if (!confirmed) {
+                            throw new GitFlowFailureException("Feature start process aborted by user.", null);
+                        }
+                    }
+                }
+                baseBranchStartPoint = selectBaseBranchStartPoint(baseBranchLocalName, "feature");
+            }
+            getMavenLog().info("Base branch for new feature is '" + baseBranchLocalName + "'");
 
             featureName = getPrompter().promptRequiredParameterValue(
                     "What is a name of feature branch? " + gitFlowConfig.getFeatureBranchPrefix(), "featureName",
@@ -201,8 +268,8 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
             if (versionless || (!skipFeatureVersion && !tychoBuild)) {
                 String version = currentVersion;
                 getLog().info("Base project version: " + version);
-                if (isEpicBranch(baseBranch)) {
-                    version = removeEpicIssueFromVersion(version, baseBranch);
+                if (isEpicBranch(baseBranchLocalName)) {
+                    version = removeEpicIssueFromVersion(version, baseBranchLocalName);
                     getLog().info("Removed epic issue number from project version: " + version);
                 }
                 baseVersion = version;
@@ -219,7 +286,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
 
             BranchCentralConfigChanges branchConfigChanges = new BranchCentralConfigChanges();
             branchConfigChanges.set(featureBranchName, BranchConfigKeys.BRANCH_TYPE, BranchType.FEATURE.getType());
-            branchConfigChanges.set(featureBranchName, BranchConfigKeys.BASE_BRANCH, baseBranch);
+            branchConfigChanges.set(featureBranchName, BranchConfigKeys.BASE_BRANCH, baseBranchLocalName);
             branchConfigChanges.set(featureBranchName, BranchConfigKeys.ISSUE_NUMBER, featureIssue);
             branchConfigChanges.set(featureBranchName, BranchConfigKeys.BASE_VERSION, baseVersion);
             branchConfigChanges.set(featureBranchName, BranchConfigKeys.START_COMMIT_MESSAGE, featureStartMessage);
