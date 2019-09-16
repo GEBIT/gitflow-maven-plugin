@@ -137,3 +137,16 @@ Following steps ensure that the feature will be properly rebased even if the pro
 	```
 	git push -f origin feature/XYZ-42
 	```
+
+How do I automatically create Jenkins jobs for feature branches?
+----------------------------------------------------------------
+
+Add this to your pom.xml:
+
+```
+<properties>
+    <jobBuild>true</jobBuild>
+</properties>
+```
+
+**Note:** this will cause that Jenkins jobs will be automatically created also for new epic branches if used.
