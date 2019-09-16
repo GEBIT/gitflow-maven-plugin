@@ -213,7 +213,7 @@ public abstract class AbstractGitFlowFeatureMojo extends AbstractGitFlowMojo {
         return gitBranchPoint(baseBranch, featureBranch);
     }
 
-    private BranchRef getFeatureBaseBranch(BranchRef featureBranch) throws MojoFailureException, CommandLineException {
+    protected BranchRef getFeatureBaseBranch(BranchRef featureBranch) throws MojoFailureException, CommandLineException {
         String baseBranchName = gitFeatureBranchBaseBranchName(featureBranch.getLocalName());
         return preferRemoteRef(baseBranchName, createBranchNotExistingSevereError(
                 "Base branch '" + baseBranchName + "' for feature branch '" + featureBranch.getLocalName() + "'"));

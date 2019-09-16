@@ -55,6 +55,9 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
     private static final String FEATURE_VERSION = BasicConstants.EXISTING_FEATURE_VERSION;
 
     private static final String EPIC_BRANCH = BasicConstants.EXISTING_EPIC_BRANCH;
+    
+    private static final String PROMPT_MESSAGE_ONE_FEATURE_SELECT_TEMPLATE = "Feature branches:" + LS + "1. {0}"
+            + LS + "Choose feature branch to rebase";
 
     private static final String PROMPT_MESSAGE_LATER_REBASE_NOT_POSSIBLE = "Updating is configured for merges, a later rebase will not be possible. "
             + "Select if you want to proceed with (m)erge or you want to use (r)ebase instead or (a)bort the process.";
@@ -166,10 +169,15 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     private void prepareFeatureBranchDivergentFromMaster() throws Exception, GitAPIException, IOException {
+        prepareFeatureBranchDivergentFromMaster(FEATURE_BRANCH);
+    }
+
+    private void prepareFeatureBranchDivergentFromMaster(String featureBranch)
+            throws Exception, GitAPIException, IOException {
         git.switchToBranch(repositorySet, MASTER_BRANCH);
         git.createAndCommitTestfile(repositorySet, "master_testfile.txt", COMMIT_MESSAGE_MASTER_TESTFILE);
         git.push(repositorySet);
-        git.switchToBranch(repositorySet, FEATURE_BRANCH);
+        git.switchToBranch(repositorySet, featureBranch);
         git.createAndCommitTestfile(repositorySet, "feature_testfile.txt", COMMIT_MESSAGE_FEATURE_TESTFILE);
     }
 
@@ -182,15 +190,20 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     private void assertFeatureRebasedCorrectly() throws ComponentLookupException, GitAPIException, IOException {
+        assertFeatureRebasedCorrectly(FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION, FEATURE_VERSION);
+    }
+
+    private void assertFeatureRebasedCorrectly(String featureBranch, String commitMessageSetVersion,
+            String featureVersion) throws ComponentLookupException, GitAPIException, IOException {
         git.assertClean(repositorySet);
-        git.assertCurrentBranch(repositorySet, FEATURE_BRANCH);
+        git.assertCurrentBranch(repositorySet, featureBranch);
 
         git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE);
-        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, FEATURE_BRANCH, FEATURE_BRANCH);
-        git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_FEATURE_TESTFILE,
-                COMMIT_MESSAGE_SET_VERSION, COMMIT_MESSAGE_MASTER_TESTFILE);
-        assertVersionsInPom(repositorySet.getWorkingDirectory(), FEATURE_VERSION);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, featureBranch, featureBranch);
+        git.assertCommitsInLocalBranch(repositorySet, featureBranch, COMMIT_MESSAGE_FEATURE_TESTFILE,
+                commitMessageSetVersion, COMMIT_MESSAGE_MASTER_TESTFILE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), featureVersion);
     }
 
     private void assertFeatureMergedCorrectly() throws ComponentLookupException, GitAPIException, IOException {
@@ -267,6 +280,26 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         assertNoChangesInRepositoriesForDivergentFeatureAndMasterBranch();
     }
 
+    private void assertNoChanges() throws ComponentLookupException, GitAPIException, IOException {
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
+        git.assertClean(repositorySet);
+        assertNoChangesInRepositories();
+    }
+
+    @Test
+    public void testExecuteNoFeatureBranches() throws Exception {
+        // set up
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.featureBranchPrefix", "no-features/");
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertGitFlowFailureException(result, "There are no feature branches in your repository.",
+                "Please start a feature first.", "'mvn flow:feature-start'");
+        assertNoChanges();
+    }
+
     @Test
     public void testExecuteWithUnstagedChanges() throws Exception {
         // set up
@@ -291,17 +324,49 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     @Test
-    public void testExecuteOnMasterBranch() throws Exception {
+    public void testExecuteOnMasterBranchOneFeatureBranch() throws Exception {
         // set up
-        prepareFeatureBranchDivergentFromMaster();
+        prepareFeatureBranchDivergentFromMaster(BasicConstants.SINGLE_FEATURE_BRANCH);
         git.switchToBranch(repositorySet, MASTER_BRANCH);
+        when(promptControllerMock.prompt(promptMessageOneFeatureSelect(), Arrays.asList("1"))).thenReturn("1");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.featureBranchPrefix", BasicConstants.SINGLE_FEATURE_BRANCH_PREFIX);
         // test
-        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL,
-                promptControllerMock);
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
-        verifyZeroInteractions(promptControllerMock);
-        assertGitFlowFailureException(result, "'mvn flow:feature-rebase' can be executed only on a feature branch.",
-                "Please switch to a feature branch first.", "'git checkout BRANCH' to switch to the feature branch");
+        verify(promptControllerMock).prompt(promptMessageOneFeatureSelect(), Arrays.asList("1"));
+        verifyNoMoreInteractions(promptControllerMock);
+        assertFeatureRebasedCorrectly(BasicConstants.SINGLE_FEATURE_BRANCH,
+                BasicConstants.SINGLE_FEATURE_VERSION_COMMIT_MESSAGE, BasicConstants.SINGLE_FEATURE_VERSION);
+    }
+
+    @Test
+    public void testExecuteOnMasterBranchTwoFeatureBranchesAndOtherBranch() throws Exception {
+        // set up
+        final String OTHER_BRANCH = "otherBranch";
+        prepareFeatureBranchDivergentFromMaster(BasicConstants.FIRST_FEATURE_BRANCH);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        git.createBranchWithoutSwitch(repositorySet, OTHER_BRANCH);
+        String PROMPT_MESSAGE = "Feature branches:" + LS + "1. " + BasicConstants.FIRST_FEATURE_BRANCH + LS + "2. "
+                + BasicConstants.SECOND_FEATURE_BRANCH + LS + "Choose feature branch to rebase";
+        when(promptControllerMock.prompt(PROMPT_MESSAGE, Arrays.asList("1", "2"))).thenReturn("1");
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.featureBranchPrefix", BasicConstants.TWO_FEATURE_BRANCHES_PREFIX);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MESSAGE, Arrays.asList("1", "2"));
+        verifyNoMoreInteractions(promptControllerMock);
+        assertFeatureRebasedCorrectly(BasicConstants.FIRST_FEATURE_BRANCH,
+                BasicConstants.FIRST_FEATURE_VERSION_COMMIT_MESSAGE, BasicConstants.FIRST_FEATURE_VERSION);
+    }
+
+    private String promptMessageOneFeatureSelect() {
+        return promptMessageOneFeatureSelect(BasicConstants.SINGLE_FEATURE_BRANCH);
+    }
+
+    private String promptMessageOneFeatureSelect(String featureBranch) {
+        return MessageFormat.format(PROMPT_MESSAGE_ONE_FEATURE_SELECT_TEMPLATE, featureBranch);
     }
 
     @Test
@@ -322,8 +387,11 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL);
         // verify
-        assertGitFlowFailureException(result, "'mvn flow:feature-rebase' can be executed only on a feature branch.",
-                "Please switch to a feature branch first.", "'git checkout BRANCH' to switch to the feature branch");
+        assertGitFlowFailureException(result,
+                "In non-interactive mode 'mvn flow:feature-rebase' can be executed only on a feature branch.",
+                "Please switch to a feature branch first or run in interactive mode.",
+                "'git checkout BRANCH' to switch to the feature branch",
+                "'mvn flow:feature-rebase' to run in interactive mode");
         assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.version);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MASTER_TESTFILE);
@@ -2376,6 +2444,79 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
             assertEquals(1, modules.size());
             assertEquals("module2", modules.get(0));
         }
+    }
+
+    @Test
+    public void testExecuteWithBranchNameCurrentFeature() throws Exception {
+        // set up
+        prepareFeatureBranchDivergentFromMaster();
+        Properties userProperties = new Properties();
+        userProperties.setProperty("branchName", FEATURE_BRANCH);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertFeatureRebasedCorrectly();
+    }
+
+    @Test
+    public void testExecuteWithBranchNameNotCurrentFeature() throws Exception {
+        // set up
+        prepareFeatureBranchDivergentFromMaster();
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("branchName", FEATURE_BRANCH);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertFeatureRebasedCorrectly();
+    }
+
+    @Test
+    public void testExecuteWithBranchNameNotFeature() throws Exception {
+        // set up
+        final String OTHER_BRANCH = "otherBranch";
+        Properties userProperties = new Properties();
+        userProperties.setProperty("branchName", OTHER_BRANCH);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        // verify
+        assertGitFlowFailureException(result,
+                "Branch '" + OTHER_BRANCH + "' defined in 'branchName' property is not a feature branch.",
+                "Please define a feature branch in order to proceed.");
+    }
+
+    @Test
+    public void testExecuteWithBranchNameNotExistingFeature() throws Exception {
+        // set up
+        final String NON_EXISTING_FEATURE_BRANCH = "feature/nonExisting";
+        Properties userProperties = new Properties();
+        userProperties.setProperty("branchName", NON_EXISTING_FEATURE_BRANCH);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        // verify
+        assertGitFlowFailureException(result,
+                "Feature branch '" + NON_EXISTING_FEATURE_BRANCH + "' defined in 'branchName' property doesn't exist.",
+                "Please define an existing feature branch in order to proceed.");
+    }
+
+    @Test
+    public void testExecuteWithBranchNameNotExistingLocalFeature() throws Exception {
+        // set up
+        prepareFeatureBranchDivergentFromMaster();
+        git.push(repositorySet);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        git.deleteLocalAndRemoteTrackingBranches(repositorySet, FEATURE_BRANCH);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("branchName", FEATURE_BRANCH);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertFeatureRebasedCorrectly();
     }
 
 }

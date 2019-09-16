@@ -2454,6 +2454,44 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
+     * Ensure that the branch exists at all and the local branch is up to
+     * date.<br>
+     * If remote branch is ahead of local the local branch reference will be
+     * updated with <code>git update-ref</code>.<br>
+     * If local branch doesn't exist it will be created from the remote
+     * branch.<br>
+     * If local branch is ahead of remote nothing will happen.
+     * If local and remote branches diverge a {@link GitFlowFailureException}
+     * will be thrown.<br>
+     * If local and remote branches don't exist a
+     * {@link GitFlowFailureException} will be thrown.<br>
+     *
+     * @param branchName
+     *            the name of the branch to be checked
+     * @param divergeErrorInfo
+     *            the messate to be used in exception if local and remote
+     *            branches diverge
+     * @param branchNotExistingErrorMessage
+     *            the message to be used in exception if neither local nor
+     *            remote branch exists
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitEnsureBranchExistsAndLocalBranchIsUpToDate(String branchName, GitFlowFailureInfo divergeErrorInfo,
+            GitFlowFailureInfo branchNotExistingErrorMessage)
+            throws MojoFailureException, CommandLineException {
+        if (!gitLocalOrRemoteBranchesExist(branchName)) {
+            if (branchNotExistingErrorMessage != null) {
+                throw new GitFlowFailureException(replacePlaceholders(branchNotExistingErrorMessage, branchName));
+            }
+            throw new GitFlowFailureException(
+                    createBranchNotExistingError("Local and remote branch '" + branchName + "'", null));
+        } else {
+            gitEnsureLocalBranchIsUpToDateIfExists(branchName, divergeErrorInfo);
+        }
+    }
+
+    /**
      * Ensure that the local and remote branches are on the same state.<br>
      * If local branch has not pushed commits or remote branch doesn't exist a
      * {@link GitFlowFailureException} will be thrown.<br>
