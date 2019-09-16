@@ -1701,4 +1701,72 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertTestfileContentModified(repositorySet);
     }
 
+    @Test
+    public void testExecuteWithBranchNameCurrentFeature() throws Exception {
+        // set up
+        addTwoCommitsToFeatureBranch();
+        userProperties.setProperty("branchName", FEATURE_BRANCH);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertCleanedUpCorrectly();
+    }
+
+    @Test
+    public void testExecuteWithBranchNameNotCurrentFeature() throws Exception {
+        // set up
+        addTwoCommitsToFeatureBranch();
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        userProperties.setProperty("branchName", FEATURE_BRANCH);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertCleanedUpCorrectly();
+    }
+
+    @Test
+    public void testExecuteWithBranchNameNotFeature() throws Exception {
+        // set up
+        final String OTHER_BRANCH = "otherBranch";
+        userProperties.setProperty("branchName", OTHER_BRANCH);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        // verify
+        assertGitFlowFailureException(result,
+                "Branch '" + OTHER_BRANCH + "' defined in 'branchName' property is not a feature branch.",
+                "Please define a feature branch in order to proceed.");
+    }
+
+    @Test
+    public void testExecuteWithBranchNameNotExistingFeature() throws Exception {
+        // set up
+        final String NON_EXISTING_FEATURE_BRANCH = BasicConstants.SINGLE_FEATURE_BRANCH_PREFIX + "nonExisting";
+        userProperties.setProperty("branchName", NON_EXISTING_FEATURE_BRANCH);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        // verify
+        assertGitFlowFailureException(result,
+                "Feature branch '" + NON_EXISTING_FEATURE_BRANCH + "' defined in 'branchName' property doesn't exist.",
+                "Please define an existing feature branch in order to proceed.");
+    }
+
+    @Test
+    public void testExecuteWithBranchNameNotExistingLocalFeature() throws Exception {
+        // set up
+        addTwoCommitsToFeatureBranch();
+        git.push(repositorySet);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        git.deleteLocalAndRemoteTrackingBranches(repositorySet, FEATURE_BRANCH);
+        userProperties.setProperty("branchName", FEATURE_BRANCH);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertCleanedUpCorrectly();
+    }
+
 }

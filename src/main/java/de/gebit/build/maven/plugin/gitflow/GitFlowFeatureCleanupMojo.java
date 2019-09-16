@@ -21,6 +21,7 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
@@ -87,6 +88,14 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
     @Parameter(property = "squashMessage", readonly = true)
     private String squashMessage;
 
+    /**
+     * The feature branch to be rebased.
+     *
+     * @since 2.2.0
+     */
+    @Parameter(property = "branchName", readonly = true)
+    protected String branchName;
+
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
@@ -110,36 +119,53 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
             if (featureBranchName == null) {
                 // check uncommitted changes
                 checkUncommittedChanges();
-
-                List<String> branches = gitAllFeatureBranches();
-                if (branches.isEmpty()) {
-                    throw new GitFlowFailureException("There are no feature branches in your repository.",
-                            "Please start a feature first.", "'mvn flow:feature-start'");
-                }
                 String currentBranch = gitCurrentBranch();
-                boolean isOnFeatureBranch = branches.contains(currentBranch);
-                if (!isOnFeatureBranch) {
-                    featureBranchName = getPrompter().promptToSelectFromOrderedList("Feature branches:",
-                            "Choose feature branch to clean up", branches,
-                            new GitFlowFailureInfo(
-                                    "In non-interactive mode 'mvn flow:feature-rebase-cleanup' can be executed only on "
-                                            + "a feature branch.",
-                                    "Please switch to a feature branch first or run in interactive mode.",
-                                    "'git checkout BRANCH' to switch to the feature branch",
-                                    "'mvn flow:feature-rebase-cleanup' to run in interactive mode"));
-                    getLog().info("Cleaning up feature on selected feature branch: " + featureBranchName);
-                    gitEnsureLocalBranchIsUpToDateIfExists(featureBranchName, new GitFlowFailureInfo(
-                            "Remote and local feature branches '" + featureBranchName + "' diverge.",
-                            "Rebase or merge the changes in local feature branch '" + featureBranchName + "' first.",
-                            "'git rebase'"));
+                if (StringUtils.isNotEmpty(branchName)) {
+                    featureBranchName = gitLocalRef(branchName);
+                    if (!isFeatureBranch(featureBranchName)) {
+                        throw new GitFlowFailureException(
+                                "Branch '" + branchName + "' defined in 'branchName' property is not a feature branch.",
+                                "Please define a feature branch in order to proceed.");
+                    }
+                    getLog().info("Clean-up feature on specified feature branch: " + featureBranchName);
+                    gitEnsureBranchExistsAndLocalBranchIsUpToDate(featureBranchName,
+                            new GitFlowFailureInfo("Remote and local feature branches '{0}' diverge.",
+                                    "Rebase or merge the changes in local feature branch '{0}' first.", "'git rebase'"),
+                            createBranchNotExistingError(
+                                    "Feature branch '" + branchName + "' defined in 'branchName' property",
+                                    "Please define an existing feature branch in order to proceed."));
+                } else {
+                    List<String> branches = gitAllFeatureBranches();
+                    if (branches.isEmpty()) {
+                        throw new GitFlowFailureException("There are no feature branches in your repository.",
+                                "Please start a feature first.", "'mvn flow:feature-start'");
+                    }
+                    boolean isOnFeatureBranch = branches.contains(currentBranch);
+                    if (!isOnFeatureBranch) {
+                        featureBranchName = getPrompter().promptToSelectFromOrderedList("Feature branches:",
+                                "Choose feature branch to clean up", branches,
+                                new GitFlowFailureInfo(
+                                        "In non-interactive mode 'mvn flow:feature-rebase-cleanup' can be executed only on "
+                                                + "a feature branch.",
+                                        "Please switch to a feature branch first or run in interactive mode.",
+                                        "'git checkout BRANCH' to switch to the feature branch",
+                                        "'mvn flow:feature-rebase-cleanup' to run in interactive mode"));
+                        getLog().info("Cleaning up feature on selected feature branch: " + featureBranchName);
+                        gitEnsureLocalBranchIsUpToDateIfExists(featureBranchName, new GitFlowFailureInfo(
+                                "Remote and local feature branches '" + featureBranchName + "' diverge.",
+                                "Rebase or merge the changes in local feature branch '" + featureBranchName + "' first.",
+                                "'git rebase'"));
+                    } else {
+                        featureBranchName = currentBranch;
+                        getLog().info("Cleaning up feature on current feature branch: " + featureBranchName);
+                        gitEnsureCurrentLocalBranchIsUpToDate(new GitFlowFailureInfo(
+                                "Remote and local feature branches '{0}' diverge.",
+                                "Rebase or merge the changes in local feature branch '{0}' first.", "'git rebase'"));
+                    }
+                }
+                if (!currentBranch.equals(featureBranchName)) {
                     getMavenLog().info("Switching to feature branch '" + featureBranchName + "'");
                     gitCheckout(featureBranchName);
-                } else {
-                    featureBranchName = currentBranch;
-                    getLog().info("Cleaning up feature on current feature branch: " + featureBranchName);
-                    gitEnsureCurrentLocalBranchIsUpToDate(new GitFlowFailureInfo(
-                            "Remote and local feature branches '{0}' diverge.",
-                            "Rebase or merge the changes in local feature branch '{0}' first.", "'git rebase'"));
                 }
 
                 getMavenLog().info("Determining start commit for rebase clean-up");
