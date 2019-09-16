@@ -14,13 +14,14 @@ If there are multiple developers working with the feature branch, everybody will
 stop working while the rebase is in process.
 
 If makes sense to cleanup the commits in the feature branch before rebasing, as with a lower number of commits there
-will be less problems when rebasing. Use `mvn flow:feature-cleanup` to do so.
+will be less problems when rebasing. Use `mvn flow:feature-rebase-cleanup` to do so.
 
 It is possible that an automatic rebase is not pssible. One of the main reasons are modification in the `pom.xml` of a
 module in the upstream branch. But also other conflicting modifications may result in a (temporary) abort of the rebase
 operation.
 
 In this case you will need to manually resolve the conflict:
+
 * Use `git status' to get an overview which files do have conflicts
 * Open the conflicting files in an editor and resolve the conflict (look for the typical `<<<<<<` markers!)
 * Add the change to the index using `git add XXXX`
@@ -49,6 +50,7 @@ After merging you are ready to finish a feature. Also, all your team members wil
 update the feature branch.
 
 However, there are a lot of downsides to using merges:
+
 * When a branch has merge commits, you cannot rebase anymore. This means you cannot edit the commit messages or clean up your branch before it is merged into production
 * The history becomes very messed up (think of London Tube Map)
 * Adjustments needed due to changes in the master are done in the merge commits, so the "real" commits introducing a change are retrospectively wrong and would not apply
