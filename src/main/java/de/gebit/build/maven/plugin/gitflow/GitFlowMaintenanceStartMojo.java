@@ -241,14 +241,11 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
         // git checkout -b maintenance/... master
         gitCreateAndCheckout(maintenanceBranch, baseName);
 
-        if (!currentVersion.equals(branchFirstVersion)) {
+        if (versionless || !currentVersion.equals(branchFirstVersion)) {
             getMavenLog()
                     .info("Setting first version '" + branchFirstVersion + "' for project on maintenance branch...");
             mvnSetVersions(branchFirstVersion, GitFlowAction.MAINTENANCE_START, "On maintenance branch: ",
-                    maintenanceBranch);
-            if (executeGitHasUncommitted()) {
-                gitCommit(commitMessages.getMaintenanceStartMessage());
-            }
+                    maintenanceBranch, commitMessages.getMaintenanceStartMessage());
         }
 
         if (pushRemote) {

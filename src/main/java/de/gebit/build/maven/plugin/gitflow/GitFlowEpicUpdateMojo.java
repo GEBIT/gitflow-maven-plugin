@@ -425,11 +425,9 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
                 boolean sameBaseVersion = Objects.equals(baseVersion, prevBaseVersion);
                 getMavenLog()
                         .info("- setting epic version '" + version + "' for project on branch prepared for rebase");
-                mvnSetVersions(version, GitFlowAction.EPIC_UPDATE, "On epic branch: ", epicBranch, sameBaseVersion,
-                        epicBranch);
                 String epicStartMessage = getEpicStartCommitMessage(epicBranch);
-                gitCommit(epicStartMessage);
-                versionChangeCommit = getCurrentCommit();
+                versionChangeCommit = mvnSetVersions(version, GitFlowAction.EPIC_UPDATE, "On epic branch: ", epicBranch, sameBaseVersion,
+                        epicBranch, epicStartMessage);
                 gitSetBranchLocalConfig(epicBranch, "newStartCommitMessage", epicStartMessage);
                 gitSetBranchLocalConfig(epicBranch, "newVersionChangeCommit", versionChangeCommit);
             } else {

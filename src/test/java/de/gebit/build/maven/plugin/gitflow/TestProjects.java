@@ -19,6 +19,7 @@ import java.util.Properties;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.maven.cli.internal.extension.model.CoreExtension;
 import org.codehaus.plexus.components.interactivity.Prompter;
 import org.eclipse.jgit.api.CreateBranchCommand.SetupUpstreamMode;
 import org.eclipse.jgit.api.RmCommand;
@@ -85,6 +86,18 @@ public class TestProjects {
     public static final TestProjectData TYCHO_PROJECT = new TestProjectData("tycho-project", "1.2.3.4-SNAPSHOT",
             "GFTST");
 
+    /**
+     * The directory of the versionless test project.
+     */
+    public static final TestProjectData VERSIONLESS_PROJECT = new TestProjectData("versionless-project",
+            "1.2.3-SNAPSHOT", "GFTST", "gitflow-tests", "de.gebit.build.maven", "gebit-build-extension", "1.1.0-I20");
+    
+    /**
+     * The directory of the versionless test project with tags.
+     */
+    public static final TestProjectData VERSIONLESS_TAG_PROJECT = new TestProjectData("versionless-tag-project",
+            "2.0.0-SNAPSHOT", "GFTST", "gitflow-tests", "de.gebit.build.maven", "gebit-build-extension", "1.1.0-I20");
+
     public static final String PROFILE_SET_VERSION_WITHOUT_ADDITIONAL_VERSION_COMMANDS = "setVersionWithoutAdditionalVersionCommands";
 
     public static final String PROFILE_SET_VERSION_ADDITIONAL_VERSION_COMMAND_WITHOUT_DEFAULT = "setVersionAdditionalVersionCommandWithoutDefault";
@@ -113,12 +126,20 @@ public class TestProjects {
         public final String nextSnepshotVersion;
         public final String jiraProject;
         public final String buildName;
+        public final String extensionGroupId;
+        public final String extensionArtifactId;
+        public final String extensionVersion;
 
         public TestProjectData(String aProjectName, String aVersion, String aJiraProject) {
             this(aProjectName, aVersion, aJiraProject, "gitflow-tests");
         }
 
         public TestProjectData(String aProjectName, String aVersion, String aJiraProject, String aBuildName) {
+            this (aProjectName, aVersion, aJiraProject, aBuildName, null, null, null);
+        }
+
+        public TestProjectData(String aProjectName, String aVersion, String aJiraProject, String aBuildName,
+                String anExtensionGroupId, String anExtensionArtifactId, String anExtensionVersion) {
             basedir = getProjectBasedir(aProjectName);
             artifactId = aProjectName;
             version = aVersion;
@@ -134,6 +155,9 @@ public class TestProjects {
             nextSnepshotVersion = nextReleaseVersion + "-SNAPSHOT";
             jiraProject = aJiraProject;
             buildName = aBuildName;
+            extensionGroupId = anExtensionGroupId;
+            extensionArtifactId = anExtensionArtifactId;
+            extensionVersion = anExtensionVersion;
         }
 
     }
@@ -144,6 +168,8 @@ public class TestProjects {
         }
         prepareRepository(gitRepoDir, BASIC);
         prepareRepository(gitRepoDir, WITH_UPSTREAM);
+        prepareRepository(gitRepoDir, VERSIONLESS_PROJECT);
+        prepareRepository(gitRepoDir, VERSIONLESS_TAG_PROJECT);
     }
 
     private static void prepareRepository(File repoDir, TestProjectData project) throws Exception {
@@ -157,7 +183,7 @@ public class TestProjects {
             long ms = System.currentTimeMillis();
             GitExecution git = new GitExecution(repoDir.getAbsoluteFile(), null);
             try (RepositorySet repositorySet = git.createGitRepositorySet(project.basedir)) {
-                MyTestCase tc = new MyTestCase();
+                MyTestCase tc = new MyTestCase(project);
                 try {
                     tc.setUpAbstractGitFlowMojoTestCase();
                     initRepository(project, git, repositorySet, tc);
@@ -197,13 +223,29 @@ public class TestProjects {
     private static void initRepository(TestProjectData project, GitExecution git, RepositorySet repositorySet,
             MyTestCase testCase) throws Exception {
         if (project == BASIC) {
-            initBasicRepository(git, repositorySet, testCase);
+            initBasicRepository(git, repositorySet, testCase, false);
         } else if (project == WITH_UPSTREAM) {
             initUpstreamVersionRepository(git, repositorySet, testCase);
+        } else if (project == VERSIONLESS_PROJECT) {
+            initVersionlessRepository(git, repositorySet, testCase);
+        } else if (project == VERSIONLESS_TAG_PROJECT) {
+            initVersionlessWithTagRepository(git, repositorySet, testCase);
         }
     }
 
-    private static void initBasicRepository(GitExecution git, RepositorySet repositorySet, MyTestCase testCase)
+    private static void initVersionlessRepository(GitExecution git, RepositorySet repositorySet, MyTestCase testCase)
+            throws Exception {
+        ExecutorHelper.executeSetVersion(testCase, repositorySet, "1.2.3-SNAPSHOT");
+        initBasicRepository(git, repositorySet, testCase, false);
+    }
+
+    private static void initVersionlessWithTagRepository(GitExecution git, RepositorySet repositorySet, MyTestCase testCase)
+            throws Exception {
+        ExecutorHelper.executeSetVersion(testCase, repositorySet, "1.2.3-SNAPSHOT");
+        initBasicRepository(git, repositorySet, testCase, true);
+    }
+
+    private static void initBasicRepository(GitExecution git, RepositorySet repositorySet, MyTestCase testCase, boolean avoidDuplicateVersions)
             throws Exception {
         git.createBranch(repositorySet, BasicConstants.PRODUCTION_BRANCH);
         git.push(repositorySet);
@@ -253,26 +295,28 @@ public class TestProjects {
                 props("flow.skipFeatureVersion", "true"));
         git.switchToBranch(repositorySet, "master");
 
-        ExecutorHelper.executeEpicStart(testCase, repositorySet, BasicConstants.EPIC_WITH_NEW_VERSION_NAME);
-        ExecutorHelper.executeFeatureStart(testCase, repositorySet,
-                BasicConstants.FEATURE_ON_EPIC_WITH_NEW_VERSION_NAME);
-        git.switchToBranch(repositorySet, BasicConstants.EPIC_WITH_NEW_VERSION_BRANCH);
-        ExecutorHelper.executeSetVersion(testCase, repositorySet, BasicConstants.EPIC_WITH_NEW_VERSION_VERSION);
-        git.commitAll(repositorySet, BasicConstants.EPIC_WITH_NEW_VERSION_UPGRADE_COMMIT_MESSAGE);
-        git.push(repositorySet);
-        git.switchToBranch(repositorySet, "master");
+        if (!avoidDuplicateVersions) {
+            ExecutorHelper.executeEpicStart(testCase, repositorySet, BasicConstants.EPIC_WITH_NEW_VERSION_NAME);
+            ExecutorHelper.executeFeatureStart(testCase, repositorySet,
+                    BasicConstants.FEATURE_ON_EPIC_WITH_NEW_VERSION_NAME);
+            git.switchToBranch(repositorySet, BasicConstants.EPIC_WITH_NEW_VERSION_BRANCH);
+            ExecutorHelper.executeSetVersion(testCase, repositorySet, BasicConstants.EPIC_WITH_NEW_VERSION_VERSION);
+            git.commitAll(repositorySet, BasicConstants.EPIC_WITH_NEW_VERSION_UPGRADE_COMMIT_MESSAGE);
+            git.push(repositorySet);
+            git.switchToBranch(repositorySet, "master");
 
-        ExecutorHelper.executeEpicStart(testCase, repositorySet, BasicConstants.SINGLE_EPIC_NAME,
-                props("flow.epicBranchPrefix", BasicConstants.SINGLE_EPIC_BRANCH_PREFIX));
-        git.switchToBranch(repositorySet, "master");
+            ExecutorHelper.executeEpicStart(testCase, repositorySet, BasicConstants.SINGLE_EPIC_NAME,
+                    props("flow.epicBranchPrefix", BasicConstants.SINGLE_EPIC_BRANCH_PREFIX));
+            git.switchToBranch(repositorySet, "master");
 
-        ExecutorHelper.executeEpicStart(testCase, repositorySet, BasicConstants.FIRST_EPIC_NAME,
-                props("flow.epicBranchPrefix", BasicConstants.TWO_EPIC_BRANCHES_PREFIX));
-        git.switchToBranch(repositorySet, "master");
+            ExecutorHelper.executeEpicStart(testCase, repositorySet, BasicConstants.FIRST_EPIC_NAME,
+                    props("flow.epicBranchPrefix", BasicConstants.TWO_EPIC_BRANCHES_PREFIX));
+            git.switchToBranch(repositorySet, "master");
 
-        ExecutorHelper.executeEpicStart(testCase, repositorySet, BasicConstants.SECOND_EPIC_NAME,
-                props("flow.epicBranchPrefix", BasicConstants.TWO_EPIC_BRANCHES_PREFIX));
-        git.switchToBranch(repositorySet, "master");
+            ExecutorHelper.executeEpicStart(testCase, repositorySet, BasicConstants.SECOND_EPIC_NAME,
+                    props("flow.epicBranchPrefix", BasicConstants.TWO_EPIC_BRANCHES_PREFIX));
+            git.switchToBranch(repositorySet, "master");
+        }
 
         // maintenance branch with feature and epic branches
         ExecutorHelper.executeMaintenanceStart(testCase, repositorySet, BasicConstants.EXISTING_MAINTENANCE_VERSION,
@@ -311,18 +355,20 @@ public class TestProjects {
         git.switchToBranch(repositorySet, "master");
 
         // maintenance without version
-        ExecutorHelper.executeMaintenanceStart(testCase, repositorySet,
-                BasicConstants.MAINTENANCE_WITHOUT_VERSION_VERSION, TestProjects.BASIC.version);
-        // epic on maintenance without version
-        ExecutorHelper.executeEpicStart(testCase, repositorySet,
-                BasicConstants.EPIC_ON_MAINTENANCE_WITHOUT_VERSION_NAME,
-                props("flow.epicBranchPrefix", BasicConstants.EPIC_ON_MAINTENANCE_WITHOUT_VERSION_BRANCH_PREFIX));
-        // feature on maintenance without version
-        git.switchToBranch(repositorySet, BasicConstants.MAINTENANCE_WITHOUT_VERSION_BRANCH);
-        ExecutorHelper.executeFeatureStart(testCase, repositorySet,
-                BasicConstants.FEATURE_ON_MAINTENANCE_WITHOUT_VERSION_NAME,
-                props("flow.featureBranchPrefix", BasicConstants.FEATURE_ON_MAINTENANCE_WITHOUT_VERSION_BRANCH_PREFIX));
-        git.switchToBranch(repositorySet, "master");
+        if (!avoidDuplicateVersions) {
+            ExecutorHelper.executeMaintenanceStart(testCase, repositorySet,
+                    BasicConstants.MAINTENANCE_WITHOUT_VERSION_VERSION, TestProjects.BASIC.version);
+            // epic on maintenance without version
+            ExecutorHelper.executeEpicStart(testCase, repositorySet,
+                    BasicConstants.EPIC_ON_MAINTENANCE_WITHOUT_VERSION_NAME,
+                    props("flow.epicBranchPrefix", BasicConstants.EPIC_ON_MAINTENANCE_WITHOUT_VERSION_BRANCH_PREFIX));
+            // feature on maintenance without version
+            git.switchToBranch(repositorySet, BasicConstants.MAINTENANCE_WITHOUT_VERSION_BRANCH);
+            ExecutorHelper.executeFeatureStart(testCase, repositorySet,
+                    BasicConstants.FEATURE_ON_MAINTENANCE_WITHOUT_VERSION_NAME,
+                    props("flow.featureBranchPrefix", BasicConstants.FEATURE_ON_MAINTENANCE_WITHOUT_VERSION_BRANCH_PREFIX));
+            git.switchToBranch(repositorySet, "master");
+        }
 
         // alternative master with one commit
         git.createBranch(repositorySet, BasicConstants.MASTER_WITH_COMMIT_BRANCH);
@@ -354,22 +400,24 @@ public class TestProjects {
         git.switchToBranch(repositorySet, "master");
 
         // release branch
-        ExecutorHelper.executeReleaseStart(testCase, repositorySet, BasicConstants.EXISTING_RELEASE_VERSION,
-                BASIC.releaseVersion);
-        git.switchToBranch(repositorySet, "master");
-        ExecutorHelper.executeReleaseStart(testCase, repositorySet, BasicConstants.SINGLE_RELEASE_VERSION,
-                BASIC.releaseVersion, props("flow.releaseBranchPrefix", BasicConstants.SINGLE_RELEASE_BRANCH_PREFIX));
-        git.switchToBranch(repositorySet, "master");
-        ExecutorHelper.executeReleaseStart(testCase, repositorySet, BasicConstants.RELEASE_WITH_PRODUCTION_VERSION,
-                BASIC.releaseVersion,
-                props("flow.noProduction", "false", "flow.productionBranch", BasicConstants.PRODUCTION_BRANCH));
-        git.switchToBranch(repositorySet, "master");
-        ExecutorHelper.executeReleaseStart(testCase, repositorySet,
-                BasicConstants.RELEASE_WITH_MISSING_PRODUCTION_VERSION, BASIC.releaseVersion,
-                props("flow.noProduction", "false", "flow.productionBranch", BasicConstants.MISSING_PRODUCTION_BRANCH));
-        git.switchToBranch(repositorySet, "master");
+        if (!avoidDuplicateVersions) {
+            ExecutorHelper.executeReleaseStart(testCase, repositorySet, BasicConstants.EXISTING_RELEASE_VERSION,
+                    BASIC.releaseVersion);
+            git.switchToBranch(repositorySet, "master");
+            ExecutorHelper.executeReleaseStart(testCase, repositorySet, BasicConstants.SINGLE_RELEASE_VERSION,
+                    BASIC.releaseVersion, props("flow.releaseBranchPrefix", BasicConstants.SINGLE_RELEASE_BRANCH_PREFIX));
+            git.switchToBranch(repositorySet, "master");
+            ExecutorHelper.executeReleaseStart(testCase, repositorySet, BasicConstants.RELEASE_WITH_PRODUCTION_VERSION,
+                    BASIC.releaseVersion,
+                    props("flow.noProduction", "false", "flow.productionBranch", BasicConstants.PRODUCTION_BRANCH));
+            git.switchToBranch(repositorySet, "master");
+            ExecutorHelper.executeReleaseStart(testCase, repositorySet,
+                    BasicConstants.RELEASE_WITH_MISSING_PRODUCTION_VERSION, BASIC.releaseVersion,
+                    props("flow.noProduction", "false", "flow.productionBranch", BasicConstants.MISSING_PRODUCTION_BRANCH));
+            git.switchToBranch(repositorySet, "master");
+        }
 
-        // finalize: empty dummy branch for initail checkout (to avoid CR-LF
+        // finalize: empty dummy branch for initial checkout (to avoid CR-LF
         // conflicts)
         git.createOrphanBranch(repositorySet, "dummy", "dummy branch for parking working directory");
         git.switchToBranch(repositorySet, "dummy");
@@ -463,7 +511,21 @@ public class TestProjects {
     }
 
     private static class MyTestCase extends AbstractGitFlowMojoTestCase {
-        // Dummy
+        TestProjectData data;
+        public MyTestCase(TestProjectData data) {
+            this.data = data;
+        }
+        @Override
+        protected CoreExtension getCoreExtensionDescriptor() {
+            if (data.extensionGroupId != null && data.extensionArtifactId != null && data.extensionVersion != null) {
+                CoreExtension extension = new CoreExtension();
+                extension.setGroupId(data.extensionGroupId);
+                extension.setArtifactId(data.extensionArtifactId);
+                extension.setVersion(data.extensionVersion);
+                return extension;
+            }
+            return null;
+        }
     }
 
     //
@@ -618,6 +680,8 @@ public class TestProjects {
         public static final String EPIC_WITH_NEW_VERSION_NAME = EPIC_WITH_NEW_VERSION_ISSUE + "-with-new-version";
         public static final String EPIC_WITH_NEW_VERSION_BRANCH = "epic/" + EPIC_WITH_NEW_VERSION_NAME;
         public static final String EPIC_WITH_NEW_VERSION_VERSION = TestProjects.BASIC.releaseVersion + "-"
+                + EPIC_WITH_NEW_VERSION_ISSUE + "-SNAPSHOT";
+        public static final String EPIC_WITH_NEW_VERSION_ON_MAINTENANCE_VERSION = TestProjects.BASIC.maintenanceVersion + "-"
                 + EPIC_WITH_NEW_VERSION_ISSUE + "-SNAPSHOT";
         public static final String EPIC_WITH_NEW_VERSION_COMMIT_MESSAGE = EPIC_WITH_NEW_VERSION_ISSUE
                 + ": updating versions for epic branch";

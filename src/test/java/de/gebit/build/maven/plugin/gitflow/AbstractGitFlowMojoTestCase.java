@@ -15,18 +15,24 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
+import java.io.BufferedInputStream;
 import java.io.Closeable;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.FileUtils;
@@ -37,24 +43,34 @@ import org.apache.maven.cli.ExtCliRequest;
 import org.apache.maven.cli.MavenCli;
 import org.apache.maven.cli.configuration.ConfigurationProcessor;
 import org.apache.maven.cli.configuration.SettingsXmlConfigurationProcessor;
+import org.apache.maven.cli.internal.BootstrapCoreExtensionManager;
+import org.apache.maven.cli.internal.extension.model.CoreExtension;
+import org.apache.maven.cli.internal.extension.model.io.xpp3.CoreExtensionsXpp3Reader;
 import org.apache.maven.execution.MavenExecutionRequest;
 import org.apache.maven.execution.MavenExecutionRequestPopulator;
 import org.apache.maven.execution.MavenExecutionResult;
+import org.apache.maven.execution.scope.internal.MojoExecutionScopeModule;
+import org.apache.maven.extension.internal.CoreExports;
+import org.apache.maven.extension.internal.CoreExtensionEntry;
 import org.apache.maven.lifecycle.LifecycleExecutionException;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.building.ModelProcessor;
 import org.apache.maven.model.io.ModelParseException;
 import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
 import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.session.scope.internal.SessionScopeModule;
 import org.codehaus.plexus.ContainerConfiguration;
 import org.codehaus.plexus.DefaultContainerConfiguration;
 import org.codehaus.plexus.DefaultPlexusContainer;
 import org.codehaus.plexus.PlexusConstants;
 import org.codehaus.plexus.PlexusContainer;
+import org.codehaus.plexus.PlexusContainerException;
 import org.codehaus.plexus.classworlds.ClassWorld;
 import org.codehaus.plexus.classworlds.realm.ClassRealm;
+import org.codehaus.plexus.classworlds.realm.DuplicateRealmException;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
 import org.codehaus.plexus.components.interactivity.Prompter;
+import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.repository.WorkspaceReader;
 import org.eclipse.aether.repository.WorkspaceRepository;
@@ -63,6 +79,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.slf4j.ILoggerFactory;
+import org.slf4j.LoggerFactory;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Module;
@@ -145,10 +163,30 @@ public abstract class AbstractGitFlowMojoTestCase {
         stopPlexusContainer();
     }
 
-    private void startPlexusContainer() throws Exception {
+    protected void startPlexusContainer() throws Exception {
         classWorld = new ClassWorld(PLEXUS_CORE_REALM_ID, Thread.currentThread().getContextClassLoader());
-        ContainerConfiguration cc = new DefaultContainerConfiguration().setClassWorld(classWorld)
-                .setClassPathScanning(PlexusConstants.SCANNING_INDEX).setAutoWiring(true).setName("maven");
+        ClassRealm coreRealm = classWorld.getRealm(PLEXUS_CORE_REALM_ID);
+
+        CoreExtensionEntry coreEntry = CoreExtensionEntry.discoverFrom( coreRealm );
+        CoreExtensionEntry extension =
+            loadCoreExtension( coreRealm, coreEntry.getExportedArtifacts() );
+
+        ClassRealm containerRealm = setupContainerRealm( classWorld, coreRealm, extension );
+
+        ContainerConfiguration containerConf = new DefaultContainerConfiguration().setClassWorld(classWorld)
+                .setRealm(containerRealm).setClassPathScanning(PlexusConstants.SCANNING_INDEX).setAutoWiring(true)
+                .setJSR250Lifecycle(true).setName("maven");
+
+        Set<String> exportedArtifacts = new HashSet<String>( coreEntry.getExportedArtifacts() );
+        Set<String> exportedPackages = new HashSet<String>( coreEntry.getExportedPackages() );
+        if ( extension != null )
+        {
+            exportedArtifacts.addAll( extension.getExportedArtifacts() );
+            exportedPackages.addAll( extension.getExportedPackages() );
+        }
+
+        final CoreExports exports = new CoreExports( containerRealm, exportedArtifacts, exportedPackages );
+
         prompter = new ControllablePrompter();
         Module module = new AbstractModule() {
 
@@ -168,7 +206,34 @@ public abstract class AbstractGitFlowMojoTestCase {
                 });
             }
         };
-        container = new DefaultPlexusContainer(cc, module);
+
+        DefaultPlexusContainer plexusContainer = new DefaultPlexusContainer( containerConf, module, new AbstractModule()
+        {
+            @Override
+            protected void configure()
+            {
+                bind( ILoggerFactory.class ).toInstance( LoggerFactory.getILoggerFactory() );
+                bind( CoreExports.class ).toInstance( exports );
+            }
+        } );
+
+
+        // NOTE: To avoid inconsistencies, we'll use the TCCL exclusively for lookups
+        plexusContainer.setLookupRealm( null );
+        ClassLoader originClassLoader = Thread.currentThread().getContextClassLoader();
+
+        try {
+            Thread.currentThread().setContextClassLoader( plexusContainer.getContainerRealm() );
+            if (extension != null)
+            {
+                plexusContainer.discoverComponents( extension.getClassRealm(), new SessionScopeModule( plexusContainer ),
+                                              new MojoExecutionScopeModule( plexusContainer ) );
+            }
+        } finally {
+            Thread.currentThread().setContextClassLoader( originClassLoader );
+        }
+
+        container = plexusContainer;
     }
 
     private void stopPlexusContainer() throws Exception {
@@ -523,11 +588,14 @@ public abstract class AbstractGitFlowMojoTestCase {
             String... activeProfiles) throws Exception {
         String pluginVersion = readPom(new File(".")).getVersion();
         String fullGoal = (goal.startsWith("#") ? goal.substring(1) : GOAL_PREFIX + ":" + goal);
+
         MavenExecutionRequest request = createMavenExecutionRequest(basedir, fullGoal, useProfileWithDefaults,
                 properties, pluginVersion, throwCommandLineExceptionOnCommandLineExecution, activeProfiles);
+
+        ClassLoader originClassLoader = Thread.currentThread().getContextClassLoader();
         request.setInteractiveMode(promptController != null);
         MavenExecutionResult result;
-        ClassLoader originClassLoader = Thread.currentThread().getContextClassLoader();
+        Thread.currentThread().setContextClassLoader(container.getContainerRealm());
         try {
             prompter.setController(promptController);
             Maven maven = container.lookup(Maven.class);
@@ -623,6 +691,54 @@ public abstract class AbstractGitFlowMojoTestCase {
         return request;
     }
 
+    private MavenExecutionRequest createMavenExecutionRequest(PlexusContainer container, final String pluginVersion) throws Exception {
+        Properties userProperties = new Properties();
+
+        MavenExecutionRequestPopulator executionRequestPopulator = container
+                .lookup(MavenExecutionRequestPopulator.class);
+        ExtCliRequest cliRequest = new ExtCliRequest(new String[] { "" });
+        cliRequest.setUserProperties(userProperties);
+        Map<String, ConfigurationProcessor> configurationProcessors = container.lookupMap(ConfigurationProcessor.class);
+        configurationProcessors.get(SettingsXmlConfigurationProcessor.HINT).process(cliRequest);
+        MavenExecutionRequest request = cliRequest.getRequest();
+        request.setSystemProperties(System.getProperties());
+        WorkspaceReader workspaceReader = new WorkspaceReader() {
+
+            WorkspaceRepository workspaceRepo = new WorkspaceRepository("ide", getClass());
+
+            @Override
+            public File findArtifact(Artifact aArtifact) {
+                if (aArtifact.getArtifactId().equals("gitflow-maven-plugin")) {
+                    if (aArtifact.getExtension().equals("pom")) {
+                        return new File("pom.xml");
+                    } else {
+                        return WorkspaceUtils.getWorkspaceClasspath();
+                    }
+                }
+                return null;
+            }
+
+            @Override
+            public List<String> findVersions(Artifact aArtifact) {
+                ArrayList<String> versions = new ArrayList<String>();
+                if (aArtifact.getArtifactId().equals("gitflow-maven-plugin")) {
+                    versions.add(pluginVersion);
+                }
+                return versions;
+            }
+
+            @Override
+            public WorkspaceRepository getRepository() {
+                return workspaceRepo;
+            }
+        };
+        request.setWorkspaceReader(workspaceReader);
+        request = executionRequestPopulator.populateDefaults(request);
+        request.setGoals(Arrays.asList(""));
+        request.setUserProperties(userProperties);
+        return request;
+    }
+
     private void addSpecialProperties(Properties userProperties, final String pluginVersion, File basedir) {
         File javaExecutable = WorkspaceUtils.getJavaExecutable();
         userProperties.setProperty(AbstractGitFlowMojo.USER_PROPERTY_KEY_CMD_MVN_EXECUTABLE,
@@ -668,6 +784,10 @@ public abstract class AbstractGitFlowMojoTestCase {
      *             if an error occurs while reading pom.xml file
      */
     protected Model readPom(File basedir) throws ComponentLookupException, ModelParseException, IOException {
+        return readPom(container, basedir);
+    }
+
+    protected static Model readPom(PlexusContainer container, File basedir) throws ComponentLookupException, ModelParseException, IOException {
         ModelProcessor modelProcessor = container.lookup(ModelProcessor.class);
         return modelProcessor.read(new File(basedir, "pom.xml"), null);
     }
@@ -1172,5 +1292,79 @@ public abstract class AbstractGitFlowMojoTestCase {
             modulePom.setValue("/project/parent/version", newVersion);
             modulePom.store();
         }
+    }
+
+    private CoreExtensionEntry loadCoreExtension(ClassRealm containerRealm, Set<String> providedArtifacts) {
+        try {
+            CoreExtension extension = getCoreExtensionDescriptor();
+            if (extension == null) {
+                return null;
+            }
+            ContainerConfiguration cc = new DefaultContainerConfiguration() //
+                    .setClassWorld(containerRealm.getWorld()) //
+                    .setRealm(containerRealm) //
+                    .setClassPathScanning(PlexusConstants.SCANNING_INDEX) //
+                    .setAutoWiring(true) //
+                    .setJSR250Lifecycle(true) //
+                    .setName("maven");
+
+            DefaultPlexusContainer container = new DefaultPlexusContainer(cc, new AbstractModule() {
+
+                @Override
+                protected void configure() {
+                    bind(ILoggerFactory.class).toInstance(LoggerFactory.getILoggerFactory());
+                }
+            });
+
+            try {
+                container.setLookupRealm(containerRealm);
+
+                BootstrapCoreExtensionManager resolver = container.lookup(BootstrapCoreExtensionManager.class);
+
+                String pluginVersion = readPom(container, new File(".")).getVersion();
+                MavenExecutionRequest mavenRequest = createMavenExecutionRequest(container, pluginVersion);
+                return resolver.loadCoreExtensions(mavenRequest, providedArtifacts, Collections.singletonList(extension)).get(0);
+            } finally {
+                container.dispose();
+            }
+        } catch (RuntimeException e) {
+            // runtime exceptions are most likely bugs in maven, let them bubble up to the
+            // user
+            throw e;
+        } catch (Exception e) {
+            // slf4jLogger.warn("Failed to read extensions descriptor " + extensionsFile +
+            // ": " + e.getMessage());
+        }
+        return null;
+    }
+
+    protected CoreExtension getCoreExtensionDescriptor() {
+        return null;
+    }
+
+
+    private static ClassRealm setupContainerRealm(ClassWorld classWorld, ClassRealm coreRealm, 
+                    CoreExtensionEntry extension) throws DuplicateRealmException, MalformedURLException {
+            if (extension != null) {
+                    ClassRealm extRealm = classWorld.newRealm("maven.ext", null);
+
+                    extRealm.setParentRealm(coreRealm);
+
+                    // TODO slf4jLogger.debug("Populating class realm " + extRealm.getId());
+
+                    Set<String> exportedPackages = extension.getExportedPackages();
+                    ClassRealm realm = extension.getClassRealm();
+                    for (String exportedPackage : exportedPackages) {
+                            extRealm.importFrom(realm, exportedPackage);
+                    }
+                    if (exportedPackages.isEmpty()) {
+                            // sisu uses realm imports to establish component visibility
+                            extRealm.importFrom(realm, realm.getId());
+                    }
+
+                    return extRealm;
+            }
+
+            return coreRealm;
     }
 }

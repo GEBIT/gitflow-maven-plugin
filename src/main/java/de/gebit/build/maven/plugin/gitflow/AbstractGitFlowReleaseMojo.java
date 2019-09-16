@@ -256,10 +256,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
 
             if (!version.equals(currentVersion)) {
                 getMavenLog().info("Setting release version '" + version + "' for project on release branch...");
-                mvnSetVersions(version, GitFlowAction.RELEASE_START, "On release branch: ");
-                if (executeGitHasUncommitted()) {
-                    gitCommit(commitMessages.getReleaseStartMessage());
-                }
+                mvnSetVersions(version, GitFlowAction.RELEASE_START, "On release branch: ", null, commitMessages.getReleaseStartMessage());
             }
 
             if (pushRemote && isPushReleaseBranch()) {

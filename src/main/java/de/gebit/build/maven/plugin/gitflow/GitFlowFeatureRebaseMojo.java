@@ -326,11 +326,9 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
                     boolean sameBaseVersion = Objects.equals(baseVersion, prevBaseVersion);
                     getMavenLog().info(
                             "- setting feature version '" + version + "' for project on branch prepared for rebase");
-                    mvnSetVersions(version, GitFlowAction.FEATURE_REBASE, "On feature branch: ", featureBranch,
-                            sameBaseVersion, featureBranch);
                     String featureStartMessage = getFeatureStartCommitMessage(featureBranch);
-                    gitCommit(featureStartMessage);
-                    versionChangeCommit = getCurrentCommit();
+                    versionChangeCommit = mvnSetVersions(version, GitFlowAction.FEATURE_REBASE, "On feature branch: ",
+                            featureBranch, sameBaseVersion, featureBranch, featureStartMessage);
                     gitSetBranchLocalConfig(featureBranch, "newStartCommitMessage", featureStartMessage);
                     gitSetBranchLocalConfig(featureBranch, "newVersionChangeCommit", versionChangeCommit);
                 } else {

@@ -47,6 +47,7 @@ import org.eclipse.jgit.lib.BranchConfig;
 import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.ObjectLoader;
+import org.eclipse.jgit.lib.ObjectReader;
 import org.eclipse.jgit.lib.ObjectStream;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
@@ -62,6 +63,7 @@ import org.eclipse.jgit.treewalk.TreeWalk;
 import org.eclipse.jgit.treewalk.filter.PathFilter;
 
 import com.google.common.base.Objects;
+import com.google.common.base.Strings;
 
 import de.gebit.build.maven.plugin.gitflow.TestProjects;
 import de.gebit.build.maven.plugin.gitflow.TestProjects.TestProjectData;
@@ -679,7 +681,12 @@ public class GitExecution {
      *             in case of an I/O error
      */
     public void createBranch(RepositorySet repositorySet, String aBranch) throws GitAPIException, IOException {
+        String version = getBranchCentralConfigValue(repositorySet, "branch-config",
+                currentBranch(repositorySet.getClonedRemoteRepoGit()), "version");
         switchToBranch(repositorySet.getLocalRepoGit(), aBranch, true);
+        if (version != null) {
+            setBranchCentralConfigValue(repositorySet, "branch-config", aBranch, "version", version);
+        }
     }
 
     public void createBranchFromRemote(RepositorySet repositorySet, String aBranch)
@@ -1108,6 +1115,46 @@ public class GitExecution {
             git.push().call();
         }
         git.checkout().setName(oldBranch).call();
+    }
+    
+    public String getBranchCentralConfigValue(RepositorySet repositorySet, String configBranch, String branch,
+            String configName) throws IOException, GitAPIException {
+        Git git = repositorySet.getClonedRemoteRepoGit();
+        git.fetch().call();
+
+        Repository repository = git.getRepository();
+        RevWalk revWalk = new RevWalk(repository);
+        ObjectId branchConfig = repository.resolve("origin/" + configBranch);
+        if (branchConfig != null && !Strings.isNullOrEmpty(branch)) {
+                RevCommit brachConfigCommit = revWalk.parseCommit(branchConfig);
+                try {
+                        TreeWalk treeWalk = TreeWalk.forPath(repository, branch, brachConfigCommit.getTree());
+                        if (treeWalk != null) {
+                                try {
+                                        ObjectId blobId = treeWalk.getObjectId(0);
+                                        ObjectReader objectReader = repository.newObjectReader();
+                                        try {
+                                                ObjectLoader objectLoader = objectReader.open(blobId);
+                                                Properties branchProps = new Properties();
+                                                ObjectStream stream = objectLoader.openStream();
+                                                try {
+                                                        branchProps.load(stream);
+                                                        return branchProps.getProperty(configName);
+                                                } finally {
+                                                        stream.close();
+                                                }
+                                        } finally {
+                                                objectReader.close();
+                                        }
+                                } finally {
+                                        treeWalk.close();
+                                }
+                        }
+                } finally {
+                        revWalk.close();
+                }
+        }
+        return null;
     }
 
     public void setBranchCentralConfigValue(RepositorySet repositorySet, String configBranch, String branch,

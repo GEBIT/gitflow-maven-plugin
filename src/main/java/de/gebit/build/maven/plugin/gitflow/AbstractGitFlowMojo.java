@@ -280,7 +280,10 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * <p>
      * When enabled please note that any changes to the version are immediatly pushed (as with any other 
      * <code>branch-config</code> changes. On the other hand there's no need to remove any tags and/or force pushing
-     * then if the version is moved, but that SHOULD never be the case anyways. 
+     * then if the version is moved, but that SHOULD never be the case anyways.
+     * <p>
+     * When not enabled please not that you cannot have two branches with the same version (tags need to be 
+     * unique) and that there can be ambiguous situations when starting multiple branches from a single commit. 
      *
      * @since 2.2.0
      */
@@ -1568,6 +1571,20 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         getLog().info("Committing changes.");
 
         executeGitCommand("commit", "-a", "-m", message);
+    }
+
+    /**
+     * Executes git commit -a -m --allow-empty.
+     *
+     * @param message
+     *            Commit message.
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected void gitCommitAllowEmpty(final String message) throws MojoFailureException, CommandLineException {
+        getLog().info("Committing changes.");
+        
+        executeGitCommand("commit", "-a", "--allow-empty", "-m", message);
     }
 
     /**
@@ -3369,12 +3386,17 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected void mvnSetVersions(final String version, GitFlowAction aGitFlowAction, String promptPrefix)
             throws MojoFailureException, CommandLineException {
-        mvnSetVersions(version, aGitFlowAction, promptPrefix, null, false, null);
+        mvnSetVersions(version, aGitFlowAction, promptPrefix, null, false, null, null);
     }
 
     protected void mvnSetVersions(final String version, GitFlowAction aGitFlowAction, String promptPrefix,
             String targetBranch) throws MojoFailureException, CommandLineException {
-        mvnSetVersions(version, aGitFlowAction, promptPrefix, null, false, targetBranch);
+        mvnSetVersions(version, aGitFlowAction, promptPrefix, null, false, targetBranch, null);
+    }
+    
+    protected String mvnSetVersions(final String version, GitFlowAction aGitFlowAction, String promptPrefix,
+            String targetBranch, String commitMessage) throws MojoFailureException, CommandLineException {
+        return mvnSetVersions(version, aGitFlowAction, promptPrefix, null, false, targetBranch, commitMessage);
     }
 
     /**
@@ -3491,13 +3513,17 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      *            <code>null</code>.
      * @param sameBaseVersion
      *            <code>true</code> if the version on base branch not changed.
+     * @param commitMessage
+     *            the commit message for the version change commit. <code>null</code> to not create a commit 
+     *            automatically
      * @param targetBranch
      *            The target branch for the gitflow action.
+     * @return commit id of the version change commit, <code>null</code> if not performed
      * @throws MojoFailureException
      * @throws CommandLineException
      */
-    protected void mvnSetVersions(final String version, GitFlowAction aGitFlowAction, String promptPrefix,
-            String branchWithAdditionalVersionInfo, boolean sameBaseVersion, String targetBranch)
+    protected String mvnSetVersions(final String version, GitFlowAction aGitFlowAction, String promptPrefix,
+            String branchWithAdditionalVersionInfo, boolean sameBaseVersion, String targetBranch, String commitMessage)
             throws MojoFailureException, CommandLineException {
         BranchCentralConfigChanges branchConfigChanges = new BranchCentralConfigChanges();
         String currentBranch = branchWithAdditionalVersionInfo;
@@ -3607,38 +3633,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         getLog().info("Updating version(s) to '" + version + "'.");
 
         if (versionless) {
-            if (versionlessPersist) {
-                String versionValue = version;
-                if (tychoBuild && ArtifactUtils.isSnapshot(version)) {
-                    versionValue = versionValue.replace("-" + Artifact.SNAPSHOT_VERSION, "");
-                }
-
-                if (versionlessByConfig) {
-                    getLog().info("Setting version to '" + versionValue + "' in branch-config");
-                    branchConfigChanges.set(currentBranch, BranchConfigKeys.VERSION, versionValue);
-                } else {
-                    String versionTag = versionlessTagPrefix + versionValue;
-                    if (gitTagExists(versionTag)) {
-                        if (!getPrompter().promptConfirmation(
-                                "Existing tag '" + versionTag + "' found. Do you want to remove it?", false, false)) {
-                            throw new GitFlowFailureException(
-                                    "Cannot set version, tag '" + versionTag + "' already exists",
-                                    "Run in interactive mode and choose to remove existing tag.");
-                        }
-                        gitRemoveLocalTag(versionTag);
-                    }
-
-                    getLog().info("Creating '" + versionTag + "' tag.");
-
-                    getLog().debug("Removing version from branch-config if set.");
-                    branchConfigChanges.set(currentBranch, BranchConfigKeys.VERSION, null);
-
-                    executeGitCommand("tag", versionTag);
-
-                    getLog().warn("Don't forget to push the tag on commit, e.g. doing 'git push -f "
-                            + gitFlowConfig.getOrigin() + " " + versionTag + "' after pushing your current changes.");
-                }
-            }
+            // processed later
         } else if (tychoBuild) {
             executeMvnCommand(OutputMode.PROGRESS, TYCHO_VERSIONS_PLUGIN_SET_GOAL, "-DnewVersion=" + version,
                     "-Dtycho.mode=maven");
@@ -3661,10 +3656,63 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             executeAdditionalMavenCommands(targetBranch);
         }
 
+        String versionChangeCommit = null;
+        if (commitMessage != null && ((versionless && !versionlessByConfig) || executeGitHasUncommitted())) {
+            gitCommitAllowEmpty(commitMessage);
+            versionChangeCommit = getCurrentCommit();
+        }
+
+        // as we might create a tag this must come after the commit
+        if (versionless && versionlessPersist) {
+            String versionValue = version;
+            if (tychoBuild && ArtifactUtils.isSnapshot(version)) {
+                versionValue = versionValue.replace("-" + Artifact.SNAPSHOT_VERSION, "");
+            }
+
+            if (versionlessByConfig || aGitFlowAction == GitFlowAction.RELEASE_START) {
+                getLog().info("Setting version to '" + versionValue + "' in branch-config");
+                branchConfigChanges.set(currentBranch, BranchConfigKeys.VERSION, versionValue);
+            } else {
+                String versionTag = versionlessTagPrefix + versionValue;
+                if (gitTagExists(versionTag)) {
+                    if (!getPrompter().promptConfirmation(
+                            "Existing tag '" + versionTag + "' found. Do you want to remove it?", false, false)) {
+                        throw new GitFlowFailureException(
+                                "Cannot set version, tag '" + versionTag + "' already exists",
+                                "Run in interactive mode and choose to remove existing tag.");
+                    }
+                    gitRemoveLocalTag(versionTag);
+                }
+
+                getLog().info("Creating '" + versionTag + "' tag.");
+
+                getLog().debug("Removing version from branch-config if set.");
+                branchConfigChanges.set(currentBranch, BranchConfigKeys.VERSION, null);
+
+                String tempCmdResult = executeGitCommandReturn("tag", "-l", "--points-at", "HEAD");
+                if (!StringUtils.isBlank(tempCmdResult)) {
+                    String[] lines = tempCmdResult.split("\r?\n");
+                    for (int i = 0; i < lines.length; ++i) {
+                        if (lines[i].startsWith(versionlessTagPrefix)) {
+                            getLog().debug("Removing old version tag '" + lines[i] + "' from commit.");
+                            executeGitCommand("tag", "-d", lines[i]);
+                        }
+                    }
+                }
+
+                executeGitCommand("tag", versionTag);
+
+                getLog().warn("Don't forget to push the tag on commit, e.g. doing 'git push -f "
+                        + gitFlowConfig.getOrigin() + " " + versionTag + "' after pushing your current changes.");
+            }
+        }
+
         if (!branchConfigChanges.isEmpty()) {
             gitApplyBranchCentralConfigChanges(branchConfigChanges,
                     "additional version values for '" + currentBranch + "'");
         }
+
+        return versionChangeCommit;
     }
 
     private void executeAdditionalMavenCommands(String branch) throws MojoFailureException {
