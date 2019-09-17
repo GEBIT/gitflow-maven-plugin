@@ -89,7 +89,7 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
     private String squashMessage;
 
     /**
-     * The feature branch to be rebased.
+     * The feature branch to be cleaned-up.
      *
      * @since 2.2.0
      */

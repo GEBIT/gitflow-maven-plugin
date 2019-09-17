@@ -1936,4 +1936,81 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
         git.assertBranchLocalConfigValueMissing(repositorySet, MASTER_BRANCH, "breakpointEpicBranch");
     }
 
+    @Test
+    public void testExecuteWithBranchNameCurrentEpic() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("branchName", EPIC_BRANCH);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertEpicFinishedCorrectly();
+    }
+
+    @Test
+    public void testExecuteWithBranchNameNotCurrentEpic() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("branchName", EPIC_BRANCH);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertEpicFinishedCorrectly();
+    }
+
+    @Test
+    public void testExecuteWithBranchNameNotEpic() throws Exception {
+        // set up
+        final String OTHER_BRANCH = "otherBranch";
+        Properties userProperties = new Properties();
+        userProperties.setProperty("branchName", OTHER_BRANCH);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertGitFlowFailureException(result,
+                "Branch '" + OTHER_BRANCH + "' defined in 'branchName' property is not an epic branch.",
+                "Please define an epic branch in order to proceed.");
+    }
+
+    @Test
+    public void testExecuteWithBranchNameNotExistingEpic() throws Exception {
+        // set up
+        final String NON_EXISTING_EPIC_BRANCH = "epic/nonExisting";
+        Properties userProperties = new Properties();
+        userProperties.setProperty("branchName", NON_EXISTING_EPIC_BRANCH);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertGitFlowFailureException(result,
+                "Epic branch '" + NON_EXISTING_EPIC_BRANCH + "' defined in 'branchName' property doesn't exist.",
+                "Please define an existing epic branch in order to proceed.");
+    }
+
+    @Test
+    public void testExecuteWithBranchNameNotExistingLocalEpic() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        git.deleteLocalAndRemoteTrackingBranches(repositorySet, EPIC_BRANCH);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("branchName", EPIC_BRANCH);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertEpicFinishedCorrectly();
+    }
+
 }
