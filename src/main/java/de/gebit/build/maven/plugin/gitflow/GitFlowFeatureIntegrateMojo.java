@@ -74,6 +74,22 @@ public class GitFlowFeatureIntegrateMojo extends AbstractGitFlowFeatureMojo {
     @Parameter(property = "flow.squashNewModuleVersionFixCommit", defaultValue = "false")
     private boolean squashNewModuleVersionFixCommit = false;
 
+    /**
+     * The source feature branch to be integrated into target feature branch.
+     *
+     * @since 2.2.0
+     */
+    @Parameter(property = "sourceBranch", readonly = true)
+    protected String sourceBranch;
+
+    /**
+     * The target feature branch which the source branch should be integrated into.
+     *
+     * @since 2.2.0
+     */
+    @Parameter(property = "targetBranch", readonly = true)
+    protected String targetBranch;
+
     private final List<Step<FeatureIntegrateBreakpoint, FeatureIntegrateStepParameters>> allProcessSteps = Arrays
             .asList(new FeatureIntegrateStep(this::selectTargetFeatureBranch),
                     new FeatureIntegrateStep(this::rebaseSourceFeatureBranchOnTopTargetFeatureBranch,
@@ -144,28 +160,58 @@ public class GitFlowFeatureIntegrateMojo extends AbstractGitFlowFeatureMojo {
         checkUncommittedChanges();
 
         String currentBranch = gitCurrentBranch();
-        if (!isFeatureBranch(currentBranch)) {
-            throw new GitFlowFailureException(
-                    "'mvn flow:feature-integrate' can be executed only on the feature branch that should be integrated "
-                            + "into another feature branch.",
-                    "Please switch to a feature branch first.",
-                    "'git checkout BRANCH' to switch to the feature branch");
+        List<String> allFeatureBranches = null;
+        String sourceFeatureBranch;
+        boolean isOnSourceFeatureBranch;
+        if (StringUtils.isNotEmpty(sourceBranch)) {
+            sourceFeatureBranch = gitLocalRef(sourceBranch);
+            if (!isFeatureBranch(sourceFeatureBranch)) {
+                throw new GitFlowFailureException(
+                        "Branch '" + sourceBranch + "' defined in 'sourceBranch' property is not a feature branch.",
+                        "Please define a feature branch in order to proceed.");
+            }
+            getLog().info("Using specified source feature branch: " + sourceFeatureBranch);
+            isOnSourceFeatureBranch = sourceFeatureBranch.equals(currentBranch);
+            if (!isOnSourceFeatureBranch && !gitLocalOrRemoteBranchesExist(sourceFeatureBranch)) {
+                throw new GitFlowFailureException(createBranchNotExistingError(
+                        "Feature branch '" + sourceBranch + "' defined in 'sourceBranch' property",
+                        "Please define an existing feature branch in order to proceed."));
+            }
+        } else {
+            allFeatureBranches = gitAllFeatureBranches();
+            if (allFeatureBranches.isEmpty()) {
+                throw new GitFlowFailureException("There are no feature branches in your repository.",
+                        "Please start a feature first.", "'mvn flow:feature-start'");
+            }
+            isOnSourceFeatureBranch = allFeatureBranches.contains(currentBranch);
+            if (!isOnSourceFeatureBranch) {
+                sourceFeatureBranch = getPrompter().promptToSelectFromOrderedList("Feature branches:",
+                        "Choose source feature branch to be integrated into target feature branch", allFeatureBranches,
+                        new GitFlowFailureInfo(
+                                "In non-interactive mode 'mvn flow:feature-integrate' can be executed only on a feature"
+                                        + " branch that should be integrated into target feature branch.",
+                                "Please switch to a feature branch first or run in interactive mode.",
+                                "'git checkout BRANCH' to switch to the feature branch",
+                                "'mvn flow:feature-integrate' to run in interactive mode"));
+                getLog().info("Using selected source feature branch: " + sourceFeatureBranch);
+            } else {
+                sourceFeatureBranch = currentBranch;
+                getLog().info("Using current source feature branch: " + sourceFeatureBranch);
+            }
         }
-        String sourceFeatureBranch = currentBranch;
-
-        List<String> branches = gitAllFeatureBranches();
-        branches.remove(sourceFeatureBranch);
-        if (branches.isEmpty()) {
-            throw new GitFlowFailureException(
-                    "There are no feature branches except current feature branch in your repository.",
-                    "Please start a feature first which the current feature branch '" + sourceFeatureBranch
-                            + "' should be integrated into.",
-                    "'mvn flow:feature-start'");
+        if (!isOnSourceFeatureBranch) {
+            gitEnsureLocalBranchIsUpToDateIfExists(sourceFeatureBranch,
+                    new GitFlowFailureInfo(
+                            "Remote and local source feature branches '" + sourceFeatureBranch + "' diverge.",
+                            "Rebase or merge the changes in local feature branch '" + sourceFeatureBranch + "' first.",
+                            "'git checkout " + sourceFeatureBranch + "' and 'git rebase' to rebase the changes in local "
+                                    + "source feature branch"));
+        } else {
+            gitEnsureCurrentLocalBranchIsUpToDate(
+                    new GitFlowFailureInfo("Remote and local source feature branches '{0}' diverge.",
+                            "Rebase the changes in local feature branch '{0}' first.",
+                            "'git rebase' to rebase the changes in local feature branch"));
         }
-        gitEnsureLocalBranchIsUpToDateIfExists(sourceFeatureBranch,
-                new GitFlowFailureInfo("Remote and local feature branches '" + sourceFeatureBranch + "' diverge.",
-                        "Rebase the changes in local feature branch '" + sourceFeatureBranch + "' first.",
-                        "'git rebase' to rebase the changes in local feature branch"));
         String sourceLocalBaseBranch = gitFeatureBranchBaseBranch(sourceFeatureBranch);
         String sourceBaseBranch = gitLocalToRemoteRef(sourceLocalBaseBranch);
         if (!hasCommitsExceptVersionChangeCommitOnFeatureBranch(sourceFeatureBranch, sourceBaseBranch)) {
@@ -177,32 +223,79 @@ public class GitFlowFeatureIntegrateMojo extends AbstractGitFlowFeatureMojo {
                             + "'mvn flow:feature-integrate' to run the feature integration again");
         }
         if (!gitHasNoMergeCommits(sourceFeatureBranch, sourceBaseBranch)) {
-            getLog().info("Feature branch contains merge commits. Removing of version change commit is not possible.");
+            getLog().info(
+                    "Source feature branch contains merge commits. Removing of version change commit is not possible.");
             throw new GitFlowFailureException(
-                    "Current feature branch '" + sourceFeatureBranch
+                    "Source feature branch '" + sourceFeatureBranch
                             + "' contains merge commits. Integration of this feature branch is not possible.",
-                    "Finish the current feature without integration.",
+                    "Finish the source feature without integration.",
                     "'mvn flow:feature-finish' to finish the feature and marge it to the development branch");
         }
-        featureName = featureName == null ? null : StringUtils.deleteWhitespace(featureName);
+
         String targetFeatureBranch;
-        if (featureName == null || featureName.isEmpty()) {
-            targetFeatureBranch = getPrompter().promptToSelectFromOrderedList("Feature branches:",
-                    "Choose the target feature branch which the current feature branch should be integrated into",
-                    branches,
-                    new GitFlowFailureInfo(
-                            "Property 'featureName' is required in non-interactive mode but was not set.",
-                            "Specify a target featureName or run in interactive mode.",
-                            "'mvn flow:feature-integrate -DfeatureName=XXX -B'", "'mvn flow:feature-integrate'"));
-        } else {
-            targetFeatureBranch = gitFlowConfig.getFeatureBranchPrefix() + featureName;
-            if (!gitBranchExists(targetFeatureBranch) && !gitRemoteBranchExists(targetFeatureBranch)) {
-                throw new GitFlowFailureException("Target feature branch '" + targetFeatureBranch + "' doesn't exist.",
-                        "Either provide featureName of an existing feature branch or run without 'featureName' in "
-                                + "interactive mode.",
-                        "'mvn flow:feature-integrate' to run in intractive mode and select an existing target branch");
+        boolean isOnTargetFeatureBranch;
+        if (StringUtils.isNotEmpty(targetBranch)) {
+            targetFeatureBranch = gitLocalRef(targetBranch);
+            if (!isFeatureBranch(targetFeatureBranch)) {
+                throw new GitFlowFailureException(
+                        "Branch '" + targetBranch + "' defined in 'targetBranch' property is not a feature branch.",
+                        "Please define a feature branch in order to proceed.");
             }
+            getLog().info("Using specified target feature branch: " + targetFeatureBranch);
+            isOnTargetFeatureBranch = targetFeatureBranch.equals(currentBranch);
+            if (!isOnTargetFeatureBranch && !gitLocalOrRemoteBranchesExist(targetFeatureBranch)) {
+                throw new GitFlowFailureException(createBranchNotExistingError(
+                        "Feature branch '" + targetBranch + "' defined in 'targetBranch' property",
+                        "Please define an existing feature branch in order to proceed."));
+            }
+        } else {
+            if (allFeatureBranches == null) {
+                allFeatureBranches = gitAllFeatureBranches();
+            }
+            allFeatureBranches.remove(sourceFeatureBranch);
+            if (allFeatureBranches.isEmpty()) {
+                throw new GitFlowFailureException(
+                        "There are no feature branches except source feature branch in your repository.",
+                        "Please start a feature first which the source feature branch '" + sourceFeatureBranch
+                                + "' should be integrated into.",
+                        "'mvn flow:feature-start'");
+            }
+            featureName = featureName == null ? null : StringUtils.deleteWhitespace(featureName);
+            if (featureName == null || featureName.isEmpty()) {
+                targetFeatureBranch = getPrompter().promptToSelectFromOrderedList("Feature branches:",
+                        "Choose the target feature branch which the source feature branch should be integrated into",
+                        allFeatureBranches,
+                        new GitFlowFailureInfo(
+                                "Property 'featureName' or 'targetBranch' is required in non-interactive mode but was "
+                                        + "not set.",
+                                "Specify a target featureName or run in interactive mode.",
+                                "'mvn flow:feature-integrate -DfeatureName=XXX -B'", "'mvn flow:feature-integrate'"));
+            } else {
+                targetFeatureBranch = gitFlowConfig.getFeatureBranchPrefix() + featureName;
+                if (!gitLocalOrRemoteBranchesExist(targetFeatureBranch)) {
+                    throw new GitFlowFailureException(
+                            "Target feature branch '" + targetFeatureBranch + "' doesn't exist.",
+                            "Either provide featureName of an existing feature branch or run without 'featureName' in "
+                                    + "interactive mode.",
+                            "'mvn flow:feature-integrate' to run in intractive mode and select an existing target "
+                                    + "branch");
+                }
+            }
+            isOnTargetFeatureBranch = targetFeatureBranch.equals(currentBranch);
         }
+        if (!isOnTargetFeatureBranch) {
+            gitEnsureLocalBranchIsUpToDateIfExists(targetFeatureBranch,
+                    new GitFlowFailureInfo(
+                            "Remote and local target feature branches '" + targetFeatureBranch + "' diverge.",
+                            "Rebase or merge the changes in local feature branch '" + targetFeatureBranch + "' first.",
+                            "'git checkout " + targetFeatureBranch + "' and 'git rebase' to rebase the changes in local"
+                                    + " target feature branch"));
+        } else {
+            gitEnsureCurrentLocalBranchIsUpToDate(
+                    new GitFlowFailureInfo("Remote and local target feature branches '{0}' diverge.",
+                            "Rebase or merge the changes in local feature branch '{0}' first.", "'git rebase'"));
+        }
+        
         if (sourceFeatureBranch.equals(targetFeatureBranch)) {
             throw new GitFlowFailureException(
                     "The target feature branch can not be the same as current feature branch.",
@@ -210,13 +303,7 @@ public class GitFlowFeatureIntegrateMojo extends AbstractGitFlowFeatureMojo {
                             + sourceFeatureBranch + "'.",
                     "'mvn flow:feature-integrate'");
         }
-        gitEnsureLocalBranchIsUpToDateIfExists(targetFeatureBranch,
-                new GitFlowFailureInfo(
-                        "Remote and local target feature branches '" + targetFeatureBranch + "' diverge.",
-                        "Rebase or merge the changes in local feature branch '" + targetFeatureBranch + "' first.",
-                        "'git checkout " + targetFeatureBranch + "' and 'git rebase' to rebase the changes in local "
-                                + "target feature branch"));
-        getMavenLog().info("Integrating current feature branch '" + sourceFeatureBranch
+        getMavenLog().info("Integrating source feature branch '" + sourceFeatureBranch
                 + "' into target feature branch '" + targetFeatureBranch + "'");
         String targetLocalBaseBranch = gitFeatureBranchBaseBranch(targetFeatureBranch);
         String targetBaseBranch = gitLocalToRemoteRef(targetLocalBaseBranch);
@@ -240,6 +327,10 @@ public class GitFlowFeatureIntegrateMojo extends AbstractGitFlowFeatureMojo {
                             + "' and 'mvn flow:feature-rebase' to rebase the target feature branch",
                     "'git checkout " + sourceFeatureBranch
                             + "' and 'mvn flow:feature-integrate' to start the feature integration process again");
+        }
+        if (!isOnSourceFeatureBranch) {
+            getMavenLog().info("Switching to source feature branch '" + sourceFeatureBranch + "'");
+            gitCheckout(sourceFeatureBranch);
         }
         stepParameters.sourceFeatureBranch = sourceFeatureBranch;
         stepParameters.sourceBaseBranch = sourceBaseBranch;

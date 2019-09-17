@@ -20,8 +20,11 @@ import java.util.Arrays;
 import java.util.Properties;
 
 import org.apache.maven.execution.MavenExecutionResult;
+import org.apache.maven.model.io.ModelParseException;
+import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
 import org.codehaus.plexus.util.FileUtils;
 import org.eclipse.jgit.api.CheckoutCommand.Stage;
+import org.eclipse.jgit.api.errors.GitAPIException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -103,6 +106,11 @@ public class GitFlowFeatureIntegrateMojoTestCase extends AbstractGitFlowMojoTest
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
+        assertFeatureIntegratedSuccessfully();
+    }
+
+    protected void assertFeatureIntegratedSuccessfully()
+            throws GitAPIException, IOException, ComponentLookupException, ModelParseException {
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, TARGET_FEATURE_BRANCH);
         git.assertMissingLocalBranches(repositorySet, SOURCE_FEATURE_BRANCH, TMP_SOURCE_FEATURE_BRANCH);
@@ -136,9 +144,11 @@ public class GitFlowFeatureIntegrateMojoTestCase extends AbstractGitFlowMojoTest
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
         assertGitFlowFailureException(result,
-                "'mvn flow:feature-integrate' can be executed only on the feature branch "
-                        + "that should be integrated into another feature branch.",
-                "Please switch to a feature branch first.", "'git checkout BRANCH' to switch to the feature branch");
+                "In non-interactive mode 'mvn flow:feature-integrate' can be executed only on a feature branch that "
+                        + "should be integrated into target feature branch.",
+                "Please switch to a feature branch first or run in interactive mode.",
+                "'git checkout BRANCH' to switch to the feature branch",
+                "'mvn flow:feature-integrate' to run in interactive mode");
     }
 
     @Test
@@ -146,12 +156,13 @@ public class GitFlowFeatureIntegrateMojoTestCase extends AbstractGitFlowMojoTest
         // set up
         userProperties.setProperty("flow.featureBranchPrefix", BasicConstants.SINGLE_FEATURE_BRANCH_PREFIX);
         git.switchToBranch(repositorySet, BasicConstants.SINGLE_FEATURE_BRANCH);
+        git.createAndCommitTestfile(repositorySet, "source_testfile.txt", COMMIT_MESSAGE_SOURCE_TESTFILE);
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
         assertGitFlowFailureException(result,
-                "There are no feature branches except current feature branch in your " + "repository.",
-                "Please start a feature first which the current feature branch '" + BasicConstants.SINGLE_FEATURE_BRANCH
+                "There are no feature branches except source feature branch in your " + "repository.",
+                "Please start a feature first which the source feature branch '" + BasicConstants.SINGLE_FEATURE_BRANCH
                         + "' should be integrated into.",
                 "'mvn flow:feature-start'");
     }
@@ -168,7 +179,7 @@ public class GitFlowFeatureIntegrateMojoTestCase extends AbstractGitFlowMojoTest
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
         assertGitFlowFailureException(result,
-                "Remote and local feature branches '" + SOURCE_FEATURE_BRANCH + "' diverge.",
+                "Remote and local source feature branches '" + SOURCE_FEATURE_BRANCH + "' diverge.",
                 "Rebase the changes in local feature branch '" + SOURCE_FEATURE_BRANCH + "' first.",
                 "'git rebase' to rebase the changes in local feature branch");
     }
@@ -194,7 +205,7 @@ public class GitFlowFeatureIntegrateMojoTestCase extends AbstractGitFlowMojoTest
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
         assertGitFlowFailureException(result,
-                "Property 'featureName' is required in non-interactive mode but was not set.",
+                "Property 'featureName' or 'targetBranch' is required in non-interactive mode but was not set.",
                 "Specify a target featureName or run in interactive mode.",
                 "'mvn flow:feature-integrate -DfeatureName=XXX -B'", "'mvn flow:feature-integrate'");
     }
@@ -208,7 +219,7 @@ public class GitFlowFeatureIntegrateMojoTestCase extends AbstractGitFlowMojoTest
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
         assertGitFlowFailureException(result,
-                "Property 'featureName' is required in non-interactive mode but was not set.",
+                "Property 'featureName' or 'targetBranch' is required in non-interactive mode but was not set.",
                 "Specify a target featureName or run in interactive mode.",
                 "'mvn flow:feature-integrate -DfeatureName=XXX -B'", "'mvn flow:feature-integrate'");
     }
@@ -301,9 +312,9 @@ public class GitFlowFeatureIntegrateMojoTestCase extends AbstractGitFlowMojoTest
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
         assertGitFlowFailureException(result,
-                "Current feature branch '" + SOURCE_FEATURE_BRANCH
+                "Source feature branch '" + SOURCE_FEATURE_BRANCH
                         + "' contains merge commits. Integration of this feature branch is not possible.",
-                "Finish the current feature without integration.",
+                "Finish the source feature without integration.",
                 "'mvn flow:feature-finish' to finish the feature and marge it to the development branch");
     }
 
@@ -583,7 +594,7 @@ public class GitFlowFeatureIntegrateMojoTestCase extends AbstractGitFlowMojoTest
     public void testExecuteWithoutFeatureNameInInteractivemode() throws Exception {
         // set up
         final String PROMPT_CHOOSE_BRANCH = "Feature branches:" + LS + "1. " + TARGET_FEATURE_BRANCH + LS
-                + "Choose the target feature branch which the current feature branch should be integrated into";
+                + "Choose the target feature branch which the source feature branch should be integrated into";
         prepareFeatures();
         when(promptControllerMock.prompt(PROMPT_CHOOSE_BRANCH, Arrays.asList("1"))).thenReturn("1");
         // test
@@ -838,6 +849,179 @@ public class GitFlowFeatureIntegrateMojoTestCase extends AbstractGitFlowMojoTest
                         + "' and 'mvn flow:feature-rebase' to rebase the target feature branch",
                 "'git checkout " + SOURCE_FEATURE_BRANCH
                         + "' and 'mvn flow:feature-integrate' to start the feature integration process again");
+    }
+
+    @Test
+    public void testExecuteWithSourceBranchCurrentFeature() throws Exception {
+        // set up
+        prepareFeatures();
+        userProperties.setProperty("featureName", TARGET_FEATURE_NAME);
+        userProperties.setProperty("sourceBranch", SOURCE_FEATURE_BRANCH);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertFeatureIntegratedSuccessfully();
+    }
+
+    @Test
+    public void testExecuteWithSourceBranchNotCurrentFeature() throws Exception {
+        // set up
+        prepareFeatures();
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        userProperties.setProperty("featureName", TARGET_FEATURE_NAME);
+        userProperties.setProperty("sourceBranch", SOURCE_FEATURE_BRANCH);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertFeatureIntegratedSuccessfully();
+    }
+
+    @Test
+    public void testExecuteWithSourceBranchNotFeature() throws Exception {
+        // set up
+        final String OTHER_BRANCH = "otherBranch";
+        userProperties.setProperty("sourceBranch", OTHER_BRANCH);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        // verify
+        assertGitFlowFailureException(result,
+                "Branch '" + OTHER_BRANCH + "' defined in 'sourceBranch' property is not a feature branch.",
+                "Please define a feature branch in order to proceed.");
+    }
+
+    @Test
+    public void testExecuteWithSourceBranchNotExistingFeature() throws Exception {
+        // set up
+        final String NON_EXISTING_FEATURE_BRANCH = FEATURE_BRANCH_PREFIX + "nonExisting";
+        userProperties.setProperty("sourceBranch", NON_EXISTING_FEATURE_BRANCH);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        // verify
+        assertGitFlowFailureException(result,
+                "Feature branch '" + NON_EXISTING_FEATURE_BRANCH + "' defined in 'sourceBranch' property doesn't exist.",
+                "Please define an existing feature branch in order to proceed.");
+    }
+
+    @Test
+    public void testExecuteWithSourceBranchNotExistingLocalFeature() throws Exception {
+        // set up
+        prepareFeatures();
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        git.deleteLocalAndRemoteTrackingBranches(repositorySet, SOURCE_FEATURE_BRANCH);
+        userProperties.setProperty("featureName", TARGET_FEATURE_NAME);
+        userProperties.setProperty("sourceBranch", SOURCE_FEATURE_BRANCH);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertFeatureIntegratedSuccessfully();
+    }
+
+    @Test
+    public void testExecuteNotOnFeatureBranchInInteractivemode() throws Exception {
+        // set up
+        final String PROMPT_CHOOSE_BRANCH = "Feature branches:" + LS + "1. " + SOURCE_FEATURE_BRANCH + LS + "2. "
+                + TARGET_FEATURE_BRANCH + LS
+                + "Choose source feature branch to be integrated into target feature branch";
+        prepareFeatures();
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        userProperties.setProperty("featureName", TARGET_FEATURE_NAME);
+        when(promptControllerMock.prompt(PROMPT_CHOOSE_BRANCH, Arrays.asList("1", "2"))).thenReturn("1");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_CHOOSE_BRANCH, Arrays.asList("1", "2"));
+        verifyNoMoreInteractions(promptControllerMock);
+        assertFeatureIntegratedSuccessfully();
+    }
+
+    @Test
+    public void testExecuteNoFeatureBranches() throws Exception {
+        // set up
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        userProperties.setProperty("flow.featureBranchPrefix", "no-features/");
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertGitFlowFailureException(result, "There are no feature branches in your repository.",
+                "Please start a feature first.", "'mvn flow:feature-start'");
+    }
+
+    @Test
+    public void testExecuteWithTargetBranchCurrentFeature() throws Exception {
+        // set up
+        prepareFeatures();
+        git.switchToBranch(repositorySet, TARGET_FEATURE_BRANCH);
+        userProperties.setProperty("sourceBranch", SOURCE_FEATURE_BRANCH);
+        userProperties.setProperty("targetBranch", TARGET_FEATURE_BRANCH);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertFeatureIntegratedSuccessfully();
+    }
+
+    @Test
+    public void testExecuteWithTargetBranchNotCurrentFeature() throws Exception {
+        // set up
+        prepareFeatures();
+        git.switchToBranch(repositorySet, SOURCE_FEATURE_BRANCH);
+        userProperties.setProperty("targetBranch", TARGET_FEATURE_BRANCH);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertFeatureIntegratedSuccessfully();
+    }
+
+    @Test
+    public void testExecuteWithTargetBranchNotFeature() throws Exception {
+        // set up
+        final String OTHER_BRANCH = "otherBranch";
+        prepareFeatures();
+        userProperties.setProperty("targetBranch", OTHER_BRANCH);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        // verify
+        assertGitFlowFailureException(result,
+                "Branch '" + OTHER_BRANCH + "' defined in 'targetBranch' property is not a feature branch.",
+                "Please define a feature branch in order to proceed.");
+    }
+
+    @Test
+    public void testExecuteWithTargetBranchNotExistingFeature() throws Exception {
+        // set up
+        final String NON_EXISTING_FEATURE_BRANCH = FEATURE_BRANCH_PREFIX + "nonExisting";
+        prepareFeatures();
+        userProperties.setProperty("targetBranch", NON_EXISTING_FEATURE_BRANCH);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        // verify
+        assertGitFlowFailureException(result,
+                "Feature branch '" + NON_EXISTING_FEATURE_BRANCH + "' defined in 'targetBranch' property doesn't exist.",
+                "Please define an existing feature branch in order to proceed.");
+    }
+
+    @Test
+    public void testExecuteWithTargetBranchNotExistingLocalFeature() throws Exception {
+        // set up
+        prepareFeatures();
+        git.switchToBranch(repositorySet, SOURCE_FEATURE_BRANCH);
+        git.deleteLocalAndRemoteTrackingBranches(repositorySet, TARGET_FEATURE_BRANCH);
+        userProperties.setProperty("targetBranch", TARGET_FEATURE_BRANCH);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertFeatureIntegratedSuccessfully();
     }
 
 }
