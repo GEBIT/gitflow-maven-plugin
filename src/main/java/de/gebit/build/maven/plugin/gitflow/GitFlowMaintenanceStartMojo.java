@@ -17,6 +17,7 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 import de.gebit.build.maven.plugin.gitflow.ExtendedPrompter.SelectOption;
@@ -86,6 +87,22 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
     @Parameter(property = "flow.releaseVersionLimit")
     protected Integer releaseVersionLimit;
 
+    /**
+     * The tag which the maintenance branch shold be created from.
+     *
+     * @since 2.2.0
+     */
+    @Parameter(property = "baseTag", readonly = true)
+    protected String baseTag;
+
+    /**
+     * The commit which the maintenance branch shold be created from.
+     *
+     * @since 2.2.0
+     */
+    @Parameter(property = "baseCommit", readonly = true)
+    protected String baseCommit;
+
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
@@ -95,7 +112,22 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
 
         String currentBranchOrCommit = gitCurrentBranchOrCommit();
         String baseName = null;
-        if (releaseVersion == null) {
+        if (StringUtils.isNotEmpty(baseCommit)) {
+            baseName = baseCommit;
+            if (!gitCommitExists(baseName)) {
+                throw new GitFlowFailureException(
+                        "Commit '" + baseName + "' defined in 'baseCommit' property doesn't exist.",
+                        "Please define an existing base commit in order to proceed.");
+            }
+            getLog().info("Commit [" + baseName + "] specified by property 'baseCommit' to start maintenance.");
+        } else if (StringUtils.isNotEmpty(baseTag)) {
+            baseName = baseTag;
+            if (!gitTagExists(baseName)) {
+                throw new GitFlowFailureException("Tag '" + baseName + "' defined in 'baseTag' property doesn't exist.",
+                        "Please define an existing base tag in order to proceed.");
+            }
+            getLog().info("Tag [" + baseName + "] specified by property 'baseTag' to start maintenance.");
+        } else if (releaseVersion == null) {
             if (settings.isInteractiveMode()) {
                 List<String> releaseTags = getFilteredReleaseTags();
                 SelectOption selectedOption = getPrompter().promptToSelectFromOrderedListAndOptions("Release:",
@@ -140,7 +172,7 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
         }
 
         if (!baseName.equals(currentBranchOrCommit)) {
-            getMavenLog().info("Switching to base release tag '" + baseName + "'");
+            getMavenLog().info("Switching to base commit '" + baseName + "'");
             gitCheckout(baseName);
         }
 

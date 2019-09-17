@@ -1193,4 +1193,182 @@ public class GitFlowMaintenanceStartMojoTest extends AbstractGitFlowMojoTestCase
         git.assertTrackingBranch(repositorySet, "origin/" + MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
     }
 
+    @Test
+    public void testExecuteWithBaseCommitCurrentCommit() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        final String BASE_COMMIT = git.currentCommit(repositorySet);
+        git.push(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("baseCommit", BASE_COMMIT);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION))
+                .thenReturn(MAINTENANCE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION))
+                .thenReturn(MAINTENANCE_FIRST_VERSION);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION);
+        verifyNoMoreInteractions(promptControllerMock);
+        assertMaintenanceBranchCratedCorrectlyFromMaster();
+    }
+
+    @Test
+    public void testExecuteWithBaseCommitNotCurrentCommit() throws Exception {
+        // set up
+        final String BASE_COMMIT = git.currentCommit(repositorySet);
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("baseCommit", BASE_COMMIT);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION))
+                .thenReturn(MAINTENANCE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION))
+                .thenReturn(MAINTENANCE_FIRST_VERSION);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION);
+        verifyNoMoreInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, MAINTENANCE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, MAINTENANCE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
+    }
+
+    @Test
+    public void testExecuteWithBaseCommitTipOfRemoteBranch() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("baseCommit", "origin/" + MASTER_BRANCH);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION))
+                .thenReturn(MAINTENANCE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION))
+                .thenReturn(MAINTENANCE_FIRST_VERSION);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION);
+        verifyNoMoreInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, MAINTENANCE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, MAINTENANCE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreDifferent(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
+        git.assertCommitsInRemoteBranch(repositorySet, MASTER_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
+    }
+
+    @Test
+    public void testExecuteWithBaseCommitNotExistingCommit() throws Exception {
+        // set up
+        final String NOT_EXISTING_COMMIT = "NotExistingCommit";
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("baseCommit", NOT_EXISTING_COMMIT);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertGitFlowFailureException(result,
+                "Commit '" + NOT_EXISTING_COMMIT + "' defined in 'baseCommit' property doesn't exist.",
+                "Please define an existing base commit in order to proceed.");
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, MAINTENANCE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, MAINTENANCE_BRANCH);
+    }
+    
+    @Test
+    public void testExecuteWithBaseTagCurrentCommit() throws Exception {
+        // set up
+        final String TAG1 = VERSION_TAG_PREFIX + "1.0.0";
+        final String TAG2 = VERSION_TAG_PREFIX + "2.1.0";
+        git.createTags(repositorySet, TAG1);
+        git.createAndCommitTestfile(repositorySet);
+        git.createTags(repositorySet, TAG2);
+        git.push(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("baseTag", TAG2);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION))
+        .thenReturn(MAINTENANCE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION))
+        .thenReturn(MAINTENANCE_FIRST_VERSION);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION);
+        verifyNoMoreInteractions(promptControllerMock);
+        assertMaintenanceBranchCratedCorrectlyFromMaster();
+    }
+    
+    @Test
+    public void testExecuteWithBaseTagNotCurrentCommit() throws Exception {
+        // set up
+        final String TAG1 = VERSION_TAG_PREFIX + "1.0.0";
+        final String TAG2 = VERSION_TAG_PREFIX + "2.1.0";
+        git.createTags(repositorySet, TAG1);
+        git.createAndCommitTestfile(repositorySet);
+        git.createTags(repositorySet, TAG2);
+        git.push(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("baseTag", TAG1);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION))
+        .thenReturn(MAINTENANCE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION))
+        .thenReturn(MAINTENANCE_FIRST_VERSION);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION);
+        verifyNoMoreInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
+        git.assertExistingLocalBranches(repositorySet, MAINTENANCE_BRANCH);
+        git.assertExistingRemoteBranches(repositorySet, MAINTENANCE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MAINTENANCE_BRANCH, MAINTENANCE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MAINTENANCE_BRANCH, COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), MAINTENANCE_FIRST_VERSION);
+    }
+
+    @Test
+    public void testExecuteWithBaseTagNotExistingTag() throws Exception {
+        // set up
+        final String NOT_EXISTING_TAG = "NotExistingTag";
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("baseTag", NOT_EXISTING_TAG);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertGitFlowFailureException(result,
+                "Tag '" + NOT_EXISTING_TAG + "' defined in 'baseTag' property doesn't exist.",
+                "Please define an existing base tag in order to proceed.");
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, MAINTENANCE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, MAINTENANCE_BRANCH);
+    }
+
 }

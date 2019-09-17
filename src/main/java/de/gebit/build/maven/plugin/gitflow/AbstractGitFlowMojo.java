@@ -2988,6 +2988,21 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     /**
+     * Executes <code>git show -s --oneline [commit] --</code> to find an
+     * existing commit.
+     *
+     * @param commit
+     *            commit to check for.
+     * @return <code>true</code> if passed commit exists.
+     * @throws MojoFailureException
+     * @throws CommandLineException
+     */
+    protected boolean gitCommitExists(String commit) throws MojoFailureException, CommandLineException {
+        CommandResult tagResult = executeGitCommandExitCode("show", "-s", "--oneline", commit, "--");
+        return tagResult.getExitCode() == 0;
+    }
+    
+    /**
      * Executes <code>git for-each-ref refs/tags/[tag name]</code> to find an
      * existing tag.
      *
