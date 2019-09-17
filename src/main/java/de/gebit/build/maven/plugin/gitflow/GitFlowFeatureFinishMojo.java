@@ -18,6 +18,7 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 import de.gebit.build.maven.plugin.gitflow.ExtendedPrompter.SelectOption;
@@ -127,6 +128,14 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
     @Parameter(property = "flow.squashNewModuleVersionFixCommit", defaultValue = "false")
     private boolean squashNewModuleVersionFixCommit = false;
 
+    /**
+     * The feature branch to be finished.
+     *
+     * @since 2.2.0
+     */
+    @Parameter(property = "branchName", readonly = true)
+    protected String branchName;
+
     private final List<Step<FeatureFinishBreakpoint, FeatureFinishStepParameters>> allProcessSteps = Arrays.asList(
             new FeatureFinishStep(this::selectFeatureAndBaseBranches),
             new FeatureFinishStep(this::ensureBranchesPreparedForFeatureFinish,
@@ -225,20 +234,59 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
         // check uncommitted changes
         checkUncommittedChanges();
 
-        List<String> branches = gitAllFeatureBranches();
-        if (branches.isEmpty()) {
-            throw new GitFlowFailureException("There are no feature branches in your repository.",
-                    "Please start a feature first.", "'mvn flow:feature-start'");
-        }
+        String featureBranchLocalName;
+        boolean isOnFeatureBranch;
         String currentBranch = gitCurrentBranch();
-        boolean isOnFeatureBranch = branches.contains(currentBranch);
+        if (StringUtils.isNotEmpty(branchName)) {
+            featureBranchLocalName = gitLocalRef(branchName);
+            if (!isFeatureBranch(featureBranchLocalName)) {
+                throw new GitFlowFailureException(
+                        "Branch '" + branchName + "' defined in 'branchName' property is not a feature branch.",
+                        "Please define a feature branch in order to proceed.");
+            }
+            getLog().info("Finishing feature on specified feature branch: " + featureBranchLocalName);
+            isOnFeatureBranch = featureBranchLocalName.equals(currentBranch);
+            if (!isOnFeatureBranch && !gitLocalOrRemoteBranchesExist(featureBranchLocalName)) {
+                throw new GitFlowFailureException(createBranchNotExistingError(
+                        "Feature branch '" + branchName + "' defined in 'branchName' property",
+                        "Please define an existing feature branch in order to proceed."));
+            }
+        } else {
+            List<String> branches = gitAllFeatureBranches();
+            if (branches.isEmpty()) {
+                throw new GitFlowFailureException("There are no feature branches in your repository.",
+                        "Please start a feature first.", "'mvn flow:feature-start'");
+            }
+            isOnFeatureBranch = branches.contains(currentBranch);
+            if (!isOnFeatureBranch) {
+                featureBranchLocalName = getPrompter().promptToSelectFromOrderedList("Feature branches:",
+                        "Choose feature branch to finish", branches,
+                        new GitFlowFailureInfo(
+                                "In non-interactive mode 'mvn flow:feature-finish' can be executed only on a feature branch.",
+                                "Please switch to a feature branch first or run in interactive mode.",
+                                "'git checkout BRANCH' to switch to the feature branch",
+                                "'mvn flow:feature-finish' to run in interactive mode"));
+                getLog().info("Finishing feature on selected feature branch: " + featureBranchLocalName);
+            } else {
+                featureBranchLocalName = currentBranch;
+                getLog().info("Finishing feature on current feature branch: " + featureBranchLocalName);
+            }
+        }
+        if (!isOnFeatureBranch) {
+            gitEnsureLocalBranchIsUpToDateIfExists(featureBranchLocalName, new GitFlowFailureInfo(
+                    "Remote and local feature branches '" + featureBranchLocalName + "' diverge.",
+                    "Rebase or merge the changes in local feature branch '" + featureBranchLocalName + "' first.",
+                    "'git rebase'"));
+        } else {
+            gitEnsureCurrentLocalBranchIsUpToDate(
+                    new GitFlowFailureInfo("Remote and local feature branches '{0}' diverge.",
+                            "Rebase or merge the changes in local feature branch '{0}' first.", "'git rebase'"));
+        }
 
-        String featureBranch = getFeatureBranchToFinish(currentBranch, isOnFeatureBranch, branches);
-
-        String baseBranch = gitFeatureBranchBaseBranch(featureBranch);
+        String baseBranch = gitFeatureBranchBaseBranch(featureBranchLocalName);
         getMavenLog().info("Base branch of feature branch is '" + baseBranch + "'");
 
-        stepParameters.featureBranch = featureBranch;
+        stepParameters.featureBranch = featureBranchLocalName;
         stepParameters.baseBranch = baseBranch;
         stepParameters.isOnFeatureBranch = isOnFeatureBranch;
         return stepParameters;
@@ -666,35 +714,6 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
             gitRemoveAllBranchCentralConfigsForBranch(featureBranch, "feature '" + featureName + "' finished");
         }
         return stepParameters;
-    }
-
-    private String getFeatureBranchToFinish(String currentBranch, boolean isOnFeatureBranch,
-            List<String> allFeatureBranches)
-            throws GitFlowFailureException, MojoFailureException, CommandLineException {
-        String featureBranch;
-        if (!isOnFeatureBranch) {
-            featureBranch = getPrompter().promptToSelectFromOrderedList("Feature branches:",
-                    "Choose feature branch to finish", allFeatureBranches,
-                    new GitFlowFailureInfo(
-                            "In non-interactive mode 'mvn flow:feature-finish' can be executed only on a feature branch.",
-                            "Please switch to a feature branch first or run in interactive mode.",
-                            "'git checkout BRANCH' to switch to the feature branch",
-                            "'mvn flow:feature-finish' to run in interactive mode"));
-            getLog().info("Finishing feature on selected feature branch: " + featureBranch);
-
-            // git checkout feature/...
-            gitEnsureLocalBranchIsUpToDateIfExists(featureBranch,
-                    new GitFlowFailureInfo("Remote and local feature branches '" + featureBranch + "' diverge.",
-                            "Rebase or merge the changes in local feature branch '" + featureBranch + "' first.",
-                            "'git rebase'"));
-        } else {
-            featureBranch = currentBranch;
-            getLog().info("Finishing feature on current feature branch: " + featureBranch);
-            gitEnsureCurrentLocalBranchIsUpToDate(
-                    new GitFlowFailureInfo("Remote and local feature branches '{0}' diverge.",
-                            "Rebase or merge the changes in local feature branch '{0}' first.", "'git rebase'"));
-        }
-        return featureBranch;
     }
 
     private boolean rebaseToRemoveVersionChangeCommit(String featureBranch, String baseBranch)
