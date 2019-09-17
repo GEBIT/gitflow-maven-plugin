@@ -117,13 +117,18 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
     }
 
     /**
+     * The mojo provides baseBranch from a configuration property.
+     */
+    protected abstract String getBaseBranch();
+
+    /**
      * Perfom the steps to start a release. Create a release branch and sets the
      * version
      *
      * @throws MojoFailureException
      * @throws CommandLineException
      */
-    protected void releaseStart() throws MojoFailureException, CommandLineException {
+    protected String releaseStart() throws MojoFailureException, CommandLineException {
         String currentBranch = gitCurrentBranch();
         String releaseBranchName = null;
         if (isReleaseBranch(currentBranch)) {
@@ -134,21 +139,22 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         }
         String developmentBranch;
         if (releaseBranchName == null) {
-            // check snapshots dependencies
-            if (!allowSnapshots && hasProjectSnapshotDependencies()) {
-                throw new GitFlowFailureException(
-                        "There are some SNAPSHOT dependencies in the project. Release cannot be started.",
-                        "Change the dependencies or ignore with parameter 'allowSnapshots'.");
+            developmentBranch = getBaseBranch();
+            if (StringUtils.isEmpty(developmentBranch)) {
+                developmentBranch = currentBranch;
             }
-
-            if (!isDevelopmentBranch(currentBranch) && !isMaintenanceBranch(currentBranch)) {
+            if (!isDevelopmentBranch(developmentBranch) && !isMaintenanceBranch(developmentBranch)) {
                 throw new GitFlowFailureException(
                         "Release can be started only on development branch '" + gitFlowConfig.getDevelopmentBranch()
                                 + "' or on a maintenance branch.",
                         "Please switch to the development branch '" + gitFlowConfig.getDevelopmentBranch()
                                 + "' or to a maintenance branch first in order to proceed.");
             }
-            developmentBranch = currentBranch;
+            if (!developmentBranch.equals(currentBranch) && !gitLocalOrRemoteBranchesExist(developmentBranch)) {
+                throw new GitFlowFailureException(
+                        "Branch '" + developmentBranch + "' defined in 'baseBranch' property doesn't exist.",
+                        "Please define an existing branch in order to proceed.");
+            }
             getMavenLog().info("Base branch for release is '" + developmentBranch + "'");
             gitAssertRemoteBranchNotAheadOfLocalBranche(developmentBranch,
                     new GitFlowFailureInfo("Remote branch '" + developmentBranch + "' is ahead of the local branch.",
@@ -159,7 +165,17 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                             "Either rebase/merge the changes into local branch '" + developmentBranch
                                     + "' or reset the changes on remote branch in order to proceed.",
                             "'git rebase'"));
+            if (!developmentBranch.equals(currentBranch)) {
+                getMavenLog().info("Switching to base branch '" + developmentBranch + "'");
+                gitCheckout(developmentBranch);
+            }
 
+            // check snapshots dependencies
+            if (!allowSnapshots && hasProjectSnapshotDependencies()) {
+                throw new GitFlowFailureException(
+                        "There are some SNAPSHOT dependencies in the project. Release cannot be started.",
+                        "Change the dependencies or ignore with parameter 'allowSnapshots'.");
+            }
             String productionBranch = getProductionBranchForDevelopmentBranch(developmentBranch);
             if (isUsingProductionBranch(developmentBranch, productionBranch)) {
                 // check the production branch, too
@@ -293,6 +309,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
             }
         }
         gitRemoveBranchLocalConfig(releaseBranchName, "breakpoint");
+        return developmentBranch;
     }
 
     /**

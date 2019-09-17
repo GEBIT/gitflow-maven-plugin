@@ -172,6 +172,14 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
     @Parameter(property = "flow.cleanupReleaseBeforeStart", defaultValue = "false")
     private boolean cleanupReleaseBeforeStart;
 
+    /**
+     * The base branch which release branch should be started on.
+     *
+     * @since 2.2.0
+     */
+    @Parameter(property = "baseBranch", readonly = true)
+    protected String baseBranch;
+
     @Override
     protected boolean isSkipTestProject() {
         return skipTestProject;
@@ -254,6 +262,11 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
     }
 
     @Override
+    protected String getBaseBranch() {
+        return baseBranch;
+    }
+
+    @Override
     protected String getCurrentGoal() {
         return GOAL;
     }
@@ -271,8 +284,8 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
             checkUncommittedChanges();
 
             // perform start and finish in one step
-            releaseStart();
-            releaseFinish(currentBranch);
+            String developmentBranch = releaseStart();
+            releaseFinish(developmentBranch);
             getMavenLog().info("Release process finished");
         }
     }

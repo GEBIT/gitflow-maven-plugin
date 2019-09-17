@@ -83,6 +83,14 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
     @Parameter(property = "flow.cleanupReleaseBeforeStart", defaultValue = "false")
     private boolean cleanupReleaseBeforeStart;
 
+    /**
+     * The base branch which release branch should be started on.
+     *
+     * @since 2.2.0
+     */
+    @Parameter(property = "baseBranch", readonly = true)
+    protected String baseBranch;
+
     @Override
     protected boolean isSkipTestProject() {
         throw new IllegalStateException("release-start does not test the project.");
@@ -151,6 +159,11 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
     @Override
     protected boolean isAllowSameVersion() {
         throw new IllegalStateException("release-start does not use property allowSameVersion.");
+    }
+
+    @Override
+    protected String getBaseBranch() {
+        return baseBranch;
     }
 
     @Override
