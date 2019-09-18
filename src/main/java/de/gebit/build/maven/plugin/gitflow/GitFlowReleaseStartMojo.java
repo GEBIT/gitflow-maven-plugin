@@ -168,7 +168,7 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
     
     @Override
     protected String getBranchName() {
-        throw new IllegalStateException("release-start does not use property branchName.");
+        return null;
     }
 
     @Override
