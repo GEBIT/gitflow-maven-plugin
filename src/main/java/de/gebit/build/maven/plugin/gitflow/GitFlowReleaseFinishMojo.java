@@ -248,34 +248,54 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
                 && !continueReleaseFinishIfMergeInProcess(currentBranch)) {
             // check uncommitted changes
             checkUncommittedChanges();
-
-            if (!isReleaseBranch(currentBranch)) {
-                throw new GitFlowFailureException("Current branch '" + currentBranch + "' is not a release branch.",
-                        "Please switch to the release branch that you want to finish in order to proceed.",
-                        "'git checkout BRANCH' to switch to the release branch");
+            
+            String releaseBranch = getBranchName();
+            boolean isOnReleaseBranch;
+            if (StringUtils.isNotEmpty(releaseBranch)) {
+                releaseBranch = gitLocalRef(releaseBranch);
+                if (!isReleaseBranch(releaseBranch)) {
+                    throw new GitFlowFailureException(
+                            "Branch '" + releaseBranch + "' defined in 'branchName' property is not a release branch.",
+                            "Please define a release branch in order to proceed.");
+                }
+                isOnReleaseBranch = releaseBranch.equals(currentBranch);
+                if (!isOnReleaseBranch && !gitLocalOrRemoteBranchesExist(releaseBranch)) {
+                    throw new GitFlowFailureException(createBranchNotExistingError(
+                            "Release branch '" + releaseBranch + "' defined in 'branchName' property",
+                            "Please define an existing release branch in order to proceed."));
+                }
+            } else {
+                if (!isReleaseBranch(currentBranch)) {
+                    throw new GitFlowFailureException("Current branch '" + currentBranch + "' is not a release branch.",
+                            "Please switch to the release branch that you want to finish in order to proceed.",
+                            "'git checkout BRANCH' to switch to the release branch");
+                }
+                releaseBranch = currentBranch;
+                isOnReleaseBranch = true;
             }
-            getMavenLog().info("Release branch to be finished is '" + currentBranch + "'");
-            String developmentBranch = gitGetBranchCentralConfig(currentBranch, BranchConfigKeys.BASE_BRANCH);
+
+            getMavenLog().info("Release branch to be finished is '" + releaseBranch + "'");
+            String developmentBranch = gitGetBranchCentralConfig(releaseBranch, BranchConfigKeys.BASE_BRANCH);
             getMavenLog().info("Base branch of release branch is '" + developmentBranch + "'");
             if (StringUtils.isBlank(developmentBranch)) {
                 throw new GitFlowFailureException(
-                        "The release branch '" + currentBranch + "' has no development branch configured.",
+                        "The release branch '" + releaseBranch + "' has no development branch configured.",
                         "Please configure development branch for current release branch first in order to proceed.",
-                        "'mvn flow:branch-config -DbranchName=" + currentBranch
+                        "'mvn flow:branch-config -DbranchName=" + releaseBranch
                                 + " -DpropertyName=baseBranch -DpropertyValue=[development branch name]' "
                                 + "to configure development branch");
             }
             gitEnsureLocalBranchExists(developmentBranch, new GitFlowFailureInfo(
                     "The development branch '" + developmentBranch + "' configured for the current release branch '"
-                            + currentBranch + "' doesn't exist.\nThis indicates either a wrong configuration for "
+                            + releaseBranch + "' doesn't exist.\nThis indicates either a wrong configuration for "
                             + "the release branch or a severe error condition on your branches.",
                     "Please configure correct development branch for the current release branch or consult a "
                             + "gitflow expert on how to fix this.",
-                    "'mvn flow:branch-config -DbranchName=" + currentBranch
+                    "'mvn flow:branch-config -DbranchName=" + releaseBranch
                             + " -DpropertyName=baseBranch -DpropertyValue=[development branch name]' to configure "
                             + "correct development branch"));
 
-            gitAssertRemoteBranchNotAheadOfLocalBranche(currentBranch,
+            gitAssertRemoteBranchNotAheadOfLocalBranche(releaseBranch,
                     new GitFlowFailureInfo(
                             "Remote release branch '{0}' is ahead of the local branch.\n"
                                     + "This indicates a severe error condition on your branches.",
@@ -291,7 +311,10 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
                             "Remote and local production branches '{0}' diverge.\n"
                                     + "This indicates a severe error condition on your branches.",
                             "Please consult a gitflow expert on how to fix this!"));
-
+            if (!isOnReleaseBranch) {
+                getMavenLog().info("Switching to release branch '" + releaseBranch + "'");
+                gitCheckout(releaseBranch);
+            }
             releaseFinish(developmentBranch);
             getMavenLog().info("Release finish process finished");
         }
