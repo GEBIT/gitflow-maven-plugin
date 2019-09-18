@@ -122,6 +122,11 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
     protected abstract String getBaseBranch();
 
     /**
+     * The mojo provides branchName from a configuration property.
+     */
+    protected abstract String getBranchName();
+
+    /**
      * Perfom the steps to start a release. Create a release branch and sets the
      * version
      *
@@ -798,8 +803,41 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         }
         String developmentBranch;
         if (releaseBranch == null) {
-            if (isReleaseBranch(currentBranch)) {
-                releaseBranch = currentBranch;
+            releaseBranch = getBranchName();
+            boolean isOnReleaseBranch;
+            if (StringUtils.isNotEmpty(releaseBranch)) {
+                releaseBranch = gitLocalRef(releaseBranch);
+                if (!isReleaseBranch(releaseBranch)) {
+                    throw new GitFlowFailureException(
+                            "Branch '" + releaseBranch + "' defined in 'branchName' property is not a release branch.",
+                            "Please define a release branch in order to proceed.");
+                }
+                isOnReleaseBranch = releaseBranch.equals(currentBranch);
+                if (!isOnReleaseBranch && !gitLocalOrRemoteBranchesExist(releaseBranch)) {
+                    throw new GitFlowFailureException(createBranchNotExistingError(
+                            "Release branch '" + releaseBranch + "' defined in 'branchName' property",
+                            "Please define an existing release branch in order to proceed."));
+                }
+            } else {
+                if (isReleaseBranch(currentBranch)) {
+                    releaseBranch = currentBranch;
+                    isOnReleaseBranch = true;
+                } else {
+                    List<String> releaseBranches = gitAllBranches(gitFlowConfig.getReleaseBranchPrefix());
+                    if (releaseBranches.isEmpty()) {
+                        throw new GitFlowFailureException("There are no release branches in your repository.", null);
+                    }
+                    if (releaseBranches.size() > 1) {
+                        throw new GitFlowFailureException(
+                                "More than one release branch exists. Cannot abort release from non-release branch.",
+                                "Please switch to a release branch first in order to proceed.",
+                                "'git checkout BRANCH' to switch to the release branch");
+                    }
+                    releaseBranch = releaseBranches.get(0);
+                    isOnReleaseBranch = false;
+                }
+            }
+            if (isOnReleaseBranch) {
                 developmentBranch = gitGetBranchCentralConfig(releaseBranch, BranchConfigKeys.BASE_BRANCH);
                 if (StringUtils.isBlank(developmentBranch)) {
                     developmentBranch = gitFlowConfig.getDevelopmentBranch();
@@ -817,7 +855,8 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                 if (developmentBranch != null) {
                     if (executeGitHasUncommitted()) {
                         boolean confirmed = getPrompter().promptConfirmation(
-                                "You have some uncommitted files. If you continue any changes will be discarded. Continue?",
+                                "You have some uncommitted files. If you continue any changes will be discarded. "
+                                        + "Continue?",
                                 false, true);
                         if (!confirmed) {
                             throw new GitFlowFailureException(
@@ -839,18 +878,6 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                                     + " -DpropertyName=baseBranch -DpropertyValue=[development branch name]' to "
                                     + "configure correct development branch");
                 }
-            } else {
-                List<String> releaseBranches = gitAllBranches(gitFlowConfig.getReleaseBranchPrefix());
-                if (releaseBranches.isEmpty()) {
-                    throw new GitFlowFailureException("There are no release branches in your repository.", null);
-                }
-                if (releaseBranches.size() > 1) {
-                    throw new GitFlowFailureException(
-                            "More than one release branch exists. Cannot abort release from non-release branch.",
-                            "Please switch to a release branch first in order to proceed.",
-                            "'git checkout BRANCH' to switch to the release branch");
-                }
-                releaseBranch = releaseBranches.get(0);
             }
         }
 

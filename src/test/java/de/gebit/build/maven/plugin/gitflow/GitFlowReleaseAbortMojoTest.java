@@ -14,11 +14,13 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Properties;
 
 import org.apache.maven.execution.MavenExecutionResult;
 import org.eclipse.jgit.api.CheckoutCommand.Stage;
+import org.eclipse.jgit.api.errors.GitAPIException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -91,6 +93,10 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
         // verify
         verifyZeroInteractions(promptControllerMock);
+        assertReleaseAbortedCorrectly();
+    }
+
+    private void assertReleaseAbortedCorrectly() throws GitAPIException, IOException, Exception {
         git.assertClean(repositorySet);
         git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
         git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
@@ -126,12 +132,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         verify(promptControllerMock).prompt(PROMPT_MESSAGE_UNCOMMITED_CHANGES_CONFIRMATION, Arrays.asList("y", "n"),
                 "n");
         verifyNoMoreInteractions(promptControllerMock);
-        git.assertClean(repositorySet);
-        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
-        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
-        assertConfigCleanedUpForMaster();
-        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
+        assertReleaseAbortedCorrectly();
     }
 
     @Test
@@ -164,13 +165,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.createAndAddToIndexTestfile(repositorySet);
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL);
-        // verify
-        git.assertClean(repositorySet);
-        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
-        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
-        assertConfigCleanedUpForMaster();
-        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
+        assertReleaseAbortedCorrectly();
     }
 
     @Test
@@ -503,13 +498,7 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         userProperties.setProperty("flow.push", "true");
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
-        // verify
-        git.assertClean(repositorySet);
-        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
-        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
-        assertConfigCleanedUpForMaster();
-        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
+        assertReleaseAbortedCorrectly();
     }
 
     @Test
@@ -1477,13 +1466,80 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         git.commitAll(repositorySet, COMMIT_MESSAGE_INVALID_JAVA_FILE_REMOVED);
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL);
+        assertReleaseAbortedCorrectly();
+    }
+
+    @Test
+    public void testExecuteWithBranchNameCurrentRelease() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("branchName", RELEASE_BRANCH);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
-        git.assertClean(repositorySet);
-        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
-        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
-        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
-        assertConfigCleanedUpForMaster();
-        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, RELEASE_BRANCH);
+        verifyZeroInteractions(promptControllerMock);
+        assertReleaseAbortedCorrectly();
+    }
+
+    @Test
+    public void testExecuteWithBranchNameNotCurrentRelease() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("branchName", RELEASE_BRANCH);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertReleaseAbortedCorrectly();
+    }
+
+    @Test
+    public void testExecuteWithBranchNameNotRelease() throws Exception {
+        // set up
+        final String OTHER_BRANCH = "otherBranch";
+        Properties userProperties = new Properties();
+        userProperties.setProperty("branchName", OTHER_BRANCH);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        // verify
+        assertGitFlowFailureException(result,
+                "Branch '" + OTHER_BRANCH + "' defined in 'branchName' property is not a release branch.",
+                "Please define a release branch in order to proceed.");
+    }
+
+    @Test
+    public void testExecuteWithBranchNameNotExistingRelease() throws Exception {
+        // set up
+        final String NON_EXISTING_RELEASE_BRANCH = "release/gitflow-tests-nonExisting";
+        Properties userProperties = new Properties();
+        userProperties.setProperty("branchName", NON_EXISTING_RELEASE_BRANCH);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties,
+                promptControllerMock);
+        // verify
+        assertGitFlowFailureException(result,
+                "Release branch '" + NON_EXISTING_RELEASE_BRANCH + "' defined in 'branchName' property doesn't exist.",
+                "Please define an existing release branch in order to proceed.");
+    }
+
+    @Test
+    public void testExecuteWithBranchNameNotExistingLocalRelease() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        git.deleteLocalAndRemoteTrackingBranches(repositorySet, RELEASE_BRANCH);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("branchName", RELEASE_BRANCH);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertReleaseAbortedCorrectly();
     }
 
 }

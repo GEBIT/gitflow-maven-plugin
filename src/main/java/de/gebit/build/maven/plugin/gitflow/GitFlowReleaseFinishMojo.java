@@ -145,6 +145,14 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
     @Parameter(property = "flow.allowSameVersion", defaultValue = "false")
     private boolean allowSameVersion;
 
+    /**
+     * The release branch to be finished.
+     *
+     * @since 2.2.0
+     */
+    @Parameter(property = "branchName", readonly = true)
+    protected String branchName;
+
     @Override
     protected boolean isSkipTestProject() {
         return skipTestProject;
@@ -218,6 +226,11 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
     @Override
     protected String getBaseBranch() {
         throw new IllegalStateException("release-finish does not use base branch.");
+    }
+    
+    @Override
+    protected String getBranchName() {
+        return branchName;
     }
 
     @Override

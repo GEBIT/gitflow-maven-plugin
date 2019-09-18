@@ -81,9 +81,10 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
     protected String baseBranch;
 
     /**
-     * The base commit which epic branch should be started on.
-     * <code>baseCommit</code> can only be used if <code>baseBranch</code>
-     * property is defined and the base branch contains the base commit.
+     * The base commit which epic branch should be started on. Also a tag name
+     * can be used as base commit. <code>baseCommit</code> can only be used if
+     * <code>baseBranch</code> property is defined and the base branch contains
+     * the base commit.
      *
      * @since 2.2.0
      */

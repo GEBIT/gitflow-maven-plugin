@@ -265,6 +265,11 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
     protected String getBaseBranch() {
         return baseBranch;
     }
+    
+    @Override
+    protected String getBranchName() {
+        throw new IllegalStateException("release does not use property branchName.");
+    }
 
     @Override
     protected String getCurrentGoal() {

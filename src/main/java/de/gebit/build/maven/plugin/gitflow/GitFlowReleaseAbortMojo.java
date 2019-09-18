@@ -18,6 +18,7 @@ package de.gebit.build.maven.plugin.gitflow;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.Parameter;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
@@ -33,6 +34,14 @@ import org.codehaus.plexus.util.cli.CommandLineException;
 public class GitFlowReleaseAbortMojo extends AbstractGitFlowReleaseMojo {
 
     static final String GOAL = "release-abort";
+
+    /**
+     * The release branch to be aborted.
+     *
+     * @since 2.2.0
+     */
+    @Parameter(property = "branchName", readonly = true)
+    protected String branchName;
 
     /** {@inheritDoc} */
     @Override
@@ -114,6 +123,11 @@ public class GitFlowReleaseAbortMojo extends AbstractGitFlowReleaseMojo {
     @Override
     protected String getBaseBranch() {
         throw new IllegalStateException("release-abort does not use base branch.");
+    }
+    
+    @Override
+    protected String getBranchName() {
+        return branchName;
     }
 
     @Override
