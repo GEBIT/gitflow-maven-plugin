@@ -177,12 +177,6 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                                     + "' or to a maintenance branch first in order to proceed.");
                 }
                 baseBranchRef = localRef(developmentBranch);
-                if (isStartFromCommit) {
-                    throw new GitFlowFailureException(
-                            "Property 'baseCommit' can only be used togather with property 'baseBranch'.",
-                            "Please define also 'baseBranch' property in order to start the release branch from a "
-                                    + "specified commit.");
-                }
             }
             getMavenLog().info("Base branch for release is '" + developmentBranch + "'");
             if (!isStartFromCommit) {
@@ -213,7 +207,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                 }
                 if (!gitIsAncestorBranch(baseCommit, baseBranchRef.getIdentifier())) {
                     throw new GitFlowFailureException(
-                            "Base branch defined in property 'baseBranch' doesn't contain commit defined in "
+                            "Base branch '" + baseBranchRef.getIdentifier() + "' doesn't contain commit defined in "
                                     + "property 'baseCommit'.",
                             "Please define a commit of the base branch in order to start the release branch from a "
                                     + "specified commit.");

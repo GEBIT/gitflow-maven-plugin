@@ -181,10 +181,10 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
     protected String baseBranch;
 
     /**
-     * The base commit which release branch should be started on. Also a tag name
-     * can be used as base commit. <code>baseCommit</code> can only be used if
-     * <code>baseBranch</code> property is defined and the base branch contains
-     * the base commit.
+     * The base commit which release branch should be started on. Also a tag
+     * name can be used as base commit. If <code>baseCommit</code> is not on
+     * current branch, a <code>baseBranch</code> that contains the base commit
+     * must be specified too.
      *
      * @since 2.2.0
      */

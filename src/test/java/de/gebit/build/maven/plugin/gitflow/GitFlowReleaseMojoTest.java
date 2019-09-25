@@ -655,6 +655,94 @@ public class GitFlowReleaseMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     @Test
+    public void testExecuteWithBaseCommitNotExisting() throws Exception {
+        // set up
+        final String NOT_EXISTING_BASE_COMMIT = "not-existing";
+        Properties userProperties = new Properties();
+        userProperties.setProperty("baseCommit", NOT_EXISTING_BASE_COMMIT);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertGitFlowFailureException(result,
+                "Commit '" + NOT_EXISTING_BASE_COMMIT + "' defined in 'baseCommit' property doesn't exist.",
+                "Please define an existing base commit in order to proceed.");
+    }
+
+    @Test
+    public void testExecuteWithBaseCommitNotOnCurrentBranch() throws Exception {
+        // set up
+        Properties userProperties = new Properties();
+        userProperties.setProperty("baseCommit", BasicConstants.EXISTING_MAINTENANCE_BRANCH);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertGitFlowFailureException(result,
+                "Base branch '" + MASTER_BRANCH + "' doesn't contain commit defined in property 'baseCommit'.",
+                "Please define a commit of the base branch in order to start the release branch from a specified "
+                        + "commit.");
+    }
+
+    @Test
+    public void testExecuteBaseCommitHeadOfCurrentBranch() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        final String COMMIT_IN_RELEASE = git.currentCommit(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("baseCommit", MASTER_BRANCH);
+        when(promptControllerMock.prompt(PROMPT_RELEASE_VERSION, POM_RELEASE_VERSION)).thenReturn(RELEASE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_NEXT_DEVELOPMENT_VERSION, NEW_DEVELOPMENT_VERSION)).thenReturn("");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_RELEASE_VERSION, POM_RELEASE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_NEXT_DEVELOPMENT_VERSION, NEW_DEVELOPMENT_VERSION);
+        verifyNoMoreInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
+        git.assertLocalTags(repositorySet, RELEASE_TAG);
+        git.assertRemoteTags(repositorySet, RELEASE_TAG);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
+                COMMIT_MESSAGE_RELEASE_START_SET_VERSION, GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
+        git.assertContainsCommit(repositorySet, RELEASE_TAG, COMMIT_IN_RELEASE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
+    }
+
+    @Test
+    public void testExecuteBaseCommitOnCurrentBranch() throws Exception {
+        // set up
+        final String BASE_COMMIT = git.currentCommit(repositorySet);
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        final String COMMIT_NOT_IN_RELEASE = git.currentCommit(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("baseCommit", BASE_COMMIT);
+        when(promptControllerMock.prompt(PROMPT_RELEASE_VERSION, POM_RELEASE_VERSION)).thenReturn(RELEASE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_NEXT_DEVELOPMENT_VERSION, NEW_DEVELOPMENT_VERSION)).thenReturn("");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_RELEASE_VERSION, POM_RELEASE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_NEXT_DEVELOPMENT_VERSION, NEW_DEVELOPMENT_VERSION);
+        verifyNoMoreInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
+        git.assertLocalTags(repositorySet, RELEASE_TAG);
+        git.assertRemoteTags(repositorySet, RELEASE_TAG);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_MERGE_RELEASE_INTO_MASTER,
+                COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION, COMMIT_MESSAGE_RELEASE_START_SET_VERSION,
+                GitExecution.COMMIT_MESSAGE_FOR_TESTFILE);
+        git.assertNotContainsCommit(repositorySet, RELEASE_TAG, COMMIT_NOT_IN_RELEASE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
+    }
+
+    @Test
     public void testExecuteWithBaseBranchNotSetAndBaseCommitSet() throws Exception {
         // set up
         Properties userProperties = new Properties();
@@ -699,7 +787,7 @@ public class GitFlowReleaseMojoTest extends AbstractGitFlowMojoTestCase {
 
     @Test
     public void testExecuteWithBaseBranchCurrentMasterBaseCommitHeadOfBaseBranch() throws Exception {
-     // set up
+        // set up
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
         final String COMMIT_IN_RELEASE = git.currentCommit(repositorySet);
