@@ -227,6 +227,11 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
     protected String getBaseBranch() {
         throw new IllegalStateException("release-finish does not use base branch.");
     }
+
+    @Override
+    protected String getBaseCommit() {
+        throw new IllegalStateException("release-finish does not use property baseCommit.");
+    }
     
     @Override
     protected String getBranchName() {

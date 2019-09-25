@@ -566,6 +566,24 @@ public class GitExecution {
     public String commitId(RepositorySet repositorySet, String ref) throws IOException {
         return repositorySet.getLocalRepoGit().getRepository().resolve(ref).getName();
     }
+    
+    public boolean containsCommit(RepositorySet repositorySet, String ref, String commitRef) throws IOException {
+        Repository repository = repositorySet.getLocalRepoGit().getRepository();
+        RevCommit refCommit = repository.parseCommit(repository.resolve(ref));
+        RevCommit commitRefCommit = repository.parseCommit(repository.resolve(commitRef));
+        try (RevWalk tempWalk = new RevWalk(repository)) {
+            refCommit = tempWalk.parseCommit(refCommit);
+            commitRefCommit = tempWalk.parseCommit(commitRefCommit);
+            tempWalk.setRevFilter(RevFilter.MERGE_BASE);
+            tempWalk.markStart(tempWalk.parseCommit(refCommit));
+            tempWalk.markStart(tempWalk.parseCommit(commitRefCommit));
+            RevCommit mergeCommit = tempWalk.next();
+            if (mergeCommit != null && mergeCommit.equals(commitRefCommit)) {
+                return true;
+            }
+            return false;
+        }
+    }
 
     /**
      * Returns ID of the current commit on passed local branch.
@@ -1463,6 +1481,18 @@ public class GitExecution {
             throws GitAPIException, IOException {
         List<String> commitMessages = commitMessagesInBranch(repositorySet.getLocalRepoGit(), branch, false);
         assertCommitMessages(expectedCommitMessages, commitMessages, branch, "local");
+    }
+    
+    public void assertContainsCommit(RepositorySet repositorySet, String ref, String commitRef)
+            throws GitAPIException, IOException {
+        assertTrue("Reference '" + ref + "' dosn't contain commit '" + commitRef + "'",
+                containsCommit(repositorySet, ref, commitRef));
+    }
+
+    public void assertNotContainsCommit(RepositorySet repositorySet, String ref, String commitRef)
+            throws GitAPIException, IOException {
+        assertFalse("Reference '" + ref + "' contains commit '" + commitRef + "'",
+                containsCommit(repositorySet, ref, commitRef));
     }
 
     /**

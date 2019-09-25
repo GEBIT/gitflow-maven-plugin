@@ -122,7 +122,12 @@ public class GitFlowReleaseAbortMojo extends AbstractGitFlowReleaseMojo {
 
     @Override
     protected String getBaseBranch() {
-        throw new IllegalStateException("release-abort does not use base branch.");
+        throw new IllegalStateException("release-abort does not use property baseBranch.");
+    }
+
+    @Override
+    protected String getBaseCommit() {
+        throw new IllegalStateException("release-abort does not use property baseCommit.");
     }
     
     @Override

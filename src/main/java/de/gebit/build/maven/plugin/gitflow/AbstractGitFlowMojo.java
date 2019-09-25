@@ -3093,7 +3093,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      *
      * @return commit id of the current commit.
      */
-    protected String getCurrentCommit() throws MojoFailureException {
+    protected String getCurrentCommit() throws MojoFailureException, CommandLineException {
         return getCurrentCommit("HEAD");
     }
 
@@ -3102,14 +3102,18 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      *
      * @return commit id of the current commit.
      */
-    protected String getCurrentCommit(String ref) throws MojoFailureException {
-        try {
-            return executeGitCommandReturn("rev-parse", ref);
-        } catch (MojoFailureException exc) {
-            throw exc;
-        } catch (CommandLineException exc) {
-            throw new MojoFailureException("Failed to get the current commit ID.", exc);
-        }
+    protected String getCurrentCommit(String ref) throws MojoFailureException, CommandLineException {
+        return executeGitCommandReturn("log", "-1", "--pretty=format:%H", ref).trim();
+    }
+    
+    protected boolean gitIsSameCommit(String commitReference1, String commitReference2)
+            throws MojoFailureException, CommandLineException {
+        return getCurrentCommit(commitReference1).equals(getCurrentCommit(commitReference2));
+    }
+    
+    protected boolean gitIsCurrentCommit(String commitReference)
+            throws MojoFailureException, CommandLineException {
+        return getCurrentCommit().equals(getCurrentCommit(commitReference));
     }
 
     protected boolean gitMergeInProcess() throws MojoFailureException, CommandLineException {
@@ -5044,6 +5048,65 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             }
         }
         return false;
+    }
+
+    /**
+     * Check if passed tag name can be a version (release) tag.
+     * 
+     * @param tag
+     *            the tag name to be checked.
+     * @return <code>true</code> if the passed tag can be a version tag.
+     */
+    protected boolean isVersionTag(String tag) {
+        if (StringUtils.isEmpty(tag)) {
+            return false;
+        }
+        String releaseTagPrefix = gitFlowConfig.getVersionTagPrefix();
+        if (StringUtils.isNotEmpty(releaseTagPrefix)) {
+            return tag.startsWith(releaseTagPrefix);
+        } else {
+            try {
+                new DefaultVersionInfo(tag).toString();
+                return true;
+            } catch (VersionParseException exc) {
+                return false;
+            }
+        }
+    }
+
+    /**
+     * Return a list of tags between older commit and newer commit filtered by
+     * optional prefix.
+     * 
+     * @param olderCommit
+     *            the start commit
+     * @param newerCommit
+     *            the end commit
+     * @param tagPrefix
+     *            optional prefix for tags
+     * @return the list of tags between older commit and newer commit filtered
+     *         by optional prefix.
+     */
+    protected List<String> gitTagsBetweenCommits(String olderCommit, String newerCommit, String tagPrefix)
+            throws MojoFailureException, CommandLineException {
+        gitFetchOnce();
+        List<String> args = new ArrayList<>(Arrays.asList("tag", "-l", "--contains", olderCommit, "--merge", newerCommit));
+        if (StringUtils.isNotEmpty(tagPrefix)) {
+            args.add(tagPrefix + "*");
+        }
+        String tempCmdResult = executeGitCommandReturn(args.toArray(new String[args.size()])).trim();
+        if (!StringUtils.isBlank(tempCmdResult)) {
+            String[] lines = tempCmdResult.split("\r?\n");
+            List<String> result = new ArrayList<>();
+            for (int i = 0; i < lines.length; ++i) {
+                lines[i] = lines[i].trim();
+                if (!lines[i].isEmpty()) {
+                    result.add(lines[i]);
+                }
+            }
+            return result;
+        }
+        return Collections.emptyList();
     }
     
     protected BranchRef preferRemoteRef(String branchName) throws MojoFailureException, CommandLineException {

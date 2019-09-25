@@ -1542,4 +1542,32 @@ public class GitFlowReleaseAbortMojoTest extends AbstractGitFlowMojoTestCase {
         assertReleaseAbortedCorrectly();
     }
 
+    @Test
+    public void testExecuteReleaseStartedFromCommit() throws Exception {
+        // set up
+        final String USED_RELEASE_VERSION = "3.4.5";
+        final String USED_RELEASE_BRANCH = "release/gitflow-tests-" + USED_RELEASE_VERSION;
+        git.switchToBranch(repositorySet, MASTER_BRANCH);
+        final String BASE_COMMIT = git.currentCommit(repositorySet);
+        git.createAndCommitTestfile(repositorySet);
+        final String EXPECTED_DEVELOPMENT_COMMIT = git.currentCommit(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("baseBranch", MASTER_BRANCH);
+        userProperties.setProperty("baseCommit", BASE_COMMIT);
+        ExecutorHelper.executeReleaseStart(this, repositorySet, USED_RELEASE_VERSION, TestProjects.BASIC.releaseVersion,
+                userProperties);
+        git.assertCurrentBranch(repositorySet, USED_RELEASE_BRANCH);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, USED_RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, USED_RELEASE_BRANCH);
+        assertConfigCleanedUp(MASTER_BRANCH, USED_RELEASE_BRANCH);
+        git.assertRemoteFileMissing(repositorySet, CONFIG_BRANCH, USED_RELEASE_BRANCH);
+        git.assertCurrentCommit(repositorySet, EXPECTED_DEVELOPMENT_COMMIT);
+    }
+
 }

@@ -91,6 +91,17 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
     @Parameter(property = "baseBranch", readonly = true)
     protected String baseBranch;
 
+    /**
+     * The base commit which release branch should be started on. Also a tag name
+     * can be used as base commit. <code>baseCommit</code> can only be used if
+     * <code>baseBranch</code> property is defined and the base branch contains
+     * the base commit.
+     *
+     * @since 2.2.0
+     */
+    @Parameter(property = "baseCommit", readonly = true)
+    protected String baseCommit;
+
     @Override
     protected boolean isSkipTestProject() {
         throw new IllegalStateException("release-start does not test the project.");
@@ -164,6 +175,11 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
     @Override
     protected String getBaseBranch() {
         return baseBranch;
+    }
+
+    @Override
+    protected String getBaseCommit() {
+        return baseCommit;
     }
     
     @Override

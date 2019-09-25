@@ -122,6 +122,11 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
     protected abstract String getBaseBranch();
 
     /**
+     * The mojo provides baseCommit from a configuration property.
+     */
+    protected abstract String getBaseCommit();
+
+    /**
      * The mojo provides branchName from a configuration property.
      */
     protected abstract String getBranchName();
@@ -143,43 +148,53 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
             }
         }
         String developmentBranch;
+        String releaseBase;
         if (releaseBranchName == null) {
-            developmentBranch = getBaseBranch();
-            if (StringUtils.isEmpty(developmentBranch)) {
+            String baseBranch = getBaseBranch();
+            String baseCommit = getBaseCommit();
+            boolean isStartFromCommit = StringUtils.isNotBlank(baseCommit);
+            BranchRef baseBranchRef;
+            if (!StringUtils.isEmpty(baseBranch)) {
+                developmentBranch = gitLocalRef(baseBranch);
+                if (!isDevelopmentBranch(developmentBranch) && !isMaintenanceBranch(developmentBranch)) {
+                    throw new GitFlowFailureException(
+                            "Release can be started only on development branch '" + gitFlowConfig.getDevelopmentBranch()
+                                    + "' or on a maintenance branch.",
+                            "Please define the development branch '" + gitFlowConfig.getDevelopmentBranch()
+                                    + "' or a maintenance branch in property 'baseBranch' in order to proceed.");
+                }
+                baseBranchRef = recognizeRef(baseBranch,
+                        createBranchNotExistingError(
+                                "Base branch '" + baseBranch + "' defined in 'baseBranch' property",
+                                "Please define an existing branch in order to proceed."));
+            } else {
                 developmentBranch = currentBranch;
-            }
-            if (!isDevelopmentBranch(developmentBranch) && !isMaintenanceBranch(developmentBranch)) {
-                throw new GitFlowFailureException(
-                        "Release can be started only on development branch '" + gitFlowConfig.getDevelopmentBranch()
-                                + "' or on a maintenance branch.",
-                        "Please switch to the development branch '" + gitFlowConfig.getDevelopmentBranch()
-                                + "' or to a maintenance branch first in order to proceed.");
-            }
-            if (!developmentBranch.equals(currentBranch) && !gitLocalOrRemoteBranchesExist(developmentBranch)) {
-                throw new GitFlowFailureException(
-                        "Branch '" + developmentBranch + "' defined in 'baseBranch' property doesn't exist.",
-                        "Please define an existing branch in order to proceed.");
+                if (!isDevelopmentBranch(developmentBranch) && !isMaintenanceBranch(developmentBranch)) {
+                    throw new GitFlowFailureException(
+                            "Release can be started only on development branch '" + gitFlowConfig.getDevelopmentBranch()
+                                    + "' or on a maintenance branch.",
+                            "Please switch to the development branch '" + gitFlowConfig.getDevelopmentBranch()
+                                    + "' or to a maintenance branch first in order to proceed.");
+                }
+                baseBranchRef = localRef(developmentBranch);
+                if (isStartFromCommit) {
+                    throw new GitFlowFailureException(
+                            "Property 'baseCommit' can only be used togather with property 'baseBranch'.",
+                            "Please define also 'baseBranch' property in order to start the release branch from a "
+                                    + "specified commit.");
+                }
             }
             getMavenLog().info("Base branch for release is '" + developmentBranch + "'");
-            gitAssertRemoteBranchNotAheadOfLocalBranche(developmentBranch,
-                    new GitFlowFailureInfo("Remote branch '" + developmentBranch + "' is ahead of the local branch.",
-                            "Either pull changes on remote branch into local branch or reset the changes on remote "
-                                    + "branch in order to proceed.",
-                            "'git pull' to pull remote changes into local branch"),
-                    new GitFlowFailureInfo("Remote and local branches '" + developmentBranch + "' diverge.",
-                            "Either rebase/merge the changes into local branch '" + developmentBranch
-                                    + "' or reset the changes on remote branch in order to proceed.",
-                            "'git rebase'"));
-            if (!developmentBranch.equals(currentBranch)) {
-                getMavenLog().info("Switching to base branch '" + developmentBranch + "'");
-                gitCheckout(developmentBranch);
-            }
-
-            // check snapshots dependencies
-            if (!allowSnapshots && hasProjectSnapshotDependencies()) {
-                throw new GitFlowFailureException(
-                        "There are some SNAPSHOT dependencies in the project. Release cannot be started.",
-                        "Change the dependencies or ignore with parameter 'allowSnapshots'.");
+            if (!isStartFromCommit) {
+                gitAssertRemoteBranchNotAheadOfLocalBranche(developmentBranch, new GitFlowFailureInfo(
+                        "Remote branch '" + developmentBranch + "' is ahead of the local branch.",
+                        "Either pull changes on remote branch into local branch or reset the changes on remote "
+                                + "branch in order to proceed.",
+                        "'git pull' to pull remote changes into local branch"),
+                        new GitFlowFailureInfo("Remote and local branches '" + developmentBranch + "' diverge.",
+                                "Either rebase/merge the changes into local branch '" + developmentBranch
+                                        + "' or reset the changes on remote branch in order to proceed.",
+                                "'git rebase'"));
             }
             String productionBranch = getProductionBranchForDevelopmentBranch(developmentBranch);
             if (isUsingProductionBranch(developmentBranch, productionBranch)) {
@@ -190,7 +205,68 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                                         + "This indicates a severe error condition on your branches.",
                                 "Please consult a gitflow expert on how to fix this!"));
             }
-
+            if (isStartFromCommit) {
+                if (!gitCommitExists(baseCommit)) {
+                    throw new GitFlowFailureException(
+                            "Commit '" + baseCommit + "' defined in 'baseCommit' property doesn't exist.",
+                            "Please define an existing base commit in order to proceed.");
+                }
+                if (!gitIsAncestorBranch(baseCommit, baseBranchRef.getIdentifier())) {
+                    throw new GitFlowFailureException(
+                            "Base branch defined in property 'baseBranch' doesn't contain commit defined in "
+                                    + "property 'baseCommit'.",
+                            "Please define a commit of the base branch in order to start the release branch from a "
+                                    + "specified commit.");
+                }
+                boolean isBeforeReleaseTag = false;
+                if (isUsingProductionBranch(developmentBranch, productionBranch)) {
+                    if (gitBranchExists(productionBranch) && gitIsAncestorBranch(baseCommit, productionBranch)) {
+                        isBeforeReleaseTag = true;
+                    }
+                } else {
+                    String releaseTagPrefix = gitFlowConfig.getVersionTagPrefix();
+                    List<String> tags = gitTagsBetweenCommits(baseCommit, baseBranchRef.getIdentifier(),
+                            releaseTagPrefix);
+                    if (StringUtils.isNotEmpty(releaseTagPrefix)) {
+                        if (!tags.isEmpty()) {
+                            isBeforeReleaseTag = true;
+                        }
+                    } else {
+                        for (String tag : tags) {
+                            if (isVersionTag(tag)) {
+                                isBeforeReleaseTag = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (isBeforeReleaseTag) {
+                    throw new GitFlowFailureException(
+                            "Release from the base commit defined in property 'baseCommit' is not possible because "
+                                    + "the commit is behind an existing release.",
+                            "Please define a commit on the base branch after the last release commit in order to "
+                                    + "proceed.");
+                }
+                if (!gitIsCurrentCommit(baseCommit)) {
+                    getMavenLog().info("Switching to base commit '" + baseCommit + "'");
+                    gitCheckout(baseCommit);
+                }
+                releaseBase = baseCommit;
+            } else {
+                if (!developmentBranch.equals(currentBranch)) {
+                    getMavenLog().info("Switching to base branch '" + developmentBranch + "'");
+                    gitCheckout(developmentBranch);
+                }
+                releaseBase = developmentBranch;
+            }
+            
+            // check snapshots dependencies
+            if (!allowSnapshots && hasProjectSnapshotDependencies()) {
+                throw new GitFlowFailureException(
+                        "There are some SNAPSHOT dependencies in the project. Release cannot be started.",
+                        "Change the dependencies or ignore with parameter 'allowSnapshots'.");
+            }
+            
             // get current project version from pom in the current (development or
             // maintenance) branch
             final String currentVersion = getCurrentProjectVersion();
@@ -255,10 +331,10 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                         "'mvn flow:" + getCurrentGoal() + "' to run again and specify another release version");
             }
 
-            String developmentCommitRef = getCurrentCommit();
+            String developmentCommitRef = getCurrentCommit(developmentBranch);
 
             getMavenLog().info("Creating release branch '" + releaseBranchName + "'");
-            gitCreateAndCheckout(releaseBranchName, developmentBranch);
+            gitCreateAndCheckout(releaseBranchName, releaseBase);
 
             BranchCentralConfigChanges branchConfigChanges = new BranchCentralConfigChanges();
             branchConfigChanges.set(releaseBranchName, BranchConfigKeys.BRANCH_TYPE, BranchType.RELEASE.getType());

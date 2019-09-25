@@ -94,6 +94,8 @@
 				<flow.releaseBranchFilter>[0-9].[0-9].0</flow.releaseBranchFilter>
 				<flow.sameBranchName>false</flow.sameBranchName>
 				<flow.releaseBranchPrefix>release/${project.build-name}-</flow.releaseBranchPrefix>
+                <flow.versionTagPrefix>${project.build-name}-</flow.versionTagPrefix>
+                <flow.maintenanceBranchPrefix>maintenance/${project.build-name}-</flow.maintenanceBranchPrefix>
 				<flow.developmentBranch>master</flow.developmentBranch>
 				<flow.skipTag>false</flow.skipTag>
 
@@ -173,8 +175,8 @@ Hints:
 									<noProduction>${flow.noProduction}</noProduction>
 									<productionBranch>${flow.productionBranch}</productionBranch>
 									<developmentBranch>${flow.developmentBranch}</developmentBranch>
-									<maintenanceBranchPrefix>maintenance/${project.build-name}-</maintenanceBranchPrefix>
-									<versionTagPrefix>${project.build-name}-</versionTagPrefix>
+									<maintenanceBranchPrefix>${flow.maintenanceBranchPrefix}</maintenanceBranchPrefix>
+									<versionTagPrefix>${flow.versionTagPrefix}</versionTagPrefix>
 									<releaseBranchPrefix>${flow.releaseBranchPrefix}</releaseBranchPrefix>
 									<featureBranchPrefix>${flow.featureBranchPrefix}</featureBranchPrefix>
 									<epicBranchPrefix>${flow.epicBranchPrefix}</epicBranchPrefix>
