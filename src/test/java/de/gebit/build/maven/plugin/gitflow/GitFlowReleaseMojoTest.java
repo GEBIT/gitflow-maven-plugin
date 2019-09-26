@@ -743,19 +743,6 @@ public class GitFlowReleaseMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     @Test
-    public void testExecuteWithBaseBranchNotSetAndBaseCommitSet() throws Exception {
-        // set up
-        Properties userProperties = new Properties();
-        userProperties.setProperty("baseCommit", MASTER_BRANCH);
-        // test
-        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
-        // verify
-        assertGitFlowFailureException(result,
-                "Property 'baseCommit' can only be used togather with property 'baseBranch'.",
-                "Please define also 'baseBranch' property in order to start the release branch from a specified commit.");
-    }
-
-    @Test
     public void testExecuteWithBaseBranchAndBaseCommitNotExisting() throws Exception {
         // set up
         final String NOT_EXISTING_BASE_COMMIT = "not-existing";
@@ -780,7 +767,7 @@ public class GitFlowReleaseMojoTest extends AbstractGitFlowMojoTestCase {
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
         assertGitFlowFailureException(result,
-                "Base branch defined in property 'baseBranch' doesn't contain commit defined in property 'baseCommit'.",
+                "Base branch '" + MASTER_BRANCH + "' doesn't contain commit defined in property 'baseCommit'.",
                 "Please define a commit of the base branch in order to start the release branch from a specified "
                         + "commit.");
     }
