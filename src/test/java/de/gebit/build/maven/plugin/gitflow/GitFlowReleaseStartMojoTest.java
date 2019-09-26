@@ -1630,10 +1630,11 @@ public class GitFlowReleaseStartMojoTest extends AbstractGitFlowMojoTestCase {
                 "Release can be started only on development branch '" + MASTER_BRANCH + "' or on a maintenance branch.",
                 "Please define the development branch '" + MASTER_BRANCH
                         + "' or a maintenance branch in property 'baseBranch' in order to proceed.");
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
     }
 
     @Test
-    public void testExecuteWithBranchNameNotExistingMaintenance() throws Exception {
+    public void testExecuteWithBaseBranchNotExistingMaintenance() throws Exception {
         // set up
         final String NON_EXISTING_MAINTENANCE_BRANCH = "maintenance/gitflow-tests-nonExisting";
         Properties userProperties = new Properties();
@@ -1645,10 +1646,11 @@ public class GitFlowReleaseStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertGitFlowFailureException(result,
                 "Base branch '" + NON_EXISTING_MAINTENANCE_BRANCH + "' defined in 'baseBranch' property doesn't exist.",
                 "Please define an existing branch in order to proceed.");
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
     }
 
     @Test
-    public void testExecuteWithBranchNameNotExistingLocalFeature() throws Exception {
+    public void testExecuteWithBaseBranchNotExistingLocalBranch() throws Exception {
         // set up
         git.createAndCommitTestfile(repositorySet);
         git.push(repositorySet);
@@ -1692,6 +1694,7 @@ public class GitFlowReleaseStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertGitFlowFailureException(result,
                 "Commit '" + NOT_EXISTING_BASE_COMMIT + "' defined in 'baseCommit' property doesn't exist.",
                 "Please define an existing base commit in order to proceed.");
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
     }
 
     @Test
@@ -1706,6 +1709,7 @@ public class GitFlowReleaseStartMojoTest extends AbstractGitFlowMojoTestCase {
                 "Base branch '" + MASTER_BRANCH + "' doesn't contain commit defined in property 'baseCommit'.",
                 "Please define a commit of the base branch in order to start the release branch from a specified "
                         + "commit.");
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
     }
 
     @Test
@@ -1783,6 +1787,7 @@ public class GitFlowReleaseStartMojoTest extends AbstractGitFlowMojoTestCase {
         assertGitFlowFailureException(result,
                 "Commit '" + NOT_EXISTING_BASE_COMMIT + "' defined in 'baseCommit' property doesn't exist.",
                 "Please define an existing base commit in order to proceed.");
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
     }
 
     @Test
@@ -1798,6 +1803,7 @@ public class GitFlowReleaseStartMojoTest extends AbstractGitFlowMojoTestCase {
                 "Base branch '" + MASTER_BRANCH + "' doesn't contain commit defined in property 'baseCommit'.",
                 "Please define a commit of the base branch in order to start the release branch from a specified "
                         + "commit.");
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
     }
 
     @Test
@@ -1915,6 +1921,7 @@ public class GitFlowReleaseStartMojoTest extends AbstractGitFlowMojoTestCase {
                 "Release from the base commit defined in property 'baseCommit' is not possible because the commit is "
                         + "behind an existing release.",
                 "Please define a commit on the base branch after the last release commit in order to proceed.");
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
     }
 
     @Test
@@ -1935,6 +1942,7 @@ public class GitFlowReleaseStartMojoTest extends AbstractGitFlowMojoTestCase {
                 "Release from the base commit defined in property 'baseCommit' is not possible because the commit is "
                         + "behind an existing release.",
                 "Please define a commit on the base branch after the last release commit in order to proceed.");
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
     }
 
     @Test
@@ -2023,6 +2031,7 @@ public class GitFlowReleaseStartMojoTest extends AbstractGitFlowMojoTestCase {
                 "Release from the base commit defined in property 'baseCommit' is not possible because the commit is "
                         + "behind an existing release.",
                 "Please define a commit on the base branch after the last release commit in order to proceed.");
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
     }
 
     @Test
@@ -2165,6 +2174,34 @@ public class GitFlowReleaseStartMojoTest extends AbstractGitFlowMojoTestCase {
                 "Release from the base commit defined in property 'baseCommit' is not possible because the commit is "
                         + "behind an existing release.",
                 "Please define a commit on the base branch after the last release commit in order to proceed.");
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+    }
+
+    @Test
+    public void testExecuteOnCommitWithDifferentVersionAsBaseBranch() throws Exception {
+        // set up
+        final String NEW_BASE_VERSION = "9.9.9-SNAPSHOT";
+        final String COMMIT_MESSAGE_SET_NEW_BASE_VERSION = "set new base version";
+        final String BASE_COMMIT = git.currentCommit(repositorySet);
+        setProjectVersion(repositorySet, NEW_BASE_VERSION);
+        git.commitAll(repositorySet, COMMIT_MESSAGE_SET_NEW_BASE_VERSION);
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        git.switchToBranch(repositorySet, MAINTENANCE_BRANCH);
+        git.deleteLocalAndRemoteTrackingBranches(repositorySet, MASTER_BRANCH);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("baseBranch", MASTER_BRANCH);
+        userProperties.setProperty("baseCommit", BASE_COMMIT);
+        // test
+        MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertGitFlowFailureException(result,
+                "Release from the base commit defined in property 'baseCommit' is not possible because "
+                        + "project version was changed on base branch after this commit.\n"
+                        + "It would cause merge conflicts on release finish.",
+                "Please ensure that the project versions on base commit and on tip of the base branch "
+                        + "are equal in order to proceed.");
+        git.assertCurrentBranch(repositorySet, MAINTENANCE_BRANCH);
     }
 
 }

@@ -139,7 +139,7 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
      * @throws CommandLineException
      */
     protected String releaseStart() throws MojoFailureException, CommandLineException {
-        String currentBranch = gitCurrentBranch();
+        final String currentBranch = gitCurrentBranch();
         String releaseBranchName = null;
         if (isReleaseBranch(currentBranch)) {
             String breakpoint = gitGetBranchLocalConfig(currentBranch, "breakpoint");
@@ -179,17 +179,15 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                 baseBranchRef = localRef(developmentBranch);
             }
             getMavenLog().info("Base branch for release is '" + developmentBranch + "'");
-            if (!isStartFromCommit) {
-                gitAssertRemoteBranchNotAheadOfLocalBranche(developmentBranch, new GitFlowFailureInfo(
-                        "Remote branch '" + developmentBranch + "' is ahead of the local branch.",
-                        "Either pull changes on remote branch into local branch or reset the changes on remote "
-                                + "branch in order to proceed.",
-                        "'git pull' to pull remote changes into local branch"),
-                        new GitFlowFailureInfo("Remote and local branches '" + developmentBranch + "' diverge.",
-                                "Either rebase/merge the changes into local branch '" + developmentBranch
-                                        + "' or reset the changes on remote branch in order to proceed.",
-                                "'git rebase'"));
-            }
+            gitAssertRemoteBranchNotAheadOfLocalBranche(developmentBranch, new GitFlowFailureInfo(
+                    "Remote branch '" + developmentBranch + "' is ahead of the local branch.",
+                    "Either pull changes on remote branch into local branch or reset the changes on remote "
+                            + "branch in order to proceed.",
+                    "'git pull' to pull remote changes into local branch"),
+                    new GitFlowFailureInfo("Remote and local branches '" + developmentBranch + "' diverge.",
+                            "Either rebase/merge the changes into local branch '" + developmentBranch
+                                    + "' or reset the changes on remote branch in order to proceed.",
+                            "'git rebase'"));
             String productionBranch = getProductionBranchForDevelopmentBranch(developmentBranch);
             if (isUsingProductionBranch(developmentBranch, productionBranch)) {
                 // check the production branch, too
@@ -241,9 +239,27 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                             "Please define a commit on the base branch after the last release commit in order to "
                                     + "proceed.");
                 }
+                if (!developmentBranch.equals(currentBranch)) {
+                    getMavenLog().info("Switching to base branch '" + developmentBranch + "'");
+                    gitCheckout(developmentBranch);
+                }
+                String currentVersionOnBranch = getCurrentProjectVersion();
                 if (!gitIsCurrentCommit(baseCommit)) {
                     getMavenLog().info("Switching to base commit '" + baseCommit + "'");
                     gitCheckout(baseCommit);
+                    String currentVersionOnCommit = getCurrentProjectVersion();
+                    if (!currentVersionOnBranch.equals(currentVersionOnCommit)) {
+                        if (!gitIsCurrentCommit(currentBranch)) {
+                            getMavenLog().info("Switching back to branch '" + currentBranch + "'");
+                            gitCheckout(currentBranch);
+                        }
+                        throw new GitFlowFailureException(
+                                "Release from the base commit defined in property 'baseCommit' is not possible because "
+                                        + "project version was changed on base branch after this commit.\n"
+                                        + "It would cause merge conflicts on release finish.",
+                                "Please ensure that the project versions on base commit and on tip of the base branch "
+                                        + "are equal in order to proceed.");
+                    }
                 }
                 releaseBase = baseCommit;
             } else {
@@ -256,6 +272,10 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
             
             // check snapshots dependencies
             if (!allowSnapshots && hasProjectSnapshotDependencies()) {
+                if (!gitIsCurrentCommit(currentBranch)) {
+                    getMavenLog().info("Switching back to branch '" + currentBranch + "'");
+                    gitCheckout(currentBranch);
+                }
                 throw new GitFlowFailureException(
                         "There are some SNAPSHOT dependencies in the project. Release cannot be started.",
                         "Change the dependencies or ignore with parameter 'allowSnapshots'.");
@@ -276,6 +296,10 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                     defaultVersion = versionInfo.getReleaseVersionString();
                     getLog().info("Calculated releaseVersion: " + defaultVersion);
                 } catch (VersionParseException e) {
+                    if (!gitIsCurrentCommit(currentBranch)) {
+                        getMavenLog().info("Switching back to branch '" + currentBranch + "'");
+                        gitCheckout(currentBranch);
+                    }
                     if (getLog().isDebugEnabled()) {
                         getLog().debug(e);
                     }
@@ -310,6 +334,10 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
             }
 
             if (gitBranchExists(releaseBranchName)) {
+                if (!gitIsCurrentCommit(currentBranch)) {
+                    getMavenLog().info("Switching back to branch '" + currentBranch + "'");
+                    gitCheckout(currentBranch);
+                }
                 throw new GitFlowFailureException(
                         "Release branch '" + releaseBranchName + "' already exists. Cannot start release.",
                         "Either checkout the existing release branch or start a new release with another release version.",
@@ -317,6 +345,10 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
                         "'mvn flow:" + getCurrentGoal() + "' to run again and specify another release version");
             }
             if (gitRemoteBranchExists(releaseBranchName)) {
+                if (!gitIsCurrentCommit(currentBranch)) {
+                    getMavenLog().info("Switching back to branch '" + currentBranch + "'");
+                    gitCheckout(currentBranch);
+                }
                 throw new GitFlowFailureException(
                         "Remote release branch '" + releaseBranchName + "' already exists on the remote '"
                                 + gitFlowConfig.getOrigin() + "'. Cannot start release.",
