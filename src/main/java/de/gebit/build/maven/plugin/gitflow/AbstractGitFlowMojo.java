@@ -820,23 +820,15 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         final CommandResult diffCommandResult = executeGitCommandExitCode("diff", "--no-ext-diff",
                 "--ignore-submodules", "--quiet", "--exit-code");
 
-        String error = null;
-
         if (diffCommandResult.getExitCode() == SUCCESS_EXIT_CODE) {
             // git diff-index --cached --quiet --ignore-submodules HEAD --
             final CommandResult diffIndexCommandResult = executeGitCommandExitCode("diff-index", "--cached", "--quiet",
                     "--ignore-submodules", "HEAD", "--");
             if (diffIndexCommandResult.getExitCode() != SUCCESS_EXIT_CODE) {
-                error = diffIndexCommandResult.getError();
                 uncommited = true;
             }
         } else {
-            error = diffCommandResult.getError();
             uncommited = true;
-        }
-
-        if (StringUtils.isNotBlank(error)) {
-            throw new MojoFailureException(error);
         }
 
         return uncommited;
