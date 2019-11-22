@@ -181,13 +181,13 @@ public class ExecutorHelper {
         when(promptControllerMock.prompt(MAINTENANCE_START_PROMPT_MAINTENANCE_VERSION,
                 TestProjects.BASIC.maintenanceVersion)).thenReturn(maintenanceVersion);
         when(promptControllerMock.prompt(MAINTENANCE_START_PROMPT_MAINTENANCE_FIRST_VERSION,
-                TestProjects.BASIC.nextSnepshotVersion)).thenReturn(maintenanceSnapshotVersion);
+                TestProjects.BASIC.nextSnapshotVersion)).thenReturn(maintenanceSnapshotVersion);
         testCase.executeMojo(repositorySet.getWorkingDirectory(), "maintenance-start", promptControllerMock);
         verify(promptControllerMock).prompt(MAINTENANCE_START_PROMPT_SELECTING_RELEASE, Arrays.asList("0", "T"));
         verify(promptControllerMock).prompt(MAINTENANCE_START_PROMPT_MAINTENANCE_VERSION,
                 TestProjects.BASIC.maintenanceVersion);
         verify(promptControllerMock).prompt(MAINTENANCE_START_PROMPT_MAINTENANCE_FIRST_VERSION,
-                TestProjects.BASIC.nextSnepshotVersion);
+                TestProjects.BASIC.nextSnapshotVersion);
         verifyNoMoreInteractions(promptControllerMock);
     }
 

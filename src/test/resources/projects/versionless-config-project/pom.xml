@@ -12,7 +12,7 @@
 	<version>${revision}</version>
 	<properties>
 		<version.build>${revision}</version.build>
-		<flow.versionlessByConfig>true</flow.versionlessByConfig>
+		<flow.versionlessMode>CONFIG</flow.versionlessMode>
 	</properties>
 	<distributionManagement>
 		<site>

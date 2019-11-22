@@ -25,9 +25,9 @@ import de.gebit.build.maven.plugin.gitflow.jgit.RepositorySet;
 /**
  * @author Volodymyr Medvid
  */
-public class VersionlessTest extends AbstractGitFlowMojoTestCase {
+public class VersionlessConfigTest extends AbstractGitFlowMojoTestCase {
     private static final String PROMPT_NEW_VERSION = "What is the new version?";
-    private static final String POM_NEXT_RELEASE_VERSION = TestProjects.VERSIONLESS_PROJECT.nextReleaseVersion;
+    private static final String POM_NEXT_RELEASE_VERSION = TestProjects.VERSIONLESS_CONFIG_PROJECT.nextReleaseVersion;
     private static final String SET_VERSION_GOAL = "set-version";
     private static final String NEW_VERSION = "1.42.0-SNAPSHOT";
 
@@ -36,15 +36,15 @@ public class VersionlessTest extends AbstractGitFlowMojoTestCase {
     @Override
     protected CoreExtension getCoreExtensionDescriptor() {
         CoreExtension desc = new CoreExtension();
-        desc.setGroupId(TestProjects.VERSIONLESS_PROJECT.extensionGroupId);
-        desc.setArtifactId(TestProjects.VERSIONLESS_PROJECT.extensionArtifactId);
-        desc.setVersion(TestProjects.VERSIONLESS_PROJECT.extensionVersion);
+        desc.setGroupId(TestProjects.VERSIONLESS_CONFIG_PROJECT.extensionGroupId);
+        desc.setArtifactId(TestProjects.VERSIONLESS_CONFIG_PROJECT.extensionArtifactId);
+        desc.setVersion(TestProjects.VERSIONLESS_CONFIG_PROJECT.extensionVersion);
         return desc;
     }
 
     @Before
     public void setUp() throws Exception {
-        repositorySet = git.useGitRepositorySet(TestProjects.VERSIONLESS_PROJECT);
+        repositorySet = git.useGitRepositorySet(TestProjects.VERSIONLESS_CONFIG_PROJECT);
     }
 
     @After

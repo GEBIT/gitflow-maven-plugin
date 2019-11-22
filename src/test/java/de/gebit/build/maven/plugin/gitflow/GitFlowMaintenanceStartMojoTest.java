@@ -51,7 +51,7 @@ public class GitFlowMaintenanceStartMojoTest extends AbstractGitFlowMojoTestCase
 
     private static final String PROMPT_MAINTENANCE_FIRST_VERSION = ExecutorHelper.MAINTENANCE_START_PROMPT_MAINTENANCE_FIRST_VERSION;
 
-    private static final String CALCULATED_MAINTENANCE_FIRST_VERSION = TestProjects.BASIC.nextSnepshotVersion;
+    private static final String CALCULATED_MAINTENANCE_FIRST_VERSION = TestProjects.BASIC.nextSnapshotVersion;
 
     private static final String COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE = "NO-ISSUE: updating versions for"
             + " maintenance branch";
@@ -988,7 +988,7 @@ public class GitFlowMaintenanceStartMojoTest extends AbstractGitFlowMojoTestCase
         git.assertCommitsInLocalBranch(repositorySet, EXPECTED_MAINTENANCE_BRANCH,
                 COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE, COMMIT_MESSAGE_MASTER_TESTFILE,
                 COMMIT_MESSAGE_TAG_TESTFILE);
-        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.nextSnepshotVersion);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.nextSnapshotVersion);
     }
 
     @Test
@@ -1018,7 +1018,7 @@ public class GitFlowMaintenanceStartMojoTest extends AbstractGitFlowMojoTestCase
                 EXPECTED_MAINTENANCE_BRANCH);
         git.assertCommitsInLocalBranch(repositorySet, EXPECTED_MAINTENANCE_BRANCH,
                 COMMIT_MESSAGE_SET_VERSION_FOR_MAINTENANCE, COMMIT_MESSAGE_TAG_TESTFILE);
-        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.nextSnepshotVersion);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), TestProjects.BASIC.nextSnapshotVersion);
     }
 
     @Test

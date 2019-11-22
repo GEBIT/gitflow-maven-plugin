@@ -890,6 +890,10 @@ public class GitExecution {
         git.push().setForce(forced).call();
     }
 
+    public void pushTags(RepositorySet repositorySet) throws GitAPIException {
+        repositorySet.getLocalRepoGit().push().setPushTags().call();
+    }
+
     public void pull(RepositorySet repositorySet) throws GitAPIException {
         pull(repositorySet.getLocalRepoGit());
     }

@@ -230,12 +230,12 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
             String currentVersion = getCurrentProjectVersion();
             String baseVersion = currentVersion;
             String versionChangeCommit = null;
-            if (versionless || !tychoBuild) {
+            if (!versionlessMode.needsVersionChangeCommit() || !tychoBuild) {
                 getLog().info("Creating project version for epic.");
                 getLog().info("Base project version: " + currentVersion);
                 String version = insertSuffixInVersion(currentVersion, epicIssue);
                 getLog().info("Added epic issue number to project version: " + version);
-                if (versionless || !currentVersion.equals(version)) {
+                if (!versionlessMode.needsVersionChangeCommit() || !currentVersion.equals(version)) {
                     getMavenLog().info("Setting version '" + version + "' for project on epic branch...");
                     versionChangeCommit = mvnSetVersions(version, GitFlowAction.EPIC_START, "On epic branch: ", epicBranchName, epicStartMessage);
                 } else {

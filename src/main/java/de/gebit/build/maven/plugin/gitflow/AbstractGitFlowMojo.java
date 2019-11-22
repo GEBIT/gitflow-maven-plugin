@@ -15,6 +15,8 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -49,6 +51,7 @@ import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder;
 import org.apache.commons.configuration2.builder.fluent.Parameters;
 import org.apache.commons.configuration2.builder.fluent.PropertiesBuilderParameters;
 import org.apache.commons.configuration2.ex.ConfigurationException;
+import org.apache.commons.io.Charsets;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.text.StrLookup;
 import org.apache.commons.lang3.text.StrSubstitutor;
@@ -87,6 +90,11 @@ import de.gebit.build.maven.plugin.gitflow.BranchCentralConfigChanges.Change;
  * @author Aleksandr Mashchenko
  */
 public abstract class AbstractGitFlowMojo extends AbstractMojo {
+
+    /**
+     * Name of the file to track the version in versionlessMode==FILE
+     */
+    public static final String POM_VERSION_FILE = ".mvn/pom.version";
 
     /**
      * A property key for an alternative maven cmd executable that can be defined in
@@ -274,21 +282,30 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     private String[] copyProperties;
 
     /**
-     * In versionless mode the version is determined by the latest tag found on the current branch. To change the version
-     * either new tags are used (if set to <code>false</code>) or the version is tracked with the branch-config (if set
-     * to <code>true</code>).
+     * If versionless mode is active specified how the version is to be
+     * determined.
      * <p>
-     * When enabled please note that any changes to the version are immediatly pushed (as with any other 
-     * <code>branch-config</code> changes. On the other hand there's no need to remove any tags and/or force pushing
-     * then if the version is moved, but that SHOULD never be the case anyways.
+     * 
+     * the version is determined by the latest tag found on the current branch.
+     * To change the version either new tags are used (if set to
+     * <code>false</code>) or the version is tracked with the branch-config (if
+     * set to <code>true</code>).
      * <p>
-     * When not enabled please not that you cannot have two branches with the same version (tags need to be 
-     * unique) and that there can be ambiguous situations when starting multiple branches from a single commit. 
+     * Please note that when set to <code>CONFIG</code> any changes to the
+     * version are immediatly pushed (as with any other
+     * <code>branch-config</code> changes. On the other hand there's no need to
+     * remove any tags and/or force pushing then if the version is moved, but
+     * that SHOULD never be the case anyways.
+     * <p>
+     * When set to <code>TAGS</code> note that you cannot have two branches with
+     * the same version (tags need to be unique) and that there can be ambiguous
+     * situations when starting multiple branches from a single commit.
      *
+     * @see #versionless
      * @since 2.2.0
      */
-    @Parameter(property = "flow.versionlessByConfig", defaultValue = "true")
-    protected boolean versionlessByConfig;
+    @Parameter(property = "flow.versionlessMode", defaultValue = "NONE")
+    protected VersionlessMode versionlessMode;
 
 
     /**
@@ -574,6 +591,9 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             } else {
                 versionless = false;
             }
+        }
+        if (!versionless) {
+            versionlessMode = VersionlessMode.NONE;
         }
         try {
             executeGoal();
@@ -3676,7 +3696,18 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         getLog().info("Updating version(s) to '" + version + "'.");
 
         if (versionless) {
-            // processed later
+            switch (versionlessMode) {
+            case FILE:
+                try {
+                    String basedir = session.getRequest().getBaseDirectory();
+                    FileUtils.writeStringToFile(new File(basedir, POM_VERSION_FILE), version, StandardCharsets.UTF_8);
+                } catch (IOException exc) {
+                    throw new MojoFailureException("Failed to change version.", exc);
+                }
+                break;
+            default:
+                // processed later
+            }
         } else if (tychoBuild) {
             executeMvnCommand(OutputMode.PROGRESS, TYCHO_VERSIONS_PLUGIN_SET_GOAL, "-DnewVersion=" + version,
                     "-Dtycho.mode=maven");
@@ -3700,22 +3731,22 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         }
 
         String versionChangeCommit = null;
-        if (commitMessage != null && ((versionless && !versionlessByConfig) || executeGitHasUncommitted())) {
+        if (commitMessage != null && (executeGitHasUncommitted() || versionlessMode.needsVersionChangeCommit())) {
             gitCommitAllowEmpty(commitMessage);
             versionChangeCommit = getCurrentCommit();
         }
 
         // as we might create a tag this must come after the commit
-        if (versionless && versionlessPersist) {
+        if (!versionlessMode.needsVersionChangeCommit() && versionlessPersist) {
             String versionValue = version;
             if (tychoBuild && ArtifactUtils.isSnapshot(version)) {
                 versionValue = versionValue.replace("-" + Artifact.SNAPSHOT_VERSION, "");
             }
 
-            if (versionlessByConfig || aGitFlowAction == GitFlowAction.RELEASE_START) {
+            if (VersionlessMode.CONFIG.equals(versionlessMode) || aGitFlowAction == GitFlowAction.RELEASE_START) {
                 getLog().info("Setting version to '" + versionValue + "' in branch-config");
                 branchConfigChanges.set(currentBranch, BranchConfigKeys.VERSION, versionValue);
-            } else {
+            } else if (VersionlessMode.TAGS.equals(versionlessMode)) {
                 String versionTag = versionlessTagPrefix + versionValue;
                 if (gitTagExists(versionTag)) {
                     if (!getPrompter().promptConfirmation(

@@ -93,7 +93,7 @@ public class GitFlowHotfixStartMojo extends AbstractGitFlowMojo {
                 ? gitFlowConfig.getDevelopmentBranch() : gitFlowConfig.getProductionBranch());
 
         // execute if version changed
-        if (versionless || !version.equals(currentVersion)) {
+        if (!versionlessMode.needsVersionChangeCommit() || !version.equals(currentVersion)) {
             // mvn versions:set -DnewVersion=... -DgenerateBackupPoms=false
             mvnSetVersions(version, GitFlowAction.HOTFIX_START, null, null, commitMessages.getHotfixStartMessage());
         }

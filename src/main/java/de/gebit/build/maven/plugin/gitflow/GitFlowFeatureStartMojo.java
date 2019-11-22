@@ -266,7 +266,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
             String currentVersion = getCurrentProjectVersion();
             String baseVersion = currentVersion;
             String versionChangeCommit = null;
-            if (versionless || (!skipFeatureVersion && !tychoBuild)) {
+            if (!versionlessMode.needsVersionChangeCommit() || (!skipFeatureVersion && !tychoBuild)) {
                 String version = currentVersion;
                 getLog().info("Base project version: " + version);
                 if (isEpicBranch(baseBranchLocalName)) {
@@ -276,7 +276,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
                 baseVersion = version;
                 version = insertSuffixInVersion(version, featureIssue);
                 getLog().info("Added feature issue number to project version: " + version);
-                if (versionless || !currentVersion.equals(version)) {
+                if (!versionlessMode.needsVersionChangeCommit() || !currentVersion.equals(version)) {
                     getMavenLog().info("Setting version '" + version + "' for project on feature branch...");
                     versionChangeCommit = mvnSetVersions(version, GitFlowAction.FEATURE_START, "On feature branch: ", featureBranchName, featureStartMessage);
                 } else {

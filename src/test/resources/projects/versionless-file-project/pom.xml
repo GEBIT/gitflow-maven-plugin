@@ -8,11 +8,11 @@
 		<relativePath>../parent-pom.xml</relativePath>
 	</parent>
 	<groupId>de.gebit.build.maven.test</groupId>
-	<artifactId>versionless-tag-project</artifactId>
+	<artifactId>versionless-project</artifactId>
 	<version>${revision}</version>
 	<properties>
 		<version.build>${revision}</version.build>
-		<flow.versionlessMode>TAGS</flow.versionlessMode>
+		<flow.versionlessMode>FILE</flow.versionlessMode>
 	</properties>
 	<distributionManagement>
 		<site>

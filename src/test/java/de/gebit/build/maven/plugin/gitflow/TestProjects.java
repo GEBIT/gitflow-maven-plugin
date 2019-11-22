@@ -15,6 +15,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 
 import org.apache.commons.io.FileUtils;
@@ -22,7 +23,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.cli.internal.extension.model.CoreExtension;
 import org.codehaus.plexus.components.interactivity.Prompter;
 import org.eclipse.jgit.api.CreateBranchCommand.SetupUpstreamMode;
+import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.RmCommand;
+import org.eclipse.jgit.api.errors.GitAPIException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -87,16 +90,22 @@ public class TestProjects {
             "GFTST");
 
     /**
-     * The directory of the versionless test project.
+     * The directory of the versionless test project with branch-config.
      */
-    public static final TestProjectData VERSIONLESS_PROJECT = new TestProjectData("versionless-project",
-            "1.2.3-SNAPSHOT", "GFTST", "gitflow-tests", "de.gebit.build.maven", "gebit-build-extension", "1.1.0-I20");
-    
+    public static final TestProjectData VERSIONLESS_CONFIG_PROJECT = new TestProjectData("versionless-config-project",
+            "1.2.3-SNAPSHOT", "GFTST", "gitflow-tests", "de.gebit.build.maven", "gebit-build-extension", "1.1.0");
+
     /**
      * The directory of the versionless test project with tags.
      */
     public static final TestProjectData VERSIONLESS_TAG_PROJECT = new TestProjectData("versionless-tag-project",
-            "2.0.0-SNAPSHOT", "GFTST", "gitflow-tests", "de.gebit.build.maven", "gebit-build-extension", "1.1.0-I20");
+            "2.0.0-SNAPSHOT", "GFTST", "gitflow-tests", "de.gebit.build.maven", "gebit-build-extension", "1.1.0");
+
+    /**
+     * The directory of the versionless test project with branch-config.
+     */
+    public static final TestProjectData VERSIONLESS_FILE_PROJECT = new TestProjectData("versionless-file-project",
+            "1.2.3-SNAPSHOT", "GFTST", "gitflow-tests", "de.gebit.build.maven", "gebit-build-extension", "1.1.0");
 
     public static final String PROFILE_SET_VERSION_WITHOUT_ADDITIONAL_VERSION_COMMANDS = "setVersionWithoutAdditionalVersionCommands";
 
@@ -123,7 +132,7 @@ public class TestProjects {
         public final String releaseVersion;
         public final String maintenanceVersion;
         public final String nextReleaseVersion;
-        public final String nextSnepshotVersion;
+        public final String nextSnapshotVersion;
         public final String jiraProject;
         public final String buildName;
         public final String extensionGroupId;
@@ -152,14 +161,13 @@ public class TestProjects {
                 tempNextReleaseVersion = releaseVersion;
             }
             nextReleaseVersion = tempNextReleaseVersion;
-            nextSnepshotVersion = nextReleaseVersion + "-SNAPSHOT";
+            nextSnapshotVersion = nextReleaseVersion + "-SNAPSHOT";
             jiraProject = aJiraProject;
             buildName = aBuildName;
             extensionGroupId = anExtensionGroupId;
             extensionArtifactId = anExtensionArtifactId;
             extensionVersion = anExtensionVersion;
         }
-
     }
 
     public static synchronized void prepareRepositoryIfNotExisting(File gitRepoDir) throws Exception {
@@ -168,8 +176,9 @@ public class TestProjects {
         }
         prepareRepository(gitRepoDir, BASIC);
         prepareRepository(gitRepoDir, WITH_UPSTREAM);
-        prepareRepository(gitRepoDir, VERSIONLESS_PROJECT);
-        prepareRepository(gitRepoDir, VERSIONLESS_TAG_PROJECT);
+        prepareRepository(gitRepoDir, VERSIONLESS_CONFIG_PROJECT);
+        prepareRepository(gitRepoDir, VERSIONLESS_FILE_PROJECT);
+        // prepareRepository(gitRepoDir, VERSIONLESS_TAG_PROJECT);
     }
 
     private static void prepareRepository(File repoDir, TestProjectData project) throws Exception {
@@ -226,7 +235,9 @@ public class TestProjects {
             initBasicRepository(git, repositorySet, testCase, false);
         } else if (project == WITH_UPSTREAM) {
             initUpstreamVersionRepository(git, repositorySet, testCase);
-        } else if (project == VERSIONLESS_PROJECT) {
+        } else if (project == VERSIONLESS_FILE_PROJECT) {
+            initVersionlessRepository(git, repositorySet, testCase);
+        } else if (project == VERSIONLESS_CONFIG_PROJECT) {
             initVersionlessRepository(git, repositorySet, testCase);
         } else if (project == VERSIONLESS_TAG_PROJECT) {
             initVersionlessWithTagRepository(git, repositorySet, testCase);
@@ -249,6 +260,9 @@ public class TestProjects {
             throws Exception {
         git.createBranch(repositorySet, BasicConstants.PRODUCTION_BRANCH);
         git.push(repositorySet);
+        if (avoidDuplicateVersions) {
+            git.pushTags(repositorySet);
+        }
         git.switchToBranch(repositorySet, "master");
 
         // feature branches
@@ -372,6 +386,7 @@ public class TestProjects {
 
         // alternative master with one commit
         git.createBranch(repositorySet, BasicConstants.MASTER_WITH_COMMIT_BRANCH);
+        ExecutorHelper.executeSetVersion(testCase, repositorySet, testCase.data.version);
         git.createAndCommitTestfile(repositorySet, "master-testfile.txt", BasicConstants.MASTER_WITH_COMMIT_MESSAGE);
         // maintenance branch on master with commit
         ExecutorHelper.executeMaintenanceStart(testCase, repositorySet,
