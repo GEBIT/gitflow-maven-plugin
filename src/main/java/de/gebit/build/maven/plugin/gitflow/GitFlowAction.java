@@ -28,6 +28,7 @@ public enum GitFlowAction {
     HOTFIX_START(CommandContext.INTERNAL),
     HOTFIX_FINISH(CommandContext.INTERNAL),
     SET_VERSION(CommandContext.VERSION),
+    MAKE_VERSIONLESS(CommandContext.VERSION),
     BUILD_VERSION(CommandContext.VERSION);
 
     private CommandContext commandContext;

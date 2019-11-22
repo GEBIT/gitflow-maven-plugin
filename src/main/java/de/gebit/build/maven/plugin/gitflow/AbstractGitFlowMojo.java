@@ -577,6 +577,24 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         return null;
     }
 
+    /**
+     * Get the directory where we operate
+     */
+    protected File getBasedir() {
+        String basedir = this.session.getRequest().getBaseDirectory();
+        return new File(basedir);
+    }
+
+    /**
+     * Make sure {@link #versionlessMode} is set to {@link VersionlessMode#NONE}
+     * if {@link #versionless} is not enabled
+     */
+    protected void initializeVersionlessMode() {
+        if (!versionless) {
+            versionlessMode = VersionlessMode.NONE;
+        }
+    }
+
     /** {@inheritDoc} */
     @Override
     public final void execute() throws MojoExecutionException, MojoFailureException {
@@ -592,9 +610,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                 versionless = false;
             }
         }
-        if (!versionless) {
-            versionlessMode = VersionlessMode.NONE;
-        }
+        initializeVersionlessMode();
         try {
             executeGoal();
             copyLogFile();
