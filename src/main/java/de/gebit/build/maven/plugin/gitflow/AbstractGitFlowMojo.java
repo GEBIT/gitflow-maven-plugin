@@ -3717,6 +3717,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                 try {
                     String basedir = session.getRequest().getBaseDirectory();
                     FileUtils.writeStringToFile(new File(basedir, POM_VERSION_FILE), version, StandardCharsets.UTF_8);
+                    executeGitCommand("add", POM_VERSION_FILE);
                 } catch (IOException exc) {
                     throw new MojoFailureException("Failed to change version.", exc);
                 }

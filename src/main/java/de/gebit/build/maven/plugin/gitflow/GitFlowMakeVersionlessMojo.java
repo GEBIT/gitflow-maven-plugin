@@ -46,17 +46,11 @@ public class GitFlowMakeVersionlessMojo extends AbstractGitFlowMojo {
             throw new MojoFailureException("Project is already versionless");
         }
 
+        // must not have uncommitted changes (otherwise they would be committed)
+        checkUncommittedChanges();
+
         // remember the current version
         String currentVersion = getProject().getVersion();
-
-        // convert to ${revision}
-        getMavenLog().debug("converting POM files");
-        mvnSetVersions("${dollar}${revision}", GitFlowAction.MAKE_VERSIONLESS, "");
-
-        // now set the version in the new scheme
-        getMavenLog().debug("re-applying version " + currentVersion);
-        mvnSetVersions(currentVersion, GitFlowAction.MAKE_VERSIONLESS, "");
-
         String extensionVersion = "1.1.0";
         Plugin extensionPlugin = getProject().getPlugin("de.gebit.build.maven:gebit-build-extension");
         if (extensionPlugin != null) {
@@ -84,6 +78,23 @@ public class GitFlowMakeVersionlessMojo extends AbstractGitFlowMojo {
         } else {
             getMavenLog().info("Please make sure this is in '" + MVN_EXTENSIONS_XML + "':\n\n" + content);
         }
+
+        // convert to ${revision}
+        getMavenLog().debug("converting POM files");
+        versionless = false;
+        VersionlessMode originalVersionlessMode = versionlessMode;
+        versionlessMode = VersionlessMode.NONE;
+        mvnSetVersions("${dollar}{revision}", GitFlowAction.MAKE_VERSIONLESS, "");
+
+        getMavenLog().info("Creating commit");
+        gitCommit("NO-ISSUE: converted to versionless mode");
+
+        // now set the version in the new scheme
+        getMavenLog().debug("re-applying version " + currentVersion);
+        versionless = true;
+        versionlessMode = originalVersionlessMode;
+        mvnSetVersions(currentVersion, GitFlowAction.MAKE_VERSIONLESS, "");
+
         getMavenLog().info("Conversion finished");
     }
 
