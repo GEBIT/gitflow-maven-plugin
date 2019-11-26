@@ -984,10 +984,12 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         }
 
         if (gitBranchExists(releaseBranch)) {
+            getMavenLog().info("Removing local release branch '" + releaseBranch + "'");
             gitBranchDeleteForce(releaseBranch);
         }
 
         if (pushRemote) {
+            getMavenLog().info("Removing remote release branch '" + releaseBranch + "'");
             gitBranchDeleteRemote(releaseBranch);
         }
         gitRemoveAllBranchCentralConfigsForBranch(releaseBranch, "release '" + releaseBranch + "' aborted");
