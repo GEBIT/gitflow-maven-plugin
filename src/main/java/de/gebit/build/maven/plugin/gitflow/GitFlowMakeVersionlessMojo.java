@@ -80,14 +80,12 @@ public class GitFlowMakeVersionlessMojo extends AbstractGitFlowMojo {
         }
 
         // convert to ${revision}
-        getMavenLog().debug("converting POM files");
+        getMavenLog().debug("converting POM files andcreating commit");
         versionless = false;
         VersionlessMode originalVersionlessMode = versionlessMode;
         versionlessMode = VersionlessMode.NONE;
-        mvnSetVersions("${dollar}{revision}", GitFlowAction.MAKE_VERSIONLESS, "");
-
-        getMavenLog().info("Creating commit");
-        gitCommit("NO-ISSUE: converted to versionless mode");
+        mvnSetVersions("${dollar}{revision}", GitFlowAction.MAKE_VERSIONLESS, "", null,
+                "NO-ISSUE: converted to versionless mode");
 
         // now set the version in the new scheme
         getMavenLog().debug("re-applying version " + currentVersion);
