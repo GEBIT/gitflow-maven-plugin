@@ -381,6 +381,38 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     @Test
+    public void testExecuteSkipTestProjectFalseAndSkipTestProjectOnEpicFinishTrue() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.skipTestProject", "false");
+        userProperties.setProperty("flow.skipTestProjectOnEpicFinish", "true");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertEpicFinishedCorrectly();
+        assertMavenCommandNotExecuted("clean verify");
+        assertMavenCommandNotExecuted("clean test");
+    }
+
+    @Test
+    public void testExecuteSkipTestProjectTrueAndSkipTestProjectOnEpicFinishFalse() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.skipTestProject", "true");
+        userProperties.setProperty("flow.skipTestProjectOnEpicFinish", "false");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertEpicFinishedCorrectly();
+        assertMavenCommandExecuted("clean verify");
+        assertMavenCommandNotExecuted("clean test");
+    }
+
+    @Test
     public void testExecuteTychoBuildAndSkipTestProjectFalse() throws Exception {
         // set up
         final String USED_EPIC_BRANCH = BasicConstants.EPIC_WITHOUT_VERSION_BRANCH;

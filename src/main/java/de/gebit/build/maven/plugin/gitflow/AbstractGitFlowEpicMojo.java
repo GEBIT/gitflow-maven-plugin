@@ -14,9 +14,6 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
-import de.gebit.build.maven.plugin.gitflow.AbstractGitFlowMojo.BranchRef;
-import de.gebit.build.maven.plugin.gitflow.AbstractGitFlowMojo.CommitRef;
-
 /**
  * Abstract implementation for all epic mojos.
  *

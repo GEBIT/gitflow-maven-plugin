@@ -46,7 +46,7 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
     private boolean keepBranch = false;
 
     /**
-     * Whether to skip calling Maven test goal before merging the branch.
+     * Whether to skip calling Maven test goal before releasing.
      *
      * @since 1.0.5
      */
@@ -162,11 +162,16 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
      */
     @Parameter(property = "flow.installProjectOnReleaseFinish")
     private Boolean installProjectOnReleaseFinish;
-
-    @Override
-    protected boolean isSkipTestProject() {
-        return skipTestProject;
-    }
+    
+    /**
+     * Whether to skip calling Maven test goal before releasing. By default the
+     * value of <code>skipTestProject</code> parameter
+     * (<code>flow.skipTestProject</code> property) is used.
+     *
+     * @since 2.2.0
+     */
+    @Parameter(property = "flow.skipTestProjectOnReleaseFinish")
+    private Boolean skipTestProjectOnReleaseFinish;
 
     @Override
     protected boolean isSkipDeployProject() {
@@ -338,5 +343,15 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
     @Override
     protected Boolean getIndividualInstallProjectConfig() {
         return installProjectOnReleaseFinish;
+    }
+    
+    @Override
+    protected boolean getSkipTestProjectConfig() {
+        return skipTestProject;
+    }
+
+    @Override
+    protected Boolean getIndividualSkipTestProjectConfig() {
+        return skipTestProjectOnReleaseFinish;
     }
 }

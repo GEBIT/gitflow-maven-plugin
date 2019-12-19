@@ -71,6 +71,16 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
      */
     @Parameter(property = "flow.installProjectOnEpicFinish")
     private Boolean installProjectOnEpicFinish;
+    
+    /**
+     * Whether to skip calling Maven test goal before merging the epic branch
+     * into base branch. By default the value of <code>skipTestProject</code>
+     * parameter (<code>flow.skipTestProject</code> property) is used.
+     *
+     * @since 2.2.0
+     */
+    @Parameter(property = "flow.skipTestProjectOnEpicFinish")
+    private Boolean skipTestProjectOnEpicFinish;
 
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
@@ -182,7 +192,7 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
                     gitCheckout(epicBranchLocalName);
                 }
 
-                if (!skipTestProject) {
+                if (!isSkipTestProject()) {
                     getMavenLog().info("Testing epic project before performing epic finish...");
                     mvnCleanVerify();
                 }
@@ -301,6 +311,16 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
     @Override
     protected Boolean getIndividualInstallProjectConfig() {
         return installProjectOnEpicFinish;
+    }
+    
+    @Override
+    protected boolean getSkipTestProjectConfig() {
+        return skipTestProject;
+    }
+
+    @Override
+    protected Boolean getIndividualSkipTestProjectConfig() {
+        return skipTestProjectOnEpicFinish;
     }
     
 }

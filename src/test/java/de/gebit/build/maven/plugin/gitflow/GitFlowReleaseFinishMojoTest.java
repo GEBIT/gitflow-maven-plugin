@@ -357,6 +357,56 @@ public class GitFlowReleaseFinishMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     @Test
+    public void testExecuteSkipTestProjectFalseAndSkipTestProjectOnReleaseFinishTrue() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.skipTestProject", "false");
+        userProperties.setProperty("flow.skipTestProjectOnReleaseFinish", "true");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
+        git.assertLocalTags(repositorySet, RELEASE_TAG);
+        git.assertRemoteTags(repositorySet, RELEASE_TAG);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
+                GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
+        assertDefaultDeployGoalExecuted();
+        assertMavenCommandNotExecuted("clean verify");
+        assertMavenCommandNotExecuted("clean test");
+    }
+
+    @Test
+    public void testExecuteSkipTestProjectTrueAndSkipTestProjectOnReleaseFinishFalse() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.skipTestProject", "true");
+        userProperties.setProperty("flow.skipTestProjectOnReleaseFinish", "false");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, MASTER_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, RELEASE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, RELEASE_BRANCH);
+        git.assertLocalTags(repositorySet, RELEASE_TAG);
+        git.assertRemoteTags(repositorySet, RELEASE_TAG);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, MASTER_BRANCH, MASTER_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, MASTER_BRANCH, COMMIT_MESSAGE_RELEASE_FINISH_SET_VERSION,
+                GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_RELEASE_START_SET_VERSION);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_DEVELOPMENT_VERSION);
+        assertDefaultDeployGoalExecuted();
+        assertMavenCommandExecuted("clean verify");
+        assertMavenCommandNotExecuted("clean test");
+    }
+
+    @Test
     public void testExecuteTychoBuildAndSkipTestProjectFalse() throws Exception {
         // set up
         git.createAndCommitTestfile(repositorySet);

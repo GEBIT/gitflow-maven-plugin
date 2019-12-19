@@ -501,6 +501,38 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     @Test
+    public void testExecuteSkipTestProjectFalseAndSkipTestProjectOnFeatureFinishTrue() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.skipTestProject", "false");
+        userProperties.setProperty("flow.skipTestProjectOnFeatureFinish", "true");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertFeatureFinishedCorrectly();
+        assertMavenCommandNotExecuted("clean verify");
+        assertMavenCommandNotExecuted("clean test");
+    }
+
+    @Test
+    public void testExecuteSkipTestProjectTrueAndSkipTestProjectOnFeatureFinishFalse() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.skipTestProject", "true");
+        userProperties.setProperty("flow.skipTestProjectOnFeatureFinish", "false");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertFeatureFinishedCorrectly();
+        assertMavenCommandExecuted("clean verify");
+        assertMavenCommandNotExecuted("clean test");
+    }
+
+    @Test
     public void testExecuteSkipTestProjectFalseAndTestProjectGoalsSet() throws Exception {
         // set up
         git.createAndCommitTestfile(repositorySet);

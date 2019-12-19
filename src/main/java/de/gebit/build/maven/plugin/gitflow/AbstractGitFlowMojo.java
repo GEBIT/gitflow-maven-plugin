@@ -15,7 +15,6 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -51,7 +50,6 @@ import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder;
 import org.apache.commons.configuration2.builder.fluent.Parameters;
 import org.apache.commons.configuration2.builder.fluent.PropertiesBuilderParameters;
 import org.apache.commons.configuration2.ex.ConfigurationException;
-import org.apache.commons.io.Charsets;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.text.StrLookup;
 import org.apache.commons.lang3.text.StrSubstitutor;
@@ -820,18 +818,25 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         return output;
     }
     
-    /**
-     * @return the installProject
-     */
     protected boolean isInstallProject() {
         Boolean individualInstallProject = getIndividualInstallProjectConfig();
         return individualInstallProject != null ? individualInstallProject : installProject;
     }
 
-    /**
-     * @return
-     */
     protected Boolean getIndividualInstallProjectConfig() {
+        return null;
+    }
+    
+    protected boolean isSkipTestProject() {
+        Boolean individualSkipTestProject = getIndividualSkipTestProjectConfig();
+        return individualSkipTestProject != null ? individualSkipTestProject : getSkipTestProjectConfig();
+    }
+
+    protected boolean getSkipTestProjectConfig() {
+        return false;
+    }
+
+    protected Boolean getIndividualSkipTestProjectConfig() {
         return null;
     }
 

@@ -145,6 +145,16 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
      */
     @Parameter(property = "flow.installProjectOnFeatureFinish")
     private Boolean installProjectOnFeatureFinish;
+    
+    /**
+     * Whether to skip calling Maven test goal before merging the feature branch
+     * into base branch. By default the value of <code>skipTestProject</code>
+     * parameter (<code>flow.skipTestProject</code> property) is used.
+     *
+     * @since 2.2.0
+     */
+    @Parameter(property = "flow.skipTestProjectOnFeatureFinish")
+    private Boolean skipTestProjectOnFeatureFinish;
 
     private final List<Step<FeatureFinishBreakpoint, FeatureFinishStepParameters>> allProcessSteps = Arrays.asList(
             new FeatureFinishStep(this::selectFeatureAndBaseBranches),
@@ -548,7 +558,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
             getMavenLog().info("Restart after failed project test on feature branch detected");
             checkUncommittedChanges();
         }
-        if (!skipTestProject) {
+        if (!isSkipTestProject()) {
             getMavenLog().info("Testing the feature project before performing feature finish...");
             try {
                 mvnCleanVerify();
@@ -917,6 +927,16 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
     @Override
     protected Boolean getIndividualInstallProjectConfig() {
         return installProjectOnFeatureFinish;
+    }
+    
+    @Override
+    protected boolean getSkipTestProjectConfig() {
+        return skipTestProject;
+    }
+
+    @Override
+    protected Boolean getIndividualSkipTestProjectConfig() {
+        return skipTestProjectOnFeatureFinish;
     }
 
 }

@@ -64,6 +64,16 @@ public class GitFlowHotfixFinishMojo extends AbstractGitFlowMojo {
      */
     @Parameter(property = "flow.installProjectOnHotfixFinish")
     private Boolean installProjectOnHotfixFinish;
+    
+    /**
+     * Whether to skip calling Maven test goal before merging the hotfix branch
+     * into base branch. By default the value of <code>skipTestProject</code>
+     * parameter (<code>flow.skipTestProject</code> property) is used.
+     *
+     * @since 2.2.0
+     */
+    @Parameter(property = "flow.skipTestProjectOnHotfixFinish")
+    private Boolean skipTestProjectOnHotfixFinish;
 
     /** {@inheritDoc} */
     @Override
@@ -113,7 +123,7 @@ public class GitFlowHotfixFinishMojo extends AbstractGitFlowMojo {
             throw new MojoFailureException("Hotfix branch name to finish is blank.");
         }
 
-        if (!skipTestProject) {
+        if (!isSkipTestProject()) {
             // git checkout hotfix/...
             gitCheckout(hotfixBranchName);
 
@@ -208,5 +218,15 @@ public class GitFlowHotfixFinishMojo extends AbstractGitFlowMojo {
     @Override
     protected Boolean getIndividualInstallProjectConfig() {
         return installProjectOnHotfixFinish;
+    }
+    
+    @Override
+    protected boolean getSkipTestProjectConfig() {
+        return skipTestProject;
+    }
+
+    @Override
+    protected Boolean getIndividualSkipTestProjectConfig() {
+        return skipTestProjectOnHotfixFinish;
     }
 }

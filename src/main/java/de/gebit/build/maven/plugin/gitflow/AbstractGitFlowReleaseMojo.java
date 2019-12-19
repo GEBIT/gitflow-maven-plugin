@@ -33,11 +33,6 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
     /**
      * The mojo provides this flag from a configuration property.
      */
-    protected abstract boolean isSkipTestProject();
-
-    /**
-     * The mojo provides this flag from a configuration property.
-     */
     protected abstract boolean isSkipDeployProject();
 
     /**

@@ -113,11 +113,6 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
     private Boolean installProjectOnReleaseStart;
 
     @Override
-    protected boolean isSkipTestProject() {
-        throw new IllegalStateException("release-start does not test the project.");
-    }
-
-    @Override
     protected boolean isSkipDeployProject() {
         throw new IllegalStateException("release-start does not deploy the project.");
     }
