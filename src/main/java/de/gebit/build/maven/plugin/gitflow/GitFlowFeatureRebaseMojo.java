@@ -110,6 +110,16 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
      */
     @Parameter(property = "branchName", readonly = true)
     protected String branchName;
+    
+    /**
+     * Whether to call Maven install goal after feature rebase. By default the
+     * value of <code>installProject</code> parameter
+     * (<code>flow.installProject</code> property) is used.
+     *
+     * @since 2.2.0
+     */
+    @Parameter(property = "flow.installProjectOnFeatureRebase")
+    private Boolean installProjectOnFeatureRebase;
 
     /** {@inheritDoc} */
     @Override
@@ -299,7 +309,7 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
             checkUncommittedChanges();
         }
 
-        if (installProject) {
+        if (isInstallProject()) {
             getMavenLog().info("Installing the feature project...");
             try {
                 mvnCleanInstall();
@@ -556,5 +566,10 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
         gitRemoveBranchLocalConfig(featureBranch, "oldBaseVersion");
         gitRemoveBranchLocalConfig(featureBranch, "oldStartCommitMessage");
         gitRemoveBranchLocalConfig(featureBranch, "oldVersionChangeCommit");
+    }
+    
+    @Override
+    protected Boolean getIndividualInstallProjectConfig() {
+        return installProjectOnFeatureRebase;
     }
 }

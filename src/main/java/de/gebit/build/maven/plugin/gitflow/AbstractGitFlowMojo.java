@@ -185,12 +185,14 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     protected boolean tychoBuild;
 
     /**
-     * Whether to call Maven install goal during the mojo execution.
+     * Whether to call Maven install goal during the mojo execution. Since
+     * version 2.2.0 this value can be overwrittem for each goal with individual
+     * parameter/property.
      *
      * @since 1.0.5
      */
     @Parameter(property = "flow.installProject", defaultValue = "false")
-    protected boolean installProject = false;
+    private boolean installProject = false;
 
     /**
      * Whether to allow SNAPSHOT versions in dependencies.
@@ -816,6 +818,21 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             output += "\n########################################################################\n";
         }
         return output;
+    }
+    
+    /**
+     * @return the installProject
+     */
+    protected boolean isInstallProject() {
+        Boolean individualInstallProject = getIndividualInstallProjectConfig();
+        return individualInstallProject != null ? individualInstallProject : installProject;
+    }
+
+    /**
+     * @return
+     */
+    protected Boolean getIndividualInstallProjectConfig() {
+        return null;
     }
 
     /**

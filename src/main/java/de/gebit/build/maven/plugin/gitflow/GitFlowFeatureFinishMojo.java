@@ -135,6 +135,16 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
      */
     @Parameter(property = "branchName", readonly = true)
     protected String branchName;
+    
+    /**
+     * Whether to call Maven install goal after feature finish. By default the
+     * value of <code>installProject</code> parameter
+     * (<code>flow.installProject</code> property) is used.
+     *
+     * @since 2.2.0
+     */
+    @Parameter(property = "flow.installProjectOnFeatureFinish")
+    private Boolean installProjectOnFeatureFinish;
 
     private final List<Step<FeatureFinishBreakpoint, FeatureFinishStepParameters>> allProcessSteps = Arrays.asList(
             new FeatureFinishStep(this::selectFeatureAndBaseBranches),
@@ -669,7 +679,7 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
             getMavenLog().info("Restart after failed project installation on base branch detected");
             checkUncommittedChanges();
         }
-        if (installProject) {
+        if (isInstallProject()) {
             getMavenLog().info("Installing the project on base branch '" + baseBranch + "'...");
             try {
                 mvnCleanInstall();
@@ -902,6 +912,11 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
         gitRemoveBranchLocalConfig(featureBranch, "breakpoint");
         gitRemoveBranchLocalConfig(baseBranch, "breakpoint");
         gitRemoveBranchLocalConfig(baseBranch, "breakpointFeatureBranch");
+    }
+    
+    @Override
+    protected Boolean getIndividualInstallProjectConfig() {
+        return installProjectOnFeatureFinish;
     }
 
 }

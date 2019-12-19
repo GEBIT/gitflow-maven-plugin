@@ -90,6 +90,16 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
      */
     @Parameter(property = "baseCommit", readonly = true)
     protected String baseCommit;
+    
+    /**
+     * Whether to call Maven install goal after epic start. By default the value
+     * of <code>installProject</code> parameter
+     * (<code>flow.installProject</code> property) is used.
+     *
+     * @since 2.2.0
+     */
+    @Parameter(property = "flow.installProjectOnEpicStart")
+    private Boolean installProjectOnEpicStart;
 
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
@@ -260,7 +270,7 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
             epicIssue = gitGetBranchCentralConfig(epicBranchName, BranchConfigKeys.ISSUE_NUMBER);
         }
 
-        if (installProject) {
+        if (isInstallProject()) {
             getMavenLog().info("Installing the epic project...");
             try {
                 mvnCleanInstall();
@@ -331,6 +341,11 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
             }
         }
         return issueNumber;
+    }
+    
+    @Override
+    protected Boolean getIndividualInstallProjectConfig() {
+        return installProjectOnEpicStart;
     }
 
 }

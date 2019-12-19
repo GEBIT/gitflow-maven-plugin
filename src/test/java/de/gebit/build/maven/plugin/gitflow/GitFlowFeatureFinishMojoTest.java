@@ -583,6 +583,36 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     @Test
+    public void testExecuteInstallProjectTrueAndInstallProjectOnFeatureFinishFalse() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.installProject", "true");
+        userProperties.setProperty("flow.installProjectOnFeatureFinish", "false");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertFeatureFinishedCorrectly();
+        assertArtifactNotInstalled();
+    }
+
+    @Test
+    public void testExecuteInstallProjectFalseAndInstallProjectOnFeatureFinishTrue() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.installProject", "false");
+        userProperties.setProperty("flow.installProjectOnFeatureFinish", "true");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertFeatureFinishedCorrectly();
+        assertArtifactInstalled();
+    }
+
+    @Test
     public void testExecuteKeepFeatureBranchTrue() throws Exception {
         // set up
         git.createAndCommitTestfile(repositorySet);

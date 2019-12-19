@@ -102,6 +102,16 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
      */
     @Parameter(property = "baseCommit", readonly = true)
     protected String baseCommit;
+    
+    /**
+     * Whether to call Maven install goal after maintenance start. By default
+     * the value of <code>installProject</code> parameter
+     * (<code>flow.installProject</code> property) is used.
+     *
+     * @since 2.2.0
+     */
+    @Parameter(property = "flow.installProjectOnMaintenanceStart")
+    private Boolean installProjectOnMaintenanceStart;
 
     /** {@inheritDoc} */
     @Override
@@ -285,7 +295,7 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
             gitPush(maintenanceBranch, false, false, true);
         }
 
-        if (installProject) {
+        if (isInstallProject()) {
             getMavenLog().info("Installing the maintenance project...");
             try {
                 mvnCleanInstall();
@@ -337,5 +347,10 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
             releaseTags = releaseTags.subList(0, releaseVersionLimit);
         }
         return releaseTags;
+    }
+    
+    @Override
+    protected Boolean getIndividualInstallProjectConfig() {
+        return installProjectOnMaintenanceStart;
     }
 }

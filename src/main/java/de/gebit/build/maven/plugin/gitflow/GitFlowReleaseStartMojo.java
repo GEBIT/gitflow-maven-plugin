@@ -101,6 +101,16 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
      */
     @Parameter(property = "baseCommit", readonly = true)
     protected String baseCommit;
+    
+    /**
+     * Whether to call Maven install goal after release start. By default the
+     * value of <code>installProject</code> parameter
+     * (<code>flow.installProject</code> property) is used.
+     *
+     * @since 2.2.0
+     */
+    @Parameter(property = "flow.installProjectOnReleaseStart")
+    private Boolean installProjectOnReleaseStart;
 
     @Override
     protected boolean isSkipTestProject() {
@@ -202,5 +212,10 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
 
         releaseStart();
         getMavenLog().info("Release start process finished");
+    }
+    
+    @Override
+    protected Boolean getIndividualInstallProjectConfig() {
+        return installProjectOnReleaseStart;
     }
 }

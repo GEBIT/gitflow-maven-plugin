@@ -109,11 +109,11 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
     protected abstract boolean isAllowSameVersion();
 
     protected boolean isInstallProjectOnStart() {
-        return installProject;
+        return isInstallProject();
     }
 
     protected boolean isInstallProjectOnFinish() {
-        return installProject;
+        return isInstallProject();
     }
 
     /**

@@ -95,6 +95,16 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
      */
     @Parameter(property = "branchName", readonly = true)
     protected String branchName;
+    
+    /**
+     * Whether to call Maven install goal after feature cleanup. By default the
+     * value of <code>installProject</code> parameter
+     * (<code>flow.installProject</code> property) is used.
+     *
+     * @since 2.2.0
+     */
+    @Parameter(property = "flow.installProjectOnFeatureCleanup")
+    private Boolean installProjectOnFeatureCleanup;
 
     /** {@inheritDoc} */
     @Override
@@ -261,7 +271,7 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
             getMavenLog().info("Restart after failed feature project installation detected");
             checkUncommittedChanges();
         }
-        if (installProject) {
+        if (isInstallProject()) {
             getMavenLog().info("Installing the feature project...");
             try {
                 mvnCleanInstall();
@@ -289,6 +299,11 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
             gitPush(featureBranchName, false, true);
         }
         getMavenLog().info("Feature clean-up process finished");
+    }
+    
+    @Override
+    protected Boolean getIndividualInstallProjectConfig() {
+        return installProjectOnFeatureCleanup;
     }
 
 }

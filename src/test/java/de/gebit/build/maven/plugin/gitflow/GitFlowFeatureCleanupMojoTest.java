@@ -310,6 +310,34 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     @Test
+    public void testExecuteInstallProjectTrueAndInstallProjectOnFeatureCleanupFalse() throws Exception {
+        // set up
+        addTwoCommitsToFeatureBranch();
+        userProperties.setProperty("flow.installProject", "true");
+        userProperties.setProperty("flow.installProjectOnFeatureCleanup", "false");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertCleanedUpCorrectly();
+        assertArtifactNotInstalled();
+    }
+
+    @Test
+    public void testExecuteInstallProjectFalseAndInstallProjectOnFeatureCleanupTrue() throws Exception {
+        // set up
+        addTwoCommitsToFeatureBranch();
+        userProperties.setProperty("flow.installProject", "false");
+        userProperties.setProperty("flow.installProjectOnFeatureCleanup", "true");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertCleanedUpCorrectly();
+        assertArtifactInstalled();
+    }
+
+    @Test
     public void testExecuteDeleteRemoteBranchOnRebaseTrue() throws Exception {
         // set up
         addTwoCommitsToFeatureBranch();

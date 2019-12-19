@@ -120,6 +120,16 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
      */
     @Parameter(property = "baseCommit", readonly = true)
     protected String baseCommit;
+    
+    /**
+     * Whether to call Maven install goal after feature start. By default the
+     * value of <code>installProject</code> parameter
+     * (<code>flow.installProject</code> property) is used.
+     *
+     * @since 2.2.0
+     */
+    @Parameter(property = "flow.installProjectOnFeatureStart")
+    private Boolean installProjectOnFeatureStart;
 
     /** {@inheritDoc} */
     @Override
@@ -301,7 +311,7 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
             featureIssue = gitGetBranchCentralConfig(featureBranchName, BranchConfigKeys.ISSUE_NUMBER);
         }
 
-        if (installProject) {
+        if (isInstallProject()) {
             getMavenLog().info("Installing the feature project...");
             try {
                 mvnCleanInstall();
@@ -389,5 +399,10 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
                         + "number.",
                 "Feature branch does not conform to <featureNamePattern> specified, cannot extract issue number.");
         return issueNumber != null ? issueNumber : aFeatureName;
+    }
+    
+    @Override
+    protected Boolean getIndividualInstallProjectConfig() {
+        return installProjectOnFeatureStart;
     }
 }

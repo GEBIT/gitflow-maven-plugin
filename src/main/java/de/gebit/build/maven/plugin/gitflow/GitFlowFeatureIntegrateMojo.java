@@ -89,6 +89,16 @@ public class GitFlowFeatureIntegrateMojo extends AbstractGitFlowFeatureMojo {
      */
     @Parameter(property = "targetBranch", readonly = true)
     protected String targetBranch;
+    
+    /**
+     * Whether to call Maven install goal after feature integrate. By default
+     * the value of <code>installProject</code> parameter
+     * (<code>flow.installProject</code> property) is used.
+     *
+     * @since 2.2.0
+     */
+    @Parameter(property = "flow.installProjectOnFeatureIntegrate")
+    private Boolean installProjectOnFeatureIntegrate;
 
     private final List<Step<FeatureIntegrateBreakpoint, FeatureIntegrateStepParameters>> allProcessSteps = Arrays
             .asList(new FeatureIntegrateStep(this::selectTargetFeatureBranch),
@@ -447,7 +457,7 @@ public class GitFlowFeatureIntegrateMojo extends AbstractGitFlowFeatureMojo {
             getMavenLog().info("Restart after failed project installation on integrated feature branch detected");
             checkUncommittedChanges();
         }
-        if (installProject) {
+        if (isInstallProject()) {
             getMavenLog().info("Installing the project on integrated feature branch '" + targetFeatureBranch + "'...");
             try {
                 mvnCleanInstall();
@@ -523,6 +533,11 @@ public class GitFlowFeatureIntegrateMojo extends AbstractGitFlowFeatureMojo {
     private void removeBreakpoints(String targetFeatureBranch) throws MojoFailureException, CommandLineException {
         gitRemoveBranchLocalConfig(targetFeatureBranch, "breakpoint");
         gitRemoveBranchLocalConfig(targetFeatureBranch, "sourceFeatureBranch");
+    }
+    
+    @Override
+    protected Boolean getIndividualInstallProjectConfig() {
+        return installProjectOnFeatureIntegrate;
     }
 
 }

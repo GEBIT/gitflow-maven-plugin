@@ -54,6 +54,16 @@ public class GitFlowHotfixFinishMojo extends AbstractGitFlowMojo {
      */
     @Parameter(property = "flow.skipTestProject", defaultValue = "false")
     private boolean skipTestProject = false;
+    
+    /**
+     * Whether to call Maven install goal after hotfix finish. By default the
+     * value of <code>installProject</code> parameter
+     * (<code>flow.installProject</code> property) is used.
+     *
+     * @since 2.2.0
+     */
+    @Parameter(property = "flow.installProjectOnHotfixFinish")
+    private Boolean installProjectOnHotfixFinish;
 
     /** {@inheritDoc} */
     @Override
@@ -174,7 +184,7 @@ public class GitFlowHotfixFinishMojo extends AbstractGitFlowMojo {
             }
         }
 
-        if (installProject) {
+        if (isInstallProject()) {
             // mvn clean install
             mvnCleanInstall();
         }
@@ -193,5 +203,10 @@ public class GitFlowHotfixFinishMojo extends AbstractGitFlowMojo {
             // git branch -d hotfix/...
             gitBranchDelete(hotfixBranchName);
         }
+    }
+    
+    @Override
+    protected Boolean getIndividualInstallProjectConfig() {
+        return installProjectOnHotfixFinish;
     }
 }

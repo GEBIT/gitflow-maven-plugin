@@ -65,6 +65,16 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
      */
     @Parameter(property = "branchName", readonly = true)
     protected String branchName;
+    
+    /**
+     * Whether to call Maven install goal after epic update. By default the
+     * value of <code>installProject</code> parameter
+     * (<code>flow.installProject</code> property) is used.
+     *
+     * @since 2.2.0
+     */
+    @Parameter(property = "flow.installProjectOnEpicUpdate")
+    private Boolean installProjectOnEpicUpdate;
 
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
@@ -346,7 +356,7 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
             getMavenLog().info("Restart after failed epic project installation detected");
             checkUncommittedChanges();
         }
-        if (installProject) {
+        if (isInstallProject()) {
             getMavenLog().info("Installing the epic project...");
             try {
                 mvnCleanInstall();
@@ -594,6 +604,11 @@ public class GitFlowEpicUpdateMojo extends AbstractGitFlowEpicMojo {
         gitRemoveBranchLocalConfig(epicBranch, "oldBaseVersion");
         gitRemoveBranchLocalConfig(epicBranch, "oldStartCommitMessage");
         gitRemoveBranchLocalConfig(epicBranch, "oldVersionChangeCommit");
+    }
+    
+    @Override
+    protected Boolean getIndividualInstallProjectConfig() {
+        return installProjectOnEpicUpdate;
     }
 
 }

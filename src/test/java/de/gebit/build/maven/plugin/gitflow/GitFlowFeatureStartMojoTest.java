@@ -1041,6 +1041,40 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
         final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
         assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
     }
+    
+    @Test
+    public void testExecuteInstallProjectTrueAndInstallProjectOnFeatureStartFalse() throws Exception {
+        // set up
+        Properties userProperties = new Properties();
+        userProperties.setProperty("featureName", FEATURE_NAME);
+        userProperties.setProperty("flow.installProject", "true");
+        userProperties.setProperty("flow.installProjectOnFeatureStart", "false");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertFeatureStartedCorrectly();
+        assertArtifactNotInstalled();
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
+    }
+    
+    @Test
+    public void testExecuteInstallProjectFalseAndInstallProjectOnFeatureStartTrue() throws Exception {
+        // set up
+        Properties userProperties = new Properties();
+        userProperties.setProperty("featureName", FEATURE_NAME);
+        userProperties.setProperty("flow.installProject", "false");
+        userProperties.setProperty("flow.installProjectOnFeatureStart", "true");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertFeatureStartedCorrectly();
+        assertArtifactInstalled();
+        
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
+    }
 
     @Test
     public void testExecuteInstallProjectTrueAndInstallProjectGoalsSet() throws Exception {

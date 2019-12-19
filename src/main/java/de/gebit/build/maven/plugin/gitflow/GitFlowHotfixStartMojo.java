@@ -20,6 +20,7 @@ import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.Parameter;
 import org.codehaus.plexus.components.interactivity.PrompterException;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
@@ -34,6 +35,16 @@ import org.codehaus.plexus.util.cli.CommandLineException;
 public class GitFlowHotfixStartMojo extends AbstractGitFlowMojo {
 
     static final String GOAL = "hotfix-start";
+    
+    /**
+     * Whether to call Maven install goal after hotfix start. By default the
+     * value of <code>installProject</code> parameter
+     * (<code>flow.installProject</code> property) is used.
+     *
+     * @since 2.2.0
+     */
+    @Parameter(property = "flow.installProjectOnHotfixStart")
+    private Boolean installProjectOnHotfixStart;
 
     /** {@inheritDoc} */
     @Override
@@ -98,9 +109,14 @@ public class GitFlowHotfixStartMojo extends AbstractGitFlowMojo {
             mvnSetVersions(version, GitFlowAction.HOTFIX_START, null, null, commitMessages.getHotfixStartMessage());
         }
 
-        if (installProject) {
+        if (isInstallProject()) {
             // mvn clean install
             mvnCleanInstall();
         }
+    }
+    
+    @Override
+    protected Boolean getIndividualInstallProjectConfig() {
+        return installProjectOnHotfixStart;
     }
 }
