@@ -56,7 +56,7 @@ public class GitFlowFeatureIntegrateMojo extends AbstractGitFlowFeatureMojo {
 
     static final String GOAL = "feature-integrate";
 
-    /** Whether to keep feature branch after in. */
+    /** Whether to keep feature branch after integration. */
     @Parameter(property = "flow.keepFeatureBranch", defaultValue = "false")
     private boolean keepFeatureBranch = false;
 

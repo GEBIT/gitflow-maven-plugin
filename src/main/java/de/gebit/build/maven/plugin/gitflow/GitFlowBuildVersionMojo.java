@@ -22,8 +22,9 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * version. Always operates on the current branch.
  * <p>
  * Example:
+ * 
  * <pre>
- * mvn flow:build-version [-DbuildVersion=XXXX]
+ * mvn flow:build-version [-DbuildVersion=Ixxx]
  * </pre>
  *
  * @author Erwin Tratar

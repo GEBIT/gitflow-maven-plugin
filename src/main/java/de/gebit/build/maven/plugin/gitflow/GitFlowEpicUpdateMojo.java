@@ -21,18 +21,28 @@ import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
+ * Integrate changes from the development branch into the epic branch.
+ * <p>
  * Rebase an epic branch on top of development (upstream) branch.<br>
  * If some other (feature) branches based on the epic branch exists or the epic
  * branch has merge commits, the rebase of the epic branch is not possible. In
  * this case the development (upstream) branch can be merged into the epic
  * branch.
  * <p>
- * Integrates the changes from development branch into the epic branch. If
- * conflicts occur on rebase/merge, you can fix the conflicts and continue
+ * If conflicts occur on rebase/merge, you can fix the conflicts and continue
  * rebase/merge process by executing <code>flow:epic-update</code> again.
+ * <p>
+ * Example:
+ * 
+ * <pre>
+ * mvn flow:epic-update [-DbranchName=XYZ] [-Dflow.updateEpicWithMerge=true|false] [-Dflow.deleteRemoteBranchOnRebase=true|false] [-Dflow.installProject=true|false]
+ * </pre>
  *
- * @author Volodymyr Medvid
+ * @author Volodja
+ * @see GitFlowEpicUpdateAbortMojo
  * @see GitFlowEpicStartMojo
+ * @see GitFlowEpicFinishMojo
+ * @see GitFlowEpicAbortMojo
  * @since 2.0.0
  */
 @Mojo(name = GitFlowEpicUpdateMojo.GOAL, aggregator = true, threadSafe = true)

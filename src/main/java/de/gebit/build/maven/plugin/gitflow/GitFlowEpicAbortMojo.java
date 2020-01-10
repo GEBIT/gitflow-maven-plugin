@@ -20,10 +20,17 @@ import org.codehaus.plexus.util.cli.CommandLineException;
 /**
  * Abort an epic branch.
  * <p>
- * Abort the implementation of the epic. Selects an epic branch for abortion,
- * switches to development branch and deletes the epic branch.
+ * Aborts the implementation of the epic and deletes the epic branch.<br>
+ * Since version 2.2.0 you will be asked for confirmation if the epic branch
+ * contains any implementation commits.
+ * <p>
+ * Example:
+ * 
+ * <pre>
+ * mvn flow:epic-abort [-DbranchName=XYZ]
+ * </pre>
  *
- * @author Volodymyr Medvid
+ * @author Volodja
  * @see GitFlowEpicStartMojo
  * @since 2.0.0
  */

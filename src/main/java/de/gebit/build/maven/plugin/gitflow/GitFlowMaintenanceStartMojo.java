@@ -96,7 +96,7 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
     protected String baseTag;
 
     /**
-     * The commit which the maintenance branch shold be created from.
+     * The commit which the maintenance branch should be created from.
      *
      * @since 2.2.0
      */

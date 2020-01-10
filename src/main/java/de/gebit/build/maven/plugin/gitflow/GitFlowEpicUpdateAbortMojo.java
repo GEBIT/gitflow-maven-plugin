@@ -14,11 +14,19 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
+ * Abort paused epic update process.
+ * <p>
  * Roll back the epic update process that was started during execution of
  * <code>flow:epic-update</code> and interrupted because of rebase/merge
  * conflicts or failed project build.
+ * <p>
+ * Example:
+ * 
+ * <pre>
+ * mvn flow:epic-update-abort
+ * </pre>
  *
- * @author Volodja Medvid
+ * @author Volodja
  * @see GitFlowEpicUpdateMojo
  * @since 2.1.7
  */

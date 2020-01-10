@@ -133,7 +133,7 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
     private boolean detachReleaseCommit;
 
     /**
-     * Whether to keep hotfix branch after finish.
+     * Whether to keep release branch after finish.
      *
      * @since 1.5.0
      */

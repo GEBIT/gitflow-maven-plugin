@@ -19,7 +19,7 @@ import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.cli.CommandLineException;
 
 /**
- * Start implementing a new Epic.
+ * Start implementing a new epic.
  * <p>
  * Creates the new epic branch to aggregate multiple features and updates the
  * version in all <code>pom.xml</code> files to a branch specific version (e.g.
@@ -36,10 +36,10 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  * Example:
  * 
  * <pre>
- * mvn flow:epic-start [-DepicName=XXXX] [-DjobBuild=true|false] [-Dflow.installProject=true|false] [-D...]
+ * mvn flow:epic-start [-DepicName=XXXX] [-DjobBuild=true|false] [-Dflow.installProject=true|false] [-DbaseBranch=XYZ] [-DbaseCommit=xxxxxx]
  * </pre>
  *
- * @author Volodymyr Medvid
+ * @author Volodja
  * @see GitFlowEpicAbortMojo
  * @see GitFlowEpicUpdateMojo
  * @see GitFlowEpicFinishMojo
