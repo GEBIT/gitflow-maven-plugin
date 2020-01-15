@@ -36,29 +36,29 @@ import org.codehaus.plexus.util.cli.CommandLineException;
  *
  * @see GitFlowFeatureRebaseMojo
  *
- * @author Erwin Tratar
- * @since 1.5.11
+ * @author Volodja
+ * @since 2.2.0
  */
 @Mojo(name = GitFlowFeatureCleanupMojo.GOAL, aggregator = true, threadSafe = true)
 public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
 
-    static final String GOAL = "feature-rebase-cleanup";
+    static final String GOAL = "feature-cleanup";
 
     private static final GitFlowFailureInfo ERROR_REBASE_CONFLICTS = new GitFlowFailureInfo(
             "Automatic rebase after interaction failed beacause of conflicts.",
             "Fix the rebase conflicts and mark them as resolved. After that, run "
-                    + "'mvn flow:feature-rebase-cleanup' again. Do NOT run 'git rebase --continue'.",
+                    + "'mvn flow:feature-cleanup' again. Do NOT run 'git rebase --continue'.",
             "'git status' to check the conflicts, resolve the conflicts and "
                     + "'git add' to mark conflicts as resolved",
-            "'mvn flow:feature-rebase-cleanup' to continue feature clean up process",
+            "'mvn flow:feature-cleanup' to continue feature clean up process",
             "'git rebase --abort' to abort feature clean up process");
 
     private static final GitFlowFailureInfo ERROR_REBASE_PAUSED = new GitFlowFailureInfo(
             "Interactive rebase is paused.",
-            "Perform your changes and run 'mvn flow:feature-rebase-cleanup' again in order to proceed. "
+            "Perform your changes and run 'mvn flow:feature-cleanup' again in order to proceed. "
                     + "Do NOT run 'git rebase --continue'.",
             "'git status' to check the conflicts",
-            "'mvn flow:feature-rebase-cleanup' to continue feature clean up process",
+            "'mvn flow:feature-cleanup' to continue feature clean up process",
             "'git rebase --abort' to abort feature clean up process");
 
     /**
@@ -155,11 +155,11 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
                         featureBranchName = getPrompter().promptToSelectFromOrderedList("Feature branches:",
                                 "Choose feature branch to clean up", branches,
                                 new GitFlowFailureInfo(
-                                        "In non-interactive mode 'mvn flow:feature-rebase-cleanup' can be executed only on "
+                                        "In non-interactive mode 'mvn flow:feature-cleanup' can be executed only on "
                                                 + "a feature branch.",
                                         "Please switch to a feature branch first or run in interactive mode.",
                                         "'git checkout BRANCH' to switch to the feature branch",
-                                        "'mvn flow:feature-rebase-cleanup' to run in interactive mode"));
+                                        "'mvn flow:feature-cleanup' to run in interactive mode"));
                         getLog().info("Cleaning up feature on selected feature branch: " + featureBranchName);
                         gitEnsureLocalBranchIsUpToDateIfExists(featureBranchName, new GitFlowFailureInfo(
                                 "Remote and local feature branches '" + featureBranchName + "' diverge.",
@@ -198,9 +198,9 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
                         throw new GitFlowFailureException(
                                 "Feature commits can't be squashed without squashMessage in non-interactive mode.",
                                 "Please either provide squashMessage or run in interactive mode.",
-                                "'mvn flow:feature-rebase-cleanup -B -Dflow.squash=true -DsquashMessage=XXXX' to "
+                                "'mvn flow:feature-cleanup -B -Dflow.squash=true -DsquashMessage=XXXX' to "
                                         + "squash all feature commits using squash commit message",
-                                "'mvn flow:feature-rebase-cleanup -Dflow.squash=true' to run in interactive mode");
+                                "'mvn flow:feature-cleanup -Dflow.squash=true' to run in interactive mode");
                     }
                     try {
                         gitSquash(rebaseCommit, squashMessage);
@@ -217,12 +217,12 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
                 } else {
                     if (!settings.isInteractiveMode()) {
                         throw new GitFlowFailureException(
-                                "'mvn flow:feature-rebase-cleanup' can be executed in non-interactive mode only to "
+                                "'mvn flow:feature-cleanup' can be executed in non-interactive mode only to "
                                         + "squash all feature commits.",
                                 "Please either run in interactive mode or enable commit squashing to squash all feature"
                                         + " commits.",
-                                "'mvn flow:feature-rebase-cleanup' to run in interactive mode",
-                                "'mvn flow:feature-rebase-cleanup -B -Dflow.squash=true -DsquashMessage=XXXX' to squash"
+                                "'mvn flow:feature-cleanup' to run in interactive mode",
+                                "'mvn flow:feature-cleanup -B -Dflow.squash=true -DsquashMessage=XXXX' to squash"
                                         + " all feature commits");
                     }
                     getMavenLog().info(
@@ -239,7 +239,7 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
             } else {
                 if (!getPrompter()
                         .promptConfirmation("You have an interactive rebase in process on your current branch. "
-                                + "If you run 'mvn flow:feature-rebase-cleanup' before and rebase was paused or had "
+                                + "If you run 'mvn flow:feature-cleanup' before and rebase was paused or had "
                                 + "conflicts you can continue. In other case it is better to clarify the reason of "
                                 + "rebase in process. Continue?", true, true)) {
                     throw new GitFlowFailureException("Continuation of feature clean up aborted by user.", null);
@@ -258,10 +258,10 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
                     getMavenLog().info("Feature clean-up process paused to resolve rebase conflicts");
                     throw new GitFlowFailureException("There are unresolved conflicts after rebase.",
                             "Fix the rebase conflicts and mark them as resolved. After that, run "
-                                    + "'mvn flow:feature-rebase-cleanup' again. Do NOT run 'git rebase --continue'.",
+                                    + "'mvn flow:feature-cleanup' again. Do NOT run 'git rebase --continue'.",
                             "'git status' to check the conflicts, resolve the conflicts and 'git add' to mark "
                                     + "conflicts as resolved",
-                            "'mvn flow:feature-rebase-cleanup' to continue feature clean up process");
+                            "'mvn flow:feature-cleanup' to continue feature clean up process");
                 case SUCCESS:
                 default:
                     break;
