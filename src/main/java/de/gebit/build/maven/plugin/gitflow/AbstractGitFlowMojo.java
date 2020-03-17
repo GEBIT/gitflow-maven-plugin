@@ -4525,8 +4525,9 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
     
     protected void gitStash(String message) throws MojoFailureException, CommandLineException {
-        getLog().info("git stash push -m \"" + message + "\"");
-        executeGitCommand("stash", "push", "-m", message);
+        // 'git stash push' not supported in git versions 2.12.0 and older
+        getLog().info("git stash save \"" + message + "\"");
+        executeGitCommand("stash", "save", message);
     }
     
     protected boolean gitStashApply() throws MojoFailureException, CommandLineException {
