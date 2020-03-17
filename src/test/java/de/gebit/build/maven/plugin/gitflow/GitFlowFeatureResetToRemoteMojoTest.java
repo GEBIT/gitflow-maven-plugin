@@ -510,8 +510,7 @@ public class GitFlowFeatureResetToRemoteMojoTest extends AbstractGitFlowMojoTest
         git.assertCommitsInLocalBranch(repositorySet, FEATURE_BRANCH, COMMIT_MESSAGE_SET_VERSION,
                 GitExecution.COMMIT_MESSAGE_FOR_TESTFILE, COMMIT_MESSAGE_REMOTE_TESTFILE);
         git.assertTestfileContent(repositorySet, REMOTE_TESTFILE);
-        git.assertStashesRegEx(repositorySet, "On " + BasicConstants.SINGLE_FEATURE_NAME
-                + ": stashed by gitflow before feature reset \\(.*\\)");
+        git.assertStashesRegEx(repositorySet, ".*stashed by gitflow before feature reset \\(.*\\)");
     }
 
     @Test
