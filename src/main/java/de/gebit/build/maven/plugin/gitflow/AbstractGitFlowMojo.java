@@ -4520,9 +4520,25 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     }
 
     protected void gitResetHard(String newRef) throws MojoFailureException, CommandLineException {
+        getLog().info("git reset --hard " + newRef);
         executeGitCommand("reset", "--hard", newRef);
     }
-
+    
+    protected void gitStash(String message) throws MojoFailureException, CommandLineException {
+        getLog().info("git stash push -m \"" + message + "\"");
+        executeGitCommand("stash", "push", "-m", message);
+    }
+    
+    protected boolean gitStashApply() throws MojoFailureException, CommandLineException {
+        getLog().info("git stash apply");
+        return (executeGitCommandExitCode("stash", "apply").getExitCode() == SUCCESS_EXIT_CODE);
+    }
+    
+    protected void gitStashDrop() throws MojoFailureException, CommandLineException {
+        getLog().info("git stash drop");
+        executeGitCommand("stash", "drop");
+    }
+    
     /**
      * @throws CommandLineException
      * @throws MojoFailureException

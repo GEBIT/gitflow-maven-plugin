@@ -14,6 +14,7 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -31,6 +32,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -1527,8 +1529,11 @@ public class GitExecution {
 
     private List<String> commitMessagesInBranch(Git git, String branch, boolean headLinesOnly, int limit)
             throws GitAPIException, IOException {
+        return toMessages(readCommits(git, branch), headLinesOnly, limit);
+    }
+    
+    private List<String> toMessages(Collection<RevCommit> commits, boolean headLinesOnly, int limit) {
         List<String> commitMessages = new ArrayList<String>();
-        List<RevCommit> commits = readCommits(git, branch);
         int count = limit;
         for (RevCommit commit : commits) {
             if (count <= 0) {
@@ -1538,6 +1543,10 @@ public class GitExecution {
             commitMessages.add(headLinesOnly ? commit.getShortMessage().trim() : commit.getFullMessage().trim());
         }
         return commitMessages;
+    }
+    
+    private List<String> toMessages(Collection<RevCommit> commits) {
+        return toMessages(commits, false, Integer.MAX_VALUE);
     }
 
     private void assertCommitMessages(String[] expectedCommitMessages, List<String> commitMessages, String branch,
@@ -2227,6 +2236,54 @@ public class GitExecution {
         String fullTrackingName = Constants.R_REMOTES + shortTrackingName;
         assertEquals("tracking branch of the branch '" + branch + "' is different from expected", fullTrackingName,
                 getUpstreamBranch(repositorySet, branch));
+    }
+
+    public void assertNoStashes(RepositorySet repositorySet) throws GitAPIException {
+        assertStashes(repositorySet);
+    }
+
+    public void assertStashes(RepositorySet repositorySet, String... expectedStashMessages) throws GitAPIException {
+        List<String> stashes = stashList(repositorySet);
+        assertStashes(expectedStashMessages, stashes);
+    }
+
+    private void assertStashes(String[] expectedStashMessages, List<String> stashMessages) {
+        assertEquals("Stash messages in repository are different from expected.",
+                Arrays.toString(expectedStashMessages),
+                Arrays.toString(stashMessages.toArray(new String[stashMessages.size()])));
+    }
+
+    public List<String> stashList(RepositorySet repositorySet) throws GitAPIException {
+        return toMessages(repositorySet.getLocalRepoGit().stashList().call());
+    }
+
+    public void assertStashesRegEx(RepositorySet repositorySet, String... expectedStashMessages) throws GitAPIException {
+        List<String> stashes = stashList(repositorySet);
+        assertStashesRegEx(expectedStashMessages, stashes);
+    }
+
+    private void assertStashesRegEx(String[] expectedStashMessages, List<String> stashMessages) {
+        boolean ok = true;
+        if (expectedStashMessages.length == stashMessages.size()) {
+            for (int i = 0; i < expectedStashMessages.length; i++) {
+                if (!Pattern.compile(expectedStashMessages[i], Pattern.MULTILINE | Pattern.DOTALL)
+                        .matcher(stashMessages.get(i)).matches()) {
+                    ok = false;
+                    break;
+                }
+            }
+        } else {
+            ok = false;
+        }
+        if (!ok) {
+            assertEquals("Stash messages in repository are not matching expected patterns.",
+                    Arrays.toString(expectedStashMessages),
+                    Arrays.toString(stashMessages.toArray(new String[stashMessages.size()])));
+            // fallback if arrays are equal
+            fail("Stash messages in repository are not matching expected patterns.\nPatterns: "
+                    + Arrays.toString(expectedStashMessages) + "\nMessages: "
+                    + Arrays.toString(stashMessages.toArray(new String[stashMessages.size()])));
+        }
     }
 
     public String getUpstreamBranch(RepositorySet repositorySet, String branchName) {
