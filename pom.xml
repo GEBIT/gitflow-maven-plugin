@@ -81,9 +81,6 @@
 		<java.optimize>true</java.optimize>
 		<java.debug>true</java.debug>
 		<java.encoding>UTF-8</java.encoding>
-		
-		<!-- can be removed after update to gebit-build 3.0.0 -->
-		<version.ecj.java8>3.20.0</version.ecj.java8>
 
 		<maven-plugin-plugin.version>3.4</maven-plugin-plugin.version>
 		
