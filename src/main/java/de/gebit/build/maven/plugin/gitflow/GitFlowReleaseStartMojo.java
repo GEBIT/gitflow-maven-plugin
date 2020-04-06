@@ -193,6 +193,11 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
     }
 
     @Override
+    protected boolean isCleanupReleaseBeforeStart() {
+        return cleanupReleaseBeforeStart;
+    }
+
+    @Override
     protected String getCurrentGoal() {
         return GOAL;
     }
@@ -202,7 +207,7 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         getMavenLog().info("Starting release start process");
         checkCentralBranchConfig();
-        abortNotFinishedReleaseIfNeeded(cleanupReleaseBeforeStart);
+        abortNotFinishedReleaseIfNeeded();
         checkUncommittedChanges();
 
         releaseStart();

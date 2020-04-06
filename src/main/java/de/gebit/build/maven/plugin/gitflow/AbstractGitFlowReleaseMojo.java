@@ -127,6 +127,11 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
     protected abstract String getBranchName();
 
     /**
+     * The mojo provides this flag from a configuration property.
+     */
+    protected abstract boolean isCleanupReleaseBeforeStart();
+
+    /**
      * Perfom the steps to start a release. Create a release branch and sets the
      * version
      *
@@ -329,15 +334,17 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
             }
 
             if (gitBranchExists(releaseBranchName)) {
-                if (!gitIsCurrentCommit(currentBranch)) {
-                    getMavenLog().info("Switching back to branch '" + currentBranch + "'");
-                    gitCheckout(currentBranch);
+                if (!abortExistingReleaseBranchIfNeeded(releaseBranchName)) {
+                    if (!gitIsCurrentCommit(currentBranch)) {
+                        getMavenLog().info("Switching back to branch '" + currentBranch + "'");
+                        gitCheckout(currentBranch);
+                    }
+                    throw new GitFlowFailureException(
+                            "Release branch '" + releaseBranchName + "' already exists. Cannot start release.",
+                            "Either checkout the existing release branch or start a new release with another release version.",
+                            "'git checkout " + releaseBranchName + "' to checkout the release branch",
+                            "'mvn flow:" + getCurrentGoal() + "' to run again and specify another release version");
                 }
-                throw new GitFlowFailureException(
-                        "Release branch '" + releaseBranchName + "' already exists. Cannot start release.",
-                        "Either checkout the existing release branch or start a new release with another release version.",
-                        "'git checkout " + releaseBranchName + "' to checkout the release branch",
-                        "'mvn flow:" + getCurrentGoal() + "' to run again and specify another release version");
             }
             if (gitRemoteBranchExists(releaseBranchName)) {
                 if (!gitIsCurrentCommit(currentBranch)) {
@@ -412,6 +419,15 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
         }
         gitRemoveBranchLocalConfig(releaseBranchName, "breakpoint");
         return developmentBranch;
+    }
+
+    private boolean abortExistingReleaseBranchIfNeeded(String releaseBranchName)
+            throws MojoFailureException, CommandLineException {
+        if (isCleanupReleaseBeforeStart()) {
+            abortReleaseBranch(releaseBranchName);
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -844,18 +860,14 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
     // release abort stuff
 
     /**
-     * Perfom the steps to start a release. Create a release branch and sets the
-     * version
-     *
-     * @param cleanupReleaseBeforeStart
-     *            whether to clean-up possibly failed release before starting new
-     *            release.
+     * Perform release abort if needed.
+     * 
      * @throws MojoFailureException
      * @throws CommandLineException
      */
-    protected void abortNotFinishedReleaseIfNeeded(boolean cleanupReleaseBeforeStart)
+    protected void abortNotFinishedReleaseIfNeeded()
             throws MojoFailureException, CommandLineException {
-        if (cleanupReleaseBeforeStart && isOnNotFinishedRelease()) {
+        if (isCleanupReleaseBeforeStart() && isOnNotFinishedRelease()) {
             getMavenLog().info("Not finished release detected. Trying to abort it before starting new release.");
             abortRelease();
         }
@@ -978,6 +990,10 @@ public abstract class AbstractGitFlowReleaseMojo extends AbstractGitFlowMojo {
             }
         }
 
+        abortReleaseBranch(releaseBranch);
+    }
+
+    protected void abortReleaseBranch(String releaseBranch) throws MojoFailureException, CommandLineException {
         if (gitBranchExists(releaseBranch)) {
             getMavenLog().info("Removing local release branch '" + releaseBranch + "'");
             gitBranchDeleteForce(releaseBranch);

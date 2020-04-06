@@ -136,6 +136,11 @@ public class GitFlowReleaseAbortMojo extends AbstractGitFlowReleaseMojo {
     }
 
     @Override
+    protected boolean isCleanupReleaseBeforeStart() {
+        throw new IllegalStateException("release-abort does not use property cleanupReleaseBeforeStart.");
+    }
+
+    @Override
     protected String getCurrentGoal() {
         return GOAL;
     }

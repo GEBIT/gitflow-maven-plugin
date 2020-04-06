@@ -303,6 +303,11 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
     }
 
     @Override
+    protected boolean isCleanupReleaseBeforeStart() {
+        return cleanupReleaseBeforeStart;
+    }
+
+    @Override
     protected String getCurrentGoal() {
         return GOAL;
     }
@@ -312,7 +317,7 @@ public class GitFlowReleaseMojo extends AbstractGitFlowReleaseMojo {
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         getMavenLog().info("Starting release process");
         checkCentralBranchConfig();
-        abortNotFinishedReleaseIfNeeded(cleanupReleaseBeforeStart);
+        abortNotFinishedReleaseIfNeeded();
         String currentBranch = gitCurrentBranch();
         if (!continueReleaseFinishIfInstallProjectPaused(currentBranch)
                 && !continueReleaseFinishIfMergeInProcess(currentBranch)) {
