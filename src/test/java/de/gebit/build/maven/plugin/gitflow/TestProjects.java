@@ -15,7 +15,6 @@ import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 
 import org.apache.commons.io.FileUtils;
@@ -23,9 +22,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.cli.internal.extension.model.CoreExtension;
 import org.codehaus.plexus.components.interactivity.Prompter;
 import org.eclipse.jgit.api.CreateBranchCommand.SetupUpstreamMode;
-import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.RmCommand;
-import org.eclipse.jgit.api.errors.GitAPIException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -121,6 +118,8 @@ public class TestProjects {
 
     public static final String PROFILE_SET_VERSION_ADDITIONAL_VERSION_COMMAND_WITH_INTERPOLATION_CYCLE = "setVersionAdditionalVersionCommandWithInterpolationCycle";
 
+    private static boolean initializationFailed = false;
+
     private static File getProjectBasedir(String projectName) {
         return new File(PROJECTS_BASEDIR, projectName);
     }
@@ -171,14 +170,22 @@ public class TestProjects {
     }
 
     public static synchronized void prepareRepositoryIfNotExisting(File gitRepoDir) throws Exception {
-        if (!gitRepoDir.exists()) {
-            gitRepoDir.mkdirs();
+        if (initializationFailed) {
+            throw new IllegalStateException("Fail test because of failed initialization of git repositories.");
         }
-        prepareRepository(gitRepoDir, BASIC);
-        prepareRepository(gitRepoDir, WITH_UPSTREAM);
-        prepareRepository(gitRepoDir, VERSIONLESS_CONFIG_PROJECT);
-        prepareRepository(gitRepoDir, VERSIONLESS_FILE_PROJECT);
-        // prepareRepository(gitRepoDir, VERSIONLESS_TAG_PROJECT);
+        try {
+            if (!gitRepoDir.exists()) {
+                gitRepoDir.mkdirs();
+            }
+            prepareRepository(gitRepoDir, BASIC);
+            prepareRepository(gitRepoDir, WITH_UPSTREAM);
+            prepareRepository(gitRepoDir, VERSIONLESS_CONFIG_PROJECT);
+            prepareRepository(gitRepoDir, VERSIONLESS_FILE_PROJECT);
+            // prepareRepository(gitRepoDir, VERSIONLESS_TAG_PROJECT);
+        } catch (Throwable exc) {
+            initializationFailed = true;
+            throw exc;
+        }
     }
 
     private static void prepareRepository(File repoDir, TestProjectData project) throws Exception {
