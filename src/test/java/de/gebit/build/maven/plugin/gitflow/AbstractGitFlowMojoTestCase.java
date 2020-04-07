@@ -629,7 +629,10 @@ public abstract class AbstractGitFlowMojoTestCase {
         Map<String, ConfigurationProcessor> configurationProcessors = container.lookupMap(ConfigurationProcessor.class);
         configurationProcessors.get(SettingsXmlConfigurationProcessor.HINT).process(cliRequest);
         MavenExecutionRequest request = cliRequest.getRequest();
-        request.setSystemProperties(System.getProperties());
+        Properties systemProperties = new Properties();
+        systemProperties.putAll(System.getProperties());
+        systemProperties.remove("revision");
+        request.setSystemProperties(systemProperties);
         WorkspaceReader workspaceReader = new WorkspaceReader() {
 
             WorkspaceRepository workspaceRepo = new WorkspaceRepository("ide", getClass());
