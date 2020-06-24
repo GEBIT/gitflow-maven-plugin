@@ -90,19 +90,19 @@ public class TestProjects {
      * The directory of the versionless test project with branch-config.
      */
     public static final TestProjectData VERSIONLESS_CONFIG_PROJECT = new TestProjectData("versionless-config-project",
-            "1.2.3-SNAPSHOT", "GFTST", "gitflow-tests", "de.gebit.build.maven", "gebit-build-extension", "1.1.0");
+            "1.2.3-SNAPSHOT", "GFTST", "gitflow-tests", "de.gebit.build.maven", "gebit-build-extension", "1.1.2");
 
     /**
      * The directory of the versionless test project with tags.
      */
     public static final TestProjectData VERSIONLESS_TAG_PROJECT = new TestProjectData("versionless-tag-project",
-            "2.0.0-SNAPSHOT", "GFTST", "gitflow-tests", "de.gebit.build.maven", "gebit-build-extension", "1.1.0");
+            "2.0.0-SNAPSHOT", "GFTST", "gitflow-tests", "de.gebit.build.maven", "gebit-build-extension", "1.1.2");
 
     /**
      * The directory of the versionless test project with branch-config.
      */
     public static final TestProjectData VERSIONLESS_FILE_PROJECT = new TestProjectData("versionless-file-project",
-            "1.2.3-SNAPSHOT", "GFTST", "gitflow-tests", "de.gebit.build.maven", "gebit-build-extension", "1.1.0");
+            "1.2.3-SNAPSHOT", "GFTST", "gitflow-tests", "de.gebit.build.maven", "gebit-build-extension", "1.1.2");
 
     public static final String PROFILE_SET_VERSION_WITHOUT_ADDITIONAL_VERSION_COMMANDS = "setVersionWithoutAdditionalVersionCommands";
 

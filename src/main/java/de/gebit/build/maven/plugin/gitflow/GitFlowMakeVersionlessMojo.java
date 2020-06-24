@@ -51,7 +51,7 @@ public class GitFlowMakeVersionlessMojo extends AbstractGitFlowMojo {
 
         // remember the current version
         String currentVersion = getProject().getVersion();
-        String extensionVersion = "1.1.1";
+        String extensionVersion = "1.1.2";
         Plugin extensionPlugin = getProject().getPlugin("de.gebit.build.maven:gebit-build-extension");
         if (extensionPlugin != null) {
             extensionVersion = extensionPlugin.getVersion();
