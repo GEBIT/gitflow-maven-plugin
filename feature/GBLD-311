@@ -1,0 +1,6 @@
+startCommitMessage = GBLD-311: updating versions for feature branch
+baseVersion = 2.2.3-SNAPSHOT
+branchType = feature
+issueNumber = GBLD-311
+baseBranch = master
+versionChangeCommit = b275f55cde6a3ca705a10c852cfa99a840f90529
