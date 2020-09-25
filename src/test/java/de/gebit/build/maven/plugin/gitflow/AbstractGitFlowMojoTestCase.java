@@ -21,6 +21,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -30,7 +31,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-import java.util.regex.Pattern;
+import java.util.StringTokenizer;
+import java.util.jar.Attributes;
+import java.util.jar.JarOutputStream;
+import java.util.jar.Manifest;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.maven.Maven;
@@ -53,7 +57,6 @@ import org.apache.maven.model.Model;
 import org.apache.maven.model.building.ModelProcessor;
 import org.apache.maven.model.io.ModelParseException;
 import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
-import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.session.scope.internal.SessionScopeModule;
 import org.codehaus.plexus.ContainerConfiguration;
 import org.codehaus.plexus.DefaultContainerConfiguration;
@@ -108,19 +111,15 @@ public abstract class AbstractGitFlowMojoTestCase {
 
     private static final String GIT_REPO_BASEDIR = "target/git-repos";
 
-    private static final String NOT_EXISTING_DIR = "notExistingDir";
-
-    private static final String COMMAND_LINE_EXCEPTION_MESSAGE_PATTERN = "Working directory \"{0}\" does not exist!";
-
-    private static final String GITFLOW_FAULURE_EXCEPTION_HEADER = "\n\n############################ Gitflow problem ###########################\n";
-
-    private static final String GITFLOW_FAULURE_EXCEPTION_FOOTER = "\n########################################################################\n";
+    static final String NOT_EXISTING_DIR = "notExistingDir";
 
     private PlexusContainer container;
 
     private ControllablePrompter prompter;
 
     private ClassWorld classWorld;
+
+    private static String packedClassPath;
 
     /**
      * Geit execution provides methods to execute different git operation using
@@ -693,14 +692,14 @@ public abstract class AbstractGitFlowMojoTestCase {
         return request;
     }
 
-    private MavenExecutionRequest createMavenExecutionRequest(PlexusContainer container, final String pluginVersion) throws Exception {
+    private MavenExecutionRequest createMavenExecutionRequest(PlexusContainer aContainer, final String pluginVersion) throws Exception {
         Properties userProperties = new Properties();
 
-        MavenExecutionRequestPopulator executionRequestPopulator = container
+        MavenExecutionRequestPopulator executionRequestPopulator = aContainer
                 .lookup(MavenExecutionRequestPopulator.class);
         ExtCliRequest cliRequest = new ExtCliRequest(new String[] { "" });
         cliRequest.setUserProperties(userProperties);
-        Map<String, ConfigurationProcessor> configurationProcessors = container.lookupMap(ConfigurationProcessor.class);
+        Map<String, ConfigurationProcessor> configurationProcessors = aContainer.lookupMap(ConfigurationProcessor.class);
         configurationProcessors.get(SettingsXmlConfigurationProcessor.HINT).process(cliRequest);
         MavenExecutionRequest request = cliRequest.getRequest();
         request.setSystemProperties(System.getProperties());
@@ -745,7 +744,7 @@ public abstract class AbstractGitFlowMojoTestCase {
         File javaExecutable = WorkspaceUtils.getJavaExecutable();
         userProperties.setProperty(AbstractGitFlowMojo.USER_PROPERTY_KEY_CMD_MVN_EXECUTABLE,
                 javaExecutable.getAbsolutePath());
-        String classPath = System.getProperty("java.class.path");
+        String classPath = getClasspath();
         String mainClass = ExtMavenCli.class.getName();
         List<String> javaArgs = new ArrayList<>();
         javaArgs.add("-D" + ExtMavenCli.PROPERTY_KEY_OUTPUT_DIR + "=" + testBasedir.getAbsolutePath());
@@ -770,6 +769,41 @@ public abstract class AbstractGitFlowMojoTestCase {
                 mvnArgs.toArray(new String[mvnArgs.size()]));
         userProperties.put(GITFLOW_PLUGIN_VERSION_PROPERTY, pluginVersion);
         userProperties.put(AbstractGitFlowMojo.USER_PROPERTY_KEY_EXTERNAL_GIT_EDITOR_USED, "true");
+    }
+
+    private synchronized String getClasspath() {
+        if (packedClassPath == null) {
+            String classPath = System.getProperty("java.class.path");
+            // store classpath as jar file with manifest in order ro avoid command line too long error
+            StringTokenizer st = new StringTokenizer(classPath, File.pathSeparator);
+            StringBuilder classpathBuilder = new StringBuilder();
+            while (st.hasMoreTokens()) {
+                if (classpathBuilder.length() != 0) {
+                    classpathBuilder.append(" ");
+                }
+                try {
+                    classpathBuilder.append(new File(st.nextToken()).toURI().toURL().toString());
+                } catch (MalformedURLException exc) {
+                    exc.printStackTrace();
+                }
+            }
+            Manifest manifest = new Manifest();
+            manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");
+            manifest.getMainAttributes().put(Attributes.Name.CLASS_PATH, classpathBuilder.toString());
+            Path classpathJar;
+            try {
+                classpathJar = Files.createTempFile("classpath-", ".jar");
+            } catch (IOException exc) {
+                throw new IllegalStateException("Couldn't create temp classpath jar file", exc);
+            }
+            try (JarOutputStream target = new JarOutputStream(Files.newOutputStream(classpathJar), manifest)) {
+                // no content
+            } catch (IOException exc) {
+                throw new IllegalStateException("Couldn't write to temp classpath jar file", exc);
+            }
+            packedClassPath = classpathJar.toString();
+        }
+        return packedClassPath;
     }
 
     /**
@@ -1084,145 +1118,25 @@ public abstract class AbstractGitFlowMojoTestCase {
         return path.toString();
     }
 
-    /**
-     * Asserts that the passed maven execution result consists of exception of
-     * passed class and with passed message.
-     *
-     * @param mavenExecutionResult
-     *            the maven execution result to be tested
-     * @param expectedExceptionClass
-     *            the class of expected exception
-     * @param expectedExceptionMessage
-     *            the message of expected exception or <code>null</code> if
-     *            exception message shouldn't be checked
-     * @param regex
-     *            <code>true</code> if <code>expectedExceptionMessage</code> is a
-     *            regular exprssion that should be matched
-     */
-    protected void assertExceptionOnMavenExecution(MavenExecutionResult mavenExecutionResult,
-            Class<? extends Throwable> expectedExceptionClass, String expectedExceptionMessage, boolean regex) {
-        List<Throwable> exceptions = mavenExecutionResult.getExceptions();
-        assertEquals("number of maven execution exceptions is different from expected", 1, exceptions.size());
-        Throwable exception = exceptions.get(0);
-        if (exception instanceof LifecycleExecutionException) {
-            exception = exception.getCause();
-        }
-        assertException(exception, expectedExceptionClass, expectedExceptionMessage, regex);
-    }
-
-    private void assertException(Throwable exception, Class<? extends Throwable> expectedExceptionClass,
-            String expectedExceptionMessage, boolean regex) {
-        if (!exception.getClass().equals(expectedExceptionClass)) {
-            assertEquals("unexpected maven execution exception",
-                    expectedExceptionClass.getName() + "(" + expectedExceptionMessage + ")",
-                    exception.getClass().getName() + "(" + exception.getMessage() + ")");
-        }
-        assertExceptionMessage(exception, expectedExceptionMessage, regex);
-    }
-
-    private void assertExceptionMessage(Throwable exception, String expectedExceptionMessage, boolean regex) {
-        if (expectedExceptionMessage != null) {
-            String exceptionMessage = trimGitFlowFailureExceptionMessage(exception.getMessage());
-            if (regex) {
-                assertTrue(
-                        "maven execution exception message doesn't matches expected pattern.\nPattern: "
-                                + expectedExceptionMessage + "\nMessage: " + exceptionMessage,
-                        Pattern.compile(expectedExceptionMessage, Pattern.MULTILINE | Pattern.DOTALL)
-                                .matcher(exceptionMessage).matches());
-            } else {
-                assertEquals("unexpected maven execution exception message", expectedExceptionMessage,
-                        exceptionMessage);
-            }
-        }
-    }
-
-    private String trimGitFlowFailureExceptionMessage(String aMessage) {
-        String message = aMessage;
-        if (message != null) {
-            if (message.startsWith(GITFLOW_FAULURE_EXCEPTION_HEADER)) {
-                message = message.substring(GITFLOW_FAULURE_EXCEPTION_HEADER.length());
-            }
-            if (message.endsWith(GITFLOW_FAULURE_EXCEPTION_FOOTER)) {
-                int pos = message.lastIndexOf("\n", message.length() - GITFLOW_FAULURE_EXCEPTION_FOOTER.length() - 1)
-                        - 1;
-                message = message.substring(0, pos);
-            }
-        }
-        return message;
-    }
-
-    /**
-     * Asserts that the passed maven execution result consists of failure exception
-     * with passed message.
-     *
-     * @param mavenExecutionResult
-     *            the maven execution result to be tested
-     * @param expectedMessage
-     *            the expected message of failure exception or <code>null</code> if
-     *            exception message shouldn't be checked
-     */
-    protected void assertMavenExecutionException(MavenExecutionResult mavenExecutionResult, String expectedMessage) {
-        assertExceptionOnMavenExecution(mavenExecutionResult, MojoExecutionException.class, expectedMessage, false);
-    }
-
     protected void assertGitFlowFailureException(MavenExecutionResult mavenExecutionResult,
             GitFlowFailureInfo expectedFailureInfo) {
-        assertGitFlowFailureException(mavenExecutionResult, expectedFailureInfo.getProblem(),
-                expectedFailureInfo.getSolutionProposal(), expectedFailureInfo.getStepsToContinue());
+        ExceptionAsserts.assertGitFlowFailureException(mavenExecutionResult, expectedFailureInfo);
     }
 
     protected void assertGitFlowFailureException(MavenExecutionResult mavenExecutionResult, String expectedProblem,
             String expectedSolutionProposal, String... expectedSteps) {
-        String expectedMessage = createGitFlowMessage(expectedProblem, expectedSolutionProposal, expectedSteps);
-        assertExceptionOnMavenExecution(mavenExecutionResult, GitFlowFailureException.class, expectedMessage, false);
-    }
-
-    private String createGitFlowMessage(String problem, String solutionProposal, String... stepsToContinue) {
-        StringBuilder message = new StringBuilder();
-        if (problem != null) {
-            message.append(problem);
-        }
-        if (solutionProposal != null) {
-            if (message.length() > 0) {
-                message.append("\n\n");
-            }
-            message.append(solutionProposal);
-        }
-        if (stepsToContinue != null && stepsToContinue.length > 0) {
-            if (message.length() > 0) {
-                message.append("\n\n");
-            }
-            message.append("How to continue:");
-            message.append("\n");
-            for (int i = 0; i < stepsToContinue.length; i++) {
-                if (i > 0) {
-                    message.append("\n");
-                }
-                message.append(stepsToContinue[i]);
-            }
-        }
-        return message.toString();
-    }
-
-    private String createGitFlowMessage(GitFlowFailureInfo expectedFailureInfoPattern) {
-        return createGitFlowMessage(expectedFailureInfoPattern.getProblem(),
-                expectedFailureInfoPattern.getSolutionProposal(), expectedFailureInfoPattern.getStepsToContinue());
+        ExceptionAsserts.assertGitFlowFailureException(mavenExecutionResult, expectedProblem,
+                expectedSolutionProposal, expectedSteps);
     }
 
     protected void assertGitFlowFailureExceptionRegEx(MavenExecutionResult mavenExecutionResult,
             GitFlowFailureInfo expectedFailureInfoPattern) {
-        String expectedMessage = createGitFlowMessage(expectedFailureInfoPattern);
-        assertExceptionOnMavenExecution(mavenExecutionResult, GitFlowFailureException.class, expectedMessage, true);
+        ExceptionAsserts.assertGitFlowFailureExceptionRegEx(mavenExecutionResult, expectedFailureInfoPattern);
     }
 
     protected void assertGitflowFailureOnCommandLineException(RepositorySet repositorySet,
             MavenExecutionResult mavenExecutionResult) {
-        String expectedProblem = "External command execution failed with error:\n"
-                + MessageFormat.format(COMMAND_LINE_EXCEPTION_MESSAGE_PATTERN,
-                        new File(repositorySet.getWorkingDirectory(), NOT_EXISTING_DIR).getAbsolutePath());
-        String expectedSolutionProposal = "Please report the error in the GBLD JIRA.";
-        String expectedMessage = createGitFlowMessage(expectedProblem, expectedSolutionProposal);
-        assertMavenExecutionException(mavenExecutionResult, expectedMessage);
+        ExceptionAsserts.assertGitflowFailureOnCommandLineException(repositorySet, mavenExecutionResult);
     }
 
     protected void verifyNoMoreInteractionsAndReset(Object... mocks) {
@@ -1312,7 +1226,7 @@ public abstract class AbstractGitFlowMojoTestCase {
                     .setJSR250Lifecycle(true) //
                     .setName("maven");
 
-            DefaultPlexusContainer container = new DefaultPlexusContainer(cc, new AbstractModule() {
+            DefaultPlexusContainer tempContainer = new DefaultPlexusContainer(cc, new AbstractModule() {
 
                 @Override
                 protected void configure() {
@@ -1321,15 +1235,15 @@ public abstract class AbstractGitFlowMojoTestCase {
             });
 
             try {
-                container.setLookupRealm(containerRealm);
+                tempContainer.setLookupRealm(containerRealm);
 
-                BootstrapCoreExtensionManager resolver = container.lookup(BootstrapCoreExtensionManager.class);
+                BootstrapCoreExtensionManager resolver = tempContainer.lookup(BootstrapCoreExtensionManager.class);
 
-                String pluginVersion = readPom(container, new File(".")).getVersion();
-                MavenExecutionRequest mavenRequest = createMavenExecutionRequest(container, pluginVersion);
+                String pluginVersion = readPom(tempContainer, new File(".")).getVersion();
+                MavenExecutionRequest mavenRequest = createMavenExecutionRequest(tempContainer, pluginVersion);
                 return resolver.loadCoreExtensions(mavenRequest, providedArtifacts, Collections.singletonList(extension)).get(0);
             } finally {
-                container.dispose();
+                tempContainer.dispose();
             }
         } catch (RuntimeException e) {
             // runtime exceptions are most likely bugs in maven, let them bubble up to the
@@ -1347,29 +1261,30 @@ public abstract class AbstractGitFlowMojoTestCase {
     }
 
 
-    private static ClassRealm setupContainerRealm(ClassWorld classWorld, ClassRealm coreRealm, 
-                    CoreExtensionEntry extension) throws DuplicateRealmException, MalformedURLException {
-            if (extension != null) {
-                    ClassRealm extRealm = classWorld.newRealm("maven.ext", null);
+    private static ClassRealm setupContainerRealm(ClassWorld classWorld, ClassRealm coreRealm,
+            CoreExtensionEntry extension) throws DuplicateRealmException, MalformedURLException {
+        if (extension != null) {
+            ClassRealm extRealm = classWorld.newRealm("maven.ext", null);
 
-                    extRealm.setParentRealm(coreRealm);
+            extRealm.setParentRealm(coreRealm);
 
-                    // TODO slf4jLogger.debug("Populating class realm " + extRealm.getId());
+            // TODO slf4jLogger.debug("Populating class realm " +
+            // extRealm.getId());
 
-                    Set<String> exportedPackages = extension.getExportedPackages();
-                    ClassRealm realm = extension.getClassRealm();
-                    for (String exportedPackage : exportedPackages) {
-                            extRealm.importFrom(realm, exportedPackage);
-                    }
-                    if (exportedPackages.isEmpty()) {
-                            // sisu uses realm imports to establish component visibility
-                            extRealm.importFrom(realm, realm.getId());
-                    }
-
-                    return extRealm;
+            Set<String> exportedPackages = extension.getExportedPackages();
+            ClassRealm realm = extension.getClassRealm();
+            for (String exportedPackage : exportedPackages) {
+                extRealm.importFrom(realm, exportedPackage);
+            }
+            if (exportedPackages.isEmpty()) {
+                // sisu uses realm imports to establish component visibility
+                extRealm.importFrom(realm, realm.getId());
             }
 
-            return coreRealm;
+            return extRealm;
+        }
+
+        return coreRealm;
     }
     
     protected GitFlowFailureInfo format(GitFlowFailureInfo message, Object... replacements) {

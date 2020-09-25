@@ -164,7 +164,7 @@ public abstract class AbstractGitFlowFeatureMojo extends AbstractGitFlowMojo {
      * @throws MojoFailureException
      *             if no branch point can be determined
      */
-    private String gitFeatureBranchBaseBranchName(String featureBranch)
+    protected String gitFeatureBranchBaseBranchName(String featureBranch)
             throws MojoFailureException, CommandLineException {
         String baseBranch = gitGetBranchBaseBranch(featureBranch);
         if (baseBranch == null) {
