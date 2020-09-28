@@ -8,7 +8,10 @@
 //
 package de.gebit.build.maven.plugin.gitflow;
 
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -43,6 +46,8 @@ public class GitFlowFeatureMergeRequestMojo extends AbstractGitFlowFeatureMojo {
 
     static final String GOAL = "feature-merge-request";
 
+    private static final String DEFAULT_MERGE_REQUEST_TITLE = "Resolve feature @{key}";
+
     /**
      * The feature branch which a merge request should be created for.
      */
@@ -61,6 +66,35 @@ public class GitFlowFeatureMergeRequestMojo extends AbstractGitFlowFeatureMojo {
      */
     @Parameter(property = "flow.gitLabProjectUrl")
     private String gitLabProjectUrl;
+
+    /**
+     * Merge request title if <code>mergeRequestTitleTemplate</code> is not
+     * specified.<br>
+     * Part of the merge request title if <code>mergeRequestTitleTemplate</code>
+     * is specified and contains @{title} placeholder.<br>
+     * Will be ignored if <code>mergeRequestTitleTemplate</code> is specified
+     * but doesn't contain @{title} placeholder.
+     */
+    @Parameter(property = "flow.mergeRequestTitle")
+    private String mergeRequestTitle;
+
+    /**
+     * The title template to be used for a merge request. If not specified,
+     * <code>mergeRequestTitle</code> parameter will be used for title.
+     * <p>
+     * Supported placeholders:
+     * <li>@{title} - title from <code>mergeRequestTitle</code> or from user
+     * promt</li>
+     * <li>@{key} - Jira issue key of the feature (e.g.
+     * <code>ABC-42</code>)</li>
+     * <li>@{sourceBranch} - source branch of the MR (e.g.
+     * <code>feature/ABC-42-description</code>)</li>
+     * <li>@{targetBranch} - target branch of the MR (e.g.
+     * <code>master</code>)</li>
+     * </p>
+     */
+    @Parameter(property = "flow.mergeRequestTitleTemplate")
+    private String mergeRequestTitleTemplate;
 
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
@@ -114,10 +148,53 @@ public class GitFlowFeatureMergeRequestMojo extends AbstractGitFlowFeatureMojo {
                     + "' already exists in GitLab\n" + mr.getWebUrl(), null);
         }
         mr = gitLab.createMergeRequest(featureBranchLocalName, baseBranchLocalName,
-                "Resolve feature " + getFeatureIssueNumber(featureBranchLocalName));
+                createMRTitle(featureBranchLocalName, baseBranchLocalName));
         getMavenLog().info("Feature merge request was successfully created: " + mr.getWebUrl());
 
         getMavenLog().info("Feature merge request process finished");
+    }
+
+    private String createMRTitle(String sourceBranch, String targetBranch)
+            throws MojoFailureException, CommandLineException {
+        String issueNumber = getFeatureIssueNumber(sourceBranch);
+        String template;
+        if (StringUtils.isEmpty(mergeRequestTitleTemplate)) {
+            template = getPrompter().promptRequiredParameterValue("What is the title of the merge request?",
+                    "mergeRequestTitle", mergeRequestTitle,
+                    substituteMRTitle(DEFAULT_MERGE_REQUEST_TITLE, sourceBranch, targetBranch, issueNumber));
+        } else if (mergeRequestTitleTemplate.equals("@{title}")) {
+            template = getPrompter().promptRequiredParameterValue("What is the title of the merge request?",
+                    "mergeRequestTitle", null,
+                    substituteMRTitle(mergeRequestTitle, sourceBranch, targetBranch, issueNumber));
+        } else if (mergeRequestTitleTemplate.contains("@{title}")) {
+            String titleTemplate = getPrompter().promptRequiredParameterValue("What is the title of the merge request?",
+                    "mergeRequestTitle", mergeRequestTitle);
+            template = substituteMRTitle(mergeRequestTitleTemplate, sourceBranch, targetBranch, issueNumber,
+                    Collections.singletonMap("title", titleTemplate));
+        } else {
+            template = mergeRequestTitleTemplate;
+        }
+        return substituteMRTitle(template, sourceBranch, targetBranch, issueNumber);
+    }
+
+    private String substituteMRTitle(String template, String sourceBranch, String targetBranch, String issueNumber)
+            throws MojoFailureException {
+        return substituteMRTitle(template, sourceBranch, targetBranch, issueNumber, null);
+    }
+
+    private String substituteMRTitle(String template, String sourceBranch, String targetBranch, String issueNumber,
+            Map<String, String> additionalReplacements) throws MojoFailureException {
+        if (template == null) {
+            return null;
+        }
+        Map<String, String> replacements = new HashMap<>();
+        replacements.put("sourceBranch", sourceBranch);
+        replacements.put("targetBranch", targetBranch);
+        replacements.put("key", issueNumber);
+        if (additionalReplacements != null) {
+            replacements.putAll(additionalReplacements);
+        }
+        return substituteStrings(template, replacements);
     }
 
     private void ensureInteractiveMode() throws GitFlowFailureException {
