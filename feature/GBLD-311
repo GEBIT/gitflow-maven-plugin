@@ -3,5 +3,5 @@ baseVersion = 2.2.3-SNAPSHOT
 branchType = feature
 issueNumber = GBLD-311
 baseBranch = master
-versionChangeCommit = b275f55cde6a3ca705a10c852cfa99a840f90529
+versionChangeCommit = ef5c6f67bf16e306ff3a868fd2c25e488d736b7f
 JOB_BUILD = true
