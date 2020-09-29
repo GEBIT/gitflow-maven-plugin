@@ -1049,7 +1049,9 @@ public abstract class AbstractGitFlowMojoTestCase {
 
     protected void assertMavenCommandExecution(String expectedMvnCommand, boolean executed) throws IOException {
         List<String> executedMavenCommands = loadExecutedMavenCommands();
-        assertEquals("expected maven command '" + expectedMvnCommand + "' was " + (executed ? "not " : "") + "executed",
+        assertEquals(
+                "expected maven command '" + expectedMvnCommand + "' was " + (executed ? "not " : "")
+                        + "executed. Executed commands: " + executedMavenCommands,
                 executed, executedMavenCommands.contains(expectedMvnCommand));
     }
 

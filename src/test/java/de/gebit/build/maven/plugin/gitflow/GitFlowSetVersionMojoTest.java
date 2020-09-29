@@ -15,10 +15,15 @@ import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 
 import org.apache.maven.execution.MavenExecutionResult;
+import org.apache.maven.model.Build;
 import org.apache.maven.model.Model;
+import org.apache.maven.model.Plugin;
+import org.apache.maven.model.PluginManagement;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -99,9 +104,12 @@ public class GitFlowSetVersionMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     private void assertSetVersionTychoMavenCommandExecution(String version, boolean executed) throws IOException {
-        assertMavenCommandExecution(
-                "org.eclipse.tycho:tycho-versions-plugin:set-version -DnewVersion=" + version + " -Dtycho.mode=maven",
-                executed);
+        assertSetVersionTychoMavenCommandExecution(version, executed, "1.4.0");
+    }
+
+    private void assertSetVersionTychoMavenCommandExecution(String version, boolean executed, String tychoVersion) throws IOException {
+        assertMavenCommandExecution("org.eclipse.tycho:tycho-versions-plugin:" + tychoVersion
+                + ":set-version -DnewVersion=" + version + " -Dtycho.mode=maven", executed);
     }
 
     @Test
@@ -184,6 +192,127 @@ public class GitFlowSetVersionMojoTest extends AbstractGitFlowMojoTestCase {
         assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_VERSION);
     }
 
+    @Test
+    public void testExecuteTychoBuildTrueAndTychoVersionUserProperty() throws Exception {
+        // set up
+        final String TYCHO_VERSION = "1.3.0";
+        Properties userProperties = new Properties();
+        userProperties.setProperty("newVersion", NEW_VERSION);
+        userProperties.setProperty("flow.tychoBuild", "true");
+        userProperties.setProperty("version.tycho", TYCHO_VERSION);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertSetVersionMavenCommandExecution(NEW_VERSION, false);
+        assertCommandsAfterVersionMavenCommandExecution(true);
+        assertSetVersionTychoMavenCommandExecution(NEW_VERSION, true, TYCHO_VERSION);
+        git.assertModifiedFiles(repositorySet, "pom.xml");
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_VERSION);
+    }
+
+    @Test
+    public void testExecuteTychoBuildTrueAndTychoVersionProperty() throws Exception {
+        // set up
+        final String TYCHO_VERSION = "1.3.0";
+        Properties userProperties = new Properties();
+        userProperties.setProperty("newVersion", NEW_VERSION);
+        userProperties.setProperty("flow.tychoBuild", "true");
+        Model pom = readPom(repositorySet.getWorkingDirectory());
+        pom.getProperties().setProperty("version.tycho", TYCHO_VERSION);
+        writePom(repositorySet.getWorkingDirectory(), pom);
+        git.commitAll(repositorySet, "added property");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertSetVersionMavenCommandExecution(NEW_VERSION, false);
+        assertCommandsAfterVersionMavenCommandExecution(true);
+        assertSetVersionTychoMavenCommandExecution(NEW_VERSION, true, TYCHO_VERSION);
+        git.assertModifiedFiles(repositorySet, "pom.xml");
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_VERSION);
+    }
+
+    @Test
+    public void testExecuteTychoBuildTrueAndTychoVersionInPluginManagement() throws Exception {
+        // set up
+        final String TYCHO_VERSION = "1.3.0";
+        Properties userProperties = new Properties();
+        userProperties.setProperty("newVersion", NEW_VERSION);
+        userProperties.setProperty("flow.tychoBuild", "true");
+        Model pom = readPom(repositorySet.getWorkingDirectory());
+        addTychoPluginToPluginManagement(pom, TYCHO_VERSION);
+        writePom(repositorySet.getWorkingDirectory(), pom);
+        git.commitAll(repositorySet, "added property");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertSetVersionMavenCommandExecution(NEW_VERSION, false);
+        assertCommandsAfterVersionMavenCommandExecution(true);
+        assertSetVersionTychoMavenCommandExecution(NEW_VERSION, true, TYCHO_VERSION);
+        git.assertModifiedFiles(repositorySet, "pom.xml");
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_VERSION);
+    }
+
+    private void addTychoPluginToPluginManagement(Model pom, String tychoVersion) {
+        Build build = pom.getBuild();
+        if (build == null) {
+            build = new Build();
+            pom.setBuild(build);
+        }
+        PluginManagement pluginManagement = build.getPluginManagement();
+        if (pluginManagement == null) {
+            pluginManagement = new PluginManagement();
+            build.setPluginManagement(pluginManagement);
+        }
+        pluginManagement.addPlugin(createTychoPlugin(tychoVersion));
+    }
+
+    @Test
+    public void testExecuteTychoBuildTrueAndTychoVersionInPlugins() throws Exception {
+        // set up
+        final String TYCHO_VERSION = "1.3.0";
+        Properties userProperties = new Properties();
+        userProperties.setProperty("newVersion", NEW_VERSION);
+        userProperties.setProperty("flow.tychoBuild", "true");
+        Model pom = readPom(repositorySet.getWorkingDirectory());
+        addTychoPluginToPlugins(pom, TYCHO_VERSION);
+        writePom(repositorySet.getWorkingDirectory(), pom);
+        git.commitAll(repositorySet, "added property");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertSetVersionMavenCommandExecution(NEW_VERSION, false);
+        assertCommandsAfterVersionMavenCommandExecution(true);
+        assertSetVersionTychoMavenCommandExecution(NEW_VERSION, true, TYCHO_VERSION);
+        git.assertModifiedFiles(repositorySet, "pom.xml");
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), NEW_VERSION);
+    }
+
+    private void addTychoPluginToPlugins(Model pom, String tychoVersion) {
+        Build build = pom.getBuild();
+        if (build == null) {
+            build = new Build();
+            pom.setBuild(build);
+        }
+        List<Plugin> plugins = build.getPlugins();
+        if (plugins == null) {
+            plugins = new ArrayList<>();
+            build.setPlugins(plugins);
+        }
+        plugins.add(createTychoPlugin(tychoVersion));
+    }
+
+    private Plugin createTychoPlugin(String tychoVersion) {
+        Plugin tychoPlugin = new Plugin();
+        tychoPlugin.setGroupId("org.eclipse.tycho");
+        tychoPlugin.setArtifactId("tycho-versions-plugin");
+        tychoPlugin.setVersion(tychoVersion);
+        return tychoPlugin;
+    }
+    
     @Test
     public void testExecuteNoCommandsAfterVersion() throws Exception {
         // set up

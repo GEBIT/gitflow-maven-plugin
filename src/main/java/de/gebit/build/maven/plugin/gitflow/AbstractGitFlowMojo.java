@@ -59,6 +59,7 @@ import org.apache.maven.execution.MavenExecutionRequest;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Model;
+import org.apache.maven.model.Plugin;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.AbstractMojoExecutionException;
@@ -123,8 +124,17 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
     /** A full name of the versions-maven-plugin set goal. */
     private static final String XML_EDITOR_MAVEN_PLUGIN_SET_GOAL = "de.gebit.build.maven:xml-editor-maven-plugin:1.0.5:replace";
 
+    /** Name of the tycho-versions-plugin. */
+    private static final String TYCHO_VERSIONS_PLUGIN = "org.eclipse.tycho:tycho-versions-plugin";
+    
+    /** Name of the tycho version property. */
+    private static final String TYCHO_VERSION_PROPERTY = "version.tycho";
+    
+    /** Default version of the tycho plugin. */
+    private static final String TYCHO_DEFAULT_VERSION = "1.4.0";
+    
     /** Name of the tycho-versions-plugin set-version goal. */
-    private static final String TYCHO_VERSIONS_PLUGIN_SET_GOAL = "org.eclipse.tycho:tycho-versions-plugin:set-version";
+    private static final String TYCHO_VERSIONS_PLUGIN_SET_GOAL = "set-version";
 
     /** System line separator. */
     protected static final String LS = System.getProperty("line.separator");
@@ -3750,7 +3760,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                 // processed later
             }
         } else if (tychoBuild) {
-            executeMvnCommand(OutputMode.PROGRESS, TYCHO_VERSIONS_PLUGIN_SET_GOAL, "-DnewVersion=" + version,
+            executeMvnCommand(OutputMode.PROGRESS, getTychoVersionsPluginSetGoal(), "-DnewVersion=" + version,
                     "-Dtycho.mode=maven");
         } else {
             executeMvnCommand(OutputMode.PROGRESS, VERSIONS_MAVEN_PLUGIN_SET_GOAL, "-DnewVersion=" + version,
@@ -3828,6 +3838,34 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         }
 
         return versionChangeCommit;
+    }
+
+    private String getTychoVersionsPluginSetGoal() {
+        String version = getConfiguredTychoVersionsPluginVersion();
+        if (StringUtils.isEmpty(version)) {
+            version = project.getProperties().getProperty(TYCHO_VERSION_PROPERTY);
+            if (StringUtils.isEmpty(version)) {
+                version = session.getUserProperties().getProperty(TYCHO_VERSION_PROPERTY);
+                if (StringUtils.isEmpty(version)) {
+                    version = TYCHO_DEFAULT_VERSION;
+                }
+            }
+        }
+        return TYCHO_VERSIONS_PLUGIN + ":" + version + ":" + TYCHO_VERSIONS_PLUGIN_SET_GOAL;
+    }
+
+    private String getConfiguredTychoVersionsPluginVersion() {
+        Plugin tychoVersionsPlugin = project.getPlugin(TYCHO_VERSIONS_PLUGIN);
+        if (tychoVersionsPlugin != null) {
+            return tychoVersionsPlugin.getVersion();
+        }
+        List<Plugin> managedPlugins = project.getPluginManagement().getPlugins();
+        for (Plugin managedPlugin : managedPlugins) {
+            if (TYCHO_VERSIONS_PLUGIN.equals(managedPlugin.getKey())) {
+                return managedPlugin.getVersion();
+            }
+        }
+        return null;
     }
 
     private void executeAdditionalMavenCommands(String branch) throws MojoFailureException {
