@@ -50,7 +50,7 @@ public class GitLabSSHClientTest {
     private static final String PERSONAL_TOKEN_RESPONSE = "Token:   aAY1G3YPeemECgUvxuXY\nScopes:  read_api\n"
             + "Expires: 2020-08-07";
     private static final String PERSONAL_TOKEN = "aAY1G3YPeemECgUvxuXY";
-    private static final String PERSONAL_TOKEN_COMMAND = "personal_access_token gebit_flow_mr read_api 1";
+    private static final String PERSONAL_TOKEN_COMMAND = "personal_access_token gebit_flow_mr api 1";
 
     @Rule
     public MockitoRule mockitoRuel = MockitoJUnit.rule().silent();

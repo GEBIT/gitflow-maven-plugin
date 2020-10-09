@@ -92,7 +92,7 @@ public class GitLabSSHClient {
      * @return
      */
     public String createPersonalToken() throws JSchException {
-        return parsePersonalToken(executeCommand("personal_access_token gebit_flow_mr read_api 1"));
+        return parsePersonalToken(executeCommand("personal_access_token gebit_flow_mr api 1"));
     }
 
     public String executeCommand(String command) throws JSchException {
