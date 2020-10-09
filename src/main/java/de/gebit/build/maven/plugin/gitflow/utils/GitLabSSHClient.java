@@ -17,6 +17,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.jcraft.jsch.ChannelExec;
+import com.jcraft.jsch.IdentityRepository;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
@@ -73,11 +74,15 @@ public class GitLabSSHClient {
     }
 
     private void configureJSch() throws AgentProxyException, JSchException {
-        Connector connector = ConnectorFactory.getDefault().createConnector();
-        RemoteIdentityRepository identityRepository = new RemoteIdentityRepository(connector);
-        jsch.setIdentityRepository(identityRepository);
+        jsch.setIdentityRepository(getIdentityRepository());
         Path knownHostsPath = Paths.get(System.getProperty("user.home"), ".ssh", "known_hosts");
         jsch.setKnownHosts(knownHostsPath.toAbsolutePath().toString());
+    }
+
+    IdentityRepository getIdentityRepository() throws AgentProxyException {
+        Connector connector = ConnectorFactory.getDefault().createConnector();
+        RemoteIdentityRepository identityRepository = new RemoteIdentityRepository(connector);
+        return identityRepository;
     }
 
     public void disconnect() {

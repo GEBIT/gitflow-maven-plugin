@@ -24,6 +24,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.File;
 
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -31,6 +32,7 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
 import com.jcraft.jsch.ChannelExec;
+import com.jcraft.jsch.IdentityRepository;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
@@ -58,14 +60,21 @@ public class GitLabSSHClientTest {
     private JSch jschMock;
     @Mock
     private Session sessionMock;
+    
+    private GitLabSSHClient clientSpy;
+    
+    @Before
+    public void setUp() throws Exception {
+        clientSpy = spy(new GitLabSSHClient(jschMock));
+        doReturn(mock(IdentityRepository.class)).when(clientSpy).getIdentityRepository();
+    }
 
     @Test
     public void testConnect() throws Exception {
         // set up
-        GitLabSSHClient client = new GitLabSSHClient(jschMock);
         when(jschMock.getSession(DEFAULT_USER, HOST, DEFAULT_PORT)).thenReturn(sessionMock);
         // test
-        client.connect(HOST);
+        clientSpy.connect(HOST);
         // verify
         verify(jschMock).setIdentityRepository(any());
         verify(jschMock).setKnownHosts(endsWith(KNOWN_HOSTS_RELATIVE_PATH));
@@ -77,10 +86,9 @@ public class GitLabSSHClientTest {
     @Test
     public void testConnectWithTryBlock() throws Exception {
         // set up
-        GitLabSSHClient client = new GitLabSSHClient(jschMock);
         when(jschMock.getSession(DEFAULT_USER, HOST, DEFAULT_PORT)).thenReturn(sessionMock);
         // test
-        try (ClosableSession session = client.connect(HOST)) {
+        try (ClosableSession session = clientSpy.connect(HOST)) {
             // NOP
         }
         // verify
@@ -95,13 +103,12 @@ public class GitLabSSHClientTest {
     @Test
     public void testConnectTwice() throws Exception {
         // set up
-        GitLabSSHClient client = new GitLabSSHClient(jschMock);
         when(jschMock.getSession(DEFAULT_USER, HOST, DEFAULT_PORT)).thenReturn(sessionMock);
         when(sessionMock.isConnected()).thenReturn(true);
         // test
-        client.connect(HOST);
+        clientSpy.connect(HOST);
         assertThrows(JSchException.class, "A connection to ssh host is already established.",
-                () -> client.connect(HOST));
+                () -> clientSpy.connect(HOST));
         // verify
         verify(jschMock).setIdentityRepository(any());
         verify(jschMock).setKnownHosts(endsWith(KNOWN_HOSTS_RELATIVE_PATH));
@@ -114,13 +121,12 @@ public class GitLabSSHClientTest {
     @Test
     public void testConnectTwiceWithTryBlock() throws Exception {
         // set up
-        GitLabSSHClient client = new GitLabSSHClient(jschMock);
         Session sessionMock2 = mock(Session.class);
         when(jschMock.getSession(DEFAULT_USER, HOST, DEFAULT_PORT)).thenReturn(sessionMock, sessionMock2);
         when(sessionMock.isConnected()).thenReturn(false);
         // test
-        client.connect(HOST);
-        client.connect(HOST);
+        clientSpy.connect(HOST);
+        clientSpy.connect(HOST);
         // verify
         verify(jschMock).setIdentityRepository(any());
         verify(jschMock).setKnownHosts(endsWith(KNOWN_HOSTS_RELATIVE_PATH));
@@ -135,14 +141,13 @@ public class GitLabSSHClientTest {
     @Test
     public void testConnectTwiceAfterDisconnected() throws Exception {
         // set up
-        GitLabSSHClient client = new GitLabSSHClient(jschMock);
         Session sessionMock2 = mock(Session.class);
         when(jschMock.getSession(DEFAULT_USER, HOST, DEFAULT_PORT)).thenReturn(sessionMock, sessionMock2);
         // test
-        try (ClosableSession session = client.connect(HOST)) {
+        try (ClosableSession session = clientSpy.connect(HOST)) {
             // NOP
         }
-        try (ClosableSession session = client.connect(HOST)) {
+        try (ClosableSession session = clientSpy.connect(HOST)) {
             // NOP
         }
         // verify
@@ -160,12 +165,11 @@ public class GitLabSSHClientTest {
     @Test
     public void testDisconnectTwice() throws Exception {
         // set up
-        GitLabSSHClient client = new GitLabSSHClient(jschMock);
         when(jschMock.getSession(DEFAULT_USER, HOST, DEFAULT_PORT)).thenReturn(sessionMock);
         // test
-        client.connect(HOST);
-        client.disconnect();
-        client.disconnect();
+        clientSpy.connect(HOST);
+        clientSpy.disconnect();
+        clientSpy.disconnect();
         // verify
         verify(jschMock).setIdentityRepository(any());
         verify(jschMock).setKnownHosts(endsWith(KNOWN_HOSTS_RELATIVE_PATH));
@@ -178,14 +182,13 @@ public class GitLabSSHClientTest {
     @Test
     public void testConnectWithException() throws Exception {
         // set up
-        GitLabSSHClient client = new GitLabSSHClient(jschMock);
-        JSchException expectedException = mock(JSchException.class);
+        JSchException expectedException = new JSchException();
         Session sessionMock2 = mock(Session.class);
         when(jschMock.getSession(DEFAULT_USER, HOST, DEFAULT_PORT)).thenReturn(sessionMock, sessionMock2);
         doThrow(expectedException).when(sessionMock).connect();
         // test
-        assertThrows(expectedException, () -> client.connect(HOST));
-        client.connect(HOST);
+        assertThrows(expectedException, () -> clientSpy.connect(HOST));
+        clientSpy.connect(HOST);
         // verify
         verify(jschMock, times(2)).setIdentityRepository(any());
         verify(jschMock, times(2)).setKnownHosts(endsWith(KNOWN_HOSTS_RELATIVE_PATH));
@@ -199,7 +202,6 @@ public class GitLabSSHClientTest {
     @Test
     public void testCreatePersonalToken() throws Exception {
         // set up
-        GitLabSSHClient clientSpy = spy(new GitLabSSHClient(jschMock));
         when(jschMock.getSession(DEFAULT_USER, HOST, DEFAULT_PORT)).thenReturn(sessionMock);
         when(sessionMock.isConnected()).thenReturn(true);
         doReturn(PERSONAL_TOKEN_RESPONSE).when(clientSpy).executeCommand(PERSONAL_TOKEN_COMMAND);
@@ -215,34 +217,29 @@ public class GitLabSSHClientTest {
 
     @Test
     public void testParsePersonalToken() throws Exception {
-        // set up
-        GitLabSSHClient client = new GitLabSSHClient(jschMock);
         // test
-        String token = client.parsePersonalToken(PERSONAL_TOKEN_RESPONSE);
+        String token = clientSpy.parsePersonalToken(PERSONAL_TOKEN_RESPONSE);
         // verify
         assertEquals(PERSONAL_TOKEN, token);
     }
 
     @Test
     public void testParsePersonalTokenFromInvalidRespons() throws Exception {
-        // set up
-        GitLabSSHClient client = new GitLabSSHClient(jschMock);
         // test
         assertThrows(JSchException.class, "Token couldn't be parsed. Response:\ndummy response",
-                () -> client.parsePersonalToken("dummy response"));
+                () -> clientSpy.parsePersonalToken("dummy response"));
     }
 
     @Test
     public void testExecuteCommand() throws Exception {
         // set up
-        GitLabSSHClient client = new GitLabSSHClient(jschMock);
         when(jschMock.getSession(DEFAULT_USER, HOST, DEFAULT_PORT)).thenReturn(sessionMock);
         when(sessionMock.isConnected()).thenReturn(true);
         ChannelExec channekMock = mock(ChannelExec.class);
         when(sessionMock.openChannel("exec")).thenReturn(channekMock);
         // test
-        client.connect(HOST);
-        client.executeCommand(PERSONAL_TOKEN_COMMAND);
+        clientSpy.connect(HOST);
+        clientSpy.executeCommand(PERSONAL_TOKEN_COMMAND);
         // verify
         verify(sessionMock).connect();
         verify(sessionMock).isConnected();
@@ -257,11 +254,10 @@ public class GitLabSSHClientTest {
     @Test
     public void testExecuteCommandWhenNotConnected() throws Exception {
         // set up
-        GitLabSSHClient client = new GitLabSSHClient(jschMock);
         when(jschMock.getSession(DEFAULT_USER, HOST, DEFAULT_PORT)).thenReturn(sessionMock);
         // test
         assertThrows(JSchException.class, "A connection to ssh host is not yet established.",
-                () -> client.executeCommand(PERSONAL_TOKEN_COMMAND));
+                () -> clientSpy.executeCommand(PERSONAL_TOKEN_COMMAND));
         // verify
         verifyZeroInteractions(sessionMock);
     }
@@ -269,13 +265,12 @@ public class GitLabSSHClientTest {
     @Test
     public void testExecuteCommandWhenDisconnected() throws Exception {
         // set up
-        GitLabSSHClient client = new GitLabSSHClient(jschMock);
         when(jschMock.getSession(DEFAULT_USER, HOST, DEFAULT_PORT)).thenReturn(sessionMock);
         when(sessionMock.isConnected()).thenReturn(false);
         // test
-        client.connect(HOST);
+        clientSpy.connect(HOST);
         assertThrows(JSchException.class, "A connection to ssh host is not yet established.",
-                () -> client.executeCommand(PERSONAL_TOKEN_COMMAND));
+                () -> clientSpy.executeCommand(PERSONAL_TOKEN_COMMAND));
         // verify
         verify(sessionMock).connect();
         verify(sessionMock).isConnected();
