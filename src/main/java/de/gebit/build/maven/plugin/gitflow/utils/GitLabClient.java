@@ -8,6 +8,7 @@
 //
 package de.gebit.build.maven.plugin.gitflow.utils;
 
+import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.List;
 
@@ -24,7 +25,11 @@ import org.gitlab4j.api.models.MergeRequestFilter;
 import org.gitlab4j.api.models.MergeRequestParams;
 import org.gitlab4j.api.models.Project;
 
+import com.jcraft.jsch.JSchException;
+import com.jcraft.jsch.agentproxy.AgentProxyException;
+
 import de.gebit.build.maven.plugin.gitflow.GitFlowFailureException;
+import de.gebit.build.maven.plugin.gitflow.utils.GitLabSSHClient.ClosableSession;
 
 /**
  * GitLab client for communication with GitLab via REST API.
@@ -34,6 +39,7 @@ import de.gebit.build.maven.plugin.gitflow.GitFlowFailureException;
 public class GitLabClient {
 
     private GitLabConnector connector;
+    private GitLabSSHClient sshClient;
     private URIish remoteUri;
     private GitLabApi gitLab;
     private Project gitProject;
@@ -53,7 +59,13 @@ public class GitLabClient {
 
     GitLabClient(String aRemoteUrl, List<String> someSupportedGitLabHosts, GitLabConnector aConnector)
             throws GitFlowFailureException {
+        this(aRemoteUrl, someSupportedGitLabHosts, aConnector, new GitLabSSHClient());
+    }
+
+    GitLabClient(String aRemoteUrl, List<String> someSupportedGitLabHosts, GitLabConnector aConnector,
+            GitLabSSHClient aSshClient) throws GitFlowFailureException {
         connector = aConnector;
+        sshClient = aSshClient;
         init(aRemoteUrl, someSupportedGitLabHosts);
     }
 
@@ -85,6 +97,42 @@ public class GitLabClient {
     }
 
     /**
+     * Connects to GitLab using ssh key.<br>
+     * Tries to create personal token via ssh and connects to GitLab using
+     * created personal token.
+     * 
+     * @throws GitFlowFailureException
+     */
+    public void connectWithSSHKey() throws GitFlowFailureException {
+        String personalToken;
+        try (ClosableSession session = sshClient.connect(remoteUri.getHost())) {
+            personalToken = sshClient.createPersonalToken();
+        } catch (JSchException | IOException | AgentProxyException exc) {
+            throw new GitFlowFailureException(exc,
+                    "Failed to login to GitLab using ssh key.\nReason: failed to create personal token via ssh", null);
+        }
+        connect(personalToken);
+    }
+
+    /**
+     * Connects to GitLab using ssh key.<br>
+     * Tries to create personal token via ssh and connects to GitLab using
+     * created personal token.
+     * 
+     * @throws GitFlowFailureException
+     */
+    public void connect(String aPersonalToken) throws GitFlowFailureException {
+        String gitLabUrl = getGitLabUrl();
+        try {
+            gitLab = connector.connect(gitLabUrl, aPersonalToken);
+        } catch (GitLabApiException exc) {
+            boolean unauthorized = exc.getHttpStatus() == HttpsURLConnection.HTTP_UNAUTHORIZED;
+            throw new GitFlowFailureException(exc, "Failed to login to GitLab with personal token.",
+                    unauthorized ? "Please check your personal token." : null);
+        }
+    }
+
+    /**
      * Connects to GitLab using username and password.
      * 
      * @param aUserName
@@ -94,6 +142,17 @@ public class GitLabClient {
      * @throws GitFlowFailureException
      */
     public void connect(String aUserName, String aUserPass) throws GitFlowFailureException {
+        String gitLabUrl = getGitLabUrl();
+        try {
+            gitLab = connector.connect(gitLabUrl, aUserName, aUserPass);
+        } catch (GitLabApiException exc) {
+            boolean unauthorized = exc.getHttpStatus() == HttpsURLConnection.HTTP_UNAUTHORIZED;
+            throw new GitFlowFailureException(exc, "Failed to login to GitLab",
+                    unauthorized ? "Please check your username and password." : null);
+        }
+    }
+
+    private String getGitLabUrl() {
         StringBuilder url = new StringBuilder();
         if ("http".equals(remoteUri.getScheme())) {
             url.append("http");
@@ -106,13 +165,7 @@ public class GitLabClient {
             url.append(":");
             url.append(remoteUri.getPort());
         }
-        try {
-            gitLab = connector.connect(url.toString(), aUserName, aUserPass);
-        } catch (GitLabApiException exc) {
-            boolean unauthorized = exc.getHttpStatus() == HttpsURLConnection.HTTP_UNAUTHORIZED;
-            throw new GitFlowFailureException(exc, "Failed to login to GitLab",
-                    unauthorized ? "Please check your username and password." : null);
-        }
+        return url.toString();
     }
 
     /**
@@ -201,6 +254,12 @@ public class GitLabClient {
     static class GitLabConnector {
         public GitLabApi connect(String aURL, String aUserName, String aUserPass) throws GitLabApiException {
             return GitLabApi.oauth2Login(aURL, aUserName, aUserPass);
+        }
+
+        public GitLabApi connect(String aURL, String aPersonalToken) throws GitLabApiException {
+            GitLabApi api = new GitLabApi(aURL, aPersonalToken);
+            api.getVersion();
+            return api;
         }
     }
 

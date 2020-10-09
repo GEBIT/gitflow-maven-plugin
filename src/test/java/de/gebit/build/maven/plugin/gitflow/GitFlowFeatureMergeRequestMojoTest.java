@@ -53,8 +53,6 @@ public class GitFlowFeatureMergeRequestMojoTest extends AbstractGitFlowMojoTestC
 
     private static final String MERGE_REQUEST_TITLE = "Resolve feature " + FEATURE_ISSUE;
 
-    private static final String MERGE_REQUEST_TITLE_TEMPLATE = "Resolve feature @{key}";
-
     private static final String GITLAB_USER = "gluser";
 
     private static final String GITLAB_PASSWORD = "glpass";
@@ -83,6 +81,7 @@ public class GitFlowFeatureMergeRequestMojoTest extends AbstractGitFlowMojoTestC
         gitLabPort = wireMockRule.port();
         userProperties = new Properties();
         userProperties.setProperty("flow.supportedGitLabHosts", "localhost");
+        userProperties.setProperty("flow.gitLabLoginBySSHKey", "false");
         userProperties.setProperty("flow.gitLabProjectUrl", gitLabProjectUrl());
     }
 

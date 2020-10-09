@@ -9,6 +9,7 @@
 package de.gebit.build.maven.plugin.gitflow;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -75,7 +76,9 @@ public class ExceptionAsserts {
                     expectedExceptionClass.getName() + "(" + expectedExceptionMessage + ")",
                     exception.getClass().getName() + "(" + exception.getMessage() + ")");
         }
-        assertExceptionMessage(exception, expectedExceptionMessage, regex);
+        if (expectedExceptionMessage != null) {
+            assertExceptionMessage(exception, expectedExceptionMessage, regex);
+        }
     }
 
     public static void assertExceptionMessage(Throwable exception, String expectedExceptionMessage, boolean regex) {
@@ -196,12 +199,30 @@ public class ExceptionAsserts {
     }
 
     public static Throwable assertThrows(ThrowableRunnable call) {
+        return assertThrows((Class) null, call);
+    }
+
+    public static Throwable assertThrows(Class<? extends Throwable> expectedType, ThrowableRunnable call) {
+        return assertThrows(expectedType, null, call);
+    }
+
+    public static Throwable assertThrows(Class<? extends Throwable> expectedType, String expectedMessage,
+            ThrowableRunnable call) {
         try {
             call.run();
         } catch (Throwable exc) {
+            if (expectedType != null) {
+                assertException(exc, expectedType, expectedMessage, true);
+            }
             return exc;
         }
         fail("Exception was expected");
         return null;
+    }
+
+    public static Throwable assertThrows(Throwable expectedException, ThrowableRunnable call) {
+        Throwable exception = assertThrows(call);
+        assertSame(expectedException, exception);
+        return exception;
     }
 }

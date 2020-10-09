@@ -68,6 +68,13 @@ public class GitFlowFeatureMergeRequestMojo extends AbstractGitFlowFeatureMojo {
     private String gitLabProjectUrl;
 
     /**
+     * Whether to try to login to GitLab using personal token created via ssh.
+     * Supported only since GitLab 13.4.
+     */
+    @Parameter(property = "flow.gitLabLoginBySSHKey", defaultValue = "true")
+    private boolean gitLabLoginBySSHKey;
+
+    /**
      * Merge request title if <code>mergeRequestTitleTemplate</code> is not
      * specified.<br>
      * Part of the merge request title if <code>mergeRequestTitleTemplate</code>
@@ -131,16 +138,10 @@ public class GitFlowFeatureMergeRequestMojo extends AbstractGitFlowFeatureMojo {
                 throw new GitFlowFailureException("Starting of feature merge request aborted by user.", null);
             }
         }
-        String userName = null;
-        String userPass = null;
-        try {
-            userName = getPrompter().promptValue("Enter GitLab user name:", System.getProperty("user.name"));
-            userPass = getPrompter().promptForPassword("Enter GitLab user password:");
-        } catch (PrompterException exc) {
-            throw new GitFlowFailureException(exc, "Failed to get value from user prompt", null);
-        }
 
-        gitLab.connect(userName, userPass);
+        if (!tryToConnectWithSSHKey(gitLab)) {
+            connectWithCredentials(gitLab);
+        }
 
         MergeRequest mr = gitLab.getMergeRequest(featureBranchLocalName);
         if (mr != null) {
@@ -152,6 +153,31 @@ public class GitFlowFeatureMergeRequestMojo extends AbstractGitFlowFeatureMojo {
         getMavenLog().info("Feature merge request was successfully created: " + mr.getWebUrl());
 
         getMavenLog().info("Feature merge request process finished");
+    }
+
+    private void connectWithCredentials(GitLabClient gitLab) throws GitFlowFailureException {
+        String userName = null;
+        String userPass = null;
+        try {
+            userName = getPrompter().promptValue("Enter GitLab user name:", System.getProperty("user.name"));
+            userPass = getPrompter().promptForPassword("Enter GitLab user password:");
+        } catch (PrompterException exc) {
+            throw new GitFlowFailureException(exc, "Failed to get value from user prompt", null);
+        }
+        gitLab.connect(userName, userPass);
+    }
+
+    private boolean tryToConnectWithSSHKey(GitLabClient gitLab) {
+        if (gitLabLoginBySSHKey) {
+            try {
+                gitLab.connectWithSSHKey();
+                return true;
+            } catch (GitFlowFailureException exc) {
+                getMavenLog().warn("Failed to connect to GitLab using ssh key.");
+                getLog().info(exc);
+            }
+        }
+        return false;
     }
 
     private String createMRTitle(String sourceBranch, String targetBranch)

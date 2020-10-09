@@ -42,8 +42,12 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
+import com.jcraft.jsch.JSchException;
+import com.jcraft.jsch.agentproxy.AgentProxyException;
+
 import de.gebit.build.maven.plugin.gitflow.GitFlowFailureException;
 import de.gebit.build.maven.plugin.gitflow.utils.GitLabClient.GitLabConnector;
+import de.gebit.build.maven.plugin.gitflow.utils.GitLabSSHClient.ClosableSession;
 
 /**
  * @author Volodja
@@ -56,11 +60,15 @@ public class GitLabClientTest {
 
     private static final String REMOTE_GITLAB = "https://testhost.local.gebit.de";
 
+    private static final String REMOTE_GITLAB_HOST = "testhost.local.gebit.de";
+
     private static final String GITLAB_PROJECT = "test/project";
 
     private static final String PASSWORD = "password";
 
     private static final String USER_NAME = "userName";
+
+    private static final String PERSONAL_TOKEN = "personal-Token";
 
     @Rule
     public MockitoRule mockitoRuel = MockitoJUnit.rule().silent();
@@ -187,6 +195,117 @@ public class GitLabClientTest {
         Throwable exc = assertThrows(() -> gitLab.connect(USER_NAME, PASSWORD));
         // verify
         assertGitFlowFailureException(exc, "Failed to login to GitLab", "Please check your username and password.");
+    }
+
+    @Test
+    public void testConnectWithPersonalToken() throws Exception {
+        // set up
+        GitLabConnector tempConnectorMock = mock(GitLabConnector.class);
+        GitLabClient gitLab = new GitLabClient(REMOTE_URL, SUPPORTED_HOSTS, tempConnectorMock);
+        when(tempConnectorMock.connect(REMOTE_GITLAB, PERSONAL_TOKEN)).thenReturn(gitLabApiMock);
+        // execute
+        gitLab.connect(PERSONAL_TOKEN);
+        // verify
+        verify(tempConnectorMock).connect(REMOTE_GITLAB, PERSONAL_TOKEN);
+    }
+
+    @Test
+    public void testConnectWithPersonalTokenAndException() throws Exception {
+        // set up
+        GitLabConnector tempConnectorMock = mock(GitLabConnector.class);
+        GitLabClient gitLab = new GitLabClient(REMOTE_URL, SUPPORTED_HOSTS, tempConnectorMock);
+        when(tempConnectorMock.connect(REMOTE_GITLAB, PERSONAL_TOKEN)).thenThrow(new GitLabApiException("dummy", 500));
+        // execute
+        Throwable exc = assertThrows(() -> gitLab.connect(PERSONAL_TOKEN));
+        // verify
+        assertGitFlowFailureException(exc, "Failed to login to GitLab with personal token.", null);
+    }
+
+    @Test
+    public void testConnectWithPersonalTokenAndUnauthorizedException() throws Exception {
+        // set up
+        GitLabConnector tempConnectorMock = mock(GitLabConnector.class);
+        GitLabClient gitLab = new GitLabClient(REMOTE_URL, SUPPORTED_HOSTS, tempConnectorMock);
+        when(tempConnectorMock.connect(REMOTE_GITLAB, PERSONAL_TOKEN)).thenThrow(new GitLabApiException("dummy", 401));
+        // execute
+        Throwable exc = assertThrows(() -> gitLab.connect(PERSONAL_TOKEN));
+        // verify
+        assertGitFlowFailureException(exc, "Failed to login to GitLab with personal token.", "Please check your personal token.");
+    }
+
+    @Test
+    public void testConnectWithSSHKey() throws Exception {
+        // set up
+        GitLabConnector tempConnectorMock = mock(GitLabConnector.class);
+        GitLabSSHClient tempSSHClientMock = mock(GitLabSSHClient.class);
+        GitLabClient gitLab = new GitLabClient(REMOTE_URL, SUPPORTED_HOSTS, tempConnectorMock, tempSSHClientMock);
+        when(tempSSHClientMock.connect(REMOTE_GITLAB_HOST)).thenReturn(mock(ClosableSession.class));
+        when(tempSSHClientMock.createPersonalToken()).thenReturn(PERSONAL_TOKEN);
+        when(tempConnectorMock.connect(REMOTE_GITLAB, PERSONAL_TOKEN)).thenReturn(gitLabApiMock);
+        // execute
+        gitLab.connectWithSSHKey();
+        // verify
+        verify(tempSSHClientMock).connect(REMOTE_GITLAB_HOST);
+        verify(tempSSHClientMock).createPersonalToken();
+        verify(tempConnectorMock).connect(REMOTE_GITLAB, PERSONAL_TOKEN);
+    }
+
+    @Test
+    public void testConnectWithSSHKeyAndException() throws Exception {
+        // set up
+        GitLabConnector tempConnectorMock = mock(GitLabConnector.class);
+        GitLabSSHClient tempSSHClientMock = mock(GitLabSSHClient.class);
+        GitLabClient gitLab = new GitLabClient(REMOTE_URL, SUPPORTED_HOSTS, tempConnectorMock, tempSSHClientMock);
+        when(tempSSHClientMock.connect(REMOTE_GITLAB_HOST)).thenReturn(mock(ClosableSession.class));
+        when(tempSSHClientMock.createPersonalToken()).thenReturn(PERSONAL_TOKEN);
+        when(tempConnectorMock.connect(REMOTE_GITLAB, PERSONAL_TOKEN)).thenThrow(new GitLabApiException("dummy", 500));
+        // execute
+        Throwable exc = assertThrows(() -> gitLab.connectWithSSHKey());
+        // verify
+        assertGitFlowFailureException(exc, "Failed to login to GitLab with personal token.", null);
+    }
+
+    @Test
+    public void testConnectWithSSHKeyAndUnauthorizedException() throws Exception {
+        // set up
+        GitLabConnector tempConnectorMock = mock(GitLabConnector.class);
+        GitLabSSHClient tempSSHClientMock = mock(GitLabSSHClient.class);
+        GitLabClient gitLab = new GitLabClient(REMOTE_URL, SUPPORTED_HOSTS, tempConnectorMock, tempSSHClientMock);
+        when(tempSSHClientMock.connect(REMOTE_GITLAB_HOST)).thenReturn(mock(ClosableSession.class));
+        when(tempSSHClientMock.createPersonalToken()).thenReturn(PERSONAL_TOKEN);
+        when(tempConnectorMock.connect(REMOTE_GITLAB, PERSONAL_TOKEN)).thenThrow(new GitLabApiException("dummy", 401));
+        // execute
+        Throwable exc = assertThrows(() -> gitLab.connectWithSSHKey());
+        // verify
+        assertGitFlowFailureException(exc, "Failed to login to GitLab with personal token.", "Please check your personal token.");
+    }
+
+    @Test
+    public void testConnectWithSSHKeyAndSSHException() throws Exception {
+        // set up
+        GitLabConnector tempConnectorMock = mock(GitLabConnector.class);
+        GitLabSSHClient tempSSHClientMock = mock(GitLabSSHClient.class);
+        GitLabClient gitLab = new GitLabClient(REMOTE_URL, SUPPORTED_HOSTS, tempConnectorMock, tempSSHClientMock);
+        when(tempSSHClientMock.connect(REMOTE_GITLAB_HOST)).thenThrow(JSchException.class);
+        // execute
+        Throwable exc = assertThrows(() -> gitLab.connectWithSSHKey());
+        // verify
+        assertGitFlowFailureException(exc,
+                "Failed to login to GitLab using ssh key.\nReason: failed to create personal token via ssh", null);
+    }
+
+    @Test
+    public void testConnectWithSSHKeyAndSSHAgentException() throws Exception {
+        // set up
+        GitLabConnector tempConnectorMock = mock(GitLabConnector.class);
+        GitLabSSHClient tempSSHClientMock = mock(GitLabSSHClient.class);
+        GitLabClient gitLab = new GitLabClient(REMOTE_URL, SUPPORTED_HOSTS, tempConnectorMock, tempSSHClientMock);
+        when(tempSSHClientMock.connect(REMOTE_GITLAB_HOST)).thenThrow(AgentProxyException.class);
+        // execute
+        Throwable exc = assertThrows(() -> gitLab.connectWithSSHKey());
+        // verify
+        assertGitFlowFailureException(exc,
+                "Failed to login to GitLab using ssh key.\nReason: failed to create personal token via ssh", null);
     }
 
     @Test
