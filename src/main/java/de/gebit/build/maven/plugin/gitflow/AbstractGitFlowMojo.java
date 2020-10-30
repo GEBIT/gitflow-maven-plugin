@@ -3873,7 +3873,6 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
         boolean processAdditionalCommands = true;
         if (processAdditionalCommands && additionalMavenCommands != null) {
             StringSearchInterpolator interpolator = new StringSearchInterpolator("@{", "}");
-            interpolator.addValueSource(new PropertiesBasedValueSource(getProject().getProperties()));
             Properties properties = new Properties();
             properties.setProperty("branchName", branch);
             String isFeature = String.valueOf(isFeatureBranch(branch));
@@ -3885,6 +3884,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             properties.setProperty("isMaintenance", isMaintenance);
             properties.setProperty("isMaster", isMaster);
             interpolator.addValueSource(new PropertiesBasedValueSource(properties));
+            interpolator.addValueSource(new PropertiesBasedValueSource(getProject().getProperties()));
 
             // process additional commands/parameters
             for (int i = 0; i < additionalMavenCommands.length; i++) {
@@ -3945,9 +3945,9 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                     getMavenLog().info("- using parameter value '" + paramValue + "' for additional maven command");
                 }
             }
-            for (String command : getAdditionalMavenCommands()) {
+            for (String command : getAdditionalMavenCommands(interpolator)) {
                 try {
-                    command = normilizeWhitespaces(command.replaceAll("\\@\\{branchName\\}", branch));
+                    command = normilizeWhitespaces(command);
                     String[] commandArgs = CommandLineUtils.translateCommandline(command);
                     commandArgs = addArgs(commandArgs, "-DisFeature=" + isFeature, "-DisEpic=" + isEpic,
                             "-DisMaintenance=" + isMaintenance, "-DisMaster=" + isMaster);
@@ -3963,7 +3963,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
     }
 
-    protected List<String> getAdditionalMavenCommands() throws MojoFailureException {
+    protected List<String> getAdditionalMavenCommands(StringSearchInterpolator interpolator)
+            throws MojoFailureException {
         if (additionalMavenCommands == null || additionalMavenCommands.length == 0) {
             return Collections.emptyList();
         }
@@ -3978,9 +3979,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                 continue;
             }
 
-            StringSearchInterpolator interpolator = new StringSearchInterpolator("@{", "}");
-            interpolator.addValueSource(new PropertiesBasedValueSource(getProject().getProperties()));
-            interpolator.addValueSource(new SingleResponseValueSource("value", parameter.getValue()));
+            SingleResponseValueSource valueSource = new SingleResponseValueSource("value", parameter.getValue());
+            interpolator.addValueSource(valueSource);
 
             try {
                 result.add(interpolator.interpolate(parameter.getCommand()));
@@ -3990,6 +3990,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
                                 + "Maven command can't be executed.",
                         "Please modify the parameter value to avoid cylces.");
             }
+            interpolator.removeValuesSource(valueSource);
         }
         return result;
     }
