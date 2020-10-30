@@ -141,8 +141,8 @@ public class GitFlowFeatureMergeRequestMojoTest extends AbstractGitFlowMojoTestC
 
     private void staubForDefaultLogin() throws PrompterException {
         stubForOAuth(GITLAB_USER, GITLAB_PASSWORD);
-        when(promptControllerMock.prompt(eq("Enter GitLab user name:"), anyString())).thenReturn(GITLAB_USER);
-        when(promptControllerMock.promptForPassword("Enter GitLab user password:")).thenReturn(GITLAB_PASSWORD);
+        when(promptControllerMock.prompt(eq("Enter GitLab user name"), anyString())).thenReturn(GITLAB_USER);
+        when(promptControllerMock.promptForPassword("Enter GitLab user password")).thenReturn(GITLAB_PASSWORD);
     }
 
     private void verifyAllForDefaultMergeRequest(int expectedProjectId)
@@ -164,8 +164,8 @@ public class GitFlowFeatureMergeRequestMojoTest extends AbstractGitFlowMojoTestC
     }
 
     private void verifyRequestForDefaultLogin() throws PrompterException {
-        verify(promptControllerMock).prompt(eq("Enter GitLab user name:"), anyString());
-        verify(promptControllerMock).promptForPassword("Enter GitLab user password:");
+        verify(promptControllerMock).prompt(eq("Enter GitLab user name"), anyString());
+        verify(promptControllerMock).promptForPassword("Enter GitLab user password");
         verifyRequestForOAuth(GITLAB_USER, GITLAB_PASSWORD);
     }
 

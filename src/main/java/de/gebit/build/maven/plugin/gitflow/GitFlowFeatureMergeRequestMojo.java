@@ -159,8 +159,8 @@ public class GitFlowFeatureMergeRequestMojo extends AbstractGitFlowFeatureMojo {
         String userName = null;
         String userPass = null;
         try {
-            userName = getPrompter().promptValue("Enter GitLab user name:", System.getProperty("user.name"));
-            userPass = getPrompter().promptForPassword("Enter GitLab user password:");
+            userName = getPrompter().promptValue("Enter GitLab user name", System.getProperty("user.name"));
+            userPass = getPrompter().promptForPassword("Enter GitLab user password");
         } catch (PrompterException exc) {
             throw new GitFlowFailureException(exc, "Failed to get value from user prompt", null);
         }
