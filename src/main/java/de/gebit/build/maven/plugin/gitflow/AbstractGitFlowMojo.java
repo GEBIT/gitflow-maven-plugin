@@ -498,14 +498,18 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             }
             cmdMvn.setExecutable(mvnExecutable);
         }
-        if (StringUtils.isBlank(cmdGit.getExecutable())) {
+        initGitCmd(cmdGit);
+    }
+    
+    private void initGitCmd(Commandline cmd) {
+        if (StringUtils.isBlank(cmd.getExecutable())) {
             String basedir = session.getRequest().getBaseDirectory();
-            cmdGit.setWorkingDirectory(basedir);
+            cmd.setWorkingDirectory(basedir);
             if (StringUtils.isBlank(gitExecutable)) {
                 gitExecutable = "git";
             }
-            cmdGit.setExecutable(gitExecutable);
-            cmdGit.addEnvironment("LANG", "en");
+            cmd.setExecutable(gitExecutable);
+            cmd.addEnvironment("LANG", "en");
         }
     }
 
@@ -3308,7 +3312,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected void gitRebaseContinue() throws MojoFailureException, CommandLineException {
         getLog().info("git rebase --continue");
-        executeGitCommand("rebase", "--continue");
+        executeGitCommandWithSilentEditor("rebase", "--continue");
     }
 
     /**
@@ -3320,7 +3324,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      */
     protected void gitRebaseSkip() throws MojoFailureException, CommandLineException {
         getLog().info("git rebase --skip");
-        executeGitCommand("rebase", "--skip");
+        executeGitCommandWithSilentEditor("rebase", "--skip");
     }
 
     protected InteractiveRebaseStatus gitInteractiveRebaseContinue() throws MojoFailureException, CommandLineException {
@@ -4175,7 +4179,30 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
      * @throws MojoFailureException
      */
     private void executeGitCommand(final String... args) throws CommandLineException, MojoFailureException {
-        executeCommand(cmdGit, true, args);
+        executeGitCommand(null, args);
+    }
+    
+    private void executeGitCommand(Map<String, String> envVars, String... args)
+            throws CommandLineException, MojoFailureException {
+        Commandline cmd;
+        if (envVars != null && !envVars.isEmpty()) {
+            cmd = new ShellCommandLine();
+            initGitCmd(cmd);
+            for (Entry<String, String> envVar : envVars.entrySet()) {
+                cmd.addEnvironment(envVar.getKey(), envVar.getValue());
+            }
+        } else {
+            cmd = cmdGit;
+        }
+        executeCommand(cmd, true, args);
+    }
+    
+    private void executeGitCommandWithSilentEditor(String... args) throws CommandLineException, MojoFailureException {
+        if (System.getenv().containsKey("GIT_EDITOR")) {
+            executeGitCommand(args);
+        } else {
+            executeGitCommand(Collections.singletonMap("GIT_EDITOR", GitSilentEditor.getExecutable()), args);
+        }
     }
 
     private void executeMvnCommand(final String... args) throws CommandLineException, MojoFailureException {
