@@ -14,12 +14,16 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+
+import org.apache.commons.io.FileUtils;
 
 import de.gebit.build.maven.plugin.gitflow.jgit.GitRebaseTodo.GitRebaseTodoEntry;
 
@@ -200,11 +204,22 @@ public class GitDummyEditor {
                 targetParentDir.mkdirs();
             }
             try {
-                System.setOut(new PrintStream(new BufferedOutputStream(new FileOutputStream(target, true)), true));
+                System.setOut(new PrintStream(new BufferedOutputStream(new FileOutputStream(target, true)), true,
+                        StandardCharsets.UTF_8.name()));
                 System.setErr(System.out);
-            } catch (FileNotFoundException exc) {
+            } catch (FileNotFoundException | UnsupportedEncodingException exc) {
                 exc.printStackTrace();
             }
         }
+    }
+
+    public static String getLogContent(String targetBasedir) throws IOException {
+        if (targetBasedir != null) {
+            File target = new File(new File(targetBasedir, RELATIVE_PATH_TO_EDITOR_WORKING_DIR), "editor.log");
+            if (target.exists()) {
+                return FileUtils.readFileToString(target, StandardCharsets.UTF_8.name());
+            }
+        }
+        return null;
     }
 }

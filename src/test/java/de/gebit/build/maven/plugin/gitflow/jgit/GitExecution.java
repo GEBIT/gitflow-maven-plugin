@@ -2018,6 +2018,17 @@ public class GitExecution {
         cmdBuilder.append(GitDummyEditor.class.getName());
         return cmdBuilder.toString();
     }
+    
+    public String getGitDummyEditorLog() throws IOException {
+        return GitDummyEditor.getLogContent(gitBaseDir.getAbsolutePath());
+    }
+    
+    public void assertGitEditorNotCalled() throws IOException {
+        String log = getGitDummyEditorLog();
+        if (log != null) {
+            fail("Git editor was unexpectedly called. Log: " + log);
+        }
+    }
 
     public void setOffline(RepositorySet repositorySet) throws GitAPIException, URISyntaxException {
         RemoteSetUrlCommand remoteSetUrlCommand = repositorySet.getLocalRepoGit().remoteSetUrl();

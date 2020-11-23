@@ -77,6 +77,7 @@ public class GitFlowFeatureCleanupMojoTest extends AbstractGitFlowMojoTestCase {
 
     @Before
     public void setUp() throws Exception {
+        skipGitEditorCallCheck = true;
         repositorySet = git.useGitRepositorySet(TestProjects.BASIC, FEATURE_BRANCH);
         userProperties = new Properties();
         userProperties.setProperty("flow.featureBranchPrefix", BasicConstants.SINGLE_FEATURE_BRANCH_PREFIX);

@@ -129,6 +129,8 @@ public abstract class AbstractGitFlowMojoTestCase {
     protected GitExecution git;
 
     private File testBasedir;
+    
+    protected boolean skipGitEditorCallCheck;
 
     @Mock
     protected Prompter promptControllerMock;
@@ -148,6 +150,9 @@ public abstract class AbstractGitFlowMojoTestCase {
     @After
     public void tearDownAbstractGitFlowMojoTestCase() throws Exception {
         if (git != null) {
+            if (!skipGitEditorCallCheck) {
+                git.assertGitEditorNotCalled();
+            }
             try {
                 git.cleanupGitBasedir();
             } catch (Exception e) {
