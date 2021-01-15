@@ -5,4 +5,3 @@ issueNumber = GBLD-311
 baseBranch = master
 versionChangeCommit = 84a9003fc4196eb75ddecac7e5796f3a7530811c
 JOB_BUILD = true
-JOB_FEATURE_INTEGRATION = true
