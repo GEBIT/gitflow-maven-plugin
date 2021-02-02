@@ -276,12 +276,16 @@ public class GitFlowFeatureMergeRequestMojoTest extends AbstractGitFlowMojoTestC
 
     @Test
     public void testExecuteInBatchMode() throws Exception {
+        // set up
+        prepareFeatureBranchForMergeRequest();
         // test
         MavenExecutionResult result = executeMojoWithResult(repositorySet.getWorkingDirectory(), GOAL, userProperties);
         // verify
         assertGitFlowFailureException(result,
-                "'mvn flow:feature-merge-request' can't be executed in non-interactive mode.",
-                "Please create the feature merge request in interactive mode.",
+                "'mvn flow:feature-merge-request' can't be executed in non-interactive mode if ssh is not properly set "
+                        + "up.",
+                "Please set up ssh using GEBIT Installer (contact DINF team if support needed) or create the feature "
+                        + "merge request in interactive mode.",
                 "'mvn flow:feature-merge-request' to run in interactive mode");
     }
 

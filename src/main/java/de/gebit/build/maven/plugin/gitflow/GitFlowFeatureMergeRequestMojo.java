@@ -109,7 +109,6 @@ public class GitFlowFeatureMergeRequestMojo extends AbstractGitFlowFeatureMojo {
 
         GitLabClient gitLab = createGitLabClient(gitLabProjectUrl, supportedGitLabHosts);
 
-        ensureInteractiveMode();
         checkCentralBranchConfig();
 
         String featureBranchLocalName = selectFeatureBranch();
@@ -156,6 +155,7 @@ public class GitFlowFeatureMergeRequestMojo extends AbstractGitFlowFeatureMojo {
     }
 
     private void connectWithCredentials(GitLabClient gitLab) throws GitFlowFailureException {
+        ensureInteractiveMode();
         String userName = null;
         String userPass = null;
         try {
@@ -226,8 +226,10 @@ public class GitFlowFeatureMergeRequestMojo extends AbstractGitFlowFeatureMojo {
     private void ensureInteractiveMode() throws GitFlowFailureException {
         if (!settings.isInteractiveMode()) {
             throw new GitFlowFailureException(
-                    "'mvn flow:feature-merge-request' can't be executed in non-interactive mode.",
-                    "Please create the feature merge request in interactive mode.",
+                    "'mvn flow:feature-merge-request' can't be executed in non-interactive mode if ssh is not properly "
+                            + "set up.",
+                    "Please set up ssh using GEBIT Installer (contact DINF team if support needed) or create the "
+                            + "feature merge request in interactive mode.",
                     "'mvn flow:feature-merge-request' to run in interactive mode");
         }
     }
@@ -253,7 +255,13 @@ public class GitFlowFeatureMergeRequestMojo extends AbstractGitFlowFeatureMojo {
                     throw new GitFlowFailureException("There are no feature branches in your repository.", null);
                 }
                 featureBranchLocalName = getPrompter().promptToSelectFromOrderedList("Feature branches:",
-                        "Choose feature branch which to create merge request for", branches);
+                        "Choose feature branch which to create merge request for", branches,
+                        new GitFlowFailureInfo(
+                                "In non-interactive mode 'mvn flow:feature-merge-request' can be executed only on a "
+                                        + "feature branch.",
+                                "Please switch to a feature branch first or run in interactive mode.",
+                                "'git checkout BRANCH' to switch to the feature branch",
+                                "'mvn flow:feature-merge-request' to run in interactive mode"));
                 getLog().info("Creating merge request for selected feature branch: " + featureBranchLocalName);
             }
         }
