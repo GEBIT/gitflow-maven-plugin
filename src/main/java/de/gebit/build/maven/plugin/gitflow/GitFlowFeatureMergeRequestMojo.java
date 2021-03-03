@@ -75,23 +75,20 @@ public class GitFlowFeatureMergeRequestMojo extends AbstractGitFlowFeatureMojo {
     private boolean gitLabLoginBySSHKey;
 
     /**
-     * Merge request title if <code>mergeRequestTitleTemplate</code> is not
-     * specified.<br>
-     * Part of the merge request title if <code>mergeRequestTitleTemplate</code>
-     * is specified and contains @{title} placeholder.<br>
-     * Will be ignored if <code>mergeRequestTitleTemplate</code> is specified
-     * but doesn't contain @{title} placeholder.
+     * The value for the <code>@{interactiveTitlePart}</code> placeholder in the
+     * <code>mergeRequestTitle</code>. Only specify this when interactive
+     * prompting is not desired.
      */
-    @Parameter(property = "flow.mergeRequestTitle")
-    private String mergeRequestTitle;
+    @Parameter(property = "flow.mergeRequestInteractiveTitlePart")
+    private String mergeRequestInteractiveTitlePart;
 
     /**
-     * The title template to be used for a merge request. If not specified,
-     * <code>mergeRequestTitle</code> parameter will be used for title.
+     * The template to be used for defining the title of a merge request.
      * <p>
-     * Supported placeholders:
-     * <li>@{title} - title from <code>mergeRequestTitle</code> or from user
-     * promt</li>
+     * Supported placeholders (all optional):
+     * <li>@{interactiveTitlePart} - the value of
+     * <code>mergeRequestInteractiveTitlePart</code> (if set); otherwise
+     * interactively asked from the user</li>
      * <li>@{key} - Jira issue key of the feature (e.g.
      * <code>ABC-42</code>)</li>
      * <li>@{sourceBranch} - source branch of the MR (e.g.
@@ -100,8 +97,8 @@ public class GitFlowFeatureMergeRequestMojo extends AbstractGitFlowFeatureMojo {
      * <code>master</code>)</li>
      * </p>
      */
-    @Parameter(property = "flow.mergeRequestTitleTemplate")
-    private String mergeRequestTitleTemplate;
+    @Parameter(property = "flow.mergeRequestTitle")
+    private String mergeRequestTitle;
 
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
@@ -184,21 +181,21 @@ public class GitFlowFeatureMergeRequestMojo extends AbstractGitFlowFeatureMojo {
             throws MojoFailureException, CommandLineException {
         String issueNumber = getFeatureIssueNumber(sourceBranch);
         String template;
-        if (StringUtils.isEmpty(mergeRequestTitleTemplate)) {
+        if (StringUtils.isEmpty(mergeRequestTitle)) {
             template = getPrompter().promptRequiredParameterValue("What is the title of the merge request?",
-                    "mergeRequestTitle", mergeRequestTitle,
+                    "mergeRequestInteractiveTitlePart", mergeRequestInteractiveTitlePart,
                     substituteMRTitle(DEFAULT_MERGE_REQUEST_TITLE, sourceBranch, targetBranch, issueNumber));
-        } else if (mergeRequestTitleTemplate.equals("@{title}")) {
+        } else if (mergeRequestTitle.equals("@{interactiveTitlePart}")) {
             template = getPrompter().promptRequiredParameterValue("What is the title of the merge request?",
-                    "mergeRequestTitle", null,
-                    substituteMRTitle(mergeRequestTitle, sourceBranch, targetBranch, issueNumber));
-        } else if (mergeRequestTitleTemplate.contains("@{title}")) {
+                    "mergeRequestInteractiveTitlePart", null,
+                    substituteMRTitle(mergeRequestInteractiveTitlePart, sourceBranch, targetBranch, issueNumber));
+        } else if (mergeRequestTitle.contains("@{interactiveTitlePart}")) {
             String titleTemplate = getPrompter().promptRequiredParameterValue("What is the title of the merge request?",
-                    "mergeRequestTitle", mergeRequestTitle);
-            template = substituteMRTitle(mergeRequestTitleTemplate, sourceBranch, targetBranch, issueNumber,
-                    Collections.singletonMap("title", titleTemplate));
+                    "mergeRequestInteractiveTitlePart", mergeRequestInteractiveTitlePart);
+            template = substituteMRTitle(mergeRequestTitle, sourceBranch, targetBranch, issueNumber,
+                    Collections.singletonMap("interactiveTitlePart", titleTemplate));
         } else {
-            template = mergeRequestTitleTemplate;
+            template = mergeRequestTitle;
         }
         return substituteMRTitle(template, sourceBranch, targetBranch, issueNumber);
     }

@@ -520,23 +520,6 @@ public class GitFlowFeatureMergeRequestMojoTest extends AbstractGitFlowMojoTestC
     }
 
     @Test
-    public void testExecuteWithMergeRequestTitleTemplate() throws Exception {
-        // set up
-        final int EXPECTED_PROJECT_ID = 42;
-        final String EXPECTED_MERGE_REQUEST_TITLE = "Resolve feature " + FEATURE_ISSUE + " (merge " + FEATURE_BRANCH
-                + " into " + MASTER_BRANCH + ")";
-        prepareFeatureBranchForMergeRequest();
-        stubAllForDefaultMergerRequest(EXPECTED_PROJECT_ID, EXPECTED_MERGE_REQUEST_TITLE);
-        userProperties.setProperty("flow.mergeRequestTitleTemplate",
-                "Resolve feature @{key} (merge @{sourceBranch} into @{targetBranch})");
-        // test
-        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
-        // verify
-        verifyAllForDefaultMergeRequest(EXPECTED_PROJECT_ID, EXPECTED_MERGE_REQUEST_TITLE);
-        verifyNoMoreInteractions(promptControllerMock);
-    }
-
-    @Test
     public void testExecuteWithMergeRequestTitle() throws Exception {
         // set up
         final int EXPECTED_PROJECT_ID = 42;
@@ -554,14 +537,32 @@ public class GitFlowFeatureMergeRequestMojoTest extends AbstractGitFlowMojoTestC
     }
 
     @Test
-    public void testExecuteWithTitlePlaceholderAsMergeRequestTitleTemplateWithoutMergeRequestTitle() throws Exception {
+    public void testExecuteWithMergeRequestInteractiveTitlePart() throws Exception {
         // set up
         final int EXPECTED_PROJECT_ID = 42;
         final String EXPECTED_MERGE_REQUEST_TITLE = "Resolve feature " + FEATURE_ISSUE + " (merge " + FEATURE_BRANCH
                 + " into " + MASTER_BRANCH + ")";
         prepareFeatureBranchForMergeRequest();
         stubAllForDefaultMergerRequest(EXPECTED_PROJECT_ID, EXPECTED_MERGE_REQUEST_TITLE);
-        userProperties.setProperty("flow.mergeRequestTitleTemplate", "@{title}");
+        userProperties.setProperty("flow.mergeRequestInteractiveTitlePart",
+                "Resolve feature @{key} (merge @{sourceBranch} into @{targetBranch})");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyAllForDefaultMergeRequest(EXPECTED_PROJECT_ID, EXPECTED_MERGE_REQUEST_TITLE);
+        verifyNoMoreInteractions(promptControllerMock);
+    }
+
+    @Test
+    public void testExecuteWithInteractiveTitlePartPlaceholderAsMergeRequestTitleWithoutMergeRequestInteractiveTitlePart()
+            throws Exception {
+        // set up
+        final int EXPECTED_PROJECT_ID = 42;
+        final String EXPECTED_MERGE_REQUEST_TITLE = "Resolve feature " + FEATURE_ISSUE + " (merge " + FEATURE_BRANCH
+                + " into " + MASTER_BRANCH + ")";
+        prepareFeatureBranchForMergeRequest();
+        stubAllForDefaultMergerRequest(EXPECTED_PROJECT_ID, EXPECTED_MERGE_REQUEST_TITLE);
+        userProperties.setProperty("flow.mergeRequestTitle", "@{interactiveTitlePart}");
         when(promptControllerMock.prompt("What is the title of the merge request?"))
                 .thenReturn("Resolve feature @{key} (merge @{sourceBranch} into @{targetBranch})");
         // test
@@ -573,7 +574,8 @@ public class GitFlowFeatureMergeRequestMojoTest extends AbstractGitFlowMojoTestC
     }
 
     @Test
-    public void testExecuteWithTitlePlaceholderAsMergeRequestTitleTemplateWithMergeRequestTitle() throws Exception {
+    public void testExecuteWithInteractiveTitlePartPlaceholderAsMergeRequestTitleWithMergeRequestInteractiveTitlePart()
+            throws Exception {
         // set up
         final int EXPECTED_PROJECT_ID = 42;
         final String USED_MERGE_REQUEST_TITLE = "Merge @{sourceBranch} into @{targetBranch}";
@@ -582,8 +584,8 @@ public class GitFlowFeatureMergeRequestMojoTest extends AbstractGitFlowMojoTestC
                 + " into " + MASTER_BRANCH + ")";
         prepareFeatureBranchForMergeRequest();
         stubAllForDefaultMergerRequest(EXPECTED_PROJECT_ID, EXPECTED_MERGE_REQUEST_TITLE);
-        userProperties.setProperty("flow.mergeRequestTitleTemplate", "@{title}");
-        userProperties.setProperty("flow.mergeRequestTitle", USED_MERGE_REQUEST_TITLE);
+        userProperties.setProperty("flow.mergeRequestTitle", "@{interactiveTitlePart}");
+        userProperties.setProperty("flow.mergeRequestInteractiveTitlePart", USED_MERGE_REQUEST_TITLE);
         when(promptControllerMock.prompt("What is the title of the merge request?", USED_MERGE_REQUEST_TITLE_REPLACED))
                 .thenReturn("Resolve feature @{key} (merge @{sourceBranch} into @{targetBranch})");
         // test
@@ -596,7 +598,7 @@ public class GitFlowFeatureMergeRequestMojoTest extends AbstractGitFlowMojoTestC
     }
 
     @Test
-    public void testExecuteWithTitlePlaceholderAsMergeRequestTitleTemplateWithMergeRequestTitleSelectDefault()
+    public void testExecuteWithInteractiveTitlePartPlaceholderAsMergeRequestTitleWithMergeRequestInteractiveTitlePartSelectDefault()
             throws Exception {
         // set up
         final int EXPECTED_PROJECT_ID = 42;
@@ -604,8 +606,8 @@ public class GitFlowFeatureMergeRequestMojoTest extends AbstractGitFlowMojoTestC
         final String USED_MERGE_REQUEST_TITLE_REPLACED = "Merge " + FEATURE_BRANCH + " into " + MASTER_BRANCH;
         prepareFeatureBranchForMergeRequest();
         stubAllForDefaultMergerRequest(EXPECTED_PROJECT_ID, USED_MERGE_REQUEST_TITLE_REPLACED);
-        userProperties.setProperty("flow.mergeRequestTitleTemplate", "@{title}");
-        userProperties.setProperty("flow.mergeRequestTitle", USED_MERGE_REQUEST_TITLE);
+        userProperties.setProperty("flow.mergeRequestTitle", "@{interactiveTitlePart}");
+        userProperties.setProperty("flow.mergeRequestInteractiveTitlePart", USED_MERGE_REQUEST_TITLE);
         when(promptControllerMock.prompt("What is the title of the merge request?", USED_MERGE_REQUEST_TITLE_REPLACED))
                 .thenReturn("");
         // test
@@ -618,15 +620,16 @@ public class GitFlowFeatureMergeRequestMojoTest extends AbstractGitFlowMojoTestC
     }
 
     @Test
-    public void testExecuteWithTitlePlaceholderInMergeRequestTitleTemplateWithoutMergeRequestTitle() throws Exception {
+    public void testExecuteWithInteractiveTitlePartPlaceholderInMergeRequestTitleWithoutMergeRequestInteractiveTitlePart()
+            throws Exception {
         // set up
         final int EXPECTED_PROJECT_ID = 42;
         final String EXPECTED_MERGE_REQUEST_TITLE = "Resolve feature " + FEATURE_ISSUE + " (merge " + FEATURE_BRANCH
                 + " into " + MASTER_BRANCH + "): test feature";
         prepareFeatureBranchForMergeRequest();
         stubAllForDefaultMergerRequest(EXPECTED_PROJECT_ID, EXPECTED_MERGE_REQUEST_TITLE);
-        userProperties.setProperty("flow.mergeRequestTitleTemplate",
-                "Resolve feature @{key} (merge @{sourceBranch} into @{targetBranch}): @{title}");
+        userProperties.setProperty("flow.mergeRequestTitle",
+                "Resolve feature @{key} (merge @{sourceBranch} into @{targetBranch}): @{interactiveTitlePart}");
         when(promptControllerMock.prompt("What is the title of the merge request?")).thenReturn("test feature");
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
@@ -637,16 +640,17 @@ public class GitFlowFeatureMergeRequestMojoTest extends AbstractGitFlowMojoTestC
     }
 
     @Test
-    public void testExecuteWithTitlePlaceholderInMergeRequestTitleTemplateWithMergeRequestTitle() throws Exception {
+    public void testExecuteWithInteractiveTitlePartPlaceholderInMergeRequestTitleWithMergeRequestInteractiveTitlePart()
+            throws Exception {
         // set up
         final int EXPECTED_PROJECT_ID = 42;
         final String EXPECTED_MERGE_REQUEST_TITLE = "Resolve feature " + FEATURE_ISSUE + " (merge " + FEATURE_BRANCH
                 + " into " + MASTER_BRANCH + "): test feature";
         prepareFeatureBranchForMergeRequest();
         stubAllForDefaultMergerRequest(EXPECTED_PROJECT_ID, EXPECTED_MERGE_REQUEST_TITLE);
-        userProperties.setProperty("flow.mergeRequestTitleTemplate",
-                "Resolve feature @{key} (merge @{sourceBranch} into @{targetBranch}): @{title}");
-        userProperties.setProperty("flow.mergeRequestTitle", "test feature");
+        userProperties.setProperty("flow.mergeRequestTitle",
+                "Resolve feature @{key} (merge @{sourceBranch} into @{targetBranch}): @{interactiveTitlePart}");
+        userProperties.setProperty("flow.mergeRequestInteractiveTitlePart", "test feature");
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
