@@ -626,16 +626,22 @@ public class GitFlowFeatureMergeRequestMojoTest extends AbstractGitFlowMojoTestC
         final int EXPECTED_PROJECT_ID = 42;
         final String EXPECTED_MERGE_REQUEST_TITLE = "Resolve feature " + FEATURE_ISSUE + " (merge " + FEATURE_BRANCH
                 + " into " + MASTER_BRANCH + "): test feature";
+        final String EXPECTED_MERGE_REQUEST_INTERACTIVE_TITLE_PART = "Resolve feature " + FEATURE_ISSUE + " (merge "
+                + FEATURE_BRANCH + " into " + MASTER_BRANCH + "): <additional details>";
+        final String EXPECTED_MERGE_REQUEST_INTERACTIVE_TITLE_PART_PROMPT = "Merge request title pattern being used:\n  "
+                + EXPECTED_MERGE_REQUEST_INTERACTIVE_TITLE_PART
+                + "\nPlease specify additional details for the merge request title:";
         prepareFeatureBranchForMergeRequest();
         stubAllForDefaultMergerRequest(EXPECTED_PROJECT_ID, EXPECTED_MERGE_REQUEST_TITLE);
         userProperties.setProperty("flow.mergeRequestTitle",
                 "Resolve feature @{key} (merge @{sourceBranch} into @{targetBranch}): @{interactiveTitlePart}");
-        when(promptControllerMock.prompt("What is the title of the merge request?")).thenReturn("test feature");
+        when(promptControllerMock.prompt(EXPECTED_MERGE_REQUEST_INTERACTIVE_TITLE_PART_PROMPT))
+                .thenReturn("test feature");
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
         verifyAllForDefaultMergeRequest(EXPECTED_PROJECT_ID, EXPECTED_MERGE_REQUEST_TITLE);
-        verify(promptControllerMock).prompt("What is the title of the merge request?");
+        verify(promptControllerMock).prompt(EXPECTED_MERGE_REQUEST_INTERACTIVE_TITLE_PART_PROMPT);
         verifyNoMoreInteractions(promptControllerMock);
     }
 
