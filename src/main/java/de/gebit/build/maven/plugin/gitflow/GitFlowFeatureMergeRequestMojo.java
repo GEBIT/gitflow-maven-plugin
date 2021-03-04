@@ -192,12 +192,12 @@ public class GitFlowFeatureMergeRequestMojo extends AbstractGitFlowFeatureMojo {
         } else if (mergeRequestTitle.contains("@{interactiveTitlePart}")) {
             template = substituteMRTitle(mergeRequestTitle, sourceBranch, targetBranch, issueNumber,
                     Collections.singletonMap("interactiveTitlePart", "<additional details>"));
-            String titleTemplate = getPrompter().promptRequiredParameterValue(
+            String titleTemplate = getPrompter().promptOptionalParameterValue(
                     "Merge request title pattern being used:\n  " + template
-                            + "\nPlease specify additional details for the merge request title:",
+                            + "\nPlease specify additional details for the merge request title",
                     "mergeRequestInteractiveTitlePart", mergeRequestInteractiveTitlePart);
             template = substituteMRTitle(mergeRequestTitle, sourceBranch, targetBranch, issueNumber,
-                    Collections.singletonMap("interactiveTitlePart", titleTemplate));
+                    Collections.singletonMap("interactiveTitlePart", (titleTemplate == null) ? "" : titleTemplate));
         } else {
             template = mergeRequestTitle;
         }
