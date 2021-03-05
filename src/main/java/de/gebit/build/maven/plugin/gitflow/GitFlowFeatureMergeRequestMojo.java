@@ -100,6 +100,23 @@ public class GitFlowFeatureMergeRequestMojo extends AbstractGitFlowFeatureMojo {
     @Parameter(property = "flow.mergeRequestTitle")
     private String mergeRequestTitle;
 
+    /**
+     * Mark merge request as draft. Corresponding prefix (e.g. [Draft]) will be
+     * add to the merge request title.
+     */
+    @Parameter(property = "flow.draft", defaultValue = "false")
+    private boolean draft;
+
+    /**
+     * Prefix for merge request title if the merge request is marked as
+     * draft.<br/>
+     * GitLab supports following prefixes: "[Draft]", "Draft:" or
+     * "(Draft)".<br/>
+     * Note: GitLab will remove support for prefix "WIP:" in version 14.0.
+     */
+    @Parameter(property = "flow.draftTitlePrefix", defaultValue = "[Draft]")
+    private String draftTitlePrefix;
+
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         getMavenLog().info("Starting feature merge request process");
@@ -193,7 +210,7 @@ public class GitFlowFeatureMergeRequestMojo extends AbstractGitFlowFeatureMojo {
             template = substituteMRTitle(mergeRequestTitle, sourceBranch, targetBranch, issueNumber,
                     Collections.singletonMap("interactiveTitlePart", "<additional details>"));
             String titleTemplate = getPrompter().promptOptionalParameterValue(
-                    "Merge request title pattern being used:\n  " + template
+                    "Merge request title pattern being used:\n  " + prependDraftIfNeeded(template)
                             + "\nPlease specify additional details for the merge request title",
                     "mergeRequestInteractiveTitlePart", mergeRequestInteractiveTitlePart);
             template = substituteMRTitle(mergeRequestTitle, sourceBranch, targetBranch, issueNumber,
@@ -201,7 +218,14 @@ public class GitFlowFeatureMergeRequestMojo extends AbstractGitFlowFeatureMojo {
         } else {
             template = mergeRequestTitle;
         }
-        return substituteMRTitle(template, sourceBranch, targetBranch, issueNumber);
+        return prependDraftIfNeeded(substituteMRTitle(template, sourceBranch, targetBranch, issueNumber));
+    }
+
+    private String prependDraftIfNeeded(String title) {
+        if (draft && StringUtils.isNotBlank(draftTitlePrefix)) {
+            return draftTitlePrefix + " " + title;
+        }
+        return title;
     }
 
     private String substituteMRTitle(String template, String sourceBranch, String targetBranch, String issueNumber)

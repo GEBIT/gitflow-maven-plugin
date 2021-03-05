@@ -661,8 +661,7 @@ public class GitFlowFeatureMergeRequestMojoTest extends AbstractGitFlowMojoTestC
         stubAllForDefaultMergerRequest(EXPECTED_PROJECT_ID, EXPECTED_MERGE_REQUEST_TITLE);
         userProperties.setProperty("flow.mergeRequestTitle",
                 "Resolve feature @{key} (merge @{sourceBranch} into @{targetBranch}): @{interactiveTitlePart}");
-        when(promptControllerMock.prompt(EXPECTED_MERGE_REQUEST_INTERACTIVE_TITLE_PART_PROMPT))
-                .thenReturn(null);
+        when(promptControllerMock.prompt(EXPECTED_MERGE_REQUEST_INTERACTIVE_TITLE_PART_PROMPT)).thenReturn(null);
         // test
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
@@ -687,6 +686,105 @@ public class GitFlowFeatureMergeRequestMojoTest extends AbstractGitFlowMojoTestC
         executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
         // verify
         verifyAllForDefaultMergeRequest(EXPECTED_PROJECT_ID, EXPECTED_MERGE_REQUEST_TITLE);
+        verifyNoMoreInteractions(promptControllerMock);
+    }
+
+    @Test
+    public void testExecuteDraft() throws Exception {
+        // set up
+        final int EXPECTED_PROJECT_ID = 42;
+        final String EXPECTED_MR_TITLE = "[Draft] " + MERGE_REQUEST_TITLE;
+        prepareFeatureBranchForMergeRequest();
+        stubAllForDefaultMergerRequest(EXPECTED_PROJECT_ID, EXPECTED_MR_TITLE);
+        userProperties.setProperty("flow.draft", "true");
+        when(promptControllerMock.prompt("What is the title of the merge request?", MERGE_REQUEST_TITLE))
+                .thenReturn("");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyAllForDefaultMergeRequest(EXPECTED_PROJECT_ID, EXPECTED_MR_TITLE);
+        verify(promptControllerMock).prompt("What is the title of the merge request?", MERGE_REQUEST_TITLE);
+        verifyNoMoreInteractions(promptControllerMock);
+    }
+
+    @Test
+    public void testExecuteDraftAndCustomPrefix() throws Exception {
+        // set up
+        final int EXPECTED_PROJECT_ID = 42;
+        final String EXPECTED_MR_TITLE = "Draft: " + MERGE_REQUEST_TITLE;
+        prepareFeatureBranchForMergeRequest();
+        stubAllForDefaultMergerRequest(EXPECTED_PROJECT_ID, EXPECTED_MR_TITLE);
+        userProperties.setProperty("flow.draft", "true");
+        userProperties.setProperty("flow.draftTitlePrefix", "Draft:");
+        when(promptControllerMock.prompt("What is the title of the merge request?", MERGE_REQUEST_TITLE))
+                .thenReturn("");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyAllForDefaultMergeRequest(EXPECTED_PROJECT_ID, EXPECTED_MR_TITLE);
+        verify(promptControllerMock).prompt("What is the title of the merge request?", MERGE_REQUEST_TITLE);
+        verifyNoMoreInteractions(promptControllerMock);
+    }
+
+    @Test
+    public void testExecuteDraftAndEmptyPrefix() throws Exception {
+        // set up
+        final int EXPECTED_PROJECT_ID = 42;
+        prepareFeatureBranchForMergeRequest();
+        stubAllForDefaultMergerRequest(EXPECTED_PROJECT_ID, MERGE_REQUEST_TITLE);
+        userProperties.setProperty("flow.draft", "true");
+        userProperties.setProperty("flow.draftTitlePrefix", "");
+        when(promptControllerMock.prompt("What is the title of the merge request?", MERGE_REQUEST_TITLE))
+                .thenReturn("");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyAllForDefaultMergeRequest(EXPECTED_PROJECT_ID, MERGE_REQUEST_TITLE);
+        verify(promptControllerMock).prompt("What is the title of the merge request?", MERGE_REQUEST_TITLE);
+        verifyNoMoreInteractions(promptControllerMock);
+    }
+
+    @Test
+    public void testExecuteDraftAndBlankPrefix() throws Exception {
+        // set up
+        final int EXPECTED_PROJECT_ID = 42;
+        prepareFeatureBranchForMergeRequest();
+        stubAllForDefaultMergerRequest(EXPECTED_PROJECT_ID, MERGE_REQUEST_TITLE);
+        userProperties.setProperty("flow.draft", "true");
+        userProperties.setProperty("flow.draftTitlePrefix", "  ");
+        when(promptControllerMock.prompt("What is the title of the merge request?", MERGE_REQUEST_TITLE))
+                .thenReturn("");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyAllForDefaultMergeRequest(EXPECTED_PROJECT_ID, MERGE_REQUEST_TITLE);
+        verify(promptControllerMock).prompt("What is the title of the merge request?", MERGE_REQUEST_TITLE);
+        verifyNoMoreInteractions(promptControllerMock);
+    }
+
+    @Test
+    public void testExecuteDraftWithInteractiveTitlePartPlaceholder() throws Exception {
+        // set up
+        final int EXPECTED_PROJECT_ID = 42;
+        final String EXPECTED_MERGE_REQUEST_TITLE = "[Draft] Resolve feature " + FEATURE_ISSUE + " (merge "
+                + FEATURE_BRANCH + " into " + MASTER_BRANCH + "): test feature";
+        final String EXPECTED_MERGE_REQUEST_INTERACTIVE_TITLE_PART = "[Draft] Resolve feature " + FEATURE_ISSUE
+                + " (merge " + FEATURE_BRANCH + " into " + MASTER_BRANCH + "): <additional details>";
+        final String EXPECTED_MERGE_REQUEST_INTERACTIVE_TITLE_PART_PROMPT = "Merge request title pattern being used:\n  "
+                + EXPECTED_MERGE_REQUEST_INTERACTIVE_TITLE_PART
+                + "\nPlease specify additional details for the merge request title";
+        prepareFeatureBranchForMergeRequest();
+        stubAllForDefaultMergerRequest(EXPECTED_PROJECT_ID, EXPECTED_MERGE_REQUEST_TITLE);
+        userProperties.setProperty("flow.draft", "true");
+        userProperties.setProperty("flow.mergeRequestTitle",
+                "Resolve feature @{key} (merge @{sourceBranch} into @{targetBranch}): @{interactiveTitlePart}");
+        when(promptControllerMock.prompt(EXPECTED_MERGE_REQUEST_INTERACTIVE_TITLE_PART_PROMPT))
+                .thenReturn("test feature");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyAllForDefaultMergeRequest(EXPECTED_PROJECT_ID, EXPECTED_MERGE_REQUEST_TITLE);
+        verify(promptControllerMock).prompt(EXPECTED_MERGE_REQUEST_INTERACTIVE_TITLE_PART_PROMPT);
         verifyNoMoreInteractions(promptControllerMock);
     }
 }
