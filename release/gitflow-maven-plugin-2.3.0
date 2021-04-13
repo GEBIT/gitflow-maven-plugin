@@ -1,0 +1,3 @@
+branchType = release
+developmentSavepointCommitRef = 6dc84dbb0c731232372ec8589d9c41939bde36ef
+baseBranch = master
