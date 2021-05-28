@@ -36,6 +36,11 @@ public class GitFlowEpicUpdateAbortMojo extends AbstractGitFlowEpicMojo {
     static final String GOAL = "epic-update-abort";
 
     @Override
+    protected String getCurrentGoal() {
+        return GOAL;
+    }
+
+    @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         getMavenLog().info("Starting epic update abort process");
         checkCentralBranchConfig();

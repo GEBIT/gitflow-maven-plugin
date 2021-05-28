@@ -131,6 +131,11 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
     @Parameter(property = "flow.installProjectOnFeatureStart")
     private Boolean installProjectOnFeatureStart;
 
+    @Override
+    protected String getCurrentGoal() {
+        return GOAL;
+    }
+
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {

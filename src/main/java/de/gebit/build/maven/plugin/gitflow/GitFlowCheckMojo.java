@@ -62,6 +62,11 @@ public class GitFlowCheckMojo extends AbstractGitFlowMojo {
     @Parameter(defaultValue = "${project.distributionManagement.repository.id}|${project.distributionManagement.repository.url},${project.distributionManagement.snapshotRepository.id}|${project.distributionManagement.snapshotRepository.url}")
     private Repository[] deploymentRepositories;
 
+    @Override
+    protected String getCurrentGoal() {
+        return GOAL;
+    }
+
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {

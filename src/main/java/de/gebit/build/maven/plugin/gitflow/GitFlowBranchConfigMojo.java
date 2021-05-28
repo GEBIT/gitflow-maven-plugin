@@ -113,6 +113,11 @@ public class GitFlowBranchConfigMojo extends AbstractGitFlowMojo {
     @Parameter(property = "flow.show", defaultValue = "false", readonly = true)
     private boolean show;
 
+    @Override
+    protected String getCurrentGoal() {
+        return GOAL;
+    }
+
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {

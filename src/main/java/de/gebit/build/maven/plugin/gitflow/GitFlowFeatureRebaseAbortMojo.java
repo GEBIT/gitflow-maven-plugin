@@ -29,6 +29,11 @@ public class GitFlowFeatureRebaseAbortMojo extends AbstractGitFlowFeatureMojo {
     static final String GOAL = "feature-rebase-abort";
 
     @Override
+    protected String getCurrentGoal() {
+        return GOAL;
+    }
+
+    @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         getMavenLog().info("Starting feature rebase abort process");
         checkCentralBranchConfig();

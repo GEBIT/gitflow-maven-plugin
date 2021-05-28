@@ -90,6 +90,11 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
     private Boolean skipTestProjectOnEpicFinish;
 
     @Override
+    protected String getCurrentGoal() {
+        return GOAL;
+    }
+
+    @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         getMavenLog().info("Starting epic finish process");
         checkCentralBranchConfig();

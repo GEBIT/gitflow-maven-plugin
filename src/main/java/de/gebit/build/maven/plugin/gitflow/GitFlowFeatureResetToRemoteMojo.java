@@ -58,6 +58,11 @@ public class GitFlowFeatureResetToRemoteMojo extends AbstractGitFlowFeatureMojo 
     protected Boolean stashChanges;
 
     @Override
+    protected String getCurrentGoal() {
+        return GOAL;
+    }
+
+    @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         getMavenLog().info("Starting feature reset to remote state process");
         checkCentralBranchConfig();

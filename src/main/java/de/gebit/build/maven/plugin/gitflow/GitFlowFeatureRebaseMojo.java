@@ -121,6 +121,11 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
     @Parameter(property = "flow.installProjectOnFeatureRebase")
     private Boolean installProjectOnFeatureRebase;
 
+    @Override
+    protected String getCurrentGoal() {
+        return GOAL;
+    }
+
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {

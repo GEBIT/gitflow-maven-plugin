@@ -106,6 +106,11 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
     @Parameter(property = "flow.installProjectOnFeatureCleanup")
     private Boolean installProjectOnFeatureCleanup;
 
+    @Override
+    protected String getCurrentGoal() {
+        return GOAL;
+    }
+
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {

@@ -31,6 +31,11 @@ public class GitFlowMakeVersionlessMojo extends AbstractGitFlowMojo {
 
     static final String GOAL = "make-versionless";
 
+    @Override
+    protected String getCurrentGoal() {
+        return GOAL;
+    }
+
     /**
      * Overwritten to disable default reset if not in versionless mode
      */

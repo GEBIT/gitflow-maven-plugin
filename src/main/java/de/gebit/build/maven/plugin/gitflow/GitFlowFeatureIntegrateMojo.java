@@ -108,6 +108,11 @@ public class GitFlowFeatureIntegrateMojo extends AbstractGitFlowFeatureMojo {
                     new FeatureIntegrateStep(this::finalizeFeatureIntegrate));
 
     @Override
+    protected String getCurrentGoal() {
+        return GOAL;
+    }
+
+    @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         getMavenLog().info("Starting feature integration process");
         checkCentralBranchConfig();

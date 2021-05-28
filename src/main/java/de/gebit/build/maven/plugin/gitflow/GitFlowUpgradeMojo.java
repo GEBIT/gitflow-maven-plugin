@@ -42,6 +42,11 @@ public class GitFlowUpgradeMojo extends AbstractGitFlowMojo {
     protected String featureNamePattern;
 
     @Override
+    protected String getCurrentGoal() {
+        return GOAL;
+    }
+
+    @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         getMavenLog().info("Starting upgrade process");
         checkOrInitCentralBranchConfig();

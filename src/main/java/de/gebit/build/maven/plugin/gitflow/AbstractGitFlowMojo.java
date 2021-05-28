@@ -452,6 +452,8 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
 
     private File tempLogFile;
 
+    protected abstract String getCurrentGoal();
+
     /**
      * Initializes command line executables.
      */
@@ -4382,6 +4384,7 @@ public abstract class AbstractGitFlowMojo extends AbstractMojo {
             }
         }
         effectiveArgs = addArgs(effectiveArgs, "-Dstyle.color=never");
+        effectiveArgs = addArgs(effectiveArgs, "-Dflow.currentGoal=" + getCurrentGoal());
         Commandline cmd = getCmdMvnConfiguredByUserProperties();
         if (cmd != null) {
             effectiveArgs = mergeCmdMvnArgsConfiguredByUserProperties(effectiveArgs);

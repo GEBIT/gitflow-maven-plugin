@@ -46,6 +46,11 @@ public class GitFlowHotfixStartMojo extends AbstractGitFlowMojo {
     @Parameter(property = "flow.installProjectOnHotfixStart")
     private Boolean installProjectOnHotfixStart;
 
+    @Override
+    protected String getCurrentGoal() {
+        return GOAL;
+    }
+
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {

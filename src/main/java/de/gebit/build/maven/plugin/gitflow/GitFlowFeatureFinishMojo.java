@@ -166,6 +166,11 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
             new FeatureFinishStep(this::buildBaseProject, FeatureFinishBreakpoint.CLEAN_INSTALL),
             new FeatureFinishStep(this::finalizeFeatureFinish));
 
+    @Override
+    protected String getCurrentGoal() {
+        return GOAL;
+    }
+
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {

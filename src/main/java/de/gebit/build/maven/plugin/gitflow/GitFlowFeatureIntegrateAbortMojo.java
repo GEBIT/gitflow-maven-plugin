@@ -31,6 +31,11 @@ public class GitFlowFeatureIntegrateAbortMojo extends AbstractGitFlowFeatureMojo
     static final String GOAL = "feature-integrate-abort";
 
     @Override
+    protected String getCurrentGoal() {
+        return GOAL;
+    }
+
+    @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         getMavenLog().info("Starting feature integrate abort process");
         checkCentralBranchConfig();

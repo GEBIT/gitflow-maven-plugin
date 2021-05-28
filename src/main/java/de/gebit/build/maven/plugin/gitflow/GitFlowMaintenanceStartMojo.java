@@ -113,6 +113,11 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
     @Parameter(property = "flow.installProjectOnMaintenanceStart")
     private Boolean installProjectOnMaintenanceStart;
 
+    @Override
+    protected String getCurrentGoal() {
+        return GOAL;
+    }
+
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {

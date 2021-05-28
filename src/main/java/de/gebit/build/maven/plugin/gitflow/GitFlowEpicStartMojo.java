@@ -102,6 +102,11 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
     private Boolean installProjectOnEpicStart;
 
     @Override
+    protected String getCurrentGoal() {
+        return GOAL;
+    }
+
+    @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
         getMavenLog().info("Starting epic start process");
         checkCentralBranchConfig();

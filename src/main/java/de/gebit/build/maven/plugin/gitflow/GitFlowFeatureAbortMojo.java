@@ -47,6 +47,11 @@ public class GitFlowFeatureAbortMojo extends AbstractGitFlowFeatureMojo {
     @Parameter(property = "branchName", readonly = true)
     protected String branchName;
 
+    @Override
+    protected String getCurrentGoal() {
+        return GOAL;
+    }
+
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {

@@ -46,6 +46,11 @@ public class GitFlowSetVersionMojo extends AbstractGitFlowMojo {
     @Parameter(property = "newVersion", readonly = true)
     private String newVersion;
 
+    @Override
+    protected String getCurrentGoal() {
+        return GOAL;
+    }
+
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {

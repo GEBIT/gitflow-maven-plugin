@@ -43,6 +43,11 @@ public class GitFlowIntegratedMojo extends AbstractGitFlowMojo {
     @Parameter(property = "integrationBranch", readonly = true)
     private String integrationBranch;
 
+    @Override
+    protected String getCurrentGoal() {
+        return GOAL;
+    }
+
     /** {@inheritDoc} */
     @Override
     protected void executeGoal() throws CommandLineException, MojoExecutionException, MojoFailureException {
