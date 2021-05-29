@@ -179,6 +179,9 @@ public class ExtMavenCli extends MavenCli {
             if (arg.equals("-Dstyle.color=never")) {
                 continue;
             }
+            if (arg.startsWith("-Dflow.currentGoal=")) {
+                continue;
+            }
             if (first) {
                 first = false;
             } else {
