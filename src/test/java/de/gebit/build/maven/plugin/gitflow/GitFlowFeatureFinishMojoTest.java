@@ -645,6 +645,38 @@ public class GitFlowFeatureFinishMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     @Test
+    public void testExecuteInstallProjectGoalsOnFeatureFinishSet() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.installProject", "true");
+        userProperties.setProperty("flow.installProjectGoalsOnFeatureFinish", "validate");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertFeatureFinishedCorrectly();
+        assertMavenCommandExecuted("validate");
+        assertMavenCommandNotExecuted("clean install");
+    }
+
+    @Test
+    public void testExecuteTestProjectGoalsOnFeatureFinishSet() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.skipTestProject", "false");
+        userProperties.setProperty("flow.testProjectGoalsOnFeatureFinish", "validate");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertFeatureFinishedCorrectly();
+        assertMavenCommandExecuted("validate");
+        assertMavenCommandNotExecuted("clean verify");
+    }
+
+    @Test
     public void testExecuteKeepFeatureBranchTrue() throws Exception {
         // set up
         git.createAndCommitTestfile(repositorySet);

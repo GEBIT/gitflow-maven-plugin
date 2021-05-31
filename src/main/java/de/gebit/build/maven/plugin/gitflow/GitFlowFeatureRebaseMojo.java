@@ -120,6 +120,16 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
      */
     @Parameter(property = "flow.installProjectOnFeatureRebase")
     private Boolean installProjectOnFeatureRebase;
+    
+    /**
+     * Maven goals (separated by space) to be used after feature rebase. By
+     * default the value of <code>installProjectGoals</code> parameter
+     * (<code>flow.installProjectGoals</code> property) is used.
+     *
+     * @since 2.3.1
+     */
+    @Parameter(property = "flow.installProjectGoalsOnFeatureRebase")
+    private String installProjectGoalsOnFeatureRebase;
 
     @Override
     protected String getCurrentGoal() {
@@ -576,5 +586,10 @@ public class GitFlowFeatureRebaseMojo extends AbstractGitFlowFeatureMojo {
     @Override
     protected Boolean getIndividualInstallProjectConfig() {
         return installProjectOnFeatureRebase;
+    }
+    
+    @Override
+    protected String getIndividualInstallProjectGoals() {
+        return installProjectGoalsOnFeatureRebase;
     }
 }

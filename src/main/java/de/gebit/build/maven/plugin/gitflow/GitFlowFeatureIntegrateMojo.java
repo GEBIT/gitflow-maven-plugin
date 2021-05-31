@@ -99,6 +99,16 @@ public class GitFlowFeatureIntegrateMojo extends AbstractGitFlowFeatureMojo {
      */
     @Parameter(property = "flow.installProjectOnFeatureIntegrate")
     private Boolean installProjectOnFeatureIntegrate;
+    
+    /**
+     * Maven goals (separated by space) to be used after feature integrate. By
+     * default the value of <code>installProjectGoals</code> parameter
+     * (<code>flow.installProjectGoals</code> property) is used.
+     *
+     * @since 2.3.1
+     */
+    @Parameter(property = "flow.installProjectGoalsOnFeatureIntegrate")
+    private String installProjectGoalsOnFeatureIntegrate;
 
     private final List<Step<FeatureIntegrateBreakpoint, FeatureIntegrateStepParameters>> allProcessSteps = Arrays
             .asList(new FeatureIntegrateStep(this::selectTargetFeatureBranch),
@@ -543,6 +553,11 @@ public class GitFlowFeatureIntegrateMojo extends AbstractGitFlowFeatureMojo {
     @Override
     protected Boolean getIndividualInstallProjectConfig() {
         return installProjectOnFeatureIntegrate;
+    }
+    
+    @Override
+    protected String getIndividualInstallProjectGoals() {
+        return installProjectGoalsOnFeatureIntegrate;
     }
 
 }

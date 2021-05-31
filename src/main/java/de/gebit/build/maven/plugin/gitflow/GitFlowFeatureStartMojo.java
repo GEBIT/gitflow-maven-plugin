@@ -130,6 +130,16 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
      */
     @Parameter(property = "flow.installProjectOnFeatureStart")
     private Boolean installProjectOnFeatureStart;
+    
+    /**
+     * Maven goals (separated by space) to be used after feature start. By
+     * default the value of <code>installProjectGoals</code> parameter
+     * (<code>flow.installProjectGoals</code> property) is used.
+     *
+     * @since 2.3.1
+     */
+    @Parameter(property = "flow.installProjectGoalsOnFeatureStart")
+    private String installProjectGoalsOnFeatureStart;
 
     @Override
     protected String getCurrentGoal() {
@@ -409,5 +419,10 @@ public class GitFlowFeatureStartMojo extends AbstractGitFlowFeatureMojo {
     @Override
     protected Boolean getIndividualInstallProjectConfig() {
         return installProjectOnFeatureStart;
+    }
+    
+    @Override
+    protected String getIndividualInstallProjectGoals() {
+        return installProjectGoalsOnFeatureStart;
     }
 }

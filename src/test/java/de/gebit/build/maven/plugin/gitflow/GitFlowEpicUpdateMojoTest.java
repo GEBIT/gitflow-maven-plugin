@@ -461,6 +461,23 @@ public class GitFlowEpicUpdateMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     @Test
+    public void testExecuteInstallProjectGoalsOnEpicUpdateSet() throws Exception {
+        // set up
+        prepareEpicBranchDivergentFromMaster();
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.updateEpicWithMerge", "true");
+        userProperties.setProperty("flow.installProject", "true");
+        userProperties.setProperty("flow.installProjectGoalsOnEpicUpdate", "validate");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertEpicMergedCorrectly();
+        assertMavenCommandExecuted("validate");
+        assertMavenCommandNotExecuted("clean install");
+    }
+
+    @Test
     public void testExecutePushRemoteFalse() throws Exception {
         // set up
         prepareEpicBranchDivergentFromMaster();

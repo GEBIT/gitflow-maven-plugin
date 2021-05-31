@@ -74,6 +74,27 @@ public class GitFlowHotfixFinishMojo extends AbstractGitFlowMojo {
      */
     @Parameter(property = "flow.skipTestProjectOnHotfixFinish")
     private Boolean skipTestProjectOnHotfixFinish;
+    
+    /**
+     * Maven goals (separated by space) to be used after hotfix finish. By
+     * default the value of <code>installProjectGoals</code> parameter
+     * (<code>flow.installProjectGoals</code> property) is used.
+     *
+     * @since 2.3.1
+     */
+    @Parameter(property = "flow.installProjectGoalsOnHotfixFinish")
+    private String installProjectGoalsOnHotfixFinish;
+
+    /**
+     * Maven goals (separated by space) to be used before merging the hotfix
+     * branch into base branch. By default the value of
+     * <code>testProjectGoals</code> parameter
+     * (<code>flow.testProjectGoals</code> property) is used.
+     *
+     * @since 2.3.1
+     */
+    @Parameter(property = "flow.testProjectGoalsOnHotfixFinish")
+    private String testProjectGoalsOnHotfixFinish;
 
     @Override
     protected String getCurrentGoal() {
@@ -233,5 +254,15 @@ public class GitFlowHotfixFinishMojo extends AbstractGitFlowMojo {
     @Override
     protected Boolean getIndividualSkipTestProjectConfig() {
         return skipTestProjectOnHotfixFinish;
+    }
+    
+    @Override
+    protected String getIndividualInstallProjectGoals() {
+        return installProjectGoalsOnHotfixFinish;
+    }
+    
+    @Override
+    protected String getIndividualTestProjectGoals() {
+        return testProjectGoalsOnHotfixFinish;
     }
 }

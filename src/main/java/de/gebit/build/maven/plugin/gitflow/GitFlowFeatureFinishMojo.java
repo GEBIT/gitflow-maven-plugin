@@ -155,6 +155,27 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
      */
     @Parameter(property = "flow.skipTestProjectOnFeatureFinish")
     private Boolean skipTestProjectOnFeatureFinish;
+    
+    /**
+     * Maven goals (separated by space) to be used after feature finish. By
+     * default the value of <code>installProjectGoals</code> parameter
+     * (<code>flow.installProjectGoals</code> property) is used.
+     *
+     * @since 2.3.1
+     */
+    @Parameter(property = "flow.installProjectGoalsOnFeatureFinish")
+    private String installProjectGoalsOnFeatureFinish;
+    
+    /**
+     * Maven goals (separated by space) to be used before merging the feature
+     * branch into base branch. By default the value of
+     * <code>testProjectGoals</code> parameter
+     * (<code>flow.testProjectGoals</code> property) is used.
+     *
+     * @since 2.3.1
+     */
+    @Parameter(property = "flow.testProjectGoalsOnFeatureFinish")
+    private String testProjectGoalsOnFeatureFinish;
 
     private final List<Step<FeatureFinishBreakpoint, FeatureFinishStepParameters>> allProcessSteps = Arrays.asList(
             new FeatureFinishStep(this::selectFeatureAndBaseBranches),
@@ -942,6 +963,16 @@ public class GitFlowFeatureFinishMojo extends AbstractGitFlowFeatureMojo {
     @Override
     protected Boolean getIndividualSkipTestProjectConfig() {
         return skipTestProjectOnFeatureFinish;
+    }
+    
+    @Override
+    protected String getIndividualInstallProjectGoals() {
+        return installProjectGoalsOnFeatureFinish;
+    }
+    
+    @Override
+    protected String getIndividualTestProjectGoals() {
+        return testProjectGoalsOnFeatureFinish;
     }
 
 }

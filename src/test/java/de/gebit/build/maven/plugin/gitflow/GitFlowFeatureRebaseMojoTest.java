@@ -442,6 +442,22 @@ public class GitFlowFeatureRebaseMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     @Test
+    public void testExecuteInstallProjectTrueGoalsOnFeatureRebaseSet() throws Exception {
+        // set up
+        prepareFeatureBranchDivergentFromMaster();
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.installProject", "true");
+        userProperties.setProperty("flow.installProjectGoalsOnFeatureRebase", "validate");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertFeatureRebasedCorrectly();
+        assertMavenCommandExecuted("validate");
+        assertMavenCommandNotExecuted("clean install");
+    }
+
+    @Test
     public void testExecuteDeleteRemoteBranchOnRebaseTrue() throws Exception {
         // set up
         prepareFeatureBranchDivergentFromMaster();

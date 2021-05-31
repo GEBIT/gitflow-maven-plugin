@@ -483,6 +483,38 @@ public class GitFlowEpicFinishMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     @Test
+    public void testExecuteInstallProjectGoalsOnEpicFinishSet() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.installProject", "true");
+        userProperties.setProperty("flow.installProjectGoalsOnEpicFinish", "validate");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertEpicFinishedCorrectly();
+        assertMavenCommandExecuted("validate");
+        assertMavenCommandNotExecuted("clean install");
+    }
+
+    @Test
+    public void testExecuteTestProjectGoalsOnEpicFinishSet() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.skipTestProject", "false");
+        userProperties.setProperty("flow.testProjectGoalsOnEpicFinish", "validate");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verifyZeroInteractions(promptControllerMock);
+        assertEpicFinishedCorrectly();
+        assertMavenCommandExecuted("validate");
+        assertMavenCommandNotExecuted("clean verify");
+    }
+
+    @Test
     public void testExecuteKeepEpicBranchTrue() throws Exception {
         // set up
         git.createAndCommitTestfile(repositorySet);

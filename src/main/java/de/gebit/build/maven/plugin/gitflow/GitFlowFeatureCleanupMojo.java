@@ -105,6 +105,16 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
      */
     @Parameter(property = "flow.installProjectOnFeatureCleanup")
     private Boolean installProjectOnFeatureCleanup;
+    
+    /**
+     * Maven goals (separated by space) to be used after feature cleanup. By
+     * default the value of <code>installProjectGoals</code> parameter
+     * (<code>flow.installProjectGoals</code> property) is used.
+     *
+     * @since 2.3.1
+     */
+    @Parameter(property = "flow.installProjectGoalsOnFeatureCleanup")
+    private String installProjectGoalsOnFeatureCleanup;
 
     @Override
     protected String getCurrentGoal() {
@@ -309,6 +319,11 @@ public class GitFlowFeatureCleanupMojo extends AbstractGitFlowFeatureMojo {
     @Override
     protected Boolean getIndividualInstallProjectConfig() {
         return installProjectOnFeatureCleanup;
+    }
+    
+    @Override
+    protected String getIndividualInstallProjectGoals() {
+        return installProjectGoalsOnFeatureCleanup;
     }
 
 }

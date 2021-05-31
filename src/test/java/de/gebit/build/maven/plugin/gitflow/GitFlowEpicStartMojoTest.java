@@ -854,6 +854,24 @@ public class GitFlowEpicStartMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     @Test
+    public void testExecuteInstallProjectGoalsOnEpicStartSet() throws Exception {
+        // set up
+        Properties userProperties = new Properties();
+        userProperties.setProperty("epicName", EPIC_NAME);
+        userProperties.setProperty("flow.installProject", "true");
+        userProperties.setProperty("flow.installProjectGoalsOnEpicStart", "validate");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertEpicStartedCorrectly();
+        assertMavenCommandExecuted("validate");
+        assertMavenCommandNotExecuted("clean install");
+
+        final String EXPECTED_VERSION_CHANGE_COMMIT = git.currentCommit(repositorySet);
+        assertCentralBranchConfigSetCorrectly(EXPECTED_VERSION_CHANGE_COMMIT);
+    }
+
+    @Test
     public void testExecuteWithIntegrationBranchSameAsMasterBranch() throws Exception {
         // set up
         git.createIntegeratedBranch(repositorySet, INTEGRATION_BRANCH);

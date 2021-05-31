@@ -172,6 +172,26 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
      */
     @Parameter(property = "flow.skipTestProjectOnReleaseFinish")
     private Boolean skipTestProjectOnReleaseFinish;
+    
+    /**
+     * Maven goals (separated by space) to be used after release finish. By
+     * default the value of <code>installProjectGoals</code> parameter
+     * (<code>flow.installProjectGoals</code> property) is used.
+     *
+     * @since 2.3.1
+     */
+    @Parameter(property = "flow.installProjectGoalsOnReleaseFinish")
+    private String installProjectGoalsOnReleaseFinish;
+
+    /**
+     * Maven goals (separated by space) to be used before releasing. By default
+     * the value of <code>testProjectGoals</code> parameter
+     * (<code>flow.testProjectGoals</code> property) is used.
+     *
+     * @since 2.3.1
+     */
+    @Parameter(property = "flow.testProjectGoalsOnReleaseFinish")
+    private String testProjectGoalsOnReleaseFinish;
 
     @Override
     protected boolean isSkipDeployProject() {
@@ -358,5 +378,15 @@ public class GitFlowReleaseFinishMojo extends AbstractGitFlowReleaseMojo {
     @Override
     protected Boolean getIndividualSkipTestProjectConfig() {
         return skipTestProjectOnReleaseFinish;
+    }
+    
+    @Override
+    protected String getIndividualInstallProjectGoals() {
+        return installProjectGoalsOnReleaseFinish;
+    }
+    
+    @Override
+    protected String getIndividualTestProjectGoals() {
+        return testProjectGoalsOnReleaseFinish;
     }
 }

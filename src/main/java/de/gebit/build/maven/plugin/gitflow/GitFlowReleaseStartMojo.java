@@ -111,6 +111,16 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
      */
     @Parameter(property = "flow.installProjectOnReleaseStart")
     private Boolean installProjectOnReleaseStart;
+    
+    /**
+     * Maven goals (separated by space) to be used after release start. By
+     * default the value of <code>installProjectGoals</code> parameter
+     * (<code>flow.installProjectGoals</code> property) is used.
+     *
+     * @since 2.3.1
+     */
+    @Parameter(property = "flow.installProjectGoalsOnReleaseStart")
+    private String installProjectGoalsOnReleaseStart;
 
     @Override
     protected boolean isSkipDeployProject() {
@@ -217,5 +227,10 @@ public class GitFlowReleaseStartMojo extends AbstractGitFlowReleaseMojo {
     @Override
     protected Boolean getIndividualInstallProjectConfig() {
         return installProjectOnReleaseStart;
+    }
+    
+    @Override
+    protected String getIndividualInstallProjectGoals() {
+        return installProjectGoalsOnReleaseStart;
     }
 }

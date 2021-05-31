@@ -981,6 +981,31 @@ public class GitFlowMaintenanceStartMojoTest extends AbstractGitFlowMojoTestCase
     }
 
     @Test
+    public void testExecuteInstallProjectGoalsOnMaintenanceStartSet() throws Exception {
+        // set up
+        git.createAndCommitTestfile(repositorySet);
+        git.push(repositorySet);
+        Properties userProperties = new Properties();
+        userProperties.setProperty("flow.installProject", "true");
+        userProperties.setProperty("flow.installProjectGoalsOnMaintenanceStart", "validate");
+        when(promptControllerMock.prompt(PROMPT_SELECTING_RELEASE_NO_TAGS, Arrays.asList("0", "T"))).thenReturn("0");
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION))
+                .thenReturn(MAINTENANCE_VERSION);
+        when(promptControllerMock.prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION))
+                .thenReturn(MAINTENANCE_FIRST_VERSION);
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties, promptControllerMock);
+        // verify
+        verify(promptControllerMock).prompt(PROMPT_SELECTING_RELEASE_NO_TAGS, Arrays.asList("0", "T"));
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_VERSION, CALCULATED_MAINTENANCE_VERSION);
+        verify(promptControllerMock).prompt(PROMPT_MAINTENANCE_FIRST_VERSION, CALCULATED_MAINTENANCE_FIRST_VERSION);
+        verifyNoMoreInteractions(promptControllerMock);
+        assertMaintenanceBranchCratedCorrectlyFromMaster();
+        assertMavenCommandExecuted("validate");
+        assertMavenCommandNotExecuted("clean install");
+    }
+
+    @Test
     public void testExecuteInBatchMode() throws Exception {
         // set up
         final String TAG = VERSION_TAG_PREFIX + "1.0.0";

@@ -112,6 +112,16 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
      */
     @Parameter(property = "flow.installProjectOnMaintenanceStart")
     private Boolean installProjectOnMaintenanceStart;
+    
+    /**
+     * Maven goals (separated by space) to be used after maintenance start. By
+     * default the value of <code>installProjectGoals</code> parameter
+     * (<code>flow.installProjectGoals</code> property) is used.
+     *
+     * @since 2.3.1
+     */
+    @Parameter(property = "flow.installProjectGoalsOnMaintenanceStart")
+    private String installProjectGoalsOnMaintenanceStart;
 
     @Override
     protected String getCurrentGoal() {
@@ -357,5 +367,10 @@ public class GitFlowMaintenanceStartMojo extends AbstractGitFlowMojo {
     @Override
     protected Boolean getIndividualInstallProjectConfig() {
         return installProjectOnMaintenanceStart;
+    }
+    
+    @Override
+    protected String getIndividualInstallProjectGoals() {
+        return installProjectGoalsOnMaintenanceStart;
     }
 }

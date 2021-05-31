@@ -88,6 +88,27 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
      */
     @Parameter(property = "flow.skipTestProjectOnEpicFinish")
     private Boolean skipTestProjectOnEpicFinish;
+    
+    /**
+     * Maven goals (separated by space) to be used after epic finish. By default
+     * the value of <code>installProjectGoals</code> parameter
+     * (<code>flow.installProjectGoals</code> property) is used.
+     *
+     * @since 2.3.1
+     */
+    @Parameter(property = "flow.installProjectGoalsOnEpicFinish")
+    private String installProjectGoalsOnEpicFinish;
+
+    /**
+     * Maven goals (separated by space) to be used before merging the epic
+     * branch into base branch. By default the value of
+     * <code>testProjectGoals</code> parameter
+     * (<code>flow.testProjectGoals</code> property) is used.
+     *
+     * @since 2.3.1
+     */
+    @Parameter(property = "flow.testProjectGoalsOnEpicFinish")
+    private String testProjectGoalsOnEpicFinish;
 
     @Override
     protected String getCurrentGoal() {
@@ -333,6 +354,16 @@ public class GitFlowEpicFinishMojo extends AbstractGitFlowEpicMojo {
     @Override
     protected Boolean getIndividualSkipTestProjectConfig() {
         return skipTestProjectOnEpicFinish;
+    }
+    
+    @Override
+    protected String getIndividualInstallProjectGoals() {
+        return installProjectGoalsOnEpicFinish;
+    }
+    
+    @Override
+    protected String getIndividualTestProjectGoals() {
+        return testProjectGoalsOnEpicFinish;
     }
     
 }

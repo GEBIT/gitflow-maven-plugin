@@ -100,6 +100,16 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
      */
     @Parameter(property = "flow.installProjectOnEpicStart")
     private Boolean installProjectOnEpicStart;
+    
+    /**
+     * Maven goals (separated by space) to be used after epic start. By default
+     * the value of <code>installProjectGoals</code> parameter
+     * (<code>flow.installProjectGoals</code> property) is used.
+     *
+     * @since 2.3.1
+     */
+    @Parameter(property = "flow.installProjectGoalsOnEpicStart")
+    private String installProjectGoalsOnEpicStart;
 
     @Override
     protected String getCurrentGoal() {
@@ -351,6 +361,11 @@ public class GitFlowEpicStartMojo extends AbstractGitFlowEpicMojo {
     @Override
     protected Boolean getIndividualInstallProjectConfig() {
         return installProjectOnEpicStart;
+    }
+    
+    @Override
+    protected String getIndividualInstallProjectGoals() {
+        return installProjectGoalsOnEpicStart;
     }
 
 }

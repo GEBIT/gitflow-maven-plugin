@@ -45,6 +45,16 @@ public class GitFlowHotfixStartMojo extends AbstractGitFlowMojo {
      */
     @Parameter(property = "flow.installProjectOnHotfixStart")
     private Boolean installProjectOnHotfixStart;
+    
+    /**
+     * Maven goals (separated by space) to be used after hotfix start. By
+     * default the value of <code>installProjectGoals</code> parameter
+     * (<code>flow.installProjectGoals</code> property) is used.
+     *
+     * @since 2.3.1
+     */
+    @Parameter(property = "flow.installProjectGoalsOnHotfixStart")
+    private String installProjectGoalsOnHotfixStart;
 
     @Override
     protected String getCurrentGoal() {
@@ -123,5 +133,10 @@ public class GitFlowHotfixStartMojo extends AbstractGitFlowMojo {
     @Override
     protected Boolean getIndividualInstallProjectConfig() {
         return installProjectOnHotfixStart;
+    }
+    
+    @Override
+    protected String getIndividualInstallProjectGoals() {
+        return installProjectGoalsOnHotfixStart;
     }
 }

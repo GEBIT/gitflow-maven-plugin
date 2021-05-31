@@ -531,6 +531,28 @@ public class GitFlowFeatureIntegrateMojoTestCase extends AbstractGitFlowMojoTest
     }
 
     @Test
+    public void testExecuteInstallProjectGoalsOnFeatureIntegrateSet() throws Exception {
+        // set up
+        prepareFeatures();
+        userProperties.setProperty("featureName", TARGET_FEATURE_NAME);
+        userProperties.setProperty("flow.installProject", "true");
+        userProperties.setProperty("flow.installProjectGoalsOnFeatureIntegrate", "validate");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        git.assertClean(repositorySet);
+        git.assertCurrentBranch(repositorySet, TARGET_FEATURE_BRANCH);
+        git.assertMissingLocalBranches(repositorySet, SOURCE_FEATURE_BRANCH, TMP_SOURCE_FEATURE_BRANCH);
+        git.assertMissingRemoteBranches(repositorySet, SOURCE_FEATURE_BRANCH);
+        git.assertLocalAndRemoteBranchesAreIdentical(repositorySet, TARGET_FEATURE_BRANCH, TARGET_FEATURE_BRANCH);
+        git.assertCommitsInLocalBranch(repositorySet, TARGET_FEATURE_BRANCH, COMMIT_MESSAGE_SOURCE_TESTFILE,
+                COMMIT_MESSAGE_TARGET_TESTFILE, BasicConstants.SECOND_FEATURE_VERSION_COMMIT_MESSAGE);
+        assertVersionsInPom(repositorySet.getWorkingDirectory(), BasicConstants.SECOND_FEATURE_VERSION);
+        assertMavenCommandExecuted("validate");
+        assertMavenCommandNotExecuted("clean install");
+    }
+
+    @Test
     public void testExecuteFailureOnCleanInstall() throws Exception {
         // set up
         final String COMMIT_MESSAGE_INVALID_JAVA_FILE = "Invalid java file";

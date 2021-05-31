@@ -1077,6 +1077,21 @@ public class GitFlowFeatureStartMojoTest extends AbstractGitFlowMojoTestCase {
     }
 
     @Test
+    public void testExecuteInstallProjectGoalsOnFeatureStartSet() throws Exception {
+        // set up
+        Properties userProperties = new Properties();
+        userProperties.setProperty("featureName", FEATURE_NAME);
+        userProperties.setProperty("flow.installProject", "true");
+        userProperties.setProperty("flow.installProjectGoalsOnFeatureStart", "validate");
+        // test
+        executeMojo(repositorySet.getWorkingDirectory(), GOAL, userProperties);
+        // verify
+        assertFeatureStartedCorrectly();
+        assertMavenCommandExecuted("validate");
+        assertMavenCommandNotExecuted("clean install");
+    }
+
+    @Test
     public void testExecuteInstallProjectTrueAndInstallProjectGoalsSet() throws Exception {
         // set up
         Properties userProperties = new Properties();
